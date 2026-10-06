@@ -153,10 +153,38 @@ interface Extractor {
 
 ## Tech
 
-TypeScript (strict), Node 22/24, ESM, pnpm. Candidate deps (to confirm before install): `tinyglobby`, `ignore`, `yaml`, `commander`. Frontmatter parsed by hand (leading `---` block + `yaml`).
+TypeScript 7 (strict), Node 24, ESM, pnpm. Runtime deps: `commander` (+ `@commander-js/extra-typings`), `yaml`, `zod`, `picocolors`. Tooling: tsup, vitest, oxlint, oxfmt, knip, husky, lint-staged, commitlint. Pattern matching and gitignore handling are specified in SPEC §7-§8; whether they are hand-written or use a library is a planning decision.
 
-## Open items
+## Error handling
 
-- Error handling and messages.
-- Testing strategy.
-- Packaging / distribution (npm name `docsync` availability).
+- All config errors are collected and reported together, never fail-fast.
+- Every message names the fix. Codes and exit codes: SPEC §16, §17.
+- Unreadable covered file, broken symlink: error. Symlinked files are followed; symlinked directories are not.
+- Corrupt or wrong-version lock: error; `docsync stamp --rebuild` after reviewing every doc.
+- `stamp` refuses and writes nothing when any target is invalid.
+- In `--json` mode, diagnostics are part of the single JSON document.
+
+## Testing
+
+- Unit tests per spec section; `engine` is pure and table-tested over every state and reason, including A -> B -> C and cycles.
+- `hash`: CRLF/LF equivalence, binary detection, frontmatter stripping.
+- `lock`: round-trip and byte-identical output regardless of input order.
+- End-to-end: temp-repo fixtures driving the built CLI; exit codes and `--json` snapshot-tested.
+
+## Packaging
+
+npm package `docsync` (name free on npmjs as of 2026-10-06), bin `docsync`, single bundle `dist/index.js`. No library API in the POC; the CLI and `--json` are the contract.
+
+## Refinements made while writing SPEC.md
+
+- Default doc discovery: `include: ["**/*.md"]` over the Universe (non-ignored files).
+- Glob grammar also supports `?`, `[...]`, `{a,b}` and `\` escapes; a pattern matching a directory covers everything under it.
+- `--json` emits one envelope `{version, command, exitCode, docs[], diagnostics[]}` instead of one object per doc.
+- Frontmatter stripping hashes the remaining frontmatter as canonical JSON, so reformatting frontmatter does not cause staleness.
+- `stamp --rebuild` added for a corrupt lock. Exit code 70 for internal failures.
+- `docsync.yaml` has a required `version: 1`.
+
+## Sources
+
+- Behavior: [SPEC.md](../../SPEC.md).
+- Principles and vision: [PRINCIPLES.md](../../PRINCIPLES.md), [VISION.md](../../VISION.md).
