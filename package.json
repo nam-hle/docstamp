@@ -1,6 +1,6 @@
 {
   "name": "docsync",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Deterministic snapshot gate for hidden links between files",
   "license": "MIT",
   "repository": {
