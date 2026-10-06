@@ -115,7 +115,7 @@ Review happened.
 | Field | Type | Meaning |
 |---|---|---|
 | `[[Covers]]` | List of String | the Binding's `[[Covers]]` at stamp time |
-| `[[Files]]` | Map from RepoPath to Hash | covered files and their hashes at stamp time |
+| `[[Hash]]` | Hash | `CoverHash` (§11.4) of the covered files at stamp time |
 
 ### 5.4 Lock Record
 
@@ -131,13 +131,15 @@ Review happened.
 | `[[Dependent]]` | RepoPath | |
 | `[[State]]` | `ok`, `stale` or `invalid` | §13 |
 | `[[Reasons]]` | List of Reason | non-empty iff `[[State]]` is `stale` |
-| `[[Modified]]` | List of RepoPath, path order | |
-| `[[Added]]` | List of RepoPath, path order | |
-| `[[Removed]]` | List of RepoPath, path order | |
+| `[[Covers]]` | List of String | the Binding's `[[Covers]]` |
 | `[[Diagnostics]]` | List of Diagnostic | non-empty iff `[[State]]` is `invalid` |
 
 A *Reason* is one of, and when several apply they are listed in this order: `unstamped`,
-`binding-changed`, `modified`, `added`, `removed`.
+`binding-changed`, `content-changed`.
+
+NOTE: A result does not list which covered files changed. The Lockfile keeps one Hash per
+Dependent (§12), so that a Binding covering thousands of files costs one line. The reviewer finds
+the change with its own tools, scoped by `[[Covers]]`.
 
 ### 5.6 Diagnostic Record
 
@@ -388,8 +390,22 @@ another Dependent that covers it stale. Editing its body does.
 
 ### 11.3 Hash
 
-`Hash(path, bindings)` is the lowercase hexadecimal encoding of the first 8 bytes of the SHA-256
-digest of `NormalizedContent(path, bindings)`: a String of exactly 16 characters `[0-9a-f]`.
+A *Hash* is the lowercase hexadecimal encoding of a SHA-256 digest: a String of exactly 64
+characters `[0-9a-f]`.
+
+`Hash(path, bindings)` is the Hash of `NormalizedContent(path, bindings)`.
+
+### 11.4 Cover Hash
+
+`CoverHash(covered, bindings)`, where *covered* is a List of RepoPaths in path order:
+
+1. Let *input* be the empty byte sequence.
+2. For each *path* of *covered*, append the UTF-8 encoding of *path*, the byte 0x00, the ASCII
+   encoding of `Hash(path, bindings)`, and the byte 0x0A.
+3. Return the Hash of *input*.
+
+NOTE: The path is part of the input, so renaming or moving a covered file changes the Cover Hash
+even when its content does not. A Dependent that names that path must be reviewed.
 
 ## 12 Lockfile
 
@@ -413,16 +429,14 @@ dependents:
   <file>:
     covers:
       - <pattern>
-    files:
-      <file>: <hash>
+    hash: <hash>
 ```
 
-- `dependents:` is followed by one block per entry, Dependents in path order. If there are no entries, the
-  line is `dependents: {}`.
+- `dependents:` is followed by one block per entry, Dependents in path order. If there are no
+  entries, the line is `dependents: {}`.
 - `covers` lists the patterns in declaration order.
-- `files` lists covered files in path order.
 - Indentation is two spaces per level.
-- Every `<file>`, `<pattern>` and `<file>` is written as a YAML double-quoted scalar, escaped as
+- Every `<file>` and `<pattern>` is written as a YAML double-quoted scalar, escaped as
   `CanonicalJson` escapes a string. `<hash>` is written plain.
 
 Writing the Lockfile MUST be atomic: a reader observes either the previous contents or the new
@@ -433,23 +447,21 @@ written.
 
 `Evaluate(binding, universe, lock, bindings)` returns a DependentResult:
 
-1. Let *r* be a DependentResult with `[[Dependent]]` = `binding.[[Dependent]]` and empty Lists.
+1. Let *r* be a DependentResult with `[[Dependent]]` = `binding.[[Dependent]]`, `[[Covers]]` =
+   `binding.[[Covers]]`, and empty Lists.
 2. Let *covered* be `ResolveCovers(binding, universe)`. If it raises, set *r*.`[[State]]` to
    `invalid`, attach every raised and collected Diagnostic, and return *r*.
-3. Let *current* be a Map from each *f* of *covered* to `Hash(f, bindings)`. If any call raises,
-   handle as in step 2.
+3. Let *current* be `CoverHash(covered, bindings)`. If it raises, handle as in step 2.
 4. Let *entry* be `lock.[[Entries]]`[`binding.[[Dependent]]`], or *none*.
-5. If *entry* is *none*:
-   1. Append `unstamped` to *r*.`[[Reasons]]`; set *r*.`[[Added]]` to the keys of *current*.
-   2. Set *r*.`[[State]]` to `stale` and return *r*.
+5. If *entry* is *none*, append `unstamped` to *r*.`[[Reasons]]`, set *r*.`[[State]]` to `stale`,
+   and return *r*.
 6. If `entry.[[Covers]]` is not equal, element by element, to `binding.[[Covers]]`, append
    `binding-changed`.
-7. Set *r*.`[[Modified]]` to the keys present in both *current* and `entry.[[Files]]` whose values
-   differ; *r*.`[[Added]]` to the keys only in *current*; *r*.`[[Removed]]` to the keys only in
-   `entry.[[Files]]`.
-8. For each of `modified`, `added`, `removed` whose List is non-empty, append it to
-   *r*.`[[Reasons]]`.
-9. Set *r*.`[[State]]` to `stale` if *r*.`[[Reasons]]` is non-empty, else `ok`. Return *r*.
+7. If `entry.[[Hash]]` is not equal to *current*, append `content-changed`.
+8. Set *r*.`[[State]]` to `stale` if *r*.`[[Reasons]]` is non-empty, else `ok`. Return *r*.
+
+NOTE: `content-changed` covers every change to the covered set: an edited file, a new file
+matching the patterns, a deleted file, and a renamed or moved file.
 
 `EvaluateAll(root, cwd, options)`:
 
@@ -517,7 +529,7 @@ in which case it is 2.
    nothing, and exit 2.
 4. Let *lock* be the Lock read in step 1 (empty with `--rebuild`).
 5. For each *t* of *targets*, set `lock.[[Entries]]`[*t*.`[[Dependent]]`] to { `[[Covers]]`: the
-   Binding's `[[Covers]]`, `[[Files]]`: the *current* Map of §13 step 3 }.
+   Binding's `[[Covers]]`, `[[Hash]]`: the *current* Cover Hash of §13 step 3 }.
 6. Remove from *lock* every entry whose Dependent has no Binding.
 7. Write *lock* (§12.2).
 8. Report each Dependent stamped and each entry removed. Exit 0.
@@ -546,17 +558,15 @@ For `check` and `status`, one block per selected DependentResult, in path order:
 
 ```
 <STATE>  <file>  (<reason>, <reason>)
-  modified  <file>
-  added     <file>
-  removed   <file>
+  covers  <pattern>
 ```
 
-`<STATE>` is `ok`, `STALE` or `INVALID`. The parenthesized part and the file lines appear only
-for `stale`. Files are listed modified, then added, then removed, each in path order. When any
-DependentResult is `stale`, the last line is:
+`<STATE>` is `ok`, `STALE` or `INVALID`. The parenthesized part and the `covers` lines (one per
+pattern, in declaration order) appear only for `stale`. When any DependentResult is `stale`, the
+last line is:
 
 ```
-next: review the files above against the listed files, then run `docsync stamp <file>...`
+next: review each stale file against the files its patterns cover, then run `docsync stamp <file>...`
 ```
 
 with the stale Dependents in path order.
@@ -576,10 +586,8 @@ not set `NO_COLOR`; colored and uncolored output differ only in escape sequences
     {
       "dependent": "CLAUDE.md",
       "state": "stale",
-      "reasons": ["modified", "added"],
-      "modified": ["src/cli/check.ts"],
-      "added": ["src/cli/stamp.ts"],
-      "removed": [],
+      "reasons": ["content-changed"],
+      "covers": ["src/cli/**", "!src/cli/**/*.test.ts"],
       "diagnostics": []
     }
   ],

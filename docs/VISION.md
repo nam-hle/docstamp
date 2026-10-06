@@ -18,9 +18,10 @@ coarse to say which doc needs a look.
 **A deterministic snapshot gate between files and the files that depend on them**, built first
 for docs and the code they describe.
 
-Each doc declares which code it covers. `docsync stamp` records a content hash of every covered
-file. `docsync check` recomputes them and fails CI when a doc's covered code changed since its
-last review, listing exactly which files were modified, added or removed.
+Each doc declares which code it covers. `docsync stamp` records one hash over the paths and
+contents of every covered file. `docsync check` recomputes it and fails CI when a doc's covered
+code changed since its last review (an edit, a new file, a deletion, a rename), naming the doc
+and the patterns to look at. The lock stays one line per doc however many files it covers.
 
 The review itself is not docsync's job. An agent (or a person) reads the report, re-checks the
 doc against the changed files, edits it if needed, and stamps it again. docsync decides *when* a

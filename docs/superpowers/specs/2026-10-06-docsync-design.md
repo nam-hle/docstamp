@@ -182,6 +182,7 @@ npm package `docsync` (name free on npmjs as of 2026-10-06), bin `docsync`, sing
 - Glob grammar also supports `?`, `[...]`, `{a,b}` and `\` escapes; a pattern matching a directory covers everything under it.
 - `--json` emits one envelope `{version, command, exitCode, docs[], diagnostics[]}` instead of one object per doc.
 - Frontmatter stripping hashes the remaining frontmatter as canonical JSON, so reformatting frontmatter does not cause staleness.
+- **Superseded per-file hashes:** the lock stores one Cover Hash per Dependent, SHA-256 over `path\0hash\n` of each covered file. Reason: a glob over thousands of files would put thousands of lines in the lock. Paths are part of the input so renames and moves count. Cost: the report no longer lists which files changed; it names the Dependent and its patterns. Reasons are now `unstamped`, `binding-changed`, `content-changed`. Hashes are full 64-char SHA-256.
 - `stamp --rebuild` added for a corrupt lock. Exit code 70 for internal failures.
 - `docsync.yaml` has a required `version: 1`.
 
