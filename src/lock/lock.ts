@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
 import { Raised, diag } from '../core/diagnostics.ts';
@@ -11,8 +11,10 @@ const LOCK = 'docsync.lock';
 const fail = (code: 'E_LOCK' | 'E_LOCK_VERSION') => new Raised([diag(code)]);
 const isMap = (v: YamlValue | undefined): v is YamlMap =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
-const hasKeys = (map: YamlMap, keys: string): boolean =>
-  [...map.entries.keys()].sort().join() === keys;
+const hasKeys = (map: YamlMap, keys: string[]): boolean => {
+  const actual = [...map.entries.keys()].sort();
+  return actual.length === keys.length && actual.every((key, index) => key === keys[index]);
+};
 
 function decode(bytes: Buffer): string {
   try {
@@ -24,7 +26,8 @@ function decode(bytes: Buffer): string {
 
 function readEntry(info: YamlMap): LockEntry {
   const covers = info.entries.get('covers')?.value;
-  const hash = info.entries.get('hash')?.value;
+  const hashNode = info.entries.get('hash');
+  const hash = hashNode?.plainSource ?? hashNode?.value;
   const validCovers =
     Array.isArray(covers) && covers.length > 0 && covers.every((c) => typeof c === 'string');
   if (!validCovers || typeof hash !== 'string' || !/^[0-9a-f]{64}$/u.test(hash)) {
@@ -42,10 +45,10 @@ export function readLock(root: string): Lock {
   const top = doc.value;
   if (top.entries.get('version')?.plainSource !== '1') throw fail('E_LOCK_VERSION');
   const dependents = top.entries.get('dependents')?.value;
-  if (!hasKeys(top, 'dependents,version') || !isMap(dependents)) throw fail('E_LOCK');
+  if (!hasKeys(top, ['dependents', 'version']) || !isMap(dependents)) throw fail('E_LOCK');
   const entries = new Map<string, LockEntry>();
   for (const [dependent, info] of dependents.entries) {
-    if (!isRepoPath(dependent) || !isMap(info.value) || !hasKeys(info.value, 'covers,hash')) {
+    if (!isRepoPath(dependent) || !isMap(info.value) || !hasKeys(info.value, ['covers', 'hash'])) {
       throw fail('E_LOCK');
     }
     entries.set(dependent, readEntry(info.value));
@@ -75,7 +78,12 @@ export function writeLock(root: string, lock: Lock): boolean {
     if (current === Buffer.from(text, 'utf8').toString('latin1')) return false;
   }
   const temp = `${path}.tmp-${process.pid}`;
-  writeFileSync(temp, text, 'utf8');
-  renameSync(temp, path);
+  try {
+    writeFileSync(temp, text, 'utf8');
+    renameSync(temp, path);
+  } catch (error) {
+    rmSync(temp, { force: true });
+    throw error;
+  }
   return true;
 }

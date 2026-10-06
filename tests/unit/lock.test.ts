@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 import { lockText, readLock, writeLock } from '../../src/lock/lock.ts';
@@ -47,6 +47,15 @@ describe('§11.1 / §11.3 read and write', () => {
     const root = makeTree({ 'docsync.lock': 'version: 1\ndependents: {}\n' });
     expect(writeLock(root, lock)).toBe(true);
     expect(readFileSync(join(root, 'docsync.lock'), 'utf8')).toBe(expected);
+    expect(readdirSync(root).filter((name) => name.includes('.tmp-'))).toEqual([]);
+  });
+  it.each([
+    ['all digits', '1'.repeat(64)],
+    ['single e', `${'1'.repeat(10)}e${'1'.repeat(53)}`],
+  ])('round-trips a numeric-looking hash (%s)', (_name, hash) => {
+    const root = makeTree({});
+    writeLock(root, { entries: new Map([['a.md', { covers: ['x'], hash }]]) });
+    expect(readLock(root).entries.get('a.md')?.hash).toBe(hash);
   });
   it('accepts a leading BOM', () => {
     const root = makeTree({ 'docsync.lock': `﻿${expected}` });
