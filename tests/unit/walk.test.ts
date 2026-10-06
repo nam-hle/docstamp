@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { chmodSync, mkdirSync } from 'node:fs';
-import { makeTree } from '../helpers/fixture.ts';
+import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 import { computeUniverse, determineRoot } from '../../src/universe/walk.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import type { Config } from '../../src/core/types.ts';
@@ -12,6 +12,8 @@ const config = (over: Partial<Config> = {}): Config => ({
   bindings: [],
   ...over,
 });
+
+afterEach(cleanupTrees);
 
 const codes = (fn: () => unknown) => {
   try {
@@ -59,6 +61,18 @@ describe('§7.2 computeUniverse', () => {
       'src/.gitignore',
       'src/a.ts',
     ]);
+  });
+  it('a nested .gitignore does not affect sibling directories', () => {
+    const root = makeTree({
+      'src/.gitignore': '*.gen.ts\n',
+      'src/a.gen.ts': '',
+      'lib/a.gen.ts': '',
+    });
+    expect(computeUniverse(root, config()).paths).toEqual(['lib/a.gen.ts', 'src/.gitignore']);
+  });
+  it('a nested docsync.yaml stays in the Universe', () => {
+    const root = makeTree({ 'docsync.yaml': '', 'sub/docsync.yaml': '', 'sub/docsync.lock': '' });
+    expect(computeUniverse(root, config()).paths).toEqual(['sub/docsync.lock', 'sub/docsync.yaml']);
   });
   it('gitignore:false ignores .gitignore files but not config ignore', () => {
     const root = makeTree({ '.gitignore': 'a\n', a: '', b: '' });
