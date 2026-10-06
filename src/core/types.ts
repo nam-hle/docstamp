@@ -2,6 +2,7 @@ export type Code =
   | 'E_USAGE'
   | 'E_ROOT'
   | 'E_CONFIG_MISSING'
+  | 'E_CONFIG_AMBIGUOUS'
   | 'E_CONFIG'
   | 'E_CONFIG_VERSION'
   | 'E_UNKNOWN_KEY'

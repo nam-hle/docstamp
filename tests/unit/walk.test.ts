@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 import { computeUniverse, determineRoot } from '../../src/universe/walk.ts';
+import { CONFIG_NAMES } from '../../src/config/value.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import type { Config } from '../../src/core/types.ts';
 
@@ -35,6 +36,10 @@ describe('§6 determineRoot', () => {
   it('no docstamp.yaml raises E_CONFIG_MISSING', () => {
     const root = makeTree({ 'a/x': '' });
     expect(codes(() => determineRoot(join(root, 'a'), undefined))).toEqual(['E_CONFIG_MISSING']);
+  });
+  it.each(CONFIG_NAMES)('finds %s upward', (name) => {
+    const root = makeTree({ [name]: '', 'a/b/x': '' });
+    expect(determineRoot(join(root, 'a/b'), undefined)).toBe(root);
   });
   it('a directory named docstamp.yaml still counts as an entry', () => {
     const root = makeTree({ 'docstamp.yaml/x': '' });
@@ -69,6 +74,14 @@ describe('§7.2 computeUniverse', () => {
       'lib/a.gen.ts': '',
     });
     expect(computeUniverse(root, config()).paths).toEqual(['lib/a.gen.ts', 'src/.gitignore']);
+  });
+  it.each(CONFIG_NAMES)('removes %s at Root from the Universe', (name) => {
+    const root = makeTree({ [name]: '', 'a.md': '' });
+    expect(computeUniverse(root, config()).paths).toEqual(['a.md']);
+  });
+  it('a nested configuration file stays in the Universe', () => {
+    const root = makeTree({ 'sub/docstamp.config.ts': '' });
+    expect(computeUniverse(root, config()).paths).toEqual(['sub/docstamp.config.ts']);
   });
   it('a nested docstamp.yaml stays in the Universe', () => {
     const root = makeTree({

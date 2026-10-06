@@ -15,19 +15,28 @@
   "bin": {
     "docstamp": "dist/index.js"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/lib.d.ts",
+      "import": "./dist/lib.js"
+    },
+    "./schema.json": "./schema.json"
+  },
   "files": [
-    "dist"
+    "dist",
+    "schema.json"
   ],
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.lib.json",
     "prepublishOnly": "pnpm run build",
+    "schema": "node scripts/write-schema.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint --type-aware src tests",
-    "format": "oxfmt src tests",
-    "format:check": "oxfmt --check src tests",
+    "lint": "oxlint --type-aware src tests scripts",
+    "format": "oxfmt src tests scripts",
+    "format:check": "oxfmt --check src tests scripts",
     "knip": "knip",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "vitest run tests/e2e",

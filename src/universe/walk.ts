@@ -3,6 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import type { Config, Diagnostic } from '../core/types.ts';
+import { CONFIG_NAMES } from '../config/value.ts';
 import { isIgnored, parseIgnoreLines, type IgnoreRule } from './ignore.ts';
 
 type Kind = 'file' | 'link';
@@ -38,7 +39,7 @@ export function determineRoot(cwd: string, rootOption: string | undefined): stri
   }
   let dir = cwd;
   for (;;) {
-    if (hasEntry(dir, 'docstamp.yaml')) return dir;
+    if (CONFIG_NAMES.some((name) => hasEntry(dir, name))) return dir;
     const parent = dirname(dir);
     if (parent === dir) throw new Raised([diag('E_CONFIG_MISSING')]);
     dir = parent;
@@ -104,7 +105,8 @@ export function computeUniverse(root: string, config: Config): Universe {
 
   const universe: Universe = { paths: [], kinds: new Map(), onDisk: new Map() };
   for (const { path, kind } of found) {
-    if (path === 'docstamp.yaml' || path === 'docstamp-lock.yaml') continue;
+    if ((CONFIG_NAMES as readonly string[]).includes(path) || path === 'docstamp-lock.yaml')
+      continue;
     const nfc = path.normalize('NFC');
     if (universe.kinds.has(nfc)) errors.push(diag('E_PATH_COLLISION', { subject: nfc }));
     universe.kinds.set(nfc, kind);

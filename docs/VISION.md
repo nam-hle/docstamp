@@ -34,7 +34,8 @@ depends on another and nothing links them: a test fixture and the schema it mirr
 translation and its source text, a hand-written type and the API it describes, a runbook and the
 deploy script. docstamp treats any file in the repository (the same scope git sees) as a possible
 *Dependent* and any file as something it may cover. Every link is declared in one place,
-`docstamp.yaml`; the files themselves carry no markers.
+the configuration file (`docstamp.yaml` or a `docstamp.config.*` script); the files themselves
+carry no markers.
 
 ## Who it is for
 

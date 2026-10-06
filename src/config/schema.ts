@@ -1,0 +1,26 @@
+// SPEC §9.3
+const configSchema = {
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  title: 'docstamp configuration',
+  type: 'object',
+  additionalProperties: false,
+  required: ['version', 'dependents'],
+  properties: {
+    version: { const: 1 },
+    gitignore: { type: 'boolean', default: true },
+    ignore: { type: 'array', items: { type: 'string' }, default: [] },
+    dependents: {
+      type: 'object',
+      additionalProperties: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['covers'],
+        properties: {
+          covers: { type: 'array', minItems: 1, items: { type: 'string' } },
+        },
+      },
+    },
+  },
+} as const;
+
+export const renderSchema = (): string => `${JSON.stringify(configSchema, null, 2)}\n`;

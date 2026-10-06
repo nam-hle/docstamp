@@ -110,7 +110,11 @@ patterns select.
 **Write**: recording a Dependent's current Cover Hash in the Lockfile with `docstamp update`,
 asserting that a Review happened.
 
-**Configuration file**: the file `docstamp.yaml` at Root. Written by people.
+**Configuration file**: the one file at Root, among the names of §9.1, that holds the Config.
+Written by people.
+
+**Carrier**: the format a Configuration file is written in (§9.1). Every Carrier produces the same
+*normalized value* (§9.2, §9.5), and only that value is validated (§9.3).
 
 **Lockfile**: the file `docstamp-lock.yaml` at Root. Written only by `docstamp update`.
 
@@ -130,6 +134,9 @@ asserting that a Review happened.
 | `[[Ignore]]` | List of String (ignore rule lines, §7.3) | « » |
 | `[[UseGitignore]]` | Boolean | true |
 | `[[Bindings]]` | List of Binding, in path order of `[[Dependent]]` | (required) |
+
+NOTE: A Config is built from the normalized value of the Configuration file (§9.3), whatever its
+Carrier.
 
 ### 5.3 Lock
 
@@ -196,7 +203,8 @@ error text, parser error text, or absolute paths; it MAY contain an error code n
    3. Return *dir*.
 2. Let *dir* be *cwd*.
 3. Repeat:
-   1. If *dir* contains an entry named `docstamp.yaml`, return *dir*.
+   1. If *dir* contains an entry named by any of the Configuration file names of §9.1, return
+      *dir*.
    2. If *dir* is the filesystem root, raise `E_CONFIG_MISSING`.
    3. Set *dir* to the parent of *dir*.
 
@@ -232,7 +240,7 @@ Symbolic links are never followed: a link is an entry of kind *link*, whatever i
          repository); otherwise call `WalkDirectory(e, q)`.
       6. If *e* is a *file* or *link*, add *q* to the Universe.
    4. Remove the rules scoped to *p* from *rules* before returning.
-3. Remove `docstamp.yaml` and `docstamp-lock.yaml` from the Universe.
+3. Remove every Configuration file name of §9.1 and `docstamp-lock.yaml` from the Universe.
 4. Apply §7.4 and §7.5, collecting their Diagnostics.
 5. If *errors* is not empty, raise it. Otherwise return the Universe in path order.
 
@@ -381,7 +389,21 @@ that removes nothing is a stale or mistyped rule.
 
 ## 9 Configuration File
 
-### 9.1 Example
+### 9.1 Carriers
+
+The Configuration file is a file at Root named, in this order of discovery, one of:
+
+| Name | Carrier |
+|---|---|
+| `docstamp.yaml` | YAML (§9.2) |
+| `docstamp.config.ts`, `docstamp.config.mts` | script (§9.5), TypeScript |
+| `docstamp.config.js`, `docstamp.config.mjs` | script (§9.5), JavaScript |
+
+Exactly one of these names MAY be an entry of Root (§9.3). The Carrier is only a format: every
+Carrier yields the same normalized value, and the rules of §9.3 apply to that value alone. The
+Lockfile is always YAML.
+
+The same configuration in the YAML Carrier:
 
 ```yaml
 version: 1
@@ -398,10 +420,25 @@ dependents:
 
 Patterns starting with `!` or `*` must be quoted in YAML.
 
+In the script Carrier (§9.5) the file exports the same value:
+
+```ts
+import { defineConfig } from 'docstamp';
+
+export default defineConfig({
+  version: 1,
+  dependents: {
+    'CLAUDE.md': { covers: ['src/**', '!src/**/*.test.ts', 'package.json'] },
+    'tests/fixtures/user.json': { covers: ['schemas/user.schema.json'] },
+  },
+});
+```
+
 ### 9.2 YAML Profile
 
-The Configuration file and the Lockfile are read as YAML 1.2 with the Core schema, restricted as
-follows. A violation raises `E_CONFIG` (Configuration file) or `E_LOCK` (Lockfile).
+The YAML Carrier of the Configuration file and the Lockfile are read as YAML 1.2 with the Core
+schema, restricted as follows. A violation raises `E_CONFIG` (Configuration file) or `E_LOCK`
+(Lockfile). The profile applies to those two files only, never to a script Carrier.
 
 - The file is UTF-8; a leading U+FEFF is ignored. It holds exactly one document.
 - Anchors, aliases, tags, merge keys (`<<`) and complex keys are not allowed.
@@ -409,26 +446,36 @@ follows. A violation raises `E_CONFIG` (Configuration file) or `E_LOCK` (Lockfil
   such as `1`, `true` or `null` is an error, not a string.
 - A mapping MUST NOT contain the same key twice.
 
+The *normalized value* of a YAML document is the Value it denotes: a mapping is a Map, a sequence
+is a List, and a scalar is the Null, Boolean, Number or String it resolves to. The one exception
+is the value of the top-level key `version`: it is the Number 1 if it is the plain scalar `1`
+exactly, and Null for any other scalar, so that `1.0`, `0x1`, `+1`, `01` and `"1"` are not
+version 1.
+
 ### 9.3 Reading
 
 `ReadConfig(root)` returns a Config and a List of attached Diagnostics, or raises:
 
 1. Let *fatal* be an empty List. Let *attached* be an empty List.
-2. If `docstamp.yaml` is not an entry of kind *file* at Root, raise « `E_CONFIG_MISSING` ».
-3. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_CONFIG` ».
-4. If the key `version` is absent, or its value is not the plain scalar `1`, raise
-   « `E_CONFIG_VERSION` ».
-5. For each key of the document other than `version`, `gitignore`, `ignore` and `dependents`,
+2. Let *names* be the names of §9.1 that are entries of Root, of any kind, in the order of §9.1.
+   1. If *names* has more than one element, raise « `E_CONFIG_AMBIGUOUS` », `[[Subject]]` the
+      elements of *names* joined with `, `.
+   2. If *names* is empty, or its element is not an entry of kind *file*, raise
+      « `E_CONFIG_MISSING` ».
+3. Let *value* be the normalized value of that file: under §9.2 for `docstamp.yaml`, under §9.5
+   for any other name. On failure, or if *value* is not a Map, raise « `E_CONFIG` ».
+4. If the key `version` is absent, or its value is not the Number 1, raise « `E_CONFIG_VERSION` ».
+5. For each key of *value* other than `version`, `gitignore`, `ignore` and `dependents`,
    collect `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` the key.
-6. If `gitignore` is present and not a boolean, or `ignore` is present and not a sequence of
-   strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` the key.
-7. If `dependents` is absent, or not a mapping, collect `E_CONFIG` into *fatal*, `[[Subject]]`
+6. If `gitignore` is present and not a Boolean, or `ignore` is present and not a List of
+   Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` the key.
+7. If `dependents` is absent, or not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]`
    `dependents`.
 8. Otherwise, for each (*key*, *value*) of `dependents`:
    1. If *key* is not a RepoPath, collect `E_CONFIG` into *fatal*, `[[Subject]]` *key*, and
       continue.
-   2. If *value* is not a mapping, or has no key `covers`, or `covers` is not a non-empty sequence
-      of strings, collect `E_CONFIG` into *fatal*, `[[Dependent]]` *key*, and continue.
+   2. If *value* is not a Map, or has no key `covers`, or `covers` is not a non-empty List
+      of Strings, collect `E_CONFIG` into *fatal*, `[[Dependent]]` *key*, and continue.
    3. For each key of *value* other than `covers`, collect `E_UNKNOWN_KEY` into *fatal*,
       `[[Dependent]]` *key*, `[[Subject]]` that key.
    4. For each string *s* of `covers` that is not a valid Pattern (§8.1), collect `E_PATTERN` into
@@ -441,6 +488,9 @@ follows. A violation raises `E_CONFIG` (Configuration file) or `E_LOCK` (Lockfil
 NOTE: A bad pattern makes only its Dependent `invalid`; every other Dependent is still evaluated.
 A structural error stops evaluation.
 
+NOTE: Steps 5 to 10 never see the Carrier. Key order in a Map is not significant: the Bindings are
+in path order (step 10).
+
 ### 9.4 Dependent Files
 
 A Dependent MUST be an entry of kind *file* whose name, in the listing of its parent directory,
@@ -450,6 +500,45 @@ the Universe; it may be an ignored file.
 NOTE: The check uses the directory listing, not a lookup by path, so `claude.md` does not resolve
 to `CLAUDE.md` on a case-insensitive file system. Renaming a Dependent without renaming its key
 raises `E_DEPENDENT_MISSING`.
+
+### 9.5 Script Carriers
+
+`LoadScript(path)` returns the normalized value of a Configuration file whose name is not
+`docstamp.yaml`, or raises `E_CONFIG`:
+
+1. Evaluate the file at *path*, synchronously, as a module of the host runtime. If it cannot be
+   loaded, if evaluation throws, or if evaluation is asynchronous (top-level `await`), raise
+   « `E_CONFIG` ».
+2. Let *exports* be the module's exports. Let *exported* be its `default` export if *exports*
+   has one that is neither `undefined` nor Null, else *exports*.
+3. Return ? `ToPlain(exported, empty)`.
+
+`ToPlain(v, ancestors)`, where *ancestors* is the List of objects being converted, raises
+`E_CONFIG` with `[[Subject]]` the top-level key whose value contains *v* (empty if *v* is the
+exported value itself):
+
+1. If *v* is Null, a Boolean or a String, return it.
+2. If *v* is a Number, return it if it is finite, else raise.
+3. If *v* is an object that is in *ancestors*, raise.
+4. If *v* is an Array, every own property of it MUST be a data property named by an index below
+   its length or `length`, and every index below its length MUST be present; otherwise raise.
+   Return the List of `ToPlain(element, ancestors + « v »)` for its elements in index order.
+5. If *v* is an object whose prototype is the Object prototype or null, every own property of it
+   MUST be an enumerable data property named by a String; otherwise raise. Return the Map of
+   each name to `ToPlain(value, ancestors + « v »)`.
+6. Raise. This covers `undefined`, functions, symbols, big integers, accessors, class instances
+   and every other object.
+
+NOTE: A value reached twice without a cycle is allowed and is converted twice. Duplicate keys
+cannot occur, and the key order of a Map is not significant (§9.3).
+
+NOTE: TypeScript files are evaluated by the host runtime's type stripping, so only erasable
+TypeScript syntax is supported: no `enum`, no `namespace` with values, no parameter properties.
+
+NOTE: Evaluating a Configuration file runs its code, and the code may import other files. Those
+files are not Covered files, not hashed and not part of the Universe, so a change in them changes
+no verdict. A script Carrier SHOULD import only `docstamp`, and its value SHOULD NOT depend on the
+environment, the clock or the network (§2).
 
 ## 10 Hashing
 
@@ -923,8 +1012,9 @@ summary line. Diagnostics as in §14.3.
 |---|---|---|---|
 | `E_USAGE` | error | §13.2 | correct the command line; for a removed option, use the command it names |
 | `E_ROOT` | error | §6 | pass an existing directory |
-| `E_CONFIG_MISSING` | error | §6, §9.3 | create `docstamp.yaml` (§9.1) |
-| `E_CONFIG` | error | §9.2, §9.3 | fix the named key |
+| `E_CONFIG_MISSING` | error | §6, §9.3 | create a Configuration file (§9.1) |
+| `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
+| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key |
 | `E_CONFIG_VERSION` | error | §9.3 | set `version: 1` |
 | `E_UNKNOWN_KEY` | error | §9.3 | remove or correct the key |
 | `E_PATTERN` | error | §9.3 | correct the pattern (§8.1) |
@@ -936,7 +1026,7 @@ summary line. Diagnostics as in §14.3.
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every Dependent |
 | `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every Dependent, then `docstamp update --all`; otherwise as `E_LOCK` |
-| `E_UNKNOWN_DEPENDENT` | error | §13.3 | name a Dependent from `docstamp.yaml` |
+| `E_UNKNOWN_DEPENDENT` | error | §13.3 | name a Dependent from the Configuration file |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any Dependent to remove it |
 
 ## 16 Exit Codes

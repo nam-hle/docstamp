@@ -12,7 +12,7 @@ Requires Node.js 24 or newer.
 
 ## Configure
 
-Bind each Dependent to the files it covers in `docstamp.yaml` at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)):
+Bind each Dependent to the files it covers in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). Start with `docstamp.yaml`:
 
 ```yaml
 version: 1
@@ -26,6 +26,29 @@ dependents:
     covers:
       - schemas/user.schema.json
 ```
+
+For editor completion and validation, point the YAML language server at the schema:
+
+```yaml
+# yaml-language-server: $schema=./node_modules/docstamp/schema.json
+```
+
+### TypeScript or JavaScript
+
+The same configuration can be a script instead: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Keep exactly one configuration file; two raise `E_CONFIG_AMBIGUOUS`.
+
+```ts
+import { defineConfig } from 'docstamp';
+
+export default defineConfig({
+  version: 1,
+  dependents: {
+    'CLAUDE.md': { covers: ['src/**', '!src/**/*.test.ts', 'package.json'] },
+  },
+});
+```
+
+The file must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carriers)). TypeScript runs through Node's type stripping, so only erasable syntax works (no `enum`, no value `namespace`). Evaluating the file may import other files; docstamp does not track them, so import only `docstamp`.
 
 Pattern syntax is in [SPEC §8](docs/SPEC.md#8-patterns).
 

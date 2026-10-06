@@ -150,6 +150,35 @@ describe('§13 workflow', () => {
     expect(JSON.parse(r.out).diagnostics[0].code).toBe('E_CONFIG_MISSING');
   });
 
+  it('§9.5 a docstamp.config.ts carrier drives the whole workflow', () => {
+    const root = makeTree({
+      'docstamp.config.ts': `interface C { version: 1 }
+const config: C & object = {
+  version: 1,
+  dependents: { 'CLAUDE.md': { covers: ['src/**'] } },
+};
+export default config;
+`,
+      'CLAUDE.md': '# doc\n',
+      'src/a.ts': 'a\n',
+    });
+    expect(docstamp(root).code).toBe(1);
+    expect(docstamp(root, 'update', 'CLAUDE.md')).toMatchObject({ code: 0 });
+    expect(docstamp(root)).toMatchObject({ code: 0, out: '1 ok, 0 stale, 0 invalid\n' });
+    appendFileSync(join(root, 'src/a.ts'), 'b\n');
+    expect(docstamp(join(root, 'src')).code).toBe(1);
+  });
+
+  it('§9.3 two configuration files are E_CONFIG_AMBIGUOUS', () => {
+    const root = makeTree({ 'docstamp.yaml': CONFIG, 'docstamp.config.mjs': 'export default {}' });
+    const r = docstamp(root, '--json');
+    expect(r.code).toBe(2);
+    expect(JSON.parse(r.out).diagnostics[0]).toMatchObject({
+      code: 'E_CONFIG_AMBIGUOUS',
+      subject: 'docstamp.yaml, docstamp.config.mjs',
+    });
+  });
+
   it('output is deterministic across runs', () => {
     const root = repo();
     expect(docstamp(root, '--json').out).toBe(docstamp(root, '--json').out);
