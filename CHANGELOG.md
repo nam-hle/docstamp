@@ -3,6 +3,17 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0](https://github.com/nam-hle/docsync/compare/v0.1.0...v0.2.0) (2026-10-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* command, config and lock files are renamed docstamp, docstamp.yaml, docstamp-lock.yaml.
+
+### Features
+
+* rename docsync to docstamp ([c3d6032](https://github.com/nam-hle/docsync/commit/c3d6032786bfbbb98ff1b0de0d24bbe7f3f0e6e7))
+
 ## 0.1.0 (2026-10-06)
 
 
