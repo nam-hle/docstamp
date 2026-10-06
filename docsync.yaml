@@ -1,0 +1,19 @@
+version: 1
+dependents:
+  CLAUDE.md:
+    covers:
+      - src
+      - package.json
+      - tsup.config.ts
+      - vitest.config.ts
+      - tsconfig.json
+      - knip.json
+      - .oxfmtrc.json
+  README.md:
+    covers:
+      - src/cli
+      - package.json
+      - docs/SPEC.md
+  docs/SPEC.md:
+    covers:
+      - src

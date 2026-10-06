@@ -18,7 +18,7 @@ codes. It is the source of truth.
 
 - Behavior changes start in the spec, then code and tests follow in the same change.
 - Code that implements an algorithm cites its clause (`// §8.4`). Tests are named by clause
-  (`describe('§13 Evaluate', ...)`).
+  (`describe('§12.1 Evaluate', ...)`).
 - A behavior the spec does not define is a spec gap: fix the spec, do not invent behavior in code.
 - [docs/superpowers/specs/](docs/superpowers/specs/) holds design rationale: why, not what. It is
   frozen once its plan ships.
@@ -36,14 +36,14 @@ Node.js >= 24. ESM only.
 - **oxlint** (type-aware) and **oxfmt** for lint and format; `pnpm format` orders imports, never
   by hand.
 - **knip** for unused dependencies, files and exports.
-- **husky + lint-staged + commitlint**: pre-commit formats staged files; commit messages follow
-  Conventional Commits.
-- Runtime dependencies: **commander** (with `@commander-js/extra-typings`), **yaml**, **zod**,
-  **picocolors**. Any other dependency needs a stated reason and the user's approval.
+- No commit hooks are installed; the gate is the only enforcement.
+- The only runtime dependency is **yaml**. Any other dependency needs a stated reason and the
+  user's approval.
 
 ## The gate
 
-`pnpm test` runs format check, lint, types, knip and every test suite. Run it before committing.
+`pnpm test` runs format check, lint, types, knip, the build, every test suite and `docsync`
+itself. Run it before committing.
 Nothing narrower is a substitute: a single vitest file or a successful build is iteration, not
 verification. If the gate cannot run, say which steps did.
 
@@ -53,7 +53,8 @@ verification. If the gate cannot run, say which steps did.
 docsync/
 ├── src/
 │   ├── index.ts          # entry; wires the CLI
-│   ├── cli/              # commands, exit codes (SPEC §13, §16)
+│   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
+│   ├── cli/              # args, path resolution, run; exit codes (§13, §16)
 │   ├── config/           # docsync.yaml (§9)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
 │   ├── pattern/          # grammar, matching, selection (§8)
@@ -62,7 +63,8 @@ docsync/
 │   ├── engine/           # evaluation; pure, no I/O (§12)
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── tests/
-│   ├── unit/             # one file per spec section
+│   ├── helpers/          # temp-repo fixture builder shared by tests
+│   ├── unit/             # unit tests, grouped by module
 │   └── e2e/              # temp-repo fixtures driving the built CLI
 └── docs/
     ├── SPEC.md           # the contract
@@ -89,8 +91,8 @@ Only what no test can check stays here.
 
 ## Commits
 
-Conventional Commits, enforced by commitlint. `!` marks a breaking change to the CLI, the
-Lockfile or the JSON output, and gets a CHANGELOG entry.
+Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change to the CLI,
+the Lockfile or the JSON output, and gets a CHANGELOG entry.
 
 ## Docs
 

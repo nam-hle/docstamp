@@ -1,0 +1,22 @@
+version: 1
+dependents:
+  "CLAUDE.md":
+    covers:
+      - "src"
+      - "package.json"
+      - "tsup.config.ts"
+      - "vitest.config.ts"
+      - "tsconfig.json"
+      - "knip.json"
+      - ".oxfmtrc.json"
+    hash: bd5ed0c810544bda945f996d9a6c7a72c227ed4a5b64f7695320fd07654b27c7
+  "README.md":
+    covers:
+      - "src/cli"
+      - "package.json"
+      - "docs/SPEC.md"
+    hash: 2ab3bca32fd220e3a6d53ee12b94cf5359ac48b6ae685d8e31c688fdb409ac18
+  "docs/SPEC.md":
+    covers:
+      - "src"
+    hash: a2b2d947cfffa45b0a77662c9eae5992dc3f35f047a7e6e0006e3c91e56fb7f3
