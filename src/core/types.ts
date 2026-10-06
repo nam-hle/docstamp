@@ -1,0 +1,59 @@
+export type Code =
+  | 'E_USAGE'
+  | 'E_ROOT'
+  | 'E_CONFIG_MISSING'
+  | 'E_CONFIG'
+  | 'E_CONFIG_VERSION'
+  | 'E_UNKNOWN_KEY'
+  | 'E_PATTERN'
+  | 'E_DEPENDENT_MISSING'
+  | 'E_EMPTY_PATTERN'
+  | 'E_EMPTY_COVERS'
+  | 'E_UNREADABLE'
+  | 'E_PATH_ENCODING'
+  | 'E_PATH_COLLISION'
+  | 'E_LOCK'
+  | 'E_LOCK_VERSION'
+  | 'E_UNKNOWN_DEPENDENT'
+  | 'W_ORPHAN';
+
+export interface Diagnostic {
+  readonly code: Code;
+  readonly severity: 'error' | 'warning';
+  readonly dependent: string;
+  readonly subject: string;
+  readonly message: string;
+}
+
+export interface Binding {
+  readonly dependent: string;
+  readonly covers: readonly string[];
+}
+
+export interface Config {
+  readonly ignore: readonly string[];
+  readonly useGitignore: boolean;
+  readonly bindings: readonly Binding[];
+}
+
+export interface LockEntry {
+  readonly covers: readonly string[];
+  readonly hash: string;
+}
+
+export interface Lock {
+  readonly entries: ReadonlyMap<string, LockEntry>;
+}
+
+export type State = 'ok' | 'stale' | 'invalid';
+export type Reason = 'unrecorded' | 'binding-changed' | 'content-changed';
+
+export interface Result {
+  readonly dependent: string;
+  readonly covers: readonly string[];
+  readonly state: State;
+  readonly reasons: readonly Reason[];
+  readonly covered: readonly string[];
+  readonly current: string;
+  readonly diagnostics: readonly Diagnostic[];
+}
