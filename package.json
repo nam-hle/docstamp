@@ -23,6 +23,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "prepublishOnly": "pnpm run build",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint --type-aware src tests",
     "format": "oxfmt src tests",
