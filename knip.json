@@ -1,7 +1,6 @@
 {
   "entry": ["tests/**/*.test.ts"],
   "project": ["src/**/*.ts", "tests/**/*.ts"],
-  "ignoreDependencies": ["yaml"],
   "ignoreIssues": {
     "src/core/types.ts": ["types"],
     "src/core/diagnostics.ts": ["exports"],
