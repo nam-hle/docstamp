@@ -1,8 +1,8 @@
 # docsync
 
 A deterministic snapshot gate for hidden links between files. Each Dependent (usually a doc, but
-any file) declares the files it covers; `docsync check` fails when they changed since the
-Dependent was last reviewed, and `docsync stamp` records the review. Terms are defined in
+any file) declares the files it covers; `docsync` fails when they changed since the Dependent
+was last reviewed, and `docsync --write <file>` records the review. Terms are defined in
 [SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
 
 Why it is built this way is imported below and binds every change. Read both before anything
@@ -77,8 +77,8 @@ Only what no test can check stays here.
 
 - **No LLM call, no network, no git invocation, no clock** anywhere in `src/` (SPEC §2).
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
-- **Nothing stamps automatically.** No command, hook or flag may write the Lockfile without the
-  caller asking for `stamp`; the stamp is the record that a review happened.
+- **Nothing writes the Lockfile automatically.** Only `docsync --write` with named files or
+  `--all` may write it; a Write is the record that a review happened.
 
 ## Known Anti-Patterns
 
@@ -95,10 +95,12 @@ Lockfile or the JSON output, and gets a CHANGELOG entry.
 ## Docs
 
 Once `docsync` runs, this repo uses it on itself: `docsync.yaml` binds `CLAUDE.md` and the docs
-to the code they describe, and `pnpm test` runs `docsync check`. When it fails:
+to the code they describe, and `pnpm test` runs `docsync`. When it fails:
 
-1. Run `docsync ls <file>`, read the covered files that changed, and re-check the doc's claims.
+1. Run `docsync --files <file>`, then `git diff origin/main -- <those files>`, and re-check the
+   doc's claims against the change.
 2. Fix what is no longer true.
-3. Only then run `docsync stamp <doc>`.
+3. Only then run `docsync --write <file>`.
 
-Never stamp without step 1. A stamp without a review hides the drift the gate exists to catch.
+Never write without step 1. A Write without a review hides the drift the gate exists to catch.
+Never use `--write --all` to make CI green.

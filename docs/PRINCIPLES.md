@@ -15,8 +15,9 @@ that has to bend is named in the commit message. Each reads _prefer X over Y_.
    command that resolves it. A missing input fails rather than prompts.
 6. **Explicit over implicit**: stated defaults, refusal over guesswork. A pattern that matches
    nothing, an unknown key, a doc declared twice: each is an error, never ignored.
-7. **Verified over claimed**: the whole gate, and what was not checked is said. A stamp means a
-   review happened; the tool cannot check that, so nothing in it may stamp on its own.
+7. **Verified over claimed**: the whole gate, and what was not checked is said. A Write means a
+   review happened; the tool cannot check that, so nothing in it may write the Lockfile on its
+   own.
 8. **Consistency over local convenience**: one idea, one name, wording, shape and failure; an
    unexplained difference is a defect. `--json` is the same content, machine-formatted.
 9. **Non-breaking over breaking**: the lockfile and the JSON output are versioned contracts.
