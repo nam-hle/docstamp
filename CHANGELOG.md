@@ -3,6 +3,23 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1](https://github.com/nam-hle/docstamp/compare/v0.2.0...v0.2.1) (2026-10-06)
+
+
+### Features
+
+* read the configuration from TypeScript or JavaScript files ([743471e](https://github.com/nam-hle/docstamp/commit/743471e4d18f584cffbc580157a083bbd5e0ea22))
+
+
+### Bug Fixes
+
+* reject Proxy values in script carriers and document loader caching ([f8029bd](https://github.com/nam-hle/docstamp/commit/f8029bd9d25cbcd6811ca8d9053b76ab0d357ae8))
+
+
+### Internal
+
+* point repository url at the renamed repo ([d5fb0e8](https://github.com/nam-hle/docstamp/commit/d5fb0e8bf3e2f672090504b1269e849cb81b7f72))
+
 ## [0.2.0](https://github.com/nam-hle/docsync/compare/v0.1.0...v0.2.0) (2026-10-06)
 
 
