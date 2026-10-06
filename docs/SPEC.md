@@ -600,10 +600,17 @@ run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose 
 contain `content-changed`, and whose Dependent has a LockEntry *entry*; for every other Result
 `[[Changes]]` is *unknown*.
 
-1. Run `git log -1 --format=%H -S<entry.[[Hash]]> -- docsync.lock` in Root. If `git` is
-   unavailable, Root is not inside a git work tree, the command fails, or it prints no commit,
-   return *unknown*.
-2. Let *C* be that commit. Let *diff* be the output of `git diff --name-status --no-renames -z
+1. Run `git` in Root with every environment variable starting with `GIT_` removed and
+   `GIT_OPTIONAL_LOCKS=0` set, so that no inherited repository or index selection applies and
+   nothing is written. If `git` is unavailable, Root is not inside a git work tree, the repository
+   is shallow (`git rev-parse --is-shallow-repository` prints anything but `false`), or a command
+   fails, return *unknown*.
+   1. List the commits of `git log --format=%H -S<entry.[[Hash]]> -- docsync.lock`, newest first.
+   2. For each, parse `docsync.lock` as of that commit and as of its first parent (*none* for a
+      root commit or when the file is absent there), by §11.1. If a parse fails, return *unknown*.
+   3. Let *C* be the first commit in which the Dependent's LockEntry has `[[Hash]]` equal to
+      *entry*.`[[Hash]]` and its parent's does not. If there is none, return *unknown*.
+2. Let *diff* be the output of `git diff --name-status --no-renames -z
    --relative <C> --` run in Root (the work tree against *C*, so staged and unstaged edits are
    included), and *untracked* the output of `git ls-files --others --exclude-standard -z` run in
    Root. Their paths are relative to Root, so a Root below the top level of the work tree works.
@@ -615,14 +622,15 @@ contain `content-changed`, and whose Dependent has a LockEntry *entry*; for ever
    `modified`, the path is in `result.[[Covered]]`; for `deleted`, the path is not
    `result.[[Dependent]]` and `Select(result.[[Covers]], « path »)` selects it, since a deleted
    file is no longer covered.
-5. Return the Changes in path order.
+5. If the Changes are empty, return *unknown*. Otherwise return them in path order.
 
 Any error at any step returns *unknown*. `ChangedSince` never raises a Diagnostic and never affects
 the exit code.
 
 NOTE: *entry*`.[[Hash]]` is searched as text; no commit ID is stored. A rebase, squash or amend of
-the review commit therefore keeps working. A shallow clone, or a Write that is not yet committed,
-yields *unknown*.
+the review commit therefore keeps working. Step 1.3 ignores commits where another Dependent with
+the same Hash removed it. A shallow clone, or a Write that is not yet committed, yields *unknown*;
+so does an empty result, since a stale `content-changed` Result must have changed something.
 
 ## 13 Command Line
 

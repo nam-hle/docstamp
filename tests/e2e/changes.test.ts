@@ -10,8 +10,13 @@ process.env['GIT_CONFIG_GLOBAL'] = '/dev/null';
 process.env['GIT_CONFIG_NOSYSTEM'] = '1';
 
 const BIN = resolve('dist/index.js');
-const docsync = (cwd: string, ...args: string[]) => {
-  const r = spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: 'utf8' });
+const docsync = (cwd: string, ...args: string[]) => docsyncEnv(cwd, {}, ...args);
+const docsyncEnv = (cwd: string, env: Record<string, string>, ...args: string[]) => {
+  const r = spawnSync(process.execPath, [BIN, ...args], {
+    cwd,
+    encoding: 'utf8',
+    env: { ...process.env, ...env },
+  });
   return { code: r.status, out: r.stdout, err: r.stderr };
 };
 const git = (cwd: string, ...args: string[]) =>
@@ -150,5 +155,80 @@ describe('§12.3 ChangedSince', () => {
   it('is null for ok dependents', () => {
     const root = reviewedRepo();
     expect(JSON.parse(docsync(root, '--json').out).dependents[0].changes).toBeNull();
+  });
+
+  it('ignores a sibling Dependent that removed the same Hash later', () => {
+    const root = makeTree({
+      ...FILES,
+      'docsync.yaml': `${CONFIG}  B.md:\n    covers: [src/**]\n`,
+      'B.md': '# b\n',
+      'src/x.ts': 'x\n',
+      'src/y.ts': 'y\n',
+    });
+    git(root, 'init', '-q');
+    commit(root, 'initial');
+    docsync(root, '--write', '--all');
+    commit(root, 'review');
+    appendFileSync(join(root, 'src/x.ts'), 'more\n');
+    commit(root, 'x');
+    appendFileSync(join(root, 'src/y.ts'), 'more\n');
+    docsync(root, '--write', 'B.md');
+    commit(root, 'review b');
+    put(root, 'src/z.ts', 'z\n');
+    const doc = JSON.parse(docsync(root, '--json').out);
+    const a = doc.dependents.find((d: { dependent: string }) => d.dependent === 'CLAUDE.md');
+    expect(a.changes.map((c: { path: string }) => c.path)).toEqual([
+      'src/x.ts',
+      'src/y.ts',
+      'src/z.ts',
+    ]);
+  });
+
+  it('is unknown in a shallow clone', () => {
+    const source = reviewedRepo();
+    const clone = join(makeTree({}), 'clone');
+    git(source, 'clone', '-q', '--depth', '1', `file://${source}`, clone);
+    appendFileSync(join(clone, 'src/a.ts'), 'more\n');
+    const r = docsync(clone, '--json');
+    expect(r.code).toBe(1);
+    expect(JSON.parse(r.out).dependents[0].changes).toBeNull();
+  });
+
+  it('ignores an inherited GIT_DIR', () => {
+    const root = reviewedRepo();
+    const foreign = reviewedRepo();
+    appendFileSync(join(root, 'src/a.ts'), 'more\n');
+    const r = docsyncEnv(root, { GIT_DIR: join(foreign, '.git') }, '--json');
+    expect(JSON.parse(r.out).dependents[0].changes).toEqual([
+      { status: 'modified', path: 'src/a.ts' },
+    ]);
+  });
+
+  it('survives a real rebase of the review commit', () => {
+    const root = makeTree(FILES);
+    git(root, 'init', '-q', '-b', 'main');
+    commit(root, 'initial');
+    git(root, 'checkout', '-q', '-b', 'feat');
+    docsync(root, '--write', 'CLAUDE.md');
+    commit(root, 'review');
+    const before = git(root, 'rev-parse', 'HEAD');
+    git(root, 'checkout', '-q', 'main');
+    put(root, 'other.txt', 'o\n');
+    commit(root, 'other');
+    git(root, 'checkout', '-q', 'feat');
+    git(root, 'rebase', '-q', 'main');
+    expect(git(root, 'rev-parse', 'HEAD')).not.toBe(before);
+    appendFileSync(join(root, 'src/a.ts'), 'more\n');
+    expect(docsync(root).out).toContain('  modified  src/a.ts\n');
+  });
+
+  it('quotes a changed path with a space', () => {
+    const root = makeTree({ ...FILES, 'src/my file.ts': 'm\n' });
+    git(root, 'init', '-q');
+    commit(root, 'initial');
+    docsync(root, '--write', 'CLAUDE.md');
+    commit(root, 'review');
+    appendFileSync(join(root, 'src/my file.ts'), 'more\n');
+    expect(docsync(root).out).toContain('  modified  "src/my file.ts"\n');
   });
 });
