@@ -36,14 +36,14 @@ Node.js >= 24. ESM only.
 - **oxlint** (type-aware) and **oxfmt** for lint and format; `pnpm format` orders imports, never
   by hand.
 - **knip** for unused dependencies, files and exports.
-- **husky + lint-staged + commitlint**: pre-commit formats staged files; commit messages follow
-  Conventional Commits.
-- Runtime dependencies: **commander** (with `@commander-js/extra-typings`), **yaml**, **zod**,
-  **picocolors**. Any other dependency needs a stated reason and the user's approval.
+- No commit hooks are installed; the gate is the only enforcement.
+- The only runtime dependency is **yaml**. Any other dependency needs a stated reason and the
+  user's approval.
 
 ## The gate
 
-`pnpm test` runs format check, lint, types, knip and every test suite. Run it before committing.
+`pnpm test` runs format check, lint, types, knip, the build, every test suite and `docsync`
+itself. Run it before committing.
 Nothing narrower is a substitute: a single vitest file or a successful build is iteration, not
 verification. If the gate cannot run, say which steps did.
 
@@ -53,7 +53,8 @@ verification. If the gate cannot run, say which steps did.
 docsync/
 ├── src/
 │   ├── index.ts          # entry; wires the CLI
-│   ├── cli/              # commands, exit codes (SPEC §13, §16)
+│   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
+│   ├── cli/              # args, path resolution, run; exit codes (§13, §16)
 │   ├── config/           # docsync.yaml (§9)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
 │   ├── pattern/          # grammar, matching, selection (§8)
@@ -62,6 +63,7 @@ docsync/
 │   ├── engine/           # evaluation; pure, no I/O (§12)
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── tests/
+│   ├── helpers/          # temp-repo fixture builder shared by tests
 │   ├── unit/             # one file per spec section
 │   └── e2e/              # temp-repo fixtures driving the built CLI
 └── docs/
@@ -89,7 +91,7 @@ Only what no test can check stays here.
 
 ## Commits
 
-Conventional Commits, enforced by commitlint. `!` marks a breaking change to the CLI, the
+Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change to the CLI, the
 Lockfile or the JSON output, and gets a CHANGELOG entry.
 
 ## Docs

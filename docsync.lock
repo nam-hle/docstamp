@@ -1,0 +1,18 @@
+version: 1
+dependents:
+  "CLAUDE.md":
+    covers:
+      - "src"
+      - "package.json"
+      - "tsup.config.ts"
+      - "vitest.config.ts"
+    hash: 5e1bdbc4696ee91fd45ce3f7a18b1715df44cae665546a3fea56942e652d21c8
+  "README.md":
+    covers:
+      - "src/cli"
+      - "docs/SPEC.md"
+    hash: 29115eda446c98dd51cdbc22a1e150ebad9fb74a3d0b7951e983de9548d8eaca
+  "docs/SPEC.md":
+    covers:
+      - "src"
+    hash: c614b35b53b2ad7e7249957fbf806782cfe247a0260928197e0ba215e9aee8e8

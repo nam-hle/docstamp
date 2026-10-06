@@ -22,7 +22,7 @@
     "knip": "knip",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "vitest run tests/e2e",
-    "test": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip && pnpm run build && pnpm run test:unit && pnpm run test:e2e"
+    "test": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip && pnpm run build && node dist/index.js && pnpm run test:unit && pnpm run test:e2e"
   },
   "dependencies": {
     "yaml": "^2.9.1"

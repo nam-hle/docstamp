@@ -1,0 +1,15 @@
+version: 1
+dependents:
+  CLAUDE.md:
+    covers:
+      - src
+      - package.json
+      - tsup.config.ts
+      - vitest.config.ts
+  README.md:
+    covers:
+      - src/cli
+      - docs/SPEC.md
+  docs/SPEC.md:
+    covers:
+      - src
