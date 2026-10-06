@@ -28,10 +28,12 @@ jobs:
 
       # Merging the release PR creates the tag and release; publishing is its own
       # workflow so a failed publish can be retried without a new release.
-      # workflow_dispatch is allowed to start from the default GITHUB_TOKEN.
+      # workflow_dispatch may start from the default GITHUB_TOKEN (needs actions: write).
+      # There is no checkout, so gh needs GH_REPO to know the repository.
       - name: Start publish
         if: ${{ steps.release.outputs.release_created }}
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ steps.release.outputs.tag_name }}
         run: gh workflow run publish.yml --ref main --field tag="$TAG"
