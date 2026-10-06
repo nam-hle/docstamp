@@ -16,11 +16,11 @@ const FIX: Record<Code, string> = {
   E_PATH_ENCODING: 'Rename the file to a valid UTF-8 name.',
   E_PATH_COLLISION: 'Rename one of the files; names differ only by case or normalization.',
   E_LOCK:
-    'Resolve the conflict by taking either side, or run "docsync --write --all" ' +
+    'Resolve the conflict by taking either side, or run "docsync update --all" ' +
     'after reviewing every Dependent.',
-  E_LOCK_VERSION: 'Run "docsync --write --all" after reviewing every Dependent.',
+  E_LOCK_VERSION: 'Run "docsync update --all" after reviewing every Dependent.',
   E_UNKNOWN_DEPENDENT: 'Name a Dependent listed in docsync.yaml.',
-  W_ORPHAN: 'Run "docsync --write" on any Dependent to remove the entry.',
+  W_ORPHAN: 'Run "docsync update" on any Dependent to remove the entry.',
 };
 
 // SPEC §5

@@ -33,7 +33,7 @@ function rejectLegacyLock(root: string): void {
       subject: LEGACY_LOCK,
       message:
         'The version 1 Lockfile docsync.lock is no longer read; delete docsync.lock, ' +
-        'review every Dependent, then run "docsync --write --all".',
+        'review every Dependent, then run "docsync update --all".',
     }),
   ]);
 }

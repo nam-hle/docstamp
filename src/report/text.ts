@@ -11,10 +11,10 @@ function shown(s: string): string {
 const LABEL = { ok: 'OK', stale: 'STALE', invalid: 'INVALID' } as const;
 
 // SPEC §14.3
-export function checkText(selected: readonly Result[], files: boolean, rootArg?: string): string {
+export function checkText(selected: readonly Result[], rootArg?: string): string {
   let out = '';
   for (const r of selected) {
-    if (r.state === 'ok' && !files) continue;
+    if (r.state === 'ok') continue;
     out += `${LABEL[r.state].padEnd(9)}${shown(r.dependent)}`;
     out += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
     if (r.state === 'stale') {
@@ -22,7 +22,6 @@ export function checkText(selected: readonly Result[], files: boolean, rootArg?:
         for (const c of r.changes) out += `  ${c.status.padEnd(8)}  ${shown(c.path)}\n`;
       } else for (const c of r.covers) out += `  covers  ${shown(c)}\n`;
     }
-    if (files && r.state !== 'invalid') for (const f of r.covered) out += `  file    ${shown(f)}\n`;
   }
   const count = (s: Result['state']) => selected.filter((r) => r.state === s).length;
   out += `${count('ok')} ok, ${count('stale')} stale, ${count('invalid')} invalid\n`;
@@ -31,13 +30,25 @@ export function checkText(selected: readonly Result[], files: boolean, rootArg?:
     const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
     out +=
       'next: review each stale file against its covered files, then run: ' +
-      `docsync --write ${stale.join(' ')}${root}\n`;
+      `docsync update ${stale.join(' ')}${root}\n`;
+  }
+  return out;
+}
+
+// SPEC §14.6
+export function listText(selected: readonly Result[]): string {
+  let out = '';
+  for (const r of selected) {
+    out += `${shown(r.dependent)}\n`;
+    if (r.state === 'invalid') continue;
+    for (const c of r.covers) out += `  covers  ${shown(c)}\n`;
+    for (const f of r.covered) out += `  file    ${shown(f)}\n`;
   }
   return out;
 }
 
 // SPEC §14.4
-export function writeText(written: readonly string[], removed: readonly string[]): string {
+export function updateText(written: readonly string[], removed: readonly string[]): string {
   return (
     sortPaths(written)
       .map((d) => `written  ${shown(d)}\n`)
