@@ -5,6 +5,7 @@
     "src/core/types.ts": ["types"],
     "src/core/quote.ts": ["exports"],
     "src/universe/walk.ts": ["types"],
-    "src/hash/hash.ts": ["exports"]
+    "src/hash/hash.ts": ["exports"],
+    "src/cli/args.ts": ["exports"]
   }
 }
