@@ -18,7 +18,7 @@ codes. It is the source of truth.
 
 - Behavior changes start in the spec, then code and tests follow in the same change.
 - Code that implements an algorithm cites its clause (`// §8.4`). Tests are named by clause
-  (`describe('§13 Evaluate', ...)`).
+  (`describe('§12.1 Evaluate', ...)`).
 - A behavior the spec does not define is a spec gap: fix the spec, do not invent behavior in code.
 - [docs/superpowers/specs/](docs/superpowers/specs/) holds design rationale: why, not what. It is
   frozen once its plan ships.
@@ -64,7 +64,7 @@ docsync/
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── tests/
 │   ├── helpers/          # temp-repo fixture builder shared by tests
-│   ├── unit/             # one file per spec section
+│   ├── unit/             # unit tests, grouped by module
 │   └── e2e/              # temp-repo fixtures driving the built CLI
 └── docs/
     ├── SPEC.md           # the contract
@@ -91,8 +91,8 @@ Only what no test can check stays here.
 
 ## Commits
 
-Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change to the CLI, the
-Lockfile or the JSON output, and gets a CHANGELOG entry.
+Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change to the CLI,
+the Lockfile or the JSON output, and gets a CHANGELOG entry.
 
 ## Docs
 

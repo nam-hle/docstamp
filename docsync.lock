@@ -6,13 +6,17 @@ dependents:
       - "package.json"
       - "tsup.config.ts"
       - "vitest.config.ts"
-    hash: 5e1bdbc4696ee91fd45ce3f7a18b1715df44cae665546a3fea56942e652d21c8
+      - "tsconfig.json"
+      - "knip.json"
+      - ".oxfmtrc.json"
+    hash: bd5ed0c810544bda945f996d9a6c7a72c227ed4a5b64f7695320fd07654b27c7
   "README.md":
     covers:
       - "src/cli"
+      - "package.json"
       - "docs/SPEC.md"
-    hash: 29115eda446c98dd51cdbc22a1e150ebad9fb74a3d0b7951e983de9548d8eaca
+    hash: 2ab3bca32fd220e3a6d53ee12b94cf5359ac48b6ae685d8e31c688fdb409ac18
   "docs/SPEC.md":
     covers:
       - "src"
-    hash: c614b35b53b2ad7e7249957fbf806782cfe247a0260928197e0ba215e9aee8e8
+    hash: a2b2d947cfffa45b0a77662c9eae5992dc3f35f047a7e6e0006e3c91e56fb7f3
