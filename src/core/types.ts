@@ -48,6 +48,11 @@ export interface Lock {
 type State = 'ok' | 'stale' | 'invalid';
 export type Reason = 'unrecorded' | 'binding-changed' | 'content-changed';
 
+export interface Change {
+  readonly status: 'modified' | 'added' | 'deleted';
+  readonly path: string;
+}
+
 export interface Result {
   readonly dependent: string;
   readonly covers: readonly string[];
@@ -56,4 +61,5 @@ export interface Result {
   readonly covered: readonly string[];
   readonly current: string;
   readonly diagnostics: readonly Diagnostic[];
+  readonly changes?: readonly Change[] | null;
 }

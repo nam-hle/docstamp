@@ -29,6 +29,22 @@ describe('§14.3 check text', () => {
       'OK       a.md\n  file    src/a.ts\n1 ok, 0 stale, 0 invalid\n',
     );
   });
+  it('known changes replace the covers lines', () => {
+    const changes = [
+      { status: 'modified', path: 'src/a.ts' },
+      { status: 'added', path: 'src/my b.ts' },
+      { status: 'deleted', path: 'src/c.ts' },
+    ] as const;
+    expect(checkText([res('a.md', 'stale', { changes })], false)).toContain(
+      'STALE    a.md  (content-changed)\n' +
+        '  modified  src/a.ts\n  added     "src/my b.ts"\n  deleted   src/c.ts\n0 ok',
+    );
+  });
+  it('unknown or empty changes print covers lines', () => {
+    const covers = 'STALE    a.md  (content-changed)\n  covers  src/**\n';
+    expect(checkText([res('a.md', 'stale', { changes: null })], false)).toContain(covers);
+    expect(checkText([res('a.md', 'stale', { changes: [] })], false)).toContain(covers);
+  });
   it('invalid prints a bare line and counts', () => {
     expect(checkText([res('a.md', 'invalid')], true)).toBe(
       'INVALID  a.md\n0 ok, 0 stale, 1 invalid\n',
@@ -89,9 +105,38 @@ describe('§14.5 JSON', () => {
       'reasons',
       'covers',
       'files',
+      'changes',
       'diagnostics',
     ]);
     expect(doc.dependents[0].files).toBeNull();
+  });
+  it('changes follow files: list when known, null otherwise', () => {
+    const changes = [{ status: 'added', path: 'src/b.ts' }] as const;
+    const doc = JSON.parse(
+      jsonText({
+        mode: 'check',
+        exitCode: 1,
+        files: false,
+        selected: [
+          res('a.md', 'stale', { changes }),
+          res('b.md', 'stale', { changes: null }),
+          res('c.md', 'ok'),
+        ],
+        diagnostics: [],
+      }),
+    );
+    expect(Object.keys(doc.dependents[0])).toEqual([
+      'dependent',
+      'state',
+      'reasons',
+      'covers',
+      'files',
+      'changes',
+      'diagnostics',
+    ]);
+    expect(doc.dependents[0].changes).toEqual([{ status: 'added', path: 'src/b.ts' }]);
+    expect(doc.dependents[1].changes).toBeNull();
+    expect(doc.dependents[2].changes).toBeNull();
   });
   it('write adds written and removed', () => {
     const doc = JSON.parse(

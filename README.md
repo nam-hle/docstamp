@@ -1,6 +1,6 @@
 # docsync
 
-A deterministic snapshot gate between files and the files that depend on them, built first for docs and the code they describe. Each doc declares the code it covers; `docsync` fails CI when that code changed since the doc was last reviewed, with no LLM call and no git invocation. See [docs/VISION.md](docs/VISION.md) for the motivation.
+A deterministic snapshot gate between files and the files that depend on them, built first for docs and the code they describe. Each doc declares the code it covers; `docsync` fails CI when that code changed since the doc was last reviewed, with no LLM call. The verdict never depends on git. See [docs/VISION.md](docs/VISION.md) for the motivation.
 
 ## Install
 
@@ -41,7 +41,9 @@ The first run has no lock; `pnpm exec docsync --write --all` records the initial
 
 ## Reviewing a stale doc
 
-List what to look at, then diff only those files against the base branch:
+A stale doc lists the covered files that changed since its last review, as `modified`, `added` or `deleted` ([SPEC §12.3](docs/SPEC.md#123-changedsince)). `--json` carries the same list as `changes`. The list comes from read-only `git` calls and never affects the verdict or exit code.
+
+When git history cannot answer (no git, not a work tree, a shallow clone, or a `--write` not yet committed), docsync prints the `covers` patterns and `changes` is `null`. Then list the covered files and diff them yourself:
 
 ```sh
 pnpm exec docsync --files <file>

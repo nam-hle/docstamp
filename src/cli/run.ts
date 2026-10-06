@@ -6,6 +6,7 @@ import { sortPaths } from '../core/order.ts';
 import type { Diagnostic, Lock, Result } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
 import { fileHash } from '../hash/hash.ts';
+import { changedSince } from '../history/changes.ts';
 import { readLock, writeLock } from '../lock/lock.ts';
 import { jsonText } from '../report/json.ts';
 import { checkText, diagnosticsText, writeText } from '../report/text.ts';
@@ -82,6 +83,15 @@ function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evalua
     ),
   );
   return { results, lock, global: orphans(config.bindings, lock) };
+}
+
+// SPEC §12.3
+function withChanges(root: string, result: Result, lock: Lock): Result {
+  const entry = lock.entries.get(result.dependent);
+  if (result.state !== 'stale' || !result.reasons.includes('content-changed') || !entry) {
+    return result;
+  }
+  return { ...result, changes: changedSince(root, result, entry) };
 }
 
 const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'error');
@@ -164,8 +174,9 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     if (mode === 'check') {
       const stale = selected.some((r) => r.state === 'stale');
       const exitCode = refused ? 2 : stale ? 1 : 0;
-      const text = checkText(selected, files, args.root);
-      return emit(io, { ...empty, exitCode, selected, global, text });
+      const reported = selected.map((r) => withChanges(root, r, evaluated.lock));
+      const text = checkText(reported, files, args.root);
+      return emit(io, { ...empty, exitCode, selected: reported, global, text });
     }
     if (refused) {
       const text = checkText(selected, false, args.root);

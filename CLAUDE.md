@@ -61,6 +61,7 @@ docsync/
 │   ├── hash/             # normalization, file and cover hash (§10)
 │   ├── lock/             # read, canonical write (§11)
 │   ├── engine/           # evaluation; pure, no I/O (§12)
+│   ├── history/          # changed-file report from git, read-only (§12.3)
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── tests/
 │   ├── helpers/          # temp-repo fixture builder shared by tests
@@ -77,7 +78,9 @@ docsync/
 
 Only what no test can check stays here.
 
-- **No LLM call, no network, no git invocation, no clock** anywhere in `src/` (SPEC §2).
+- **No LLM call, no network, no clock** anywhere in `src/` (SPEC §2). `git` is invoked only in
+  `src/history/`, read-only, through `execFileSync` with an argument array (no shell), and never
+  for the verdict, the exit code or the Lockfile.
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
 - **Nothing writes the Lockfile automatically.** Only `docsync --write` with named files or
   `--all` may write it; a Write is the record that a review happened.
