@@ -94,8 +94,16 @@ Only what no test can check stays here.
 
 ## Commits
 
-Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change to the CLI,
-the Lockfile or the JSON output, and gets a CHANGELOG entry.
+Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change to the
+CLI, the Lockfile or the JSON output. Commit types drive releases, so get them right.
+
+## CI and releases
+
+- `.github/workflows/ci.yml` runs `pnpm test` on every pull request and push to `main`.
+- `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
+  the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
+- Merging that pull request tags `vX.Y.Z`, creates the GitHub release and publishes to npm
+  (secret `NPM_TOKEN`). Releasing is that merge; nothing else publishes.
 
 ## Docs
 
