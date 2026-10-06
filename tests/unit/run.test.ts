@@ -108,7 +108,7 @@ describe('§13.6 write', () => {
   });
   it('strict write fails on a broken lock; --all recovers', () => {
     const root = tree();
-    writeFileSync(join(root, 'docsync.lock'), '<<<<<<< garbage\n');
+    writeFileSync(join(root, 'docsync-lock.yaml'), '<<<<<<< garbage\n');
     const strict = exec(root, '--write', 'doc.md');
     expect(strict.code).toBe(2);
     expect(strict.err).toContain('E_LOCK');
@@ -117,17 +117,17 @@ describe('§13.6 write', () => {
   });
   it('a lock that is a directory is E_LOCK on check', () => {
     const root = tree();
-    mkdirSync(join(root, 'docsync.lock'));
+    mkdirSync(join(root, 'docsync-lock.yaml'));
     const r = exec(root);
     expect(r.code).toBe(2);
     expect(r.err).toContain('E_LOCK');
   });
   it('--write --all with a directory lock reports E_UNREADABLE, not a crash', () => {
     const root = tree();
-    mkdirSync(join(root, 'docsync.lock'));
+    mkdirSync(join(root, 'docsync-lock.yaml'));
     const r = exec(root, '--write', '--all');
     expect(r.code).toBe(2);
-    expect(r.err).toContain('E_UNREADABLE: docsync.lock');
+    expect(r.err).toContain('E_UNREADABLE: docsync-lock.yaml');
     expect(readdirSync(root).filter((n) => n.includes('.tmp-'))).toEqual([]);
   });
   it('removes orphans', () => {

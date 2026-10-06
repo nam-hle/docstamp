@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { appendFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 
@@ -220,6 +220,44 @@ describe('§12.3 ChangedSince', () => {
     expect(git(root, 'rev-parse', 'HEAD')).not.toBe(before);
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     expect(docsync(root).out).toContain('  modified  src/a.ts\n');
+  });
+
+  it('treats a version 1 lock in history as absent, never an error', () => {
+    const root = makeTree(FILES);
+    git(root, 'init', '-q');
+    commit(root, 'initial');
+    docsync(root, '--write', 'CLAUDE.md');
+    const v2 = readFileSync(join(root, 'docsync-lock.yaml'), 'utf8');
+    const v1 = `version: 1\ndependents:\n  CLAUDE.md:\n    covers: [src/**]\n    hash: ${'b'.repeat(64)}\n`;
+    put(root, 'docsync-lock.yaml', v1);
+    put(root, 'docsync.lock', v1);
+    commit(root, 'v1');
+    rmSync(join(root, 'docsync.lock'));
+    put(root, 'docsync-lock.yaml', v2);
+    commit(root, 'v2');
+    appendFileSync(join(root, 'src/a.ts'), 'more\n');
+    const r = docsync(root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('  modified  src/a.ts\n');
+    expect(r.err).toBe('');
+  });
+
+  it('is unknown, not an error, when only a legacy docsync.lock holds the Hash', () => {
+    const root = makeTree(FILES);
+    git(root, 'init', '-q');
+    commit(root, 'initial');
+    docsync(root, '--write', 'CLAUDE.md');
+    const hash = /[0-9a-f]{64}/u.exec(readFileSync(join(root, 'docsync-lock.yaml'), 'utf8'))![0];
+    rmSync(join(root, 'docsync-lock.yaml'));
+    put(root, 'docsync.lock', `version: 1\ndependents:\n  CLAUDE.md:\n    hash: ${hash}\n`);
+    commit(root, 'legacy');
+    rmSync(join(root, 'docsync.lock'));
+    docsync(root, '--write', 'CLAUDE.md');
+    appendFileSync(join(root, 'src/a.ts'), 'more\n');
+    const r = docsync(root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('  covers  src/**\n');
+    expect(r.err).toBe('');
   });
 
   it('quotes a changed path with a space', () => {

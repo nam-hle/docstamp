@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { comparePaths } from '../core/order.ts';
-import type { Change, LockEntry, Result } from '../core/types.ts';
+import type { Change, Result } from '../core/types.ts';
 import { parseLock } from '../lock/lock.ts';
 import { select } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
@@ -82,16 +82,16 @@ const git = (root: string, args: readonly string[]): string =>
 function recordedHash(root: string, rev: string, dependent: string): string | undefined {
   let text: string;
   try {
-    text = git(root, ['show', `${rev}:./docsync.lock`]);
+    text = git(root, ['show', `${rev}:./docsync-lock.yaml`]);
+    return parseLock(Buffer.from(text)).entries.get(dependent);
   } catch {
     return undefined;
   }
-  return parseLock(Buffer.from(text)).entries.get(dependent)?.hash;
 }
 
-// SPEC §12.3 step 2
+// SPEC §12.3 step 1
 function reviewCommit(root: string, dependent: string, hash: string): string | null {
-  const log = git(root, ['log', '--format=%H', `-S${hash}`, '--', 'docsync.lock']);
+  const log = git(root, ['log', '--format=%H', `-S${hash}`, '--', 'docsync-lock.yaml']);
   for (const commit of log.split('\n').filter((line) => line !== '')) {
     if (
       recordedHash(root, commit, dependent) === hash &&
@@ -107,11 +107,11 @@ function reviewCommit(root: string, dependent: string, hash: string): string | n
 export function changedSince(
   root: string,
   result: Result,
-  entry: LockEntry,
+  entry: string,
 ): readonly Change[] | null {
   try {
     if (git(root, ['rev-parse', '--is-shallow-repository']).trim() !== 'false') return null;
-    const id = reviewCommit(root, result.dependent, entry.hash);
+    const id = reviewCommit(root, result.dependent, entry);
     if (id === null) return null;
     const diff = parseNameStatus(
       git(root, ['diff', '--name-status', '--no-renames', '-z', '--relative', id, '--']),

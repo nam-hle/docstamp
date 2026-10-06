@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join, resolve } from 'node:path';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 
@@ -64,17 +71,38 @@ describe('§13 workflow', () => {
 
   it('write refuses on lock conflict markers and writes nothing', () => {
     const root = repo();
-    writeFileSync(join(root, 'docsync.lock'), '<<<<<<< HEAD\n');
+    writeFileSync(join(root, 'docsync-lock.yaml'), '<<<<<<< HEAD\n');
     const r = docsync(root, '--write', 'CLAUDE.md');
     expect(r.code).toBe(2);
     expect(r.err).toContain('E_LOCK');
-    expect(readFileSync(join(root, 'docsync.lock'), 'utf8')).toBe('<<<<<<< HEAD\n');
+    expect(readFileSync(join(root, 'docsync-lock.yaml'), 'utf8')).toBe('<<<<<<< HEAD\n');
   });
 
   it('--write --all recovers from a corrupt lock', () => {
     const root = repo();
-    writeFileSync(join(root, 'docsync.lock'), 'garbage: [');
+    writeFileSync(join(root, 'docsync-lock.yaml'), 'garbage: [');
     expect(docsync(root, '--write', '--all').code).toBe(0);
+    expect(docsync(root).code).toBe(0);
+  });
+
+  it('§11.1 a legacy docsync.lock is E_LOCK_VERSION until deleted', () => {
+    const root = repo();
+    writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
+    const check = docsync(root);
+    expect(check.code).toBe(2);
+    expect(check.err).toContain('E_LOCK_VERSION: docsync.lock');
+    expect(check.err).toContain('delete docsync.lock');
+    expect(docsync(root, '--write', 'CLAUDE.md').code).toBe(2);
+  });
+
+  it('§13.6 --write --all writes the new lock but leaves docsync.lock in place', () => {
+    const root = repo();
+    writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
+    expect(docsync(root, '--write', '--all').code).toBe(0);
+    expect(readFileSync(join(root, 'docsync-lock.yaml'), 'utf8')).toMatch(/^version: 2\n/u);
+    expect(existsSync(join(root, 'docsync.lock'))).toBe(true);
+    expect(docsync(root).code).toBe(2);
+    rmSync(join(root, 'docsync.lock'));
     expect(docsync(root).code).toBe(0);
   });
 
