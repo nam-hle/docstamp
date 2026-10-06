@@ -16,6 +16,7 @@ class Reader {
   private i = 0;
   private readonly cps: string[];
   constructor(src: string) {
+    // oxlint-disable-next-line typescript/no-misused-spread -- code point split is intended
     this.cps = [...src];
   }
   peek(): string | undefined {

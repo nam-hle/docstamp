@@ -6,6 +6,6 @@
     "src/core/types.ts": ["types"],
     "src/core/diagnostics.ts": ["exports"],
     "src/core/quote.ts": ["exports"],
-    "src/pattern/parse.ts": ["types"]
+    "src/pattern/match.ts": ["exports"]
   }
 }
