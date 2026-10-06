@@ -34,9 +34,56 @@ describe('§13.2 parseArgs', () => {
       paths: ['a.md'],
     });
   });
-  it('a command name that is not first is a file argument', () => {
-    expect(parseArgs(['--json', 'update'])).toMatchObject({ mode: 'check', paths: ['update'] });
-    expect(parseArgs(['a.md', 'check'])).toMatchObject({ mode: 'check', paths: ['a.md', 'check'] });
+  it('the command is the first non-option argument', () => {
+    expect(parseArgs(['--json', 'update', 'D.md'])).toEqual({
+      mode: 'update',
+      all: false,
+      json: true,
+      paths: ['D.md'],
+    });
+    expect(parseArgs(['--root', 'd', 'update', '--all'])).toMatchObject({
+      mode: 'update',
+      all: true,
+      root: 'd',
+    });
+    expect(parseArgs(['--root=d', 'list-dependents'])).toMatchObject({ mode: 'list-dependents' });
+  });
+  it('a command word after a file or after -- is a file argument', () => {
+    expect(parseArgs(['x', 'check'])).toMatchObject({ mode: 'check', paths: ['x', 'check'] });
+    expect(parseArgs(['x', 'update'])).toMatchObject({ mode: 'check', paths: ['x', 'update'] });
+    expect(parseArgs(['--json', '--', 'update'])).toMatchObject({
+      mode: 'check',
+      json: true,
+      paths: ['update'],
+    });
+  });
+  it('help and version win over everything else, without E_USAGE', () => {
+    for (const argv of [
+      ['check', '--help'],
+      ['--help', '--json'],
+      ['help', 'a'],
+      ['help', '--bogus'],
+      ['update', '--help', '--all', 'a'],
+      ['--json', 'help'],
+    ]) {
+      expect(parseArgs(argv)).toEqual({ mode: 'help' });
+    }
+    for (const argv of [
+      ['--version', 'a'],
+      ['update', '--version'],
+      ['version', '--json'],
+    ]) {
+      expect(parseArgs(argv)).toEqual({ mode: 'version' });
+    }
+    expect(parseArgs(['--version', '--help'])).toEqual({ mode: 'help' });
+  });
+  it('E_USAGE messages state the problem', () => {
+    const message = (argv: string[]) => failure(argv)?.message;
+    expect(message(['check', '--all'])).toContain('only valid with "docsync update"');
+    expect(message(['update'])).toBe('Name the files you reviewed, or pass --all.');
+    expect(message(['update', '--all', 'a'])).toBe('Pass either files or --all, not both.');
+    expect(message(['--json', '--json'])).toBe('--json given twice.');
+    expect(message(['--bogus'])).toBe('Unknown option --bogus; see docsync help.');
   });
   it('a file named like a command is reached after --', () => {
     expect(parseArgs(['check', '--', 'check'])).toMatchObject({ mode: 'check', paths: ['check'] });
@@ -67,15 +114,8 @@ describe('§13.2 parseArgs', () => {
     [['--root='], '--root'],
     [['--root', 'a', '--root=b'], '--root'],
     [['list-dependents', '--json', '--json'], '--json'],
-    [['--version', 'a'], '--version'],
-    [['--help', '--json'], '--help'],
-    [['check', '--help'], '--help'],
-    [['update', '--version'], '--version'],
-    [['help', 'a'], 'help'],
-    [['help', '--json'], 'help'],
-    [['version', 'a'], 'version'],
-    [['help', '--help'], 'help'],
     [['--all'], '--all'],
+    [['--root', 'd', 'update'], 'update'],
     [['check', '--all'], '--all'],
     [['list-dependents', '--all'], '--all'],
     [['-x'], '-x'],

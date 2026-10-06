@@ -658,26 +658,29 @@ The commands are `check` (§13.5), `update` (§13.6), `list-dependents` (§13.7)
 
 The command line is parsed before anything else.
 
-1. If the first argument is `check`, `update`, `list-dependents`, `help` or `version`, it is the
-   command *name* and the remaining arguments are *rest*. Otherwise the command is `check`, and
-   every argument, including the first, is in *rest*. A command name anywhere but first is a file
-   argument.
-2. `--help` anywhere in *rest* selects `help`, and `--version` selects `version`.
-3. `--root=<dir>` is equivalent to `--root <dir>`. After `--`, every argument is a file argument.
-   Options and file arguments may appear in any order.
+1. The options are `--json`, `--all`, `--help`, `--version`, `--root <dir>` and `--root=<dir>`.
+   Before any `--`, an argument starting with `-` other than a lone `-` is an option; `--root`
+   consumes the next argument as its value. After `--`, every argument is a file argument.
+2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
+   `list-dependents`, `help` or `version`; it is then not a file argument. Otherwise, and when there
+   is none, the command is `check` and that argument stays a file argument. A command word in any
+   later position, or after `--`, is a file argument. Options and file arguments may appear in
+   any order.
+3. `--help` before any `--`, or the command `help`, selects `help`; `--version` or the command
+   `version` selects `version`. `help` wins over `version`. Both ignore every other argument and
+   raise no `E_USAGE`.
 
-The following raise « `E_USAGE` » with `[[Subject]]` the offending argument, and exit 2:
+Otherwise the following raise « `E_USAGE` » with `[[Subject]]` the offending argument, and exit 2.
+Each message states the problem:
 
 - an unknown option, a missing value for `--root`, or an option given twice;
-- `help`, `version`, `--help` or `--version` together with any other argument, the command name
-  included (`docsync update --help` is an error);
 - `--write` or `--files`, which were removed: the message names the replacement, `docsync update`
   for `--write` and `docsync list-dependents` for `--files`;
 - `--all` with any command but `update`;
 - `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both.
 
 `help` prints usage and `version` prints the version; both exit 0 (§14.1). A file named like a
-command is reached as `docsync check -- check`, or `docsync -- check`.
+command is reached as `docsync check -- check`, `docsync -- check` or `docsync --json -- check`.
 
 ### 13.3 File Arguments
 
@@ -896,7 +899,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - A Diagnostic is `{ "code", "severity", "dependent", "subject", "message" }`, with `null` for an
   empty `dependent` or `subject`. Diagnostic Lists are in Diagnostic order.
 - When a step raises before Results exist, `summary` (not for `list-dependents`) counts zeros and
-  `dependents` is empty.- Consumers MUST ignore unknown members. Within version 1, later revisions only add members.
+  `dependents` is empty.
+- Consumers MUST ignore unknown members. Within version 1, later revisions only add members.
 
 ### 14.6 List-Dependents, Text Mode
 

@@ -31,51 +31,54 @@ const usage = (subject: string, message?: string) =>
 
 // SPEC §13.2
 export function parseArgs(argv: readonly string[]): Args {
-  const first = argv[0];
-  const explicit = first !== undefined && COMMANDS.has(first);
-  const command = explicit ? first : 'check';
-  const rest = explicit ? argv.slice(1) : argv;
-  if (command === 'help' || command === 'version') {
-    if (rest.length > 0) throw usage(command);
-    return { mode: command };
-  }
   const seen = new Set<string>();
   const paths: string[] = [];
+  let command: string | undefined;
   let root: string | undefined;
+  let failure: Raised | undefined;
+  const fail = (subject: string, message: string) => {
+    failure ??= usage(subject, message);
+  };
   const mark = (flag: string) => {
-    if (seen.has(flag)) throw usage(flag);
+    if (seen.has(flag)) fail(flag, `${flag} given twice.`);
     seen.add(flag);
   };
-  for (let i = 0; i < rest.length; i++) {
-    const arg = rest[i]!;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
     if (arg === '--') {
-      paths.push(...rest.slice(i + 1));
+      paths.push(...argv.slice(i + 1));
       break;
     }
     if (arg === '--root' || arg.startsWith('--root=')) {
       mark('--root');
-      root = arg === '--root' ? rest[++i] : arg.slice('--root='.length);
-      if (root === undefined || root === '') throw usage('--root');
+      root = arg === '--root' ? argv[++i] : arg.slice('--root='.length);
+      if (root === undefined || root === '') fail('--root', '--root needs a directory.');
     } else if (FLAGS.has(arg)) mark(arg);
-    else if (REMOVED[arg] !== undefined) {
-      throw usage(arg, `${arg} was removed; use "${REMOVED[arg]}".`);
-    } else if (arg.startsWith('-') && arg !== '-') throw usage(arg);
-    else paths.push(arg);
+    else if (REMOVED[arg] !== undefined) fail(arg, `${arg} was removed; use "${REMOVED[arg]}".`);
+    else if (arg.startsWith('-') && arg !== '-') {
+      fail(arg, `Unknown option ${arg}; see docsync help.`);
+    } else if (command === undefined) {
+      if (COMMANDS.has(arg)) command = arg;
+      else {
+        command = 'check';
+        paths.push(arg);
+      }
+    } else paths.push(arg);
   }
-  const total = seen.size + paths.length + (explicit ? 1 : 0);
-  for (const flag of ['--version', '--help'] as const) {
-    if (!seen.has(flag)) continue;
-    if (total > 1) throw usage(flag);
-    return { mode: flag === '--version' ? 'version' : 'help' };
-  }
+  if (seen.has('--help') || command === 'help') return { mode: 'help' };
+  if (seen.has('--version') || command === 'version') return { mode: 'version' };
+  const mode = (command ?? 'check') as 'check' | 'update' | 'list-dependents';
+  const all = seen.has('--all');
+  if (mode === 'update') {
+    if (!all && paths.length === 0) {
+      fail('update', 'Name the files you reviewed, or pass --all.');
+    }
+    if (all && paths.length > 0) fail('--all', 'Pass either files or --all, not both.');
+  } else if (all) fail('--all', '--all is only valid with "docsync update".');
+  if (failure) throw failure;
   const json = seen.has('--json');
   const rootOpt = root === undefined ? {} : { root };
-  const all = seen.has('--all');
-  if (command === 'update') {
-    if (!all && paths.length === 0) throw usage('update');
-    if (all && paths.length > 0) throw usage('--all');
-    return { mode: 'update', all, json, ...rootOpt, paths };
-  }
-  if (all) throw usage('--all');
-  return { mode: command as 'check' | 'list-dependents', json, ...rootOpt, paths };
+  return mode === 'update'
+    ? { mode, all, json, ...rootOpt, paths }
+    : { mode, json, ...rootOpt, paths };
 }
