@@ -5,8 +5,7 @@ import { Raised, diag } from '../core/diagnostics.ts';
 import type { Universe } from '../universe/walk.ts';
 
 // SPEC §10.3
-export const sha256Hex = (bytes: Uint8Array): string =>
-  createHash('sha256').update(bytes).digest('hex');
+const sha256Hex = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
 
 // SPEC §10.1
 function isBinary(bytes: Buffer): boolean {

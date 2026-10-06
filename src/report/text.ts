@@ -1,0 +1,57 @@
+import { sortDiagnostics } from '../core/diagnostics.ts';
+import { sortPaths } from '../core/order.ts';
+import { needsQuoting, quote } from '../core/quote.ts';
+import type { Diagnostic, Result } from '../core/types.ts';
+
+// SPEC §14.2
+function shown(s: string): string {
+  return needsQuoting(s) || /[ ()]/u.test(s) ? quote(s) : s;
+}
+
+const LABEL = { ok: 'OK', stale: 'STALE', invalid: 'INVALID' } as const;
+
+// SPEC §14.3
+export function checkText(selected: readonly Result[], files: boolean, rootArg?: string): string {
+  let out = '';
+  for (const r of selected) {
+    if (r.state === 'ok' && !files) continue;
+    out += `${LABEL[r.state].padEnd(9)}${shown(r.dependent)}`;
+    out += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
+    if (r.state === 'stale') for (const c of r.covers) out += `  covers  ${shown(c)}\n`;
+    if (files && r.state !== 'invalid') for (const f of r.covered) out += `  file    ${shown(f)}\n`;
+  }
+  const count = (s: Result['state']) => selected.filter((r) => r.state === s).length;
+  out += `${count('ok')} ok, ${count('stale')} stale, ${count('invalid')} invalid\n`;
+  const stale = selected.filter((r) => r.state === 'stale').map((r) => shown(r.dependent));
+  if (stale.length > 0) {
+    const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
+    out +=
+      'next: review each stale file against its covered files, then run: ' +
+      `docsync --write ${stale.join(' ')}${root}\n`;
+  }
+  return out;
+}
+
+// SPEC §14.4
+export function writeText(written: readonly string[], removed: readonly string[]): string {
+  return (
+    sortPaths(written)
+      .map((d) => `written  ${shown(d)}\n`)
+      .join('') +
+    sortPaths(removed)
+      .map((d) => `removed  ${shown(d)}\n`)
+      .join('')
+  );
+}
+
+// SPEC §14.3
+export function diagnosticsText(ds: readonly Diagnostic[]): string {
+  return sortDiagnostics(ds)
+    .map((d) => {
+      const parts: string[] = [d.severity, d.code];
+      if (d.dependent !== '') parts.push(shown(d.dependent));
+      if (d.subject !== '') parts.push(shown(d.subject));
+      return `${parts.join(': ')}: ${d.message}\n`;
+    })
+    .join('');
+}

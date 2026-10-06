@@ -45,7 +45,7 @@ export interface Lock {
   readonly entries: ReadonlyMap<string, LockEntry>;
 }
 
-export type State = 'ok' | 'stale' | 'invalid';
+type State = 'ok' | 'stale' | 'invalid';
 export type Reason = 'unrecorded' | 'binding-changed' | 'content-changed';
 
 export interface Result {

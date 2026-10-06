@@ -1,11 +1,4 @@
 {
   "entry": ["tests/**/*.test.ts"],
-  "project": ["src/**/*.ts", "tests/**/*.ts"],
-  "ignoreIssues": {
-    "src/core/types.ts": ["types"],
-    "src/core/quote.ts": ["exports"],
-    "src/universe/walk.ts": ["types"],
-    "src/hash/hash.ts": ["exports"],
-    "src/cli/args.ts": ["exports"]
-  }
+  "project": ["src/**/*.ts", "tests/**/*.ts"]
 }

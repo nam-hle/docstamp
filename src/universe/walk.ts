@@ -5,7 +5,7 @@ import { comparePaths } from '../core/order.ts';
 import type { Config, Diagnostic } from '../core/types.ts';
 import { isIgnored, parseIgnoreLines, type IgnoreRule } from './ignore.ts';
 
-export type Kind = 'file' | 'link';
+type Kind = 'file' | 'link';
 export interface Universe {
   paths: string[];
   kinds: Map<string, Kind>;
