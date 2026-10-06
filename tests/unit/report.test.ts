@@ -21,7 +21,7 @@ describe('§14.3 check text', () => {
       'STALE    "my doc.md"  (content-changed)\n  covers  src/**\n' +
         '1 ok, 1 stale, 0 invalid\n' +
         'next: review each stale file against its covered files, then run: ' +
-        'docsync update "my doc.md"\n',
+        'docstamp update "my doc.md"\n',
     );
   });
   it('prints no block for ok and no file lines', () => {
@@ -48,7 +48,7 @@ describe('§14.3 check text', () => {
     expect(checkText([res('a.md', 'invalid')])).toBe('INVALID  a.md\n0 ok, 0 stale, 1 invalid\n');
   });
   it('next line carries --root', () => {
-    expect(checkText([res('a.md', 'stale')], 'sub')).toContain('docsync update a.md --root sub\n');
+    expect(checkText([res('a.md', 'stale')], 'sub')).toContain('docstamp update a.md --root sub\n');
   });
   it('summary is always present', () => {
     expect(checkText([])).toBe('0 ok, 0 stale, 0 invalid\n');

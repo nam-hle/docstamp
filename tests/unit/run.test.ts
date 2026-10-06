@@ -41,14 +41,14 @@ function exec(cwd: string, ...argv: string[]): { code: number; out: string; err:
   return { code: run(argv, cwd, io), out, err };
 }
 
-const tree = () => makeTree({ 'docsync.yaml': CONFIG, 'doc.md': 'x', 'src/a.ts': 'a' });
+const tree = () => makeTree({ 'docstamp.yaml': CONFIG, 'doc.md': 'x', 'src/a.ts': 'a' });
 
 describe('§13.5 check', () => {
   it('unrecorded is stale, exit 1, next line on stdout', () => {
     const r = exec(tree(), '--root', '.');
     expect(r.code).toBe(1);
     expect(r.out).toContain('STALE    doc.md  (unrecorded)\n  covers  src/**\n');
-    expect(r.out).toContain('docsync update doc.md --root .\n');
+    expect(r.out).toContain('docstamp update doc.md --root .\n');
     expect(r.err).toBe('');
   });
   it('write then check is ok, change makes it stale', () => {
@@ -65,10 +65,10 @@ describe('§13.5 check', () => {
     const write = exec(tree(), '--write', 'doc.md');
     expect(write.code).toBe(2);
     expect(write.err).toContain('E_USAGE: --write: ');
-    expect(write.err).toContain('docsync update');
+    expect(write.err).toContain('docstamp update');
     const files = exec(tree(), '--files');
     expect(files.code).toBe(2);
-    expect(files.err).toContain('docsync list-dependents');
+    expect(files.err).toContain('docstamp list-dependents');
     expect(files.out).toBe('');
   });
   it('unknown dependent is exit 2 on stderr', () => {
@@ -91,7 +91,7 @@ describe('§13.5 check', () => {
   });
   it('a symlinked Dependent is invalid', () => {
     const root = makeTree({
-      'docsync.yaml': CONFIG,
+      'docstamp.yaml': CONFIG,
       'real.md': 'x',
       'doc.md': { link: 'real.md' },
       'src/a.ts': 'a',
@@ -118,7 +118,7 @@ describe('§13.6 update', () => {
   });
   it('strict write fails on a broken lock; --all recovers', () => {
     const root = tree();
-    writeFileSync(join(root, 'docsync-lock.yaml'), '<<<<<<< garbage\n');
+    writeFileSync(join(root, 'docstamp-lock.yaml'), '<<<<<<< garbage\n');
     const strict = exec(root, 'update', 'doc.md');
     expect(strict.code).toBe(2);
     expect(strict.err).toContain('E_LOCK');
@@ -127,24 +127,24 @@ describe('§13.6 update', () => {
   });
   it('a lock that is a directory is E_LOCK on check', () => {
     const root = tree();
-    mkdirSync(join(root, 'docsync-lock.yaml'));
+    mkdirSync(join(root, 'docstamp-lock.yaml'));
     const r = exec(root);
     expect(r.code).toBe(2);
     expect(r.err).toContain('E_LOCK');
   });
   it('update --all with a directory lock reports E_UNREADABLE, not a crash', () => {
     const root = tree();
-    mkdirSync(join(root, 'docsync-lock.yaml'));
+    mkdirSync(join(root, 'docstamp-lock.yaml'));
     const r = exec(root, 'update', '--all');
     expect(r.code).toBe(2);
-    expect(r.err).toContain('E_UNREADABLE: docsync-lock.yaml');
+    expect(r.err).toContain('E_UNREADABLE: docstamp-lock.yaml');
     expect(readdirSync(root).filter((n) => n.includes('.tmp-'))).toEqual([]);
   });
   it('removes orphans', () => {
     const root = tree();
     exec(root, 'update', 'doc.md');
     writeFileSync(
-      join(root, 'docsync.yaml'),
+      join(root, 'docstamp.yaml'),
       'version: 1\ndependents:\n  other.md:\n    covers: [src/**]\n',
     );
     writeFileSync(join(root, 'other.md'), 'o');
@@ -163,7 +163,7 @@ describe('§13.7 list-dependents', () => {
   });
   it('lists only the named Dependents', () => {
     const root = makeTree({
-      'docsync.yaml': `${CONFIG}  b.md:\n    covers: [src/**]\n`,
+      'docstamp.yaml': `${CONFIG}  b.md:\n    covers: [src/**]\n`,
       'doc.md': 'x',
       'b.md': 'y',
       'src/a.ts': 'a',
@@ -176,13 +176,13 @@ describe('§13.7 list-dependents', () => {
   it('is not blocked by a legacy docsync.lock, a broken lock or an unrecorded tree', () => {
     const root = tree();
     writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
-    writeFileSync(join(root, 'docsync-lock.yaml'), '<<<<<<< garbage\n');
+    writeFileSync(join(root, 'docstamp-lock.yaml'), '<<<<<<< garbage\n');
     const r = exec(root, list);
     expect(r.code).toBe(0);
     expect(r.err).toBe('');
   });
   it('an invalid Dependent prints its header and diagnostics, exit 2', () => {
-    const root = makeTree({ 'docsync.yaml': CONFIG, 'src/a.ts': 'a' });
+    const root = makeTree({ 'docstamp.yaml': CONFIG, 'src/a.ts': 'a' });
     const r = exec(root, list);
     expect(r.code).toBe(2);
     expect(r.out).toBe('doc.md\n');

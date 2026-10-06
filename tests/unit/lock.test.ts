@@ -16,7 +16,7 @@ const lock: Lock = {
   ]),
 };
 const expected = `version: 2\ndependents:\n  "a \\"q\\".md": ${H}\n  "b.md": ${H}\n`;
-const LOCK = 'docsync-lock.yaml';
+const LOCK = 'docstamp-lock.yaml';
 
 const rejection = (root: string): Raised | undefined => {
   try {
@@ -102,7 +102,7 @@ describe('§11.1 step 1 legacy docsync.lock', () => {
       expect(d?.code).toBe('E_LOCK_VERSION');
       expect(d?.subject).toBe('docsync.lock');
       expect(d?.message).toContain('delete docsync.lock');
-      expect(d?.message).toContain('docsync update --all');
+      expect(d?.message).toContain('docstamp update --all');
     },
   );
 });

@@ -7,24 +7,24 @@ export type Args =
   | { mode: 'update'; all: boolean; json: boolean; root?: string; paths: string[] };
 
 export const HELP = `Usage:
-  docsync check [--json] [--root <dir>] [<file>...]
+  docstamp check [--json] [--root <dir>] [<file>...]
       Check that each file's covered files are unchanged since its last review.
-      The default command: a bare docsync is docsync check.
-  docsync update [--json] [--root <dir>] (--all | <file>...)
-      Record in docsync-lock.yaml that you reviewed the named files against their covered files.
-  docsync list-dependents [--json] [--root <dir>] [<file>...]
+      The default command: a bare docstamp is docstamp check.
+  docstamp update [--json] [--root <dir>] (--all | <file>...)
+      Record in docstamp-lock.yaml that you reviewed the named files against their covered files.
+  docstamp list-dependents [--json] [--root <dir>] [<file>...]
       List each file with the patterns it covers and the covered files.
-  docsync help
+  docstamp help
       Print this usage (also --help).
-  docsync version
+  docstamp version
       Print the version (also --version).
 `;
 
 const COMMANDS = new Set(['check', 'update', 'list-dependents', 'help', 'version']);
 const FLAGS = new Set(['--json', '--all', '--version', '--help']);
 const REMOVED: Record<string, string> = {
-  '--write': 'docsync update',
-  '--files': 'docsync list-dependents',
+  '--write': 'docstamp update',
+  '--files': 'docstamp list-dependents',
 };
 const usage = (subject: string, message?: string) =>
   new Raised([diag('E_USAGE', { subject, ...(message === undefined ? {} : { message }) })]);
@@ -56,7 +56,7 @@ export function parseArgs(argv: readonly string[]): Args {
     } else if (FLAGS.has(arg)) mark(arg);
     else if (REMOVED[arg] !== undefined) fail(arg, `${arg} was removed; use "${REMOVED[arg]}".`);
     else if (arg.startsWith('-') && arg !== '-') {
-      fail(arg, `Unknown option ${arg}; see docsync help.`);
+      fail(arg, `Unknown option ${arg}; see docstamp help.`);
     } else if (command === undefined) {
       if (COMMANDS.has(arg)) command = arg;
       else {
@@ -74,7 +74,7 @@ export function parseArgs(argv: readonly string[]): Args {
       fail('update', 'Name the files you reviewed, or pass --all.');
     }
     if (all && paths.length > 0) fail('--all', 'Pass either files or --all, not both.');
-  } else if (all) fail('--all', '--all is only valid with "docsync update".');
+  } else if (all) fail('--all', '--all is only valid with "docstamp update".');
   if (failure) throw failure;
   const json = seen.has('--json');
   const rootOpt = root === undefined ? {} : { root };

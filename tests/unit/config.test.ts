@@ -8,7 +8,7 @@ import { Raised } from '../../src/core/diagnostics.ts';
 
 afterEach(cleanupTrees);
 
-const read = (yaml: string) => readConfig(makeTree({ 'docsync.yaml': yaml }));
+const read = (yaml: string) => readConfig(makeTree({ 'docstamp.yaml': yaml }));
 const codes = (yaml: string) => {
   try {
     read(yaml);
@@ -75,10 +75,10 @@ describe('§9.3 readConfig', () => {
   it('empty file is E_CONFIG', () => {
     expect(codes('')).toEqual(['E_CONFIG']);
   });
-  it('symlinked docsync.yaml is E_CONFIG_MISSING', () => {
+  it('symlinked docstamp.yaml is E_CONFIG_MISSING', () => {
     const root = makeTree({
       'real.yaml': 'version: 1\ndependents: {}\n',
-      'docsync.yaml': { link: 'real.yaml' },
+      'docstamp.yaml': { link: 'real.yaml' },
     });
     expect(() => readConfig(root)).toThrow(
       expect.objectContaining({
@@ -88,7 +88,7 @@ describe('§9.3 readConfig', () => {
   });
   it('invalid UTF-8 is E_CONFIG', () => {
     const root = makeTree({});
-    writeFileSync(join(root, 'docsync.yaml'), Buffer.from([0x76, 0x3a, 0x20, 0xff, 0x0a]));
+    writeFileSync(join(root, 'docstamp.yaml'), Buffer.from([0x76, 0x3a, 0x20, 0xff, 0x0a]));
     expect(() => readConfig(root)).toThrow(
       expect.objectContaining({ diagnostics: [expect.objectContaining({ code: 'E_CONFIG' })] }),
     );

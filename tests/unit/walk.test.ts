@@ -25,28 +25,28 @@ const codes = (fn: () => unknown) => {
 };
 
 describe('§6 determineRoot', () => {
-  it('finds nearest docsync.yaml upward', () => {
-    const root = makeTree({ 'docsync.yaml': '', 'a/b/x': '' });
+  it('finds nearest docstamp.yaml upward', () => {
+    const root = makeTree({ 'docstamp.yaml': '', 'a/b/x': '' });
     expect(determineRoot(join(root, 'a/b'), undefined)).toBe(root);
   });
   it('--root must exist', () => {
     expect(codes(() => determineRoot('/', '/nope/nope'))).toEqual(['E_ROOT']);
   });
-  it('no docsync.yaml raises E_CONFIG_MISSING', () => {
+  it('no docstamp.yaml raises E_CONFIG_MISSING', () => {
     const root = makeTree({ 'a/x': '' });
     expect(codes(() => determineRoot(join(root, 'a'), undefined))).toEqual(['E_CONFIG_MISSING']);
   });
-  it('a directory named docsync.yaml still counts as an entry', () => {
-    const root = makeTree({ 'docsync.yaml/x': '' });
+  it('a directory named docstamp.yaml still counts as an entry', () => {
+    const root = makeTree({ 'docstamp.yaml/x': '' });
     expect(determineRoot(root, undefined)).toBe(root);
   });
 });
 
 describe('§7.2 computeUniverse', () => {
-  it('honors nested .gitignore and excludes docsync files and .git', () => {
+  it('honors nested .gitignore and excludes docstamp files and .git', () => {
     const root = makeTree({
-      'docsync.yaml': '',
-      'docsync-lock.yaml': '',
+      'docstamp.yaml': '',
+      'docstamp-lock.yaml': '',
       '.gitignore': 'dist/\n',
       'dist/a.js': '',
       'src/a.ts': '',
@@ -70,19 +70,19 @@ describe('§7.2 computeUniverse', () => {
     });
     expect(computeUniverse(root, config()).paths).toEqual(['lib/a.gen.ts', 'src/.gitignore']);
   });
-  it('a nested docsync.yaml stays in the Universe', () => {
+  it('a nested docstamp.yaml stays in the Universe', () => {
     const root = makeTree({
-      'docsync.yaml': '',
-      'sub/docsync.yaml': '',
-      'sub/docsync-lock.yaml': '',
+      'docstamp.yaml': '',
+      'sub/docstamp.yaml': '',
+      'sub/docstamp-lock.yaml': '',
     });
     expect(computeUniverse(root, config()).paths).toEqual([
-      'sub/docsync-lock.yaml',
-      'sub/docsync.yaml',
+      'sub/docstamp-lock.yaml',
+      'sub/docstamp.yaml',
     ]);
   });
   it('a leftover docsync.lock stays in the Universe', () => {
-    const root = makeTree({ 'docsync.yaml': '', 'docsync.lock': '' });
+    const root = makeTree({ 'docstamp.yaml': '', 'docsync.lock': '' });
     expect(computeUniverse(root, config()).paths).toEqual(['docsync.lock']);
   });
   it('gitignore:false ignores .gitignore files but not config ignore', () => {

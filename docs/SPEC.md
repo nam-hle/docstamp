@@ -1,11 +1,11 @@
-# docsync Specification
+# docstamp Specification
 
-Version 1 (draft; Lockfile format version 2). This document defines the observable behavior of docsync. It does not define
+Version 1 (draft; Lockfile format version 2). This document defines the observable behavior of docstamp. It does not define
 implementation structure. Code and tests cite its clause numbers (for example `§8.3`).
 
 ## 1 Scope
 
-docsync tracks hidden dependencies between files: a file (the *Dependent*) whose correctness
+docstamp tracks hidden dependencies between files: a file (the *Dependent*) whose correctness
 rests on the content of other files (its *covered files*). The primary case is documentation that
 describes code, but any file may be a Dependent and any file in the Universe may be covered: a
 fixture and the schema it mirrors, generated types and their source, a translation and its
@@ -13,10 +13,10 @@ original.
 
 The workflow it serves:
 
-1. CI runs `docsync`. It exits 1 when a Dependent's covered files changed since its last Review.
+1. CI runs `docstamp`. It exits 1 when a Dependent's covered files changed since its last Review.
 2. A person or an agent reviews each stale Dependent against its covered files and edits it if
    needed.
-3. They run `docsync update <file>` to record the Review in the Lockfile. CI passes.
+3. They run `docstamp update <file>` to record the Review in the Lockfile. CI passes.
 
 This specification defines how a Root is determined (§6), the Universe (§7), patterns (§8), the
 Configuration file (§9), hashing (§10), the Lockfile (§11), evaluation (§12), the command line
@@ -105,14 +105,14 @@ patterns select.
 
 **Covered file**: a file selected by a Dependent's Binding (§8.5).
 
-**Review**: the act, outside docsync, of checking a Dependent against its covered files.
+**Review**: the act, outside docstamp, of checking a Dependent against its covered files.
 
-**Write**: recording a Dependent's current Cover Hash in the Lockfile with `docsync update`,
+**Write**: recording a Dependent's current Cover Hash in the Lockfile with `docstamp update`,
 asserting that a Review happened.
 
-**Configuration file**: the file `docsync.yaml` at Root. Written by people.
+**Configuration file**: the file `docstamp.yaml` at Root. Written by people.
 
-**Lockfile**: the file `docsync-lock.yaml` at Root. Written only by `docsync update`.
+**Lockfile**: the file `docstamp-lock.yaml` at Root. Written only by `docstamp update`.
 
 ## 5 Records
 
@@ -196,7 +196,7 @@ error text, parser error text, or absolute paths; it MAY contain an error code n
    3. Return *dir*.
 2. Let *dir* be *cwd*.
 3. Repeat:
-   1. If *dir* contains an entry named `docsync.yaml`, return *dir*.
+   1. If *dir* contains an entry named `docstamp.yaml`, return *dir*.
    2. If *dir* is the filesystem root, raise `E_CONFIG_MISSING`.
    3. Set *dir* to the parent of *dir*.
 
@@ -232,7 +232,7 @@ Symbolic links are never followed: a link is an entry of kind *link*, whatever i
          repository); otherwise call `WalkDirectory(e, q)`.
       6. If *e* is a *file* or *link*, add *q* to the Universe.
    4. Remove the rules scoped to *p* from *rules* before returning.
-3. Remove `docsync.yaml` and `docsync-lock.yaml` from the Universe.
+3. Remove `docstamp.yaml` and `docstamp-lock.yaml` from the Universe.
 4. Apply §7.4 and §7.5, collecting their Diagnostics.
 5. If *errors* is not empty, raise it. Otherwise return the Universe in path order.
 
@@ -414,7 +414,7 @@ follows. A violation raises `E_CONFIG` (Configuration file) or `E_LOCK` (Lockfil
 `ReadConfig(root)` returns a Config and a List of attached Diagnostics, or raises:
 
 1. Let *fatal* be an empty List. Let *attached* be an empty List.
-2. If `docsync.yaml` is not an entry of kind *file* at Root, raise « `E_CONFIG_MISSING` ».
+2. If `docstamp.yaml` is not an entry of kind *file* at Root, raise « `E_CONFIG_MISSING` ».
 3. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_CONFIG` ».
 4. If the key `version` is absent, or its value is not the plain scalar `1`, raise
    « `E_CONFIG_VERSION` ».
@@ -490,7 +490,7 @@ A *Hash* is the lowercase hexadecimal encoding of a SHA-256 digest: exactly 64 c
 NOTE: The path is part of the input, so renaming or moving a covered file changes the Cover Hash
 even when its content does not. An empty file contributes the Hash of the bytes `file`, 0x00.
 
-NOTE: The result for files modified while docsync runs is undefined.
+NOTE: The result for files modified while docstamp runs is undefined.
 
 ## 11 Lockfile
 
@@ -500,8 +500,8 @@ NOTE: The result for files modified while docsync runs is undefined.
 
 1. If an entry named `docsync.lock` exists at Root, whatever its content, raise
    « `E_LOCK_VERSION` » with `[[Subject]]` `docsync.lock`. Its message names the fix: delete
-   `docsync.lock`, review every Dependent, then run `docsync update --all`.
-2. If `docsync-lock.yaml` does not exist at Root, return a Lock with no entries.
+   `docsync.lock`, review every Dependent, then run `docstamp update --all`.
+2. If `docstamp-lock.yaml` does not exist at Root, return a Lock with no entries.
 3. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_LOCK` ».
 4. If the key `version` is absent, or its value is not the plain scalar `2`, raise
    « `E_LOCK_VERSION` ».
@@ -512,9 +512,10 @@ NOTE: The result for files modified while docsync runs is undefined.
 6. Return the Lock.
 
 NOTE: Unresolved merge conflict markers fail step 3. The message for `E_LOCK` names the fix:
-resolve the conflict by taking either side, then run `docsync`.
+resolve the conflict by taking either side, then run `docstamp`.
 
-NOTE: `docsync.lock` is the name of the version 1 Lockfile, which also recorded the patterns.
+NOTE: `docsync.lock` is the name of the version 1 Lockfile, written before the tool was renamed
+docstamp; the old name is kept on purpose. It also recorded the patterns.
 Step 1 refuses it so that stale records are never silently dropped. Nothing deletes it
 automatically (§13.6): the error persists until the file is deleted.
 
@@ -535,20 +536,20 @@ dependents:
 
 NOTE: Two branches that write the same Dependent conflict on its `hash` line, as two branches that
 change one dependency conflict in a package-manager lockfile. Resolution: take either side, run
-`docsync`, review what it reports stale, and write again.
+`docstamp`, review what it reports stale, and write again.
 
 ### 11.3 Writing
 
 `WriteLock(root, lock)`:
 
 1. Let *text* be `LockText(lock)`.
-2. If `docsync-lock.yaml` exists and its contents, with every 0x0D 0x0A replaced by 0x0A, equal the
+2. If `docstamp-lock.yaml` exists and its contents, with every 0x0D 0x0A replaced by 0x0A, equal the
    UTF-8 encoding of *text*, return without writing.
-3. Replace `docsync-lock.yaml` atomically with the UTF-8 encoding of *text*: a concurrent reader sees
+3. Replace `docstamp-lock.yaml` atomically with the UTF-8 encoding of *text*: a concurrent reader sees
    either the old contents or the new.
 
 NOTE: Step 2 tolerates a checkout that converted the Lockfile to CR LF. Repositories SHOULD
-declare `docsync-lock.yaml text eol=lf` in `.gitattributes`.
+declare `docstamp-lock.yaml text eol=lf` in `.gitattributes`.
 
 ## 12 Evaluation
 
@@ -609,8 +610,8 @@ contain `content-changed`, and whose Dependent has a LockEntry *entry*; for ever
    nothing is written. If `git` is unavailable, Root is not inside a git work tree, the repository
    is shallow (`git rev-parse --is-shallow-repository` prints anything but `false`), or a command
    fails, return *unknown*.
-   1. List the commits of `git log --format=%H -S<entry> -- docsync-lock.yaml`, newest first.
-   2. For each, parse `docsync-lock.yaml` as of that commit and as of its first parent by §11.1
+   1. List the commits of `git log --format=%H -S<entry> -- docstamp-lock.yaml`, newest first.
+   2. For each, parse `docstamp-lock.yaml` as of that commit and as of its first parent by §11.1
       steps 3 to 5. The file is *none* for a root commit, when it is absent there, or when it does
       not parse (for example a version 1 file); that is never an error.
    3. Let *C* be the first commit in which the Dependent's LockEntry equals *entry* and its
@@ -642,13 +643,13 @@ so does an empty result, since a stale `content-changed` Result must have change
 ### 13.1 Synopsis
 
 ```
-docsync [check] [--json] [--root <dir>] [<file>...]
-docsync update [--json] [--root <dir>] (--all | <file>...)
-docsync list-dependents [--json] [--root <dir>] [<file>...]
-docsync help
-docsync version
-docsync --help
-docsync --version
+docstamp [check] [--json] [--root <dir>] [<file>...]
+docstamp update [--json] [--root <dir>] (--all | <file>...)
+docstamp list-dependents [--json] [--root <dir>] [<file>...]
+docstamp help
+docstamp version
+docstamp --help
+docstamp --version
 ```
 
 The commands are `check` (§13.5), `update` (§13.6), `list-dependents` (§13.7), `help` and
@@ -674,13 +675,13 @@ Otherwise the following raise « `E_USAGE` » with `[[Subject]]` the offending a
 Each message states the problem:
 
 - an unknown option, a missing value for `--root`, or an option given twice;
-- `--write` or `--files`, which were removed: the message names the replacement, `docsync update`
-  for `--write` and `docsync list-dependents` for `--files`;
+- `--write` or `--files`, which were removed: the message names the replacement, `docstamp update`
+  for `--write` and `docstamp list-dependents` for `--files`;
 - `--all` with any command but `update`;
 - `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both.
 
 `help` prints usage and `version` prints the version; both exit 0 (§14.1). A file named like a
-command is reached as `docsync check -- check`, `docsync -- check` or `docsync --json -- check`.
+command is reached as `docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`.
 
 ### 13.3 File Arguments
 
@@ -724,7 +725,7 @@ Step 4 evaluates Results as §12.1 and then sets `[[Changes]]` of each selected 
 
 NOTE: Reviewer's recipe for a stale Dependent. The text output (§14.3) and `changes` in JSON
 (§14.5) name the covered files that changed since the last Write when the repository history
-allows (§12.3). Otherwise `docsync list-dependents <file>` lists the covered files and the
+allows (§12.3). Otherwise `docstamp list-dependents <file>` lists the covered files and the
 reviewer compares them with the state at the last Write using its own tools.
 
 ### 13.6 Update
@@ -746,10 +747,10 @@ reviewer compares them with the state at the last Write using its own tools.
 If a step raises, output the raised Diagnostics as global and exit 2.
 
 NOTE: `update --all` recovers from the legacy `docsync.lock` (§11.1 step 1) by writing
-`docsync-lock.yaml`, but does not delete `docsync.lock`: deletions stay explicit, and every
+`docstamp-lock.yaml`, but does not delete `docsync.lock`: deletions stay explicit, and every
 later run that reads the Lockfile raises `E_LOCK_VERSION` until the user deletes it.
 
-NOTE: A Write asserts that a Review happened; docsync cannot check that, and trusts its caller.
+NOTE: A Write asserts that a Review happened; docstamp cannot check that, and trusts its caller.
 `update` requires naming the files, or `--all` on purpose (first adoption, or recovery from an
 unreadable Lockfile), so no file is marked reviewed by accident.
 
@@ -767,7 +768,7 @@ unreadable Lockfile), so no file is marked reviewed by accident.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
-NOTE: `list-dependents` reads neither `docsync-lock.yaml` nor `docsync.lock`, so it does not
+NOTE: `list-dependents` reads neither `docstamp-lock.yaml` nor `docsync.lock`, so it does not
 evaluate staleness, raises no `E_LOCK` or `E_LOCK_VERSION`, and emits no `W_ORPHAN`. It works before
 the first `update` and while a legacy `docsync.lock` is still present.
 
@@ -823,7 +824,7 @@ Then one summary line:
 counting the selected Results. Then, if any selected Result is `stale`:
 
 ```
-next: review each stale file against its covered files, then run: docsync update <file> <file>
+next: review each stale file against its covered files, then run: docstamp update <file> <file>
 ```
 
 with the stale Dependents in path order, each written as in §14.2, followed by ` --root ` and
@@ -922,7 +923,7 @@ summary line. Diagnostics as in §14.3.
 |---|---|---|---|
 | `E_USAGE` | error | §13.2 | correct the command line; for a removed option, use the command it names |
 | `E_ROOT` | error | §6 | pass an existing directory |
-| `E_CONFIG_MISSING` | error | §6, §9.3 | create `docsync.yaml` (§9.1) |
+| `E_CONFIG_MISSING` | error | §6, §9.3 | create `docstamp.yaml` (§9.1) |
 | `E_CONFIG` | error | §9.2, §9.3 | fix the named key |
 | `E_CONFIG_VERSION` | error | §9.3 | set `version: 1` |
 | `E_UNKNOWN_KEY` | error | §9.3 | remove or correct the key |
@@ -933,10 +934,10 @@ summary line. Diagnostics as in §14.3.
 | `E_UNREADABLE` | error | §7.2, §10.2 | fix permissions |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
-| `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docsync update --all` after reviewing every Dependent |
-| `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every Dependent, then `docsync update --all`; otherwise as `E_LOCK` |
-| `E_UNKNOWN_DEPENDENT` | error | §13.3 | name a Dependent from `docsync.yaml` |
-| `W_ORPHAN` | warning | §12.2 | run `docsync update` on any Dependent to remove it |
+| `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every Dependent |
+| `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every Dependent, then `docstamp update --all`; otherwise as `E_LOCK` |
+| `E_UNKNOWN_DEPENDENT` | error | §13.3 | name a Dependent from `docstamp.yaml` |
+| `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any Dependent to remove it |
 
 ## 16 Exit Codes
 

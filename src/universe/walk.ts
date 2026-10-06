@@ -38,7 +38,7 @@ export function determineRoot(cwd: string, rootOption: string | undefined): stri
   }
   let dir = cwd;
   for (;;) {
-    if (hasEntry(dir, 'docsync.yaml')) return dir;
+    if (hasEntry(dir, 'docstamp.yaml')) return dir;
     const parent = dirname(dir);
     if (parent === dir) throw new Raised([diag('E_CONFIG_MISSING')]);
     dir = parent;
@@ -104,7 +104,7 @@ export function computeUniverse(root: string, config: Config): Universe {
 
   const universe: Universe = { paths: [], kinds: new Map(), onDisk: new Map() };
   for (const { path, kind } of found) {
-    if (path === 'docsync.yaml' || path === 'docsync-lock.yaml') continue;
+    if (path === 'docstamp.yaml' || path === 'docstamp-lock.yaml') continue;
     const nfc = path.normalize('NFC');
     if (universe.kinds.has(nfc)) errors.push(diag('E_PATH_COLLISION', { subject: nfc }));
     universe.kinds.set(nfc, kind);

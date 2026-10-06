@@ -7,7 +7,8 @@ import { quote } from '../core/quote.ts';
 import { isRepoPath } from '../core/repo-path.ts';
 import type { Lock } from '../core/types.ts';
 
-const LOCK = 'docsync-lock.yaml';
+const LOCK = 'docstamp-lock.yaml';
+// Historical name from before the rename to docstamp; kept on purpose (§11.1).
 const LEGACY_LOCK = 'docsync.lock';
 const fail = (code: 'E_LOCK' | 'E_LOCK_VERSION') => new Raised([diag(code)]);
 const isMap = (v: YamlValue | undefined): v is YamlMap =>
@@ -33,7 +34,7 @@ function rejectLegacyLock(root: string): void {
       subject: LEGACY_LOCK,
       message:
         'The version 1 Lockfile docsync.lock is no longer read; delete docsync.lock, ' +
-        'review every Dependent, then run "docsync update --all".',
+        'review every Dependent, then run "docstamp update --all".',
     }),
   ]);
 }

@@ -20,7 +20,7 @@ const isStrings = (v: YamlValue | undefined): v is string[] =>
   Array.isArray(v) && v.every((x) => typeof x === 'string');
 
 function readText(root: string): string {
-  const path = join(root, 'docsync.yaml');
+  const path = join(root, 'docstamp.yaml');
   let bytes: Buffer;
   try {
     if (!lstatSync(path).isFile()) throw new Error('not a file');

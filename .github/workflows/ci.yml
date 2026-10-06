@@ -28,3 +28,6 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Check the package can be published
+        run: npm publish --dry-run
