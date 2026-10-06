@@ -46,6 +46,11 @@ export function readLock(root: string): Lock {
   } catch {
     throw fail('E_LOCK');
   }
+  return parseLock(bytes);
+}
+
+// SPEC §11.1 steps 2 to 5
+export function parseLock(bytes: Buffer): Lock {
   const doc = parseStrictYaml(decode(bytes));
   if (!doc || !isMap(doc.value)) throw fail('E_LOCK');
   const top = doc.value;

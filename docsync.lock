@@ -9,14 +9,14 @@ dependents:
       - "tsconfig.json"
       - "knip.json"
       - ".oxfmtrc.json"
-    hash: bd5ed0c810544bda945f996d9a6c7a72c227ed4a5b64f7695320fd07654b27c7
+    hash: 3edb89d9309dd97157f63879fb854fd425199a0f514ea8cbd4af735acc394e94
   "README.md":
     covers:
       - "src/cli"
       - "package.json"
       - "docs/SPEC.md"
-    hash: 2ab3bca32fd220e3a6d53ee12b94cf5359ac48b6ae685d8e31c688fdb409ac18
+    hash: f63d96173d55f8fb596ab4e19d68b7546ca2d9d2e11393f963808e5924330809
   "docs/SPEC.md":
     covers:
       - "src"
-    hash: a2b2d947cfffa45b0a77662c9eae5992dc3f35f047a7e6e0006e3c91e56fb7f3
+    hash: 2d88ab65293aa16bb5874152ee250802485e3932a72a71817e3c2c33f670ab5e

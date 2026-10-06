@@ -37,10 +37,13 @@ permitted variations are:
 - color escape sequences (§14.1);
 - the choice of Root by the upward search of §6, which `--root` removes;
 - Unicode normalization (§7.4) and case mapping (§7.5) of code points that are unassigned in the
-  Unicode version of the implementation's runtime.
+  Unicode version of the implementation's runtime;
+- the changed-file report (`[[Changes]]`, §5.4), which depends on the repository history available
+  on the host, for example a shallow clone against a full clone.
 
-A conforming implementation MUST NOT perform network access and MUST NOT invoke a version-control
-program.
+A conforming implementation MUST NOT perform network access. It MAY invoke `git`, read-only, only
+to compute the changed-file report (§12.3). The verdict (states and reasons), the exit code and the
+Lockfile MUST NOT depend on `git`.
 
 ## 3 Notational Conventions
 
@@ -148,13 +151,16 @@ and its Cover Hash (§10.4) at the last Write.
 | `[[Covered]]` | List of RepoPath, path order | empty iff `[[State]]` is `invalid` |
 | `[[Current]]` | Hash or empty | empty iff `[[State]]` is `invalid` |
 | `[[Diagnostics]]` | List of Diagnostic, §5.5 order | non-empty iff `[[State]]` is `invalid` |
+| `[[Changes]]` | List of Change in path order, or *unknown* | known only as defined in §12.3 |
 
 A *Reason* is `unrecorded`, `binding-changed` or `content-changed`. When several apply they are
 listed in that order.
 
-NOTE: A Result does not say which covered files changed. The Lockfile keeps one Hash per
-Dependent, so a Binding over thousands of files costs one entry. §13.5 gives the reviewer's
-recipe for finding the change.
+A *Change* is { `[[Status]]`: `modified`, `added` or `deleted`, `[[Path]]`: RepoPath }.
+
+NOTE: The Lockfile keeps one Hash per Dependent, so a Binding over thousands of files costs one
+entry and the verdict cannot say which covered files changed. `[[Changes]]` is a best-effort report
+computed from the repository history (§12.3); it is *unknown* whenever that history cannot answer.
 
 ### 5.5 Diagnostic
 
@@ -587,6 +593,45 @@ NOTE: There is no propagation between Dependents. If C covers B and B covers cod
 the code makes B stale and leaves C ok. Writing B changes only the Lockfile, which is never in the
 Universe (§7.2 step 3), so C stays ok. C becomes stale only when B's content changes.
 
+### 12.3 ChangedSince
+
+`ChangedSince(root, result, entry)` returns a List of Change or *unknown*. It is
+run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
+contain `content-changed`, and whose Dependent has a LockEntry *entry*; for every other Result
+`[[Changes]]` is *unknown*.
+
+1. Run `git` in Root with every environment variable starting with `GIT_` removed and
+   `GIT_OPTIONAL_LOCKS=0` set, so that no inherited repository or index selection applies and
+   nothing is written. If `git` is unavailable, Root is not inside a git work tree, the repository
+   is shallow (`git rev-parse --is-shallow-repository` prints anything but `false`), or a command
+   fails, return *unknown*.
+   1. List the commits of `git log --format=%H -S<entry.[[Hash]]> -- docsync.lock`, newest first.
+   2. For each, parse `docsync.lock` as of that commit and as of its first parent (*none* for a
+      root commit or when the file is absent there), by §11.1. If a parse fails, return *unknown*.
+   3. Let *C* be the first commit in which the Dependent's LockEntry has `[[Hash]]` equal to
+      *entry*.`[[Hash]]` and its parent's does not. If there is none, return *unknown*.
+2. Let *diff* be the output of `git diff --name-status --no-renames -z
+   --relative <C> --` run in Root (the work tree against *C*, so staged and unstaged edits are
+   included), and *untracked* the output of `git ls-files --others --exclude-standard -z` run in
+   Root. Their paths are relative to Root, so a Root below the top level of the work tree works.
+   Convert every path to NFC.
+3. Build the changes: git status `M` or `T` gives `modified`; `A` gives `added`; `D` gives
+   `deleted`; any other status returns *unknown*. Every path of *untracked* is `added`. A path that
+   is both `deleted` and `added` is `modified`.
+4. Keep a Change only if its path is selected by the Binding's patterns: for `added` and
+   `modified`, the path is in `result.[[Covered]]`; for `deleted`, the path is not
+   `result.[[Dependent]]` and `Select(result.[[Covers]], « path »)` selects it, since a deleted
+   file is no longer covered.
+5. If the Changes are empty, return *unknown*. Otherwise return them in path order.
+
+Any error at any step returns *unknown*. `ChangedSince` never raises a Diagnostic and never affects
+the exit code.
+
+NOTE: *entry*`.[[Hash]]` is searched as text; no commit ID is stored. A rebase, squash or amend of
+the review commit therefore keeps working. Step 1.3 ignores commits where another Dependent with
+the same Hash removed it. A shallow clone, or a Write that is not yet committed, yields *unknown*;
+so does an empty result, since a stale `content-changed` Result must have changed something.
+
 ## 13 Command Line
 
 ### 13.1 Synopsis
@@ -653,10 +698,12 @@ No case folding is applied: the argument must equal the Dependent key.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
-NOTE: Reviewer's recipe for a stale Dependent. `docsync --files <file>` lists the covered files.
-The reviewer compares them with the state at the last Write using its own tools, for example
-`git diff <base> -- <files>`, where *base* is the commit the branch started from. docsync names
-what to review; it does not compute the difference.
+Step 4 evaluates Results as §12.1 and then sets `[[Changes]]` of each selected Result as §12.3.
+
+NOTE: Reviewer's recipe for a stale Dependent. The text output (§14.3) and `changes` in JSON
+(§14.5) name the covered files that changed since the last Write when the repository history
+allows (§12.3). Otherwise `docsync --files <file>` lists the covered files and the reviewer
+compares them with the state at the last Write using its own tools.
 
 ### 13.6 Write
 
@@ -709,9 +756,21 @@ STALE    <dependent>  (<reason>, <reason>)
   file    <covered file>
 ```
 
+or, for a stale Result with a non-empty `[[Changes]]`:
+
+```
+STALE    <dependent>  (<reason>, <reason>)
+  modified  <path>
+  added     <path>
+  deleted   <path>
+```
+
 - The first line is `STALE`, `INVALID` or `OK`, padded with spaces to 9 characters, then the
   Dependent; for `stale`, two spaces and the Reasons in parentheses, separated by `, `.
-- For `stale`: one `covers` line per pattern, in declaration order.
+- For `stale` with a non-empty `[[Changes]]`: one line per Change, in path order, instead of the
+  `covers` lines: two spaces, the status padded with spaces to 8 characters, two spaces, and the
+  path as in §14.2 (`  modified  <path>`, `  added     <path>`, `  deleted   <path>`).
+- For any other `stale`: one `covers` line per pattern, in declaration order.
 - With `--files`, for `stale` and `ok`: one `file` line per covered file, in path order.
 
 Then one summary line:
@@ -760,6 +819,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
       "reasons": ["content-changed"],
       "covers": ["src/**", "!src/**/*.test.ts", "package.json"],
       "files": null,
+      "changes": [{ "status": "modified", "path": "src/cli/run.ts" }],
       "diagnostics": []
     }
   ],
@@ -771,6 +831,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - `dependents` holds every selected Result (check) or every target (write), in path order,
   including `ok` ones.
 - `files` is the List of covered files with `--files`, else `null`.
+- `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path" }` in this order, or
+  `null` when it is *unknown* or not applicable (§12.3), including in write mode.
 - With `--write`, each element of `dependents` adds `"written": true|false` after
   `diagnostics` (false only when step 5 of §13.6 refused), and the top level adds `"removed"`, a
   List of Dependents, after `diagnostics`.

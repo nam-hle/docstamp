@@ -17,7 +17,11 @@ export function checkText(selected: readonly Result[], files: boolean, rootArg?:
     if (r.state === 'ok' && !files) continue;
     out += `${LABEL[r.state].padEnd(9)}${shown(r.dependent)}`;
     out += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
-    if (r.state === 'stale') for (const c of r.covers) out += `  covers  ${shown(c)}\n`;
+    if (r.state === 'stale') {
+      if (r.changes && r.changes.length > 0) {
+        for (const c of r.changes) out += `  ${c.status.padEnd(8)}  ${shown(c.path)}\n`;
+      } else for (const c of r.covers) out += `  covers  ${shown(c)}\n`;
+    }
     if (files && r.state !== 'invalid') for (const f of r.covered) out += `  file    ${shown(f)}\n`;
   }
   const count = (s: Result['state']) => selected.filter((r) => r.state === s).length;

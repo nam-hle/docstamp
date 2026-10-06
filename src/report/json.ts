@@ -53,6 +53,17 @@ export function jsonText(doc: JsonDoc): string {
       ['reasons', [...r.reasons]],
       ['covers', [...r.covers]],
       ['files', doc.files ? [...r.covered] : null],
+      [
+        'changes',
+        r.changes
+          ? r.changes.map((c) =>
+              obj([
+                ['status', c.status],
+                ['path', c.path],
+              ]),
+            )
+          : null,
+      ],
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ];
     if (doc.mode === 'write') members.push(['written', doc.written?.has(r.dependent) ?? false]);
