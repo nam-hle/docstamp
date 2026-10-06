@@ -1,0 +1,40 @@
+{
+  "name": "docsync",
+  "version": "0.0.0",
+  "description": "Deterministic snapshot gate for hidden links between files",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "docsync": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --type-aware src tests",
+    "format": "oxfmt src tests",
+    "format:check": "oxfmt --check src tests",
+    "knip": "knip",
+    "test:unit": "vitest run tests/unit",
+    "test:e2e": "vitest run tests/e2e --passWithNoTests",
+    "test": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip && pnpm run build && pnpm run test:unit && pnpm run test:e2e"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "knip": "^6.39.0",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
