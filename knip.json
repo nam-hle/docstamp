@@ -5,6 +5,7 @@
   "ignoreIssues": {
     "src/core/types.ts": ["types"],
     "src/core/diagnostics.ts": ["exports"],
-    "src/core/quote.ts": ["exports"]
+    "src/core/quote.ts": ["exports"],
+    "src/universe/walk.ts": ["types"]
   }
 }
