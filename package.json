@@ -5,7 +5,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nam-hle/docsync.git"
+    "url": "git+https://github.com/nam-hle/docstamp.git"
   },
   "type": "module",
   "packageManager": "pnpm@12.5.1",
