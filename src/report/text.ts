@@ -30,7 +30,7 @@ export function checkText(selected: readonly Result[], rootArg?: string): string
     const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
     out +=
       'next: review each stale file against its covered files, then run: ' +
-      `docsync update ${stale.join(' ')}${root}\n`;
+      `docstamp update ${stale.join(' ')}${root}\n`;
   }
   return out;
 }

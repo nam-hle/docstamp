@@ -13,18 +13,18 @@ the code: expensive on every run, different answers on different runs, and false
 teach people to ignore it. Others track at the level of "something in the repo changed", too
 coarse to say which doc needs a look.
 
-## What docsync is
+## What docstamp is
 
 **A deterministic snapshot gate between files and the files that depend on them**, built first
 for docs and the code they describe.
 
-Each doc declares which code it covers. `docsync update` records one hash over the paths and
-contents of every covered file. `docsync` recomputes it and fails CI when a doc's covered
+Each doc declares which code it covers. `docstamp update` records one hash over the paths and
+contents of every covered file. `docstamp` recomputes it and fails CI when a doc's covered
 code changed since its last review (an edit, a new file, a deletion, a rename), naming the doc
 and the patterns to look at. The lock stays one line per doc however many files it covers.
 
-The review itself is not docsync's job. An agent (or a person) reads the report, re-checks the
-doc against the changed files, edits it if needed, and writes it again. docsync decides *when* a
+The review itself is not docstamp's job. An agent (or a person) reads the report, re-checks the
+doc against the changed files, edits it if needed, and writes it again. docstamp decides *when* a
 review is due and *what* it must look at; it never decides whether the doc is right.
 
 ## Beyond docs
@@ -32,9 +32,9 @@ review is due and *what* it must look at; it never decides whether the doc is ri
 Docs are the main case, not the only one. The same problem appears wherever one file silently
 depends on another and nothing links them: a test fixture and the schema it mirrors, a
 translation and its source text, a hand-written type and the API it describes, a runbook and the
-deploy script. docsync treats any file in the repository (the same scope git sees) as a possible
+deploy script. docstamp treats any file in the repository (the same scope git sees) as a possible
 *Dependent* and any file as something it may cover. Every link is declared in one place,
-`docsync.yaml`; the files themselves carry no markers.
+`docstamp.yaml`; the files themselves carry no markers.
 
 ## Who it is for
 
@@ -62,6 +62,6 @@ Roughly in order of how settled each is:
 
 ## What it will not become
 
-- **An LLM wrapper.** No model call inside the tool, ever. Agents call docsync, not the reverse.
+- **An LLM wrapper.** No model call inside the tool, ever. Agents call docstamp, not the reverse.
 - **A doc generator.** It says a doc may be stale; it does not write the doc.
 - **A git tool.** Verdicts come from file content alone, so history rewrites cannot affect them.

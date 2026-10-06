@@ -1,8 +1,8 @@
-# docsync
+# docstamp
 
 A deterministic snapshot gate for hidden links between files. Each Dependent (usually a doc, but
-any file) declares the files it covers; `docsync` fails when they changed since the Dependent
-was last reviewed, and `docsync update <file>` records the review. Terms are defined in
+any file) declares the files it covers; `docstamp` fails when they changed since the Dependent
+was last reviewed, and `docstamp update <file>` records the review. Terms are defined in
 [SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
 
 Why it is built this way is imported below and binds every change. Read both before anything
@@ -31,7 +31,7 @@ Node.js >= 24. ESM only.
 
 - **pnpm** is the only package manager. Never delete `pnpm-lock.yaml`; update it in place.
 - **TypeScript 7**, strict, `tsc --noEmit` over src, tests and root configs.
-- **tsup** bundles `src/index.ts` into a single `dist/index.js` with a `docsync` bin.
+- **tsup** bundles `src/index.ts` into a single `dist/index.js` with a `docstamp` bin.
 - **vitest** for unit and end-to-end tests.
 - **oxlint** (type-aware) and **oxfmt** for lint and format; `pnpm format` orders imports, never
   by hand.
@@ -42,7 +42,7 @@ Node.js >= 24. ESM only.
 
 ## The gate
 
-`pnpm test` runs format check, lint, types, knip, the build, every test suite and `docsync`
+`pnpm test` runs format check, lint, types, knip, the build, every test suite and `docstamp`
 itself. Run it before committing.
 Nothing narrower is a substitute: a single vitest file or a successful build is iteration, not
 verification. If the gate cannot run, say which steps did.
@@ -50,12 +50,12 @@ verification. If the gate cannot run, say which steps did.
 ## Layout
 
 ```
-docsync/
+docstamp/
 ├── src/
 │   ├── index.ts          # entry; wires the CLI
 │   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
 │   ├── cli/              # args, path resolution, run; exit codes (§13, §16)
-│   ├── config/           # docsync.yaml (§9)
+│   ├── config/           # docstamp.yaml (§9)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and cover hash (§10)
@@ -82,7 +82,7 @@ Only what no test can check stays here.
   `src/history/`, read-only, through `execFileSync` with an argument array (no shell), and never
   for the verdict, the exit code or the Lockfile.
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
-- **Nothing writes the Lockfile automatically.** Only `docsync update` with named files or
+- **Nothing writes the Lockfile automatically.** Only `docstamp update` with named files or
   `--all` may write it; a Write is the record that a review happened.
 
 ## Known Anti-Patterns
@@ -99,7 +99,10 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 
 ## CI and releases
 
-- `.github/workflows/ci.yml` runs `pnpm test` on every pull request and push to `main`.
+- The npm package, the command and the config files are named `docstamp`; the repository directory
+  and the GitHub repository are still named `docsync`.
+- `.github/workflows/ci.yml` runs `pnpm test` on every pull request and push to `main`, then dry-runs
+  `npm publish` to prove the package can be published.
 - `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
   the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
 - Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
@@ -113,13 +116,13 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 
 ## Docs
 
-Once `docsync` runs, this repo uses it on itself: `docsync.yaml` binds `CLAUDE.md` and the docs
-to the code they describe, and `pnpm test` runs `docsync`. When it fails:
+Once `docstamp` runs, this repo uses it on itself: `docstamp.yaml` binds `CLAUDE.md` and the docs
+to the code they describe, and `pnpm test` runs `docstamp`. When it fails:
 
-1. Run `docsync list-dependents <file>`, then `git diff origin/main -- <those files>`, and
+1. Run `docstamp list-dependents <file>`, then `git diff origin/main -- <those files>`, and
    re-check the doc's claims against the change.
 2. Fix what is no longer true.
-3. Only then run `docsync update <file>`.
+3. Only then run `docstamp update <file>`.
 
 Never update without step 1. A Write without a review hides the drift the gate exists to catch.
 Never use `update --all` to make CI green.

@@ -14,56 +14,56 @@ import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 afterEach(cleanupTrees);
 
 const BIN = resolve('dist/index.js');
-const docsync = (cwd: string, ...args: string[]) => {
+const docstamp = (cwd: string, ...args: string[]) => {
   const r = spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: 'utf8' });
   return { code: r.status, out: r.stdout, err: r.stderr };
 };
 const CONFIG = 'version: 1\ndependents:\n  CLAUDE.md:\n    covers: [src/**]\n';
-const repo = () => makeTree({ 'docsync.yaml': CONFIG, 'CLAUDE.md': '# doc\n', 'src/a.ts': 'a\n' });
+const repo = () => makeTree({ 'docstamp.yaml': CONFIG, 'CLAUDE.md': '# doc\n', 'src/a.ts': 'a\n' });
 
 describe('§13 workflow', () => {
   it('unrecorded -> write -> ok -> edit -> stale -> write -> ok', () => {
     const root = repo();
-    expect(docsync(root).code).toBe(1);
-    expect(docsync(root, 'update', 'CLAUDE.md')).toMatchObject({
+    expect(docstamp(root).code).toBe(1);
+    expect(docstamp(root, 'update', 'CLAUDE.md')).toMatchObject({
       code: 0,
       out: 'written  CLAUDE.md\n',
     });
-    expect(docsync(root)).toMatchObject({ code: 0, out: '1 ok, 0 stale, 0 invalid\n' });
+    expect(docstamp(root)).toMatchObject({ code: 0, out: '1 ok, 0 stale, 0 invalid\n' });
     appendFileSync(join(root, 'src/a.ts'), 'b\n');
-    const stale = docsync(root);
+    const stale = docstamp(root);
     expect(stale.code).toBe(1);
     expect(stale.out).toContain('STALE    CLAUDE.md  (content-changed)');
-    expect(docsync(root, 'update', 'CLAUDE.md').code).toBe(0);
-    expect(docsync(root).code).toBe(0);
+    expect(docstamp(root, 'update', 'CLAUDE.md').code).toBe(0);
+    expect(docstamp(root).code).toBe(0);
   });
 
   it('rename of a covered file is stale', () => {
     const root = repo();
-    docsync(root, 'update', '--all');
+    docstamp(root, 'update', '--all');
     renameSync(join(root, 'src/a.ts'), join(root, 'src/b.ts'));
-    expect(docsync(root).code).toBe(1);
+    expect(docstamp(root).code).toBe(1);
   });
 
   it('editing the dependent itself does not make it stale', () => {
     const root = repo();
-    docsync(root, 'update', '--all');
+    docstamp(root, 'update', '--all');
     appendFileSync(join(root, 'CLAUDE.md'), 'more\n');
-    expect(docsync(root).code).toBe(0);
+    expect(docstamp(root).code).toBe(0);
   });
 
   it('runs from a subdirectory and resolves file args against cwd', () => {
     const root = repo();
-    expect(docsync(join(root, 'src'), 'update', '../CLAUDE.md').code).toBe(0);
+    expect(docstamp(join(root, 'src'), 'update', '../CLAUDE.md').code).toBe(0);
   });
 
   it('missing dependent is exit 2, others still evaluated', () => {
     const root = makeTree({
-      'docsync.yaml': `${CONFIG}  GONE.md:\n    covers: [src/**]\n`,
+      'docstamp.yaml': `${CONFIG}  GONE.md:\n    covers: [src/**]\n`,
       'CLAUDE.md': '',
       'src/a.ts': '',
     });
-    const r = docsync(root, '--json');
+    const r = docstamp(root, '--json');
     expect(r.code).toBe(2);
     const doc = JSON.parse(r.out);
     expect(doc.dependents.map((d: { state: string }) => d.state)).toEqual(['stale', 'invalid']);
@@ -71,57 +71,57 @@ describe('§13 workflow', () => {
 
   it('write refuses on lock conflict markers and writes nothing', () => {
     const root = repo();
-    writeFileSync(join(root, 'docsync-lock.yaml'), '<<<<<<< HEAD\n');
-    const r = docsync(root, 'update', 'CLAUDE.md');
+    writeFileSync(join(root, 'docstamp-lock.yaml'), '<<<<<<< HEAD\n');
+    const r = docstamp(root, 'update', 'CLAUDE.md');
     expect(r.code).toBe(2);
     expect(r.err).toContain('E_LOCK');
-    expect(readFileSync(join(root, 'docsync-lock.yaml'), 'utf8')).toBe('<<<<<<< HEAD\n');
+    expect(readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8')).toBe('<<<<<<< HEAD\n');
   });
 
   it('update --all recovers from a corrupt lock', () => {
     const root = repo();
-    writeFileSync(join(root, 'docsync-lock.yaml'), 'garbage: [');
-    expect(docsync(root, 'update', '--all').code).toBe(0);
-    expect(docsync(root).code).toBe(0);
+    writeFileSync(join(root, 'docstamp-lock.yaml'), 'garbage: [');
+    expect(docstamp(root, 'update', '--all').code).toBe(0);
+    expect(docstamp(root).code).toBe(0);
   });
 
   it('§11.1 a legacy docsync.lock is E_LOCK_VERSION until deleted', () => {
     const root = repo();
     writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
-    const check = docsync(root);
+    const check = docstamp(root);
     expect(check.code).toBe(2);
     expect(check.err).toContain('E_LOCK_VERSION: docsync.lock');
     expect(check.err).toContain('delete docsync.lock');
-    expect(docsync(root, 'update', 'CLAUDE.md').code).toBe(2);
+    expect(docstamp(root, 'update', 'CLAUDE.md').code).toBe(2);
   });
 
   it('§13.6 update --all writes the new lock but leaves docsync.lock in place', () => {
     const root = repo();
     writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
-    expect(docsync(root, 'update', '--all').code).toBe(0);
-    expect(readFileSync(join(root, 'docsync-lock.yaml'), 'utf8')).toMatch(/^version: 2\n/u);
+    expect(docstamp(root, 'update', '--all').code).toBe(0);
+    expect(readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8')).toMatch(/^version: 2\n/u);
     expect(existsSync(join(root, 'docsync.lock'))).toBe(true);
-    expect(docsync(root).code).toBe(2);
+    expect(docstamp(root).code).toBe(2);
     rmSync(join(root, 'docsync.lock'));
-    expect(docsync(root).code).toBe(0);
+    expect(docstamp(root).code).toBe(0);
   });
 
   it('§13.7 list-dependents works while a legacy docsync.lock is present', () => {
     const root = repo();
     writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
-    expect(docsync(root).code).toBe(2);
-    expect(docsync(root, 'list-dependents')).toEqual({
+    expect(docstamp(root).code).toBe(2);
+    expect(docstamp(root, 'list-dependents')).toEqual({
       code: 0,
       out: 'CLAUDE.md\n  covers  src/**\n  file    src/a.ts\n',
       err: '',
     });
-    const json = JSON.parse(docsync(root, 'list-dependents', '--json').out);
+    const json = JSON.parse(docstamp(root, 'list-dependents', '--json').out);
     expect(json.dependents[0].files).toEqual(['src/a.ts']);
   });
 
   it('§13.7 list-dependents exits 2 for an invalid Dependent', () => {
-    const root = makeTree({ 'docsync.yaml': CONFIG, 'src/a.ts': 'a\n' });
-    const r = docsync(root, 'list-dependents');
+    const root = makeTree({ 'docstamp.yaml': CONFIG, 'src/a.ts': 'a\n' });
+    const r = docstamp(root, 'list-dependents');
     expect(r.code).toBe(2);
     expect(r.out).toBe('CLAUDE.md\n');
     expect(r.err).toContain('E_DEPENDENT_MISSING');
@@ -129,29 +129,29 @@ describe('§13 workflow', () => {
 
   it('§13.2 explicit check equals bare check; a file named check is reachable', () => {
     const root = repo();
-    expect(docsync(root, 'check')).toEqual(docsync(root));
-    expect(docsync(root, 'check', '--', 'check').err).toContain('E_UNKNOWN_DEPENDENT: check');
+    expect(docstamp(root, 'check')).toEqual(docstamp(root));
+    expect(docstamp(root, 'check', '--', 'check').err).toContain('E_UNKNOWN_DEPENDENT: check');
   });
 
   it('§13.2 removed options exit 2 naming the replacement', () => {
     const root = repo();
-    expect(docsync(root, '--write', 'CLAUDE.md').err).toContain('docsync update');
-    expect(docsync(root, '--files').err).toContain('docsync list-dependents');
-    expect(docsync(root, 'update').code).toBe(2);
+    expect(docstamp(root, '--write', 'CLAUDE.md').err).toContain('docstamp update');
+    expect(docstamp(root, '--files').err).toContain('docstamp list-dependents');
+    expect(docstamp(root, 'update').code).toBe(2);
   });
 
   it('usage error exits 2 before root discovery', () => {
-    expect(docsync('/', '--bogus')).toMatchObject({ code: 2 });
+    expect(docstamp('/', '--bogus')).toMatchObject({ code: 2 });
   });
 
   it('no config is E_CONFIG_MISSING', () => {
-    const r = docsync(makeTree({ x: '' }), '--json');
+    const r = docstamp(makeTree({ x: '' }), '--json');
     expect(r.code).toBe(2);
     expect(JSON.parse(r.out).diagnostics[0].code).toBe('E_CONFIG_MISSING');
   });
 
   it('output is deterministic across runs', () => {
     const root = repo();
-    expect(docsync(root, '--json').out).toBe(docsync(root, '--json').out);
+    expect(docstamp(root, '--json').out).toBe(docstamp(root, '--json').out);
   });
 });

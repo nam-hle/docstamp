@@ -82,7 +82,7 @@ const git = (root: string, args: readonly string[]): string =>
 function recordedHash(root: string, rev: string, dependent: string): string | undefined {
   let text: string;
   try {
-    text = git(root, ['show', `${rev}:./docsync-lock.yaml`]);
+    text = git(root, ['show', `${rev}:./docstamp-lock.yaml`]);
     return parseLock(Buffer.from(text)).entries.get(dependent);
   } catch {
     return undefined;
@@ -91,7 +91,7 @@ function recordedHash(root: string, rev: string, dependent: string): string | un
 
 // SPEC §12.3 step 1
 function reviewCommit(root: string, dependent: string, hash: string): string | null {
-  const log = git(root, ['log', '--format=%H', `-S${hash}`, '--', 'docsync-lock.yaml']);
+  const log = git(root, ['log', '--format=%H', `-S${hash}`, '--', 'docstamp-lock.yaml']);
   for (const commit of log.split('\n').filter((line) => line !== '')) {
     if (
       recordedHash(root, commit, dependent) === hash &&

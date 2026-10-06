@@ -79,11 +79,11 @@ describe('§13.2 parseArgs', () => {
   });
   it('E_USAGE messages state the problem', () => {
     const message = (argv: string[]) => failure(argv)?.message;
-    expect(message(['check', '--all'])).toContain('only valid with "docsync update"');
+    expect(message(['check', '--all'])).toContain('only valid with "docstamp update"');
     expect(message(['update'])).toBe('Name the files you reviewed, or pass --all.');
     expect(message(['update', '--all', 'a'])).toBe('Pass either files or --all, not both.');
     expect(message(['--json', '--json'])).toBe('--json given twice.');
-    expect(message(['--bogus'])).toBe('Unknown option --bogus; see docsync help.');
+    expect(message(['--bogus'])).toBe('Unknown option --bogus; see docstamp help.');
   });
   it('a file named like a command is reached after --', () => {
     expect(parseArgs(['check', '--', 'check'])).toMatchObject({ mode: 'check', paths: ['check'] });
@@ -128,13 +128,13 @@ describe('§13.2 parseArgs', () => {
       ['check', '--write'],
     ]) {
       expect(usage(argv)).toBe('--write');
-      expect(failure(argv)?.message).toContain('docsync update');
+      expect(failure(argv)?.message).toContain('docstamp update');
     }
   });
   it('--files is removed and names its replacement', () => {
     for (const argv of [['--files'], ['--files', 'a'], ['update', '--files', 'a']]) {
       expect(usage(argv)).toBe('--files');
-      expect(failure(argv)?.message).toContain('docsync list-dependents');
+      expect(failure(argv)?.message).toContain('docstamp list-dependents');
     }
   });
   it('a removed option after -- is a file argument', () => {
@@ -151,7 +151,7 @@ describe('§13.2 parseArgs', () => {
   });
   it('HELP lists every command and is LF text with a final newline', () => {
     for (const name of ['check', 'update', 'list-dependents', 'help', 'version']) {
-      expect(HELP).toContain(`docsync ${name}`);
+      expect(HELP).toContain(`docstamp ${name}`);
     }
     expect(HELP.endsWith('\n')).toBe(true);
     expect(HELP).not.toContain('\r');

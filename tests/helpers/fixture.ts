@@ -16,7 +16,7 @@ export type TreeSpec = Record<string, string | { link: string }>;
 const created: string[] = [];
 
 export function makeTree(spec: TreeSpec): string {
-  const root = mkdtempSync(join(tmpdir(), 'docsync-'));
+  const root = mkdtempSync(join(tmpdir(), 'docstamp-'));
   created.push(root);
   for (const [rel, value] of Object.entries(spec)) {
     const abs = join(root, rel);

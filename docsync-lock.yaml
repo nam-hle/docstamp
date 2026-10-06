@@ -1,5 +1,0 @@
-version: 2
-dependents:
-  "CLAUDE.md": 5bb36feb6069905704eec58e0c478da329116b2166a364849430b7d4493f9f9b
-  "README.md": dc19db16402426acadddbc2c8928906f599fb793c5edc6c37fad3e70cf6704a5
-  "docs/SPEC.md": e9f684e0d96ce1a3e2f033fc38ee98d3d9690cbdb88a4d5fbda1e2a90b652740
