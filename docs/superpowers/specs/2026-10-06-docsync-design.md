@@ -177,7 +177,8 @@ npm package `docsync` (name free on npmjs as of 2026-10-06), bin `docsync`, sing
 
 ## Refinements made while writing SPEC.md
 
-- Default doc discovery: `include: ["**/*.md"]` over the Universe (non-ignored files).
+- Generalized from docs to any file: a *Dependent* is any file with a Binding; covered files are any files. Docs stay the primary case. Lockfile and config key `docs` became `dependents`.
+- Default discovery: `include: ["**"]` over the Universe (gitignore scope). Frontmatter is recognized in any text file; other files bind via `docsync.yaml`.
 - Glob grammar also supports `?`, `[...]`, `{a,b}` and `\` escapes; a pattern matching a directory covers everything under it.
 - `--json` emits one envelope `{version, command, exitCode, docs[], diagnostics[]}` instead of one object per doc.
 - Frontmatter stripping hashes the remaining frontmatter as canonical JSON, so reformatting frontmatter does not cause staleness.

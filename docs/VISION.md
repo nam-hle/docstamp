@@ -15,7 +15,8 @@ coarse to say which doc needs a look.
 
 ## What docsync is
 
-**A deterministic snapshot gate between code and the docs that describe it.**
+**A deterministic snapshot gate between files and the files that depend on them**, built first
+for docs and the code they describe.
 
 Each doc declares which code it covers. `docsync stamp` records a content hash of every covered
 file. `docsync check` recomputes them and fails CI when a doc's covered code changed since its
@@ -24,6 +25,15 @@ last review, listing exactly which files were modified, added or removed.
 The review itself is not docsync's job. An agent (or a person) reads the report, re-checks the
 doc against the changed files, edits it if needed, and stamps it again. docsync decides *when* a
 review is due and *what* it must look at; it never decides whether the doc is right.
+
+## Beyond docs
+
+Docs are the main case, not the only one. The same problem appears wherever one file silently
+depends on another and nothing links them: a test fixture and the schema it mirrors, a
+translation and its source text, a hand-written type and the API it describes, a runbook and the
+deploy script. docsync treats any file in the repository (the same scope git sees) as a possible
+*Dependent* and any file as something it may cover. Markdown declares its links in frontmatter;
+every other file declares them in `docsync.yaml`.
 
 ## Who it is for
 

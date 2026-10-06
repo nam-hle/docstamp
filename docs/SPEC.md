@@ -6,16 +6,22 @@ document (for example `§8.3`).
 
 ## 1 Scope
 
+docsync tracks hidden dependencies between files: a file (the *Dependent*) whose correctness
+rests on the content of other files (its *covered files*). The primary case is documentation that
+describes code, but any file in the Universe may be a Dependent and any file may be covered: a
+fixture and the schema it mirrors, generated types and their source, a translation and its
+original.
+
 This specification defines:
 
 - how a *Root* is determined (§6);
 - the file universe docsync observes (§7);
-- the syntax and semantics of bindings declared in Markdown frontmatter and in the configuration
-  file (§9, §10);
+- the syntax and semantics of bindings declared in frontmatter and in the configuration file
+  (§9, §10);
 - the pattern language used in bindings (§8);
 - content hashing (§11);
 - the lockfile format (§12);
-- the evaluation of a doc's state (§13);
+- the evaluation of a Dependent's state (§13);
 - the command-line interface, its output and its exit codes (§14, §15, §16).
 
 ## 2 Conformance
@@ -71,13 +77,13 @@ only ordering used by this specification. Locale-aware collation MUST NOT be use
 **RepoPath**: a String naming a file relative to Root. A RepoPath uses `/` as separator, has no
 leading `/`, no trailing `/`, no empty segment, and no segment equal to `.` or `..`.
 
-**Doc**: a file that has a Binding.
+**Dependent**: a file that has a Binding.
 
-**Covered file**: a file selected by a Doc's Binding (§8.4).
+**Covered file**: a file selected by a Dependent's Binding (§8.4).
 
-**Review**: the act, outside docsync, of checking a Doc's content against its covered files.
+**Review**: the act, outside docsync, of checking a Dependent's content against its covered files.
 
-**Stamp**: recording the current hashes of a Doc's covered files in the lockfile, asserting that a
+**Stamp**: recording the current hashes of a Dependent's covered files in the lockfile, asserting that a
 Review happened.
 
 **Configuration file**: the file `docsync.yaml` at Root.
@@ -90,7 +96,7 @@ Review happened.
 
 | Field | Type | Meaning |
 |---|---|---|
-| `[[Doc]]` | RepoPath | the Doc |
+| `[[Dependent]]` | RepoPath | the Dependent |
 | `[[Covers]]` | List of String | the patterns, verbatim, in declaration order |
 | `[[Source]]` | `frontmatter` or `config` | where the Binding was declared |
 
@@ -98,11 +104,11 @@ Review happened.
 
 | Field | Type | Default |
 |---|---|---|
-| `[[Include]]` | List of String (patterns) | « `**/*.md` » |
+| `[[Include]]` | List of String (patterns) | « `**` » |
 | `[[Exclude]]` | List of String (patterns) | « » |
 | `[[Ignore]]` | List of String (gitignore lines) | « » |
 | `[[UseGitignore]]` | Boolean | true |
-| `[[Docs]]` | Map from RepoPath to List of String | empty |
+| `[[Dependents]]` | Map from RepoPath to List of String | empty |
 
 ### 5.3 LockEntry Record
 
@@ -116,13 +122,13 @@ Review happened.
 | Field | Type |
 |---|---|
 | `[[Version]]` | the integer 1 |
-| `[[Entries]]` | Map from RepoPath (Doc) to LockEntry |
+| `[[Entries]]` | Map from RepoPath (Dependent) to LockEntry |
 
-### 5.5 DocResult Record
+### 5.5 DependentResult Record
 
 | Field | Type | Meaning |
 |---|---|---|
-| `[[Doc]]` | RepoPath | |
+| `[[Dependent]]` | RepoPath | |
 | `[[State]]` | `ok`, `stale` or `invalid` | §13 |
 | `[[Reasons]]` | List of Reason | non-empty iff `[[State]]` is `stale` |
 | `[[Modified]]` | List of RepoPath, path order | |
@@ -142,8 +148,8 @@ A *Reason* is one of, and when several apply they are listed in this order: `uns
 | `[[File]]` | RepoPath or empty | the file the problem is in |
 | `[[Message]]` | String | one sentence, naming what is wrong and the fix |
 
-A Diagnostic whose `[[File]]` is a Doc, or which concerns a Doc's Binding, is *attached* to that
-Doc. Every other Diagnostic is *global*.
+A Diagnostic whose `[[File]]` is a Dependent, or which concerns a Dependent's Binding, is *attached* to that
+Dependent. Every other Diagnostic is *global*.
 
 ## 6 Root
 
@@ -249,7 +255,7 @@ pattern added.
 `ResolveCovers(binding, universe)`:
 
 1. For each *pattern* of `binding.[[Covers]]`, raise `E_PATTERN` if it is invalid (§8.1).
-2. Let *candidates* be *universe* without `binding.[[Doc]]`.
+2. Let *candidates* be *universe* without `binding.[[Dependent]]`.
 3. For each *pattern* of `binding.[[Covers]]` without Negation: if no *path* of *candidates*
    satisfies `PatternMatches(pattern, path)`, collect `E_EMPTY_PATTERN` naming *pattern*.
 4. If any Diagnostic was collected in step 3, raise the first of them after collecting the rest.
@@ -257,8 +263,8 @@ pattern added.
 6. If *covered* is empty, raise `E_EMPTY_COVERS`.
 7. Return *covered*.
 
-NOTE: A Doc is never one of its own covered files (step 2), so editing a Doc never makes that
-Doc stale.
+NOTE: A Dependent is never one of its own covered files (step 2), so editing a Dependent never makes that
+Dependent stale.
 
 ## 9 Frontmatter Bindings
 
@@ -288,10 +294,15 @@ A file has *no frontmatter* if `FrontmatterOf` returns *none*.
       with `docsync:`, collect `E_FRONTMATTER` attached to *path*; skip it.
    4. If the result is not a mapping, or has no key `docsync`, skip it.
    5. Let *b* be `? ParseBindingValue(result.docsync, path)`, collecting on raise.
-   6. Append the Binding { `[[Doc]]`: *path*, `[[Covers]]`: *b*, `[[Source]]`: `frontmatter` }.
+   6. Append the Binding { `[[Dependent]]`: *path*, `[[Covers]]`: *b*, `[[Source]]`: `frontmatter` }.
 4. Return *bindings*.
 
-`ParseBindingValue(value, doc)`:
+NOTE: Frontmatter is recognized in any text file of the Universe, not only Markdown. A file whose
+format cannot start with a `---` block (source code, JSON, most configuration) declares its
+Binding in the Configuration file instead (§10). A YAML file whose first document has a top-level
+`docsync` key is, by this definition, a frontmatter Binding.
+
+`ParseBindingValue(value, dep)`:
 
 1. If *value* is not a mapping, raise `E_FRONTMATTER`.
 2. If *value* has a key other than `covers`, raise `E_UNKNOWN_KEY`.
@@ -319,34 +330,34 @@ The Configuration file MUST parse as a YAML 1.2 mapping (else raise `E_CONFIG`).
 | `exclude` | sequence of Pattern strings without Negation | `[[Exclude]]` |
 | `ignore` | sequence of strings | `[[Ignore]]` |
 | `gitignore` | boolean | `[[UseGitignore]]` |
-| `docs` | mapping from RepoPath to a mapping with exactly the key `covers` | `[[Docs]]` |
+| `dependents` | mapping from RepoPath to a mapping with exactly the key `covers` | `[[Dependents]]` |
 
 - A missing or different `version` raises `E_CONFIG_VERSION`.
 - An unknown key at any level raises `E_UNKNOWN_KEY`.
 - A value of the wrong type raises `E_CONFIG`.
-- A `docs` key that is not a valid RepoPath raises `E_CONFIG`.
+- A `dependents` key that is not a valid RepoPath raises `E_CONFIG`.
 - Each `covers` value follows `ParseBindingValue` (§9.2).
 
 ### 10.3 Config Bindings
 
 `ConfigBindings(config, root)`:
 
-1. For each (*doc*, *covers*) of `config.[[Docs]]`:
-   1. If no regular file exists at *doc* under Root, collect `E_DOC_MISSING` attached to *doc*.
-   2. Otherwise produce the Binding { `[[Doc]]`: *doc*, `[[Covers]]`: *covers*, `[[Source]]`:
+1. For each (*dep*, *covers*) of `config.[[Dependents]]`:
+   1. If no regular file exists at *dep* under Root, collect `E_DEPENDENT_MISSING` attached to *dep*.
+   2. Otherwise produce the Binding { `[[Dependent]]`: *dep*, `[[Covers]]`: *covers*, `[[Source]]`:
       `config` }.
 2. Return the produced Bindings.
 
-NOTE: A config-declared Doc need not be in the Universe; it may be an ignored file.
+NOTE: A config-declared Dependent need not be in the Universe; it may be an ignored file.
 
 ### 10.4 All Bindings
 
 `AllBindings(root, config, universe)`:
 
 1. Let *a* be `DiscoverBindings(universe, config)` and *b* be `ConfigBindings(config, root)`.
-2. For each Doc that appears in both *a* and *b*, collect `E_DUPLICATE_BINDING` attached to it,
+2. For each Dependent that appears in both *a* and *b*, collect `E_DUPLICATE_BINDING` attached to it,
    and remove it from both.
-3. Return *a* ++ *b* in path order of `[[Doc]]`.
+3. Return *a* ++ *b* in path order of `[[Dependent]]`.
 
 ## 11 Hashing
 
@@ -362,7 +373,8 @@ A byte sequence is *binary* iff its first min(8192, length) bytes contain the by
 2. If the bytes are binary, return them.
 3. Replace every byte pair 0x0D 0x0A with 0x0A. Let *text* be the result decoded as UTF-8, with
    each invalid sequence replaced by U+FFFD.
-4. If *path* is the `[[Doc]]` of a Binding whose `[[Source]]` is `frontmatter`:
+4. If *path* is the `[[Dependent]]` of a Binding whose `[[Source]]` is `frontmatter` (only such a
+   file has a `docsync` key to strip):
    1. Let *fm* be `FrontmatterOf(text)`; parse `fm.[[Yaml]]`; remove the key `docsync`.
    2. If the remaining mapping is empty, set *text* to `fm.[[Body]]`.
    3. Otherwise set *text* to `CanonicalJson(remaining)` ++ LF ++ `fm.[[Body]]`.
@@ -371,8 +383,8 @@ A byte sequence is *binary* iff its first min(8192, length) bytes contain the by
 `CanonicalJson(value)` is the JSON text of *value* with mapping keys in path order, no
 insignificant whitespace, and strings escaped as ECMAScript `JSON.stringify` escapes them.
 
-NOTE: Step 4 means editing a Doc's `docsync` block, or reformatting its frontmatter, never makes
-another Doc that covers it stale. Editing its prose does.
+NOTE: Step 4 means editing a Dependent's `docsync` block, or reformatting its frontmatter, never makes
+another Dependent that covers it stale. Editing its body does.
 
 ### 11.3 Hash
 
@@ -397,20 +409,20 @@ digest of `NormalizedContent(path, bindings)`: a String of exactly 16 characters
 
 ```
 version: 1
-docs:
-  <doc>:
+dependents:
+  <file>:
     covers:
       - <pattern>
     files:
       <file>: <hash>
 ```
 
-- `docs:` is followed by one block per entry, Docs in path order. If there are no entries, the
-  line is `docs: {}`.
+- `dependents:` is followed by one block per entry, Dependents in path order. If there are no entries, the
+  line is `dependents: {}`.
 - `covers` lists the patterns in declaration order.
 - `files` lists covered files in path order.
 - Indentation is two spaces per level.
-- Every `<doc>`, `<pattern>` and `<file>` is written as a YAML double-quoted scalar, escaped as
+- Every `<file>`, `<pattern>` and `<file>` is written as a YAML double-quoted scalar, escaped as
   `CanonicalJson` escapes a string. `<hash>` is written plain.
 
 Writing the Lockfile MUST be atomic: a reader observes either the previous contents or the new
@@ -419,14 +431,14 @@ written.
 
 ## 13 Evaluation
 
-`Evaluate(binding, universe, lock, bindings)` returns a DocResult:
+`Evaluate(binding, universe, lock, bindings)` returns a DependentResult:
 
-1. Let *r* be a DocResult with `[[Doc]]` = `binding.[[Doc]]` and empty Lists.
+1. Let *r* be a DependentResult with `[[Dependent]]` = `binding.[[Dependent]]` and empty Lists.
 2. Let *covered* be `ResolveCovers(binding, universe)`. If it raises, set *r*.`[[State]]` to
    `invalid`, attach every raised and collected Diagnostic, and return *r*.
 3. Let *current* be a Map from each *f* of *covered* to `Hash(f, bindings)`. If any call raises,
    handle as in step 2.
-4. Let *entry* be `lock.[[Entries]]`[`binding.[[Doc]]`], or *none*.
+4. Let *entry* be `lock.[[Entries]]`[`binding.[[Dependent]]`], or *none*.
 5. If *entry* is *none*:
    1. Append `unstamped` to *r*.`[[Reasons]]`; set *r*.`[[Added]]` to the keys of *current*.
    2. Set *r*.`[[State]]` to `stale` and return *r*.
@@ -445,13 +457,13 @@ written.
 2. Let *bindings* be `AllBindings(root, config, universe)`.
 3. Let *lock* be `? ReadLock(root)`.
 4. Let *results* be `Evaluate(b, universe, lock, bindings)` for every *b* of *bindings*, plus, for
-   every Doc to which a collected Diagnostic is attached but which has no Binding, a DocResult in
-   state `invalid` carrying those Diagnostics. Order *results* by `[[Doc]]` in path order.
-5. For every Doc in `lock.[[Entries]]` that has no Binding and no DocResult, collect the global
+   every Dependent to which a collected Diagnostic is attached but which has no Binding, a DependentResult in
+   state `invalid` carrying those Diagnostics. Order *results* by `[[Dependent]]` in path order.
+5. For every Dependent in `lock.[[Entries]]` that has no Binding and no DependentResult, collect the global
    warning `W_ORPHAN` naming it.
 6. Return *results* and the global Diagnostics.
 
-NOTE: There is no propagation between Docs. If Doc C covers Doc B and B covers code, a change in
+NOTE: There is no propagation between Dependents. If Dependent C covers Dependent B and B covers code, a change in
 the code makes B stale and leaves C ok; stamping B writes only the Lockfile, which is never in the
 Universe (§7 step 7), so C stays ok. C becomes stale only when B's normalized content changes.
 
@@ -460,29 +472,29 @@ Universe (§7 step 7), so C stays ok. C becomes stale only when B's normalized c
 ### 14.1 Synopsis
 
 ```
-docsync check  [--json] [--root <dir>] [<doc>...]
-docsync status [--json] [--root <dir>] [<doc>...]
-docsync stamp  [--json] [--root <dir>] [--rebuild] [<doc>...]
-docsync ls     [--json] [--root <dir>] [<doc>...]
+docsync check  [--json] [--root <dir>] [<file>...]
+docsync status [--json] [--root <dir>] [<file>...]
+docsync stamp  [--json] [--root <dir>] [--rebuild] [<file>...]
+docsync ls     [--json] [--root <dir>] [<file>...]
 docsync --version
 docsync --help
 ```
 
 An unknown command, unknown option, or missing option value raises `E_USAGE`.
 
-### 14.2 Doc Arguments
+### 14.2 Dependent Arguments
 
-`SelectDocs(args, cwd, root, results)`:
+`SelectDependents(args, cwd, root, results)`:
 
-1. If *args* is empty, return every DocResult of *results*.
+1. If *args* is empty, return every DependentResult of *results*.
 2. For each *arg*: resolve it against *cwd*; express it relative to Root as a RepoPath. If that is
-   impossible, or no DocResult has it as `[[Doc]]`, collect `E_UNKNOWN_DOC` naming *arg*.
-3. Return the matching DocResults, in path order, without duplicates.
+   impossible, or no DependentResult has it as `[[Dependent]]`, collect `E_UNKNOWN_DEPENDENT` naming *arg*.
+3. Return the matching DependentResults, in path order, without duplicates.
 
 ### 14.3 check
 
 1. Let (*results*, *global*) be `EvaluateAll`. If it raises, report the Diagnostic and exit 2.
-2. Let *selected* be `SelectDocs(...)`.
+2. Let *selected* be `SelectDependents(...)`.
 3. Report *selected* and every global Diagnostic (§15).
 4. Exit with `ExitCode(selected, global)`.
 
@@ -492,31 +504,31 @@ affect the exit code.
 
 ### 14.4 status
 
-As `check`, but the exit code is 0 unless step 1 raises or `E_USAGE`/`E_UNKNOWN_DOC` is raised,
+As `check`, but the exit code is 0 unless step 1 raises or `E_USAGE`/`E_UNKNOWN_DEPENDENT` is raised,
 in which case it is 2.
 
 ### 14.5 stamp
 
 1. If `--rebuild` is given, the Lockfile is treated as absent in `EvaluateAll` (so `E_LOCK` and
    `E_LOCK_VERSION` do not apply). Otherwise, if `EvaluateAll` raises, report and exit 2.
-2. Let *targets* be `SelectDocs(...)` if Doc arguments are given; otherwise every DocResult whose
-   state is not `ok`, or, with `--rebuild`, every DocResult.
+2. Let *targets* be `SelectDependents(...)` if Dependent arguments are given; otherwise every DependentResult whose
+   state is not `ok`, or, with `--rebuild`, every DependentResult.
 3. If any of *targets* is `invalid`, or any error Diagnostic is global, report them, write
    nothing, and exit 2.
 4. Let *lock* be the Lock read in step 1 (empty with `--rebuild`).
-5. For each *t* of *targets*, set `lock.[[Entries]]`[*t*.`[[Doc]]`] to { `[[Covers]]`: the
+5. For each *t* of *targets*, set `lock.[[Entries]]`[*t*.`[[Dependent]]`] to { `[[Covers]]`: the
    Binding's `[[Covers]]`, `[[Files]]`: the *current* Map of §13 step 3 }.
-6. Remove from *lock* every entry whose Doc has no Binding.
+6. Remove from *lock* every entry whose Dependent has no Binding.
 7. Write *lock* (§12.2).
-8. Report each Doc stamped and each entry removed. Exit 0.
+8. Report each Dependent stamped and each entry removed. Exit 0.
 
 NOTE: `stamp` does not check that a Review happened; it trusts its caller. Without arguments it
-stamps only Docs that are not `ok`, so it never re-stamps a Doc nobody needed to review.
+stamps only Dependents that are not `ok`, so it never re-stamps a Dependent nobody needed to review.
 
 ### 14.6 ls
 
 1. Let *config*, *universe* and *bindings* be as in `EvaluateAll` steps 1 and 2.
-2. For each selected Binding (§14.2), report its Doc, `[[Source]]`, and the result of
+2. For each selected Binding (§14.2), report its Dependent, `[[Source]]`, and the result of
    `ResolveCovers`, or its Diagnostics.
 3. Exit 2 if any error Diagnostic was reported, else 0.
 
@@ -530,10 +542,10 @@ when the JSON document itself cannot be produced.
 
 ### 15.2 Text Mode
 
-For `check` and `status`, one block per selected DocResult, in path order:
+For `check` and `status`, one block per selected DependentResult, in path order:
 
 ```
-<STATE>  <doc>  (<reason>, <reason>)
+<STATE>  <file>  (<reason>, <reason>)
   modified  <file>
   added     <file>
   removed   <file>
@@ -541,13 +553,13 @@ For `check` and `status`, one block per selected DocResult, in path order:
 
 `<STATE>` is `ok`, `STALE` or `INVALID`. The parenthesized part and the file lines appear only
 for `stale`. Files are listed modified, then added, then removed, each in path order. When any
-DocResult is `stale`, the last line is:
+DependentResult is `stale`, the last line is:
 
 ```
-next: review the docs above against the listed files, then run `docsync stamp <doc>...`
+next: review the files above against the listed files, then run `docsync stamp <file>...`
 ```
 
-with the stale Docs in path order.
+with the stale Dependents in path order.
 
 A Diagnostic is written as `<severity>: <code>: <file>: <message>`, omitting `<file>: ` when
 empty. Text mode MAY use color only when standard output is a terminal and the environment does
@@ -560,9 +572,9 @@ not set `NO_COLOR`; colored and uncolored output differ only in escape sequences
   "version": 1,
   "command": "check",
   "exitCode": 1,
-  "docs": [
+  "dependents": [
     {
-      "doc": "CLAUDE.md",
+      "dependent": "CLAUDE.md",
       "state": "stale",
       "reasons": ["modified", "added"],
       "modified": ["src/cli/check.ts"],
@@ -577,9 +589,9 @@ not set `NO_COLOR`; colored and uncolored output differ only in escape sequences
 
 - Fields appear in the order shown. Arrays follow the orders of §5.5 and §15.2.
 - A Diagnostic is `{ "code", "severity", "file", "message" }`; `file` is `null` when empty.
-- For `stamp`, each doc object has the additional field `"stamped": true|false`, and the top
-  level has `"removed": [<doc>...]`.
-- For `ls`, each doc object has `"source"` and `"files"` instead of the state fields.
+- For `stamp`, each dependent object has the additional field `"stamped": true|false`, and the top
+  level has `"removed": [<file>...]`.
+- For `ls`, each dependent object has `"source"` and `"files"` instead of the state fields.
 - Consumers MUST ignore unknown fields. Future versions of this specification only add fields
   within version 1.
 
@@ -593,7 +605,7 @@ not set `NO_COLOR`; colored and uncolored output differ only in escape sequences
 | `E_CONFIG_VERSION` | error | §10.2 |
 | `E_UNKNOWN_KEY` | error | §9.2, §10.2 |
 | `E_FRONTMATTER` | error | §9.2 |
-| `E_DOC_MISSING` | error | §10.3 |
+| `E_DEPENDENT_MISSING` | error | §10.3 |
 | `E_DUPLICATE_BINDING` | error | §10.4 |
 | `E_PATTERN` | error | §8.1 |
 | `E_EMPTY_PATTERN` | error | §8.4 |
@@ -601,18 +613,18 @@ not set `NO_COLOR`; colored and uncolored output differ only in escape sequences
 | `E_UNREADABLE` | error | §11.2 |
 | `E_LOCK` | error | §12.1 |
 | `E_LOCK_VERSION` | error | §12.1 |
-| `E_UNKNOWN_DOC` | error | §14.2 |
+| `E_UNKNOWN_DEPENDENT` | error | §14.2 |
 | `W_ORPHAN` | warning | §13 |
 
 Every `[[Message]]` MUST name the fix. For `E_LOCK` and `E_LOCK_VERSION` the fix is
-`docsync stamp --rebuild` after reviewing every Doc; for `W_ORPHAN` it is `docsync stamp`.
+`docsync stamp --rebuild` after reviewing every Dependent; for `W_ORPHAN` it is `docsync stamp`.
 
 ## 17 Exit Codes
 
 | Code | Meaning |
 |---|---|
-| 0 | every selected Doc is `ok` (or the command succeeded) |
-| 1 | at least one selected Doc is `stale`, none `invalid` (`check` only) |
-| 2 | an error Diagnostic, an `invalid` Doc, or a usage error |
+| 0 | every selected Dependent is `ok` (or the command succeeded) |
+| 1 | at least one selected Dependent is `stale`, none `invalid` (`check` only) |
+| 2 | an error Diagnostic, an `invalid` Dependent, or a usage error |
 
 An unexpected internal failure exits 70 and writes the failure to standard error.

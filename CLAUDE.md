@@ -1,8 +1,9 @@
 # docsync
 
-A deterministic snapshot gate between code and the docs that describe it. Each doc declares the
-code it covers; `docsync check` fails when that code changed since the doc was last reviewed, and
-`docsync stamp` records the review.
+A deterministic snapshot gate for hidden links between files. Each Dependent (usually a doc, but
+any file) declares the files it covers; `docsync check` fails when they changed since the
+Dependent was last reviewed, and `docsync stamp` records the review. Terms are defined in
+[SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
 
 Why it is built this way is imported below and binds every change. Read both before anything
 else, and check the work against them.
