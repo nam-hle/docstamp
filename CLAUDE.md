@@ -102,8 +102,13 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 - `.github/workflows/ci.yml` runs `pnpm test` on every pull request and push to `main`.
 - `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
   the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
-- Merging that pull request tags `vX.Y.Z`, creates the GitHub release and publishes to npm
-  (secret `NPM_TOKEN`). Releasing is that merge; nothing else publishes.
+- Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
+  `.github/workflows/publish.yml` for that tag. It builds, runs the unit and end-to-end tests
+  (not the docs self-check) and publishes to npm with the secret `NPM_TOKEN`.
+- To retry a failed publish, run the Publish workflow from `main` with the release tag as input.
+  Nothing else publishes.
+- Version bumps edit `package.json`, so the docs deliberately do not cover it: a release must
+  not make the docs check fail.
 
 ## Docs
 
