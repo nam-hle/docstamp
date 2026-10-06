@@ -2,7 +2,7 @@
 
 A deterministic snapshot gate for hidden links between files. Each Dependent (usually a doc, but
 any file) declares the files it covers; `docsync` fails when they changed since the Dependent
-was last reviewed, and `docsync --write <file>` records the review. Terms are defined in
+was last reviewed, and `docsync update <file>` records the review. Terms are defined in
 [SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
 
 Why it is built this way is imported below and binds every change. Read both before anything
@@ -82,7 +82,7 @@ Only what no test can check stays here.
   `src/history/`, read-only, through `execFileSync` with an argument array (no shell), and never
   for the verdict, the exit code or the Lockfile.
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
-- **Nothing writes the Lockfile automatically.** Only `docsync --write` with named files or
+- **Nothing writes the Lockfile automatically.** Only `docsync update` with named files or
   `--all` may write it; a Write is the record that a review happened.
 
 ## Known Anti-Patterns
@@ -102,10 +102,10 @@ the Lockfile or the JSON output, and gets a CHANGELOG entry.
 Once `docsync` runs, this repo uses it on itself: `docsync.yaml` binds `CLAUDE.md` and the docs
 to the code they describe, and `pnpm test` runs `docsync`. When it fails:
 
-1. Run `docsync --files <file>`, then `git diff origin/main -- <those files>`, and re-check the
-   doc's claims against the change.
+1. Run `docsync list-dependents <file>`, then `git diff origin/main -- <those files>`, and
+   re-check the doc's claims against the change.
 2. Fix what is no longer true.
-3. Only then run `docsync --write <file>`.
+3. Only then run `docsync update <file>`.
 
-Never write without step 1. A Write without a review hides the drift the gate exists to catch.
-Never use `--write --all` to make CI green.
+Never update without step 1. A Write without a review hides the drift the gate exists to catch.
+Never use `update --all` to make CI green.

@@ -8,8 +8,8 @@ import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
 import { fileHash } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
 import { readLock, writeLock } from '../lock/lock.ts';
-import { jsonText } from '../report/json.ts';
-import { checkText, diagnosticsText, writeText } from '../report/text.ts';
+import { jsonText, listJsonText } from '../report/json.ts';
+import { checkText, diagnosticsText, listText, updateText } from '../report/text.ts';
 import { computeUniverse, determineRoot } from '../universe/walk.ts';
 import { HELP, parseArgs } from './args.ts';
 import { selectResults } from './paths.ts';
@@ -58,20 +58,13 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
   };
 }
 
-// SPEC §12.2
-function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evaluated {
+function evaluateBindings(root: string, readLockFor: () => Lock, hashFiles: boolean) {
   const { config, attached } = readConfig(root);
   const universe = computeUniverse(root, config);
-  let lock: Lock;
-  try {
-    lock = readLock(root);
-  } catch (e) {
-    if (!(e instanceof Raised) || policy === 'strict') throw e;
-    lock = { entries: new Map() };
-  }
+  const lock = readLockFor();
   const fs: EngineFs = {
     isDependentFile: (p) => isDependentFile(root, p),
-    fileHash: memoizeHash((p) => fileHash(root, universe, p)),
+    fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
   };
   const results = config.bindings.map((b) =>
     evaluate(
@@ -82,7 +75,26 @@ function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evalua
       fs,
     ),
   );
-  return { results, lock, global: orphans(config.bindings, lock) };
+  return { bindings: config.bindings, results, lock };
+}
+
+// SPEC §12.2
+function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evaluated {
+  const readLockFor = (): Lock => {
+    try {
+      return readLock(root);
+    } catch (e) {
+      if (!(e instanceof Raised) || policy === 'strict') throw e;
+      return { entries: new Map() };
+    }
+  };
+  const { bindings, results, lock } = evaluateBindings(root, readLockFor, true);
+  return { results, lock, global: orphans(bindings, lock) };
+}
+
+// SPEC §13.7
+function listAll(root: string): Result[] {
+  return evaluateBindings(root, () => ({ entries: new Map() }), false).results;
 }
 
 // SPEC §12.3
@@ -98,10 +110,9 @@ const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'e
 
 interface Output {
   json: boolean;
-  mode: 'check' | 'write';
+  mode: 'check' | 'update';
   exitCode: number;
   selected: Result[];
-  files: boolean;
   global: Diagnostic[];
   text: string;
   written?: Set<string>;
@@ -115,7 +126,6 @@ function emit(io: Io, o: Output): number {
         mode: o.mode,
         exitCode: o.exitCode,
         selected: o.selected,
-        files: o.files,
         diagnostics: o.global,
         ...(o.written === undefined ? {} : { written: o.written }),
         ...(o.removed === undefined ? {} : { removed: o.removed }),
@@ -128,7 +138,35 @@ function emit(io: Io, o: Output): number {
   return o.exitCode;
 }
 
-// SPEC §13.5, §13.6
+// SPEC §13.7
+function runList(
+  args: { json: boolean; root?: string; paths: string[] },
+  cwd: string,
+  io: Io,
+): number {
+  let selected: Result[] = [];
+  let global: Diagnostic[] = [];
+  let exitCode = 2;
+  try {
+    const root = determineRoot(cwd, args.root);
+    const picked = selectResults(args.paths, cwd, root, listAll(root));
+    selected = picked.selected;
+    global = picked.errors;
+    exitCode = hasError(global) || selected.some((r) => r.state === 'invalid') ? 2 : 0;
+  } catch (e) {
+    if (!(e instanceof Raised)) throw e;
+    global = e.diagnostics;
+  }
+  if (args.json) {
+    io.stdout(listJsonText({ exitCode, selected, diagnostics: global }));
+  } else {
+    io.stdout(listText(selected));
+    io.stderr(diagnosticsText([...global, ...selected.flatMap((r) => r.diagnostics)]));
+  }
+  return exitCode;
+}
+
+// SPEC §13.5, §13.6, §13.7
 export function run(argv: readonly string[], cwd: string, io: Io): number {
   let args: ReturnType<typeof parseArgs>;
   try {
@@ -146,26 +184,25 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     io.stdout(`${typeof VERSION === 'string' ? VERSION : '0.0.0'}\n`);
     return 0;
   }
+  if (args.mode === 'list-dependents') return runList(args, cwd, io);
   const { mode, json } = args;
-  const files = args.mode === 'check' && args.files;
   const empty: Output = {
     json,
     mode,
     exitCode: 2,
     selected: [],
-    files,
     global: [],
-    text: checkText([], false),
-    ...(mode === 'write' ? { written: new Set<string>(), removed: [] } : {}),
+    text: checkText([]),
+    ...(mode === 'update' ? { written: new Set<string>(), removed: [] } : {}),
   };
   try {
     const root = determineRoot(cwd, args.root);
     const evaluated = evaluateAll(
       root,
-      mode === 'write' && args.all ? 'discard-invalid' : 'strict',
+      args.mode === 'update' && args.all ? 'discard-invalid' : 'strict',
     );
     const picked =
-      mode === 'write' && args.all
+      args.mode === 'update' && args.all
         ? { selected: evaluated.results, errors: [] }
         : selectResults(args.paths, cwd, root, evaluated.results);
     const { selected } = picked;
@@ -175,11 +212,11 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       const stale = selected.some((r) => r.state === 'stale');
       const exitCode = refused ? 2 : stale ? 1 : 0;
       const reported = selected.map((r) => withChanges(root, r, evaluated.lock));
-      const text = checkText(reported, files, args.root);
+      const text = checkText(reported, args.root);
       return emit(io, { ...empty, exitCode, selected: reported, global, text });
     }
     if (refused) {
-      const text = checkText(selected, false, args.root);
+      const text = checkText(selected, args.root);
       return emit(io, { ...empty, selected, global, text });
     }
     const entries = new Map(evaluated.lock.entries);
@@ -189,7 +226,7 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     for (const d of removed) entries.delete(d);
     writeLock(root, { entries });
     const written = selected.map((r) => r.dependent);
-    const text = writeText(written, removed);
+    const text = updateText(written, removed);
     return emit(io, {
       ...empty,
       exitCode: 0,

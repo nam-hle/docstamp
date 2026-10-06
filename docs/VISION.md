@@ -18,7 +18,7 @@ coarse to say which doc needs a look.
 **A deterministic snapshot gate between files and the files that depend on them**, built first
 for docs and the code they describe.
 
-Each doc declares which code it covers. `docsync --write` records one hash over the paths and
+Each doc declares which code it covers. `docsync update` records one hash over the paths and
 contents of every covered file. `docsync` recomputes it and fails CI when a doc's covered
 code changed since its last review (an edit, a new file, a deletion, a rename), naming the doc
 and the patterns to look at. The lock stays one line per doc however many files it covers.

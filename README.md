@@ -35,22 +35,31 @@ The three steps are defined in [SPEC §1](docs/SPEC.md#1-scope):
 
 1. CI runs `pnpm exec docsync`. It exits 1 when a Dependent's covered files changed since its last review.
 2. A person or an agent reviews each stale Dependent against its covered files and edits it if needed.
-3. Run `pnpm exec docsync --write <file>` to record the review in `docsync-lock.yaml`, and commit the lock.
+3. Run `pnpm exec docsync update <file>` to record the review in `docsync-lock.yaml`, and commit the lock.
 
-The first run has no lock; `pnpm exec docsync --write --all` records the initial state once the docs have been reviewed.
+The first run has no lock; `pnpm exec docsync update --all` records the initial state once the docs have been reviewed.
 
-Upgrading from a version 1 lock (`docsync.lock`): delete it, review every Dependent, then run `pnpm exec docsync --write --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
+Upgrading from a version 1 lock (`docsync.lock`): delete it, review every Dependent, then run `pnpm exec docsync update --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
 
 ## Reviewing a stale doc
 
 A stale doc lists the covered files that changed since its last review, as `modified`, `added` or `deleted` ([SPEC §12.3](docs/SPEC.md#123-changedsince)). `--json` carries the same list as `changes`. The list comes from read-only `git` calls and never affects the verdict or exit code.
 
-When git history cannot answer (no git, not a work tree, a shallow clone, or a `--write` not yet committed), docsync prints the `covers` patterns and `changes` is `null`. Then list the covered files and diff them yourself:
+When git history cannot answer (no git, not a work tree, a shallow clone, or an `update` not yet committed), docsync prints the `covers` patterns and `changes` is `null`. Then list the covered files and diff them yourself:
 
 ```sh
-pnpm exec docsync --files <file>
+pnpm exec docsync list-dependents <file>
 git diff <base> -- <files>
 ```
+
+## Commands
+
+- `docsync [check]`: the verdict; exit 0 when every Dependent is ok, 1 when one is stale, 2 on an error. A bare `docsync` is `check`.
+- `docsync update (--all | <file>...)`: record that you reviewed the named files.
+- `docsync list-dependents [<file>...]`: each Dependent with its patterns and covered files. It does not read the lock.
+- `docsync help` and `docsync version`.
+
+Every command except `help` and `version` takes `--json` and `--root <dir>`. The options `--write` and `--files` were replaced by `update` and `list-dependents`.
 
 Command line and exit codes: [SPEC §13](docs/SPEC.md#13-command-line) and [SPEC §16](docs/SPEC.md#16-exit-codes).
 

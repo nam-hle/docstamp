@@ -3,10 +3,9 @@ import { quote } from '../core/quote.ts';
 import type { Diagnostic, Result } from '../core/types.ts';
 
 export interface JsonDoc {
-  mode: 'check' | 'write';
+  mode: 'check' | 'update';
   exitCode: number;
   selected: readonly Result[];
-  files: boolean;
   diagnostics: readonly Diagnostic[];
   written?: ReadonlySet<string>;
   removed?: readonly string[];
@@ -52,7 +51,6 @@ export function jsonText(doc: JsonDoc): string {
       ['state', r.state],
       ['reasons', [...r.reasons]],
       ['covers', [...r.covers]],
-      ['files', doc.files ? [...r.covered] : null],
       [
         'changes',
         r.changes
@@ -66,7 +64,7 @@ export function jsonText(doc: JsonDoc): string {
       ],
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ];
-    if (doc.mode === 'write') members.push(['written', doc.written?.has(r.dependent) ?? false]);
+    if (doc.mode === 'update') members.push(['written', doc.written?.has(r.dependent) ?? false]);
     return obj(members);
   });
   const top: Array<[string, Json]> = [
@@ -84,6 +82,32 @@ export function jsonText(doc: JsonDoc): string {
     ['dependents', dependents],
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
   ];
-  if (doc.mode === 'write') top.push(['removed', [...(doc.removed ?? [])]]);
+  if (doc.mode === 'update') top.push(['removed', [...(doc.removed ?? [])]]);
+  return `${render(obj(top), '')}\n`;
+}
+
+export interface ListJsonDoc {
+  exitCode: number;
+  selected: readonly Result[];
+  diagnostics: readonly Diagnostic[];
+}
+
+// SPEC §14.5
+export function listJsonText(doc: ListJsonDoc): string {
+  const dependents = doc.selected.map((r) =>
+    obj([
+      ['dependent', r.dependent],
+      ['covers', [...r.covers]],
+      ['files', [...r.covered]],
+      ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
+    ]),
+  );
+  const top: Array<[string, Json]> = [
+    ['version', 1],
+    ['mode', 'list-dependents'],
+    ['exitCode', doc.exitCode],
+    ['dependents', dependents],
+    ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
+  ];
   return `${render(obj(top), '')}\n`;
 }

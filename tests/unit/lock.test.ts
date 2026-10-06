@@ -102,7 +102,7 @@ describe('§11.1 step 1 legacy docsync.lock', () => {
       expect(d?.code).toBe('E_LOCK_VERSION');
       expect(d?.subject).toBe('docsync.lock');
       expect(d?.message).toContain('delete docsync.lock');
-      expect(d?.message).toContain('docsync --write --all');
+      expect(d?.message).toContain('docsync update --all');
     },
   );
 });

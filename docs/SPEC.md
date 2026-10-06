@@ -16,7 +16,7 @@ The workflow it serves:
 1. CI runs `docsync`. It exits 1 when a Dependent's covered files changed since its last Review.
 2. A person or an agent reviews each stale Dependent against its covered files and edits it if
    needed.
-3. They run `docsync --write <file>` to record the Review in the Lockfile. CI passes.
+3. They run `docsync update <file>` to record the Review in the Lockfile. CI passes.
 
 This specification defines how a Root is determined (§6), the Universe (§7), patterns (§8), the
 Configuration file (§9), hashing (§10), the Lockfile (§11), evaluation (§12), the command line
@@ -107,12 +107,12 @@ patterns select.
 
 **Review**: the act, outside docsync, of checking a Dependent against its covered files.
 
-**Write**: recording a Dependent's current Cover Hash in the Lockfile with `docsync --write`,
+**Write**: recording a Dependent's current Cover Hash in the Lockfile with `docsync update`,
 asserting that a Review happened.
 
 **Configuration file**: the file `docsync.yaml` at Root. Written by people.
 
-**Lockfile**: the file `docsync-lock.yaml` at Root. Written only by `docsync --write`.
+**Lockfile**: the file `docsync-lock.yaml` at Root. Written only by `docsync update`.
 
 ## 5 Records
 
@@ -500,7 +500,7 @@ NOTE: The result for files modified while docsync runs is undefined.
 
 1. If an entry named `docsync.lock` exists at Root, whatever its content, raise
    « `E_LOCK_VERSION` » with `[[Subject]]` `docsync.lock`. Its message names the fix: delete
-   `docsync.lock`, review every Dependent, then run `docsync --write --all`.
+   `docsync.lock`, review every Dependent, then run `docsync update --all`.
 2. If `docsync-lock.yaml` does not exist at Root, return a Lock with no entries.
 3. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_LOCK` ».
 4. If the key `version` is absent, or its value is not the plain scalar `2`, raise
@@ -642,28 +642,45 @@ so does an empty result, since a stale `content-changed` Result must have change
 ### 13.1 Synopsis
 
 ```
-docsync [--files] [--json] [--root <dir>] [<file>...]
-docsync --write [--json] [--root <dir>] (--all | <file>...)
-docsync --version
+docsync [check] [--json] [--root <dir>] [<file>...]
+docsync update [--json] [--root <dir>] (--all | <file>...)
+docsync list-dependents [--json] [--root <dir>] [<file>...]
+docsync help
+docsync version
 docsync --help
+docsync --version
 ```
 
-Without `--write`, `--version` or `--help`, docsync *checks* (§13.5).
+The commands are `check` (§13.5), `update` (§13.6), `list-dependents` (§13.7), `help` and
+`version`. `--help` is the same command as `help`, and `--version` the same as `version`.
 
 ### 13.2 Parsing
 
-The command line is parsed before anything else. The following raise « `E_USAGE` » with
-`[[Subject]]` the offending argument, and exit 2:
+The command line is parsed before anything else.
+
+1. The options are `--json`, `--all`, `--help`, `--version`, `--root <dir>` and `--root=<dir>`.
+   Before any `--`, an argument starting with `-` other than a lone `-` is an option; `--root`
+   consumes the next argument as its value. After `--`, every argument is a file argument.
+2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
+   `list-dependents`, `help` or `version`; it is then not a file argument. Otherwise, and when there
+   is none, the command is `check` and that argument stays a file argument. A command word in any
+   later position, or after `--`, is a file argument. Options and file arguments may appear in
+   any order.
+3. `--help` before any `--`, or the command `help`, selects `help`; `--version` or the command
+   `version` selects `version`. `help` wins over `version`. Both ignore every other argument and
+   raise no `E_USAGE`.
+
+Otherwise the following raise « `E_USAGE` » with `[[Subject]]` the offending argument, and exit 2.
+Each message states the problem:
 
 - an unknown option, a missing value for `--root`, or an option given twice;
-- `--version` or `--help` together with any other argument;
-- `--files` together with `--write`; `--all` without `--write`;
-- `--write` with neither `--all` nor a file argument, or with both.
+- `--write` or `--files`, which were removed: the message names the replacement, `docsync update`
+  for `--write` and `docsync list-dependents` for `--files`;
+- `--all` with any command but `update`;
+- `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both.
 
-`--root=<dir>` is equivalent to `--root <dir>`. After `--`, every argument is a file argument.
-Options and file arguments may appear in any order.
-
-`--version` prints the version and exits 0. `--help` prints usage and exits 0.
+`help` prints usage and `version` prints the version; both exit 0 (§14.1). A file named like a
+command is reached as `docsync check -- check`, `docsync -- check` or `docsync --json -- check`.
 
 ### 13.3 File Arguments
 
@@ -707,10 +724,10 @@ Step 4 evaluates Results as §12.1 and then sets `[[Changes]]` of each selected 
 
 NOTE: Reviewer's recipe for a stale Dependent. The text output (§14.3) and `changes` in JSON
 (§14.5) name the covered files that changed since the last Write when the repository history
-allows (§12.3). Otherwise `docsync --files <file>` lists the covered files and the reviewer
-compares them with the state at the last Write using its own tools.
+allows (§12.3). Otherwise `docsync list-dependents <file>` lists the covered files and the
+reviewer compares them with the state at the last Write using its own tools.
 
-### 13.6 Write
+### 13.6 Update
 
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
 2. Let *policy* be `discard-invalid` if `--all` is given, else `strict`.
@@ -728,13 +745,31 @@ compares them with the state at the last Write using its own tools.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
-NOTE: `--write --all` recovers from the legacy `docsync.lock` (§11.1 step 1) by writing
+NOTE: `update --all` recovers from the legacy `docsync.lock` (§11.1 step 1) by writing
 `docsync-lock.yaml`, but does not delete `docsync.lock`: deletions stay explicit, and every
-later run raises `E_LOCK_VERSION` until the user deletes it.
+later run that reads the Lockfile raises `E_LOCK_VERSION` until the user deletes it.
 
 NOTE: A Write asserts that a Review happened; docsync cannot check that, and trusts its caller.
-`--write` requires naming the files, or `--all` on purpose (first adoption, or recovery from an
+`update` requires naming the files, or `--all` on purpose (first adoption, or recovery from an
 unreadable Lockfile), so no file is marked reviewed by accident.
+
+### 13.7 ListDependents
+
+1. Let *root* be `? DetermineRoot(cwd, --root)`.
+2. Let (*config*, *attached*) be `? ReadConfig(root)` and *universe* be
+   `? ComputeUniverse(root, config)`.
+3. Let *results* be `Evaluate(b, universe, « », attached of b)` for each Binding *b* of
+   `config.[[Bindings]]`, in path order, except that no covered file is read or hashed (§10.4 is
+   skipped), so a Result is never `invalid` for `E_UNREADABLE`.
+4. Let (*selected*, *argErrors*) be `SelectResults(args, cwd, root, results)`.
+5. Output *selected* and *argErrors* (§14).
+6. Exit 2 if *argErrors* contains an error or any of *selected* is `invalid`; else 0.
+
+If a step raises, output the raised Diagnostics as global and exit 2.
+
+NOTE: `list-dependents` reads neither `docsync-lock.yaml` nor `docsync.lock`, so it does not
+evaluate staleness, raises no `E_LOCK` or `E_LOCK_VERSION`, and emits no `W_ORPHAN`. It works before
+the first `update` and while a legacy `docsync.lock` is still present.
 
 ## 14 Output
 
@@ -756,13 +791,11 @@ In text mode, a RepoPath or pattern *s* is written as *s* if it contains no code
 
 ### 14.3 Check, Text Mode
 
-One block per selected Result that is not `ok`, in path order; with `--files`, one block per
-selected Result.
+One block per selected Result that is not `ok`, in path order.
 
 ```
 STALE    <dependent>  (<reason>, <reason>)
   covers  <pattern>
-  file    <covered file>
 ```
 
 or, for a stale Result with a non-empty `[[Changes]]`:
@@ -774,13 +807,12 @@ STALE    <dependent>  (<reason>, <reason>)
   deleted   <path>
 ```
 
-- The first line is `STALE`, `INVALID` or `OK`, padded with spaces to 9 characters, then the
+- The first line is `STALE` or `INVALID`, padded with spaces to 9 characters, then the
   Dependent; for `stale`, two spaces and the Reasons in parentheses, separated by `, `.
 - For `stale` with a non-empty `[[Changes]]`: one line per Change, in path order, instead of the
   `covers` lines: two spaces, the status padded with spaces to 8 characters, two spaces, and the
   path as in §14.2 (`  modified  <path>`, `  added     <path>`, `  deleted   <path>`).
 - For any other `stale`: one `covers` line per pattern, in declaration order.
-- With `--files`, for `stale` and `ok`: one `file` line per covered file, in path order.
 
 Then one summary line:
 
@@ -791,7 +823,7 @@ Then one summary line:
 counting the selected Results. Then, if any selected Result is `stale`:
 
 ```
-next: review each stale file against its covered files, then run: docsync --write <file> <file>
+next: review each stale file against its covered files, then run: docsync update <file> <file>
 ```
 
 with the stale Dependents in path order, each written as in §14.2, followed by ` --root ` and
@@ -805,7 +837,7 @@ Each Diagnostic, global and attached, in Diagnostic order, is written to standar
 
 omitting the bracketed parts when empty.
 
-### 14.4 Write, Text Mode
+### 14.4 Update, Text Mode
 
 One line `written  <dependent>` per target, then one line `removed  <dependent>` per removed
 entry, each group in path order. Diagnostics as in §14.3.
@@ -827,7 +859,6 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
       "state": "stale",
       "reasons": ["content-changed"],
       "covers": ["src/**", "!src/**/*.test.ts", "package.json"],
-      "files": null,
       "changes": [{ "status": "modified", "path": "src/cli/run.ts" }],
       "diagnostics": []
     }
@@ -836,25 +867,60 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 }
 ```
 
-- `mode` is `check` or `write`.
-- `dependents` holds every selected Result (check) or every target (write), in path order,
+- `mode` is `check`, `update` or `list-dependents`.
+- `dependents` holds every selected Result (check) or every target (update), in path order,
   including `ok` ones.
-- `files` is the List of covered files with `--files`, else `null`.
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path" }` in this order, or
-  `null` when it is *unknown* or not applicable (§12.3), including in write mode.
-- With `--write`, each element of `dependents` adds `"written": true|false` after
+  `null` when it is *unknown* or not applicable (§12.3), including in update mode.
+- With `update`, each element of `dependents` adds `"written": true|false` after
   `diagnostics` (false only when step 5 of §13.6 refused), and the top level adds `"removed"`, a
   List of Dependents, after `diagnostics`.
+- With `list-dependents` the document is instead (§13.7):
+
+  ```json
+  {
+    "version": 1,
+    "mode": "list-dependents",
+    "exitCode": 0,
+    "dependents": [
+      {
+        "dependent": "CLAUDE.md",
+        "covers": ["src/**", "package.json"],
+        "files": ["package.json", "src/cli/run.ts"],
+        "diagnostics": []
+      }
+    ],
+    "diagnostics": []
+  }
+  ```
+
+  It has no `summary`, `state`, `reasons` or `changes`. `files` is the Result's `[[Covered]]` in
+  path order, and `[]` for an `invalid` Result.
 - A Diagnostic is `{ "code", "severity", "dependent", "subject", "message" }`, with `null` for an
   empty `dependent` or `subject`. Diagnostic Lists are in Diagnostic order.
-- When a step raises before Results exist, `summary` counts zeros and `dependents` is empty.
+- When a step raises before Results exist, `summary` (not for `list-dependents`) counts zeros and
+  `dependents` is empty.
 - Consumers MUST ignore unknown members. Within version 1, later revisions only add members.
+
+### 14.6 List-Dependents, Text Mode
+
+One block per selected Result, in path order:
+
+```
+<dependent>
+  covers  <pattern>
+  file    <covered file>
+```
+
+with one `covers` line per pattern in declaration order, then one `file` line per covered file in
+path order, each written as in §14.2. An `invalid` Result prints its first line only. There is no
+summary line. Diagnostics as in §14.3.
 
 ## 15 Diagnostics
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2 | correct the command line |
+| `E_USAGE` | error | §13.2 | correct the command line; for a removed option, use the command it names |
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3 | create `docsync.yaml` (§9.1) |
 | `E_CONFIG` | error | §9.2, §9.3 | fix the named key |
@@ -867,16 +933,16 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 | `E_UNREADABLE` | error | §7.2, §10.2 | fix permissions |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
-| `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docsync --write --all` after reviewing every Dependent |
-| `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every Dependent, then `docsync --write --all`; otherwise as `E_LOCK` |
+| `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docsync update --all` after reviewing every Dependent |
+| `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every Dependent, then `docsync update --all`; otherwise as `E_LOCK` |
 | `E_UNKNOWN_DEPENDENT` | error | §13.3 | name a Dependent from `docsync.yaml` |
-| `W_ORPHAN` | warning | §12.2 | run `docsync --write` on any Dependent to remove it |
+| `W_ORPHAN` | warning | §12.2 | run `docsync update` on any Dependent to remove it |
 
 ## 16 Exit Codes
 
 | Code | Meaning |
 |---|---|
-| 0 | check: every selected Dependent is `ok`; write: the Lockfile was written or already current |
+| 0 | check: every selected Dependent is `ok`; update: the Lockfile was written or already current; list-dependents: the Dependents were listed; help, version |
 | 1 | check only: a selected Dependent is `stale`, none is `invalid`, no global error |
 | 2 | an error Diagnostic, an `invalid` Dependent, or a usage error |
 | 70 | an unexpected internal failure, reported on standard error |
