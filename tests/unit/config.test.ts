@@ -1,3 +1,5 @@
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 import { readConfig } from '../../src/config/read-config.ts';
@@ -63,6 +65,33 @@ describe('§9.3 readConfig', () => {
   });
   it('non-RepoPath key is E_CONFIG', () => {
     expect(codes('version: 1\ndependents:\n  ../x.md: {covers: [a]}\n')).toEqual(['E_CONFIG']);
+  });
+  it.each(['0x1', '+1', '01'])('version %s rejected', (v) => {
+    expect(codes(`version: ${v}\ndependents: {}\n`)).toEqual(['E_CONFIG_VERSION']);
+  });
+  it('version with trailing comment accepted', () => {
+    expect(codes('version: 1 # comment\ndependents: {}\n')).toEqual([]);
+  });
+  it('empty file is E_CONFIG', () => {
+    expect(codes('')).toEqual(['E_CONFIG']);
+  });
+  it('symlinked docsync.yaml is E_CONFIG_MISSING', () => {
+    const root = makeTree({
+      'real.yaml': 'version: 1\ndependents: {}\n',
+      'docsync.yaml': { link: 'real.yaml' },
+    });
+    expect(() => readConfig(root)).toThrow(
+      expect.objectContaining({
+        diagnostics: [expect.objectContaining({ code: 'E_CONFIG_MISSING' })],
+      }),
+    );
+  });
+  it('invalid UTF-8 is E_CONFIG', () => {
+    const root = makeTree({});
+    writeFileSync(join(root, 'docsync.yaml'), Buffer.from([0x76, 0x3a, 0x20, 0xff, 0x0a]));
+    expect(() => readConfig(root)).toThrow(
+      expect.objectContaining({ diagnostics: [expect.objectContaining({ code: 'E_CONFIG' })] }),
+    );
   });
   it('missing file', () => {
     expect(() => readConfig(makeTree({}))).toThrow(Raised);

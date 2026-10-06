@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
@@ -21,11 +21,17 @@ const isStrings = (v: YamlValue | undefined): v is string[] =>
 
 function readText(root: string): string {
   const path = join(root, 'docsync.yaml');
+  let bytes: Buffer;
   try {
-    if (!statSync(path).isFile()) throw new Error('not a file');
-    return readFileSync(path, 'utf8');
+    if (!lstatSync(path).isFile()) throw new Error('not a file');
+    bytes = readFileSync(path);
   } catch {
     throw new Raised([diag('E_CONFIG_MISSING')]);
+  }
+  try {
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    throw new Raised([diag('E_CONFIG')]);
   }
 }
 
