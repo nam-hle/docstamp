@@ -40,7 +40,13 @@ function readEntry(info: YamlMap): LockEntry {
 export function readLock(root: string): Lock {
   const path = join(root, LOCK);
   if (!existsSync(path)) return { entries: new Map() };
-  const doc = parseStrictYaml(decode(readFileSync(path)));
+  let bytes: Buffer;
+  try {
+    bytes = readFileSync(path);
+  } catch {
+    throw fail('E_LOCK');
+  }
+  const doc = parseStrictYaml(decode(bytes));
   if (!doc || !isMap(doc.value)) throw fail('E_LOCK');
   const top = doc.value;
   if (top.entries.get('version')?.plainSource !== '1') throw fail('E_LOCK_VERSION');
@@ -73,17 +79,22 @@ export function lockText(lock: Lock): string {
 export function writeLock(root: string, lock: Lock): boolean {
   const path = join(root, LOCK);
   const text = lockText(lock);
-  if (existsSync(path)) {
-    const current = readFileSync(path).toString('latin1').replaceAll('\r\n', '\n');
-    if (current === Buffer.from(text, 'utf8').toString('latin1')) return false;
-  }
   const temp = `${path}.tmp-${process.pid}`;
   try {
+    if (existsSync(path)) {
+      const current = readFileSync(path).toString('latin1').replaceAll('\r\n', '\n');
+      if (current === Buffer.from(text, 'utf8').toString('latin1')) return false;
+    }
     writeFileSync(temp, text, 'utf8');
     renameSync(temp, path);
-  } catch (error) {
+  } catch {
     rmSync(temp, { force: true });
-    throw error;
+    throw new Raised([
+      diag('E_UNREADABLE', {
+        subject: LOCK,
+        message: 'Cannot write docsync.lock; fix the permissions or remove the obstruction.',
+      }),
+    ]);
   }
   return true;
 }

@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { memoizeHash, run, type Io } from '../../src/cli/run.ts';
@@ -114,6 +114,21 @@ describe('§13.6 write', () => {
     expect(strict.err).toContain('E_LOCK');
     expect(exec(root, '--write', '--all').out).toBe('written  doc.md\n');
     expect(exec(root).code).toBe(0);
+  });
+  it('a lock that is a directory is E_LOCK on check', () => {
+    const root = tree();
+    mkdirSync(join(root, 'docsync.lock'));
+    const r = exec(root);
+    expect(r.code).toBe(2);
+    expect(r.err).toContain('E_LOCK');
+  });
+  it('--write --all with a directory lock reports E_UNREADABLE, not a crash', () => {
+    const root = tree();
+    mkdirSync(join(root, 'docsync.lock'));
+    const r = exec(root, '--write', '--all');
+    expect(r.code).toBe(2);
+    expect(r.err).toContain('E_UNREADABLE: docsync.lock');
+    expect(readdirSync(root).filter((n) => n.includes('.tmp-'))).toEqual([]);
   });
   it('removes orphans', () => {
     const root = tree();
