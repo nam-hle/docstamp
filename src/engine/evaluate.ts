@@ -49,9 +49,6 @@ function coverHash(covered: readonly string[], fs: EngineFs): string {
   return coverHashFrom(entries);
 }
 
-const sameList = (a: readonly string[], b: readonly string[]) =>
-  a.length === b.length && a.every((item, i) => item === b[i]);
-
 // SPEC §12.1
 export function evaluate(
   b: Binding,
@@ -83,11 +80,8 @@ export function evaluate(
   }
   const reasons: Reason[] = [];
   const entry = lock.entries.get(b.dependent);
-  if (!entry) reasons.push('unrecorded');
-  else {
-    if (!sameList(entry.covers, b.covers)) reasons.push('binding-changed');
-    if (entry.hash !== current) reasons.push('content-changed');
-  }
+  if (entry === undefined) reasons.push('unrecorded');
+  else if (entry !== current) reasons.push('content-changed');
   const state = reasons.length > 0 ? 'stale' : 'ok';
   return { ...base, state, reasons, covered, current, diagnostics: [] };
 }

@@ -36,17 +36,12 @@ export interface Config {
   readonly bindings: readonly Binding[];
 }
 
-export interface LockEntry {
-  readonly covers: readonly string[];
-  readonly hash: string;
-}
-
 export interface Lock {
-  readonly entries: ReadonlyMap<string, LockEntry>;
+  readonly entries: ReadonlyMap<string, string>;
 }
 
 type State = 'ok' | 'stale' | 'invalid';
-export type Reason = 'unrecorded' | 'binding-changed' | 'content-changed';
+export type Reason = 'unrecorded' | 'content-changed';
 
 export interface Change {
   readonly status: 'modified' | 'added' | 'deleted';

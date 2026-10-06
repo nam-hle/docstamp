@@ -104,7 +104,7 @@ export function computeUniverse(root: string, config: Config): Universe {
 
   const universe: Universe = { paths: [], kinds: new Map(), onDisk: new Map() };
   for (const { path, kind } of found) {
-    if (path === 'docsync.yaml' || path === 'docsync.lock') continue;
+    if (path === 'docsync.yaml' || path === 'docsync-lock.yaml') continue;
     const nfc = path.normalize('NFC');
     if (universe.kinds.has(nfc)) errors.push(diag('E_PATH_COLLISION', { subject: nfc }));
     universe.kinds.set(nfc, kind);

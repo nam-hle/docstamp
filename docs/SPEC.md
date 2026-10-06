@@ -1,6 +1,6 @@
 # docsync Specification
 
-Version 1 (draft). This document defines the observable behavior of docsync. It does not define
+Version 1 (draft; Lockfile format version 2). This document defines the observable behavior of docsync. It does not define
 implementation structure. Code and tests cite its clause numbers (for example `§8.3`).
 
 ## 1 Scope
@@ -112,7 +112,7 @@ asserting that a Review happened.
 
 **Configuration file**: the file `docsync.yaml` at Root. Written by people.
 
-**Lockfile**: the file `docsync.lock` at Root. Written only by `docsync --write`.
+**Lockfile**: the file `docsync-lock.yaml` at Root. Written only by `docsync --write`.
 
 ## 5 Records
 
@@ -137,8 +137,12 @@ asserting that a Review happened.
 |---|---|
 | `[[Entries]]` | Map from RepoPath (a Dependent) to LockEntry |
 
-A *LockEntry* is { `[[Covers]]`: List of String, `[[Hash]]`: Hash }: the Binding's `[[Covers]]`
-and its Cover Hash (§10.4) at the last Write.
+A *LockEntry* is a Hash: the Dependent's Cover Hash (§10.4) at the last Write.
+
+NOTE: The Lockfile does not record the patterns. The Cover Hash includes every covered path, so a
+pattern change that changes the covered set changes the Cover Hash and the Dependent is `stale`
+with `content-changed`. A pattern change that leaves the covered set identical needs no Review
+(Principle 4).
 
 ### 5.4 Result
 
@@ -153,8 +157,7 @@ and its Cover Hash (§10.4) at the last Write.
 | `[[Diagnostics]]` | List of Diagnostic, §5.5 order | non-empty iff `[[State]]` is `invalid` |
 | `[[Changes]]` | List of Change in path order, or *unknown* | known only as defined in §12.3 |
 
-A *Reason* is `unrecorded`, `binding-changed` or `content-changed`. When several apply they are
-listed in that order.
+A *Reason* is `unrecorded` or `content-changed`; exactly one applies to a `stale` Result.
 
 A *Change* is { `[[Status]]`: `modified`, `added` or `deleted`, `[[Path]]`: RepoPath }.
 
@@ -229,7 +232,7 @@ Symbolic links are never followed: a link is an entry of kind *link*, whatever i
          repository); otherwise call `WalkDirectory(e, q)`.
       6. If *e* is a *file* or *link*, add *q* to the Universe.
    4. Remove the rules scoped to *p* from *rules* before returning.
-3. Remove `docsync.yaml` and `docsync.lock` from the Universe.
+3. Remove `docsync.yaml` and `docsync-lock.yaml` from the Universe.
 4. Apply §7.4 and §7.5, collecting their Diagnostics.
 5. If *errors* is not empty, raise it. Otherwise return the Universe in path order.
 
@@ -495,38 +498,40 @@ NOTE: The result for files modified while docsync runs is undefined.
 
 `ReadLock(root)` returns a Lock or raises:
 
-1. If `docsync.lock` does not exist at Root, return a Lock with no entries.
-2. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_LOCK` ».
-3. If the key `version` is absent, or its value is not the plain scalar `1`, raise
+1. If an entry named `docsync.lock` exists at Root, whatever its content, raise
+   « `E_LOCK_VERSION` » with `[[Subject]]` `docsync.lock`. Its message names the fix: delete
+   `docsync.lock`, review every Dependent, then run `docsync --write --all`.
+2. If `docsync-lock.yaml` does not exist at Root, return a Lock with no entries.
+3. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_LOCK` ».
+4. If the key `version` is absent, or its value is not the plain scalar `2`, raise
    « `E_LOCK_VERSION` ».
-4. Raise « `E_LOCK` » unless all of these hold:
+5. Raise « `E_LOCK` » unless all of these hold:
    1. The document's keys are exactly `version` and `dependents`.
-   2. `dependents` is a mapping whose keys are RepoPaths.
-   3. Each value has exactly the keys `covers`, a non-empty sequence of strings, and `hash`, a
-      String of 64 characters in `[0-9a-f]`.
-5. Return the Lock.
+   2. `dependents` is a mapping whose keys are RepoPaths and whose values are each a String of 64
+      characters in `[0-9a-f]`.
+6. Return the Lock.
 
-NOTE: Unresolved merge conflict markers fail step 2. The message for `E_LOCK` names the fix:
+NOTE: Unresolved merge conflict markers fail step 3. The message for `E_LOCK` names the fix:
 resolve the conflict by taking either side, then run `docsync`.
+
+NOTE: `docsync.lock` is the name of the version 1 Lockfile, which also recorded the patterns.
+Step 1 refuses it so that stale records are never silently dropped. Nothing deletes it
+automatically (§13.6): the error persists until the file is deleted.
 
 ### 11.2 Canonical Form
 
 `LockText(lock)` is this text, with LF line endings and a final LF:
 
 ```
-version: 1
+version: 2
 dependents:
-  <Quote(dependent)>:
-    covers:
-      - <Quote(pattern)>
-    hash: <hash>
+  <Quote(dependent)>: <hash>
 ```
 
-- Keys always appear in this order: `version`, `dependents`; within an entry, `covers`, `hash`.
-- One block per entry, in path order of the Dependent. With no entries, the second line is
+- Keys always appear in this order: `version`, `dependents`.
+- One line per entry, in path order of the Dependent. With no entries, the second line is
   `dependents: {}`.
-- `covers` lists the patterns in declaration order.
-- Indentation is two spaces per level.
+- Indentation is two spaces.
 
 NOTE: Two branches that write the same Dependent conflict on its `hash` line, as two branches that
 change one dependency conflict in a package-manager lockfile. Resolution: take either side, run
@@ -537,13 +542,13 @@ change one dependency conflict in a package-manager lockfile. Resolution: take e
 `WriteLock(root, lock)`:
 
 1. Let *text* be `LockText(lock)`.
-2. If `docsync.lock` exists and its contents, with every 0x0D 0x0A replaced by 0x0A, equal the
+2. If `docsync-lock.yaml` exists and its contents, with every 0x0D 0x0A replaced by 0x0A, equal the
    UTF-8 encoding of *text*, return without writing.
-3. Replace `docsync.lock` atomically with the UTF-8 encoding of *text*: a concurrent reader sees
+3. Replace `docsync-lock.yaml` atomically with the UTF-8 encoding of *text*: a concurrent reader sees
    either the old contents or the new.
 
 NOTE: Step 2 tolerates a checkout that converted the Lockfile to CR LF. Repositories SHOULD
-declare `docsync.lock text eol=lf` in `.gitattributes`.
+declare `docsync-lock.yaml text eol=lf` in `.gitattributes`.
 
 ## 12 Evaluation
 
@@ -565,14 +570,13 @@ declare `docsync.lock text eol=lf` in `.gitattributes`.
    *problems*, each with `[[Dependent]]` set to `binding.[[Dependent]]`, and return *r*.
 7. Set *r*.`[[Covered]]` to *covered* and *r*.`[[Current]]` to *current*.
 8. Let *entry* be the LockEntry of `binding.[[Dependent]]` in *lock*, or *none*.
-9. If *entry* is *none*, append `unrecorded`. Otherwise:
-   1. If `entry.[[Covers]]` and `binding.[[Covers]]` are not equal element by element, append
-      `binding-changed`.
-   2. If `entry.[[Hash]]` is not equal to *current*, append `content-changed`.
+9. If *entry* is *none*, append `unrecorded`. Otherwise, if *entry* is not equal to *current*,
+   append `content-changed`.
 10. Set *r*.`[[State]]` to `stale` if *r*.`[[Reasons]]` is non-empty, else `ok`. Return *r*.
 
 NOTE: `content-changed` covers every change to the covered set: an edited file, a new file the
-patterns select, a deleted file, a renamed or moved file.
+patterns select, a deleted file, a renamed or moved file, and so a pattern change that changes
+the covered set. A pattern change that leaves the covered set identical leaves the Dependent `ok`.
 
 ### 12.2 EvaluateAll
 
@@ -605,11 +609,12 @@ contain `content-changed`, and whose Dependent has a LockEntry *entry*; for ever
    nothing is written. If `git` is unavailable, Root is not inside a git work tree, the repository
    is shallow (`git rev-parse --is-shallow-repository` prints anything but `false`), or a command
    fails, return *unknown*.
-   1. List the commits of `git log --format=%H -S<entry.[[Hash]]> -- docsync.lock`, newest first.
-   2. For each, parse `docsync.lock` as of that commit and as of its first parent (*none* for a
-      root commit or when the file is absent there), by §11.1. If a parse fails, return *unknown*.
-   3. Let *C* be the first commit in which the Dependent's LockEntry has `[[Hash]]` equal to
-      *entry*.`[[Hash]]` and its parent's does not. If there is none, return *unknown*.
+   1. List the commits of `git log --format=%H -S<entry> -- docsync-lock.yaml`, newest first.
+   2. For each, parse `docsync-lock.yaml` as of that commit and as of its first parent by §11.1
+      steps 3 to 5. The file is *none* for a root commit, when it is absent there, or when it does
+      not parse (for example a version 1 file); that is never an error.
+   3. Let *C* be the first commit in which the Dependent's LockEntry equals *entry* and its
+      parent's does not. If there is none, return *unknown*.
 2. Let *diff* be the output of `git diff --name-status --no-renames -z
    --relative <C> --` run in Root (the work tree against *C*, so staged and unstaged edits are
    included), and *untracked* the output of `git ls-files --others --exclude-standard -z` run in
@@ -627,7 +632,7 @@ contain `content-changed`, and whose Dependent has a LockEntry *entry*; for ever
 Any error at any step returns *unknown*. `ChangedSince` never raises a Diagnostic and never affects
 the exit code.
 
-NOTE: *entry*`.[[Hash]]` is searched as text; no commit ID is stored. A rebase, squash or amend of
+NOTE: *entry* is searched as text; no commit ID is stored. A rebase, squash or amend of
 the review commit therefore keeps working. Step 1.3 ignores commits where another Dependent with
 the same Hash removed it. A shallow clone, or a Write that is not yet committed, yields *unknown*;
 so does an empty result, since a stale `content-changed` Result must have changed something.
@@ -715,13 +720,17 @@ compares them with the state at the last Write using its own tools.
 5. If *global* contains an error or any of *targets* is `invalid`: output *targets* and *global*
    as a check would (§14), write nothing, and exit 2.
 6. For each *t* of *targets*, set the LockEntry of *t*.`[[Dependent]]` in *lock* to
-   { `[[Covers]]`: *t*.`[[Covers]]`, `[[Hash]]`: *t*.`[[Current]]` }.
+   *t*.`[[Current]]`.
 7. Let *removed* be the Dependents of *lock* that have no Binding, in path order. Remove their
    entries.
 8. `WriteLock(root, lock)`.
 9. Output the written Dependents and *removed* (§14). Exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
+
+NOTE: `--write --all` recovers from the legacy `docsync.lock` (§11.1 step 1) by writing
+`docsync-lock.yaml`, but does not delete `docsync.lock`: deletions stay explicit, and every
+later run raises `E_LOCK_VERSION` until the user deletes it.
 
 NOTE: A Write asserts that a Review happened; docsync cannot check that, and trusts its caller.
 `--write` requires naming the files, or `--all` on purpose (first adoption, or recovery from an
@@ -859,7 +868,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docsync --write --all` after reviewing every Dependent |
-| `E_LOCK_VERSION` | error | §11.1 | as `E_LOCK` |
+| `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every Dependent, then `docsync --write --all`; otherwise as `E_LOCK` |
 | `E_UNKNOWN_DEPENDENT` | error | §13.3 | name a Dependent from `docsync.yaml` |
 | `W_ORPHAN` | warning | §12.2 | run `docsync --write` on any Dependent to remove it |
 

@@ -1,0 +1,5 @@
+version: 2
+dependents:
+  "CLAUDE.md": b3493da25fdaf57d0587695c4fefff5280ca5fa0ce1ed605ab815305dd98ac76
+  "README.md": af9bd9e590060e34bf0369cb28c2ac45c1f69770e314ccee1b76f6b966cbf01f
+  "docs/SPEC.md": 0b2c6906eee5901397ee730566e863b63bbde899e398568db04331494f1414f4

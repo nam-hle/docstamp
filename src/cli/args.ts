@@ -10,7 +10,7 @@ export const HELP = `Usage:
   docsync [--files] [--json] [--root <dir>] [<file>...]
       Check that each file's covered files are unchanged since its last review.
   docsync --write [--json] [--root <dir>] (--all | <file>...)
-      Record in docsync.lock that you reviewed the named files against their covered files.
+      Record in docsync-lock.yaml that you reviewed the named files against their covered files.
   docsync --version | --help
 `;
 

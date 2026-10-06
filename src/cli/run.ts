@@ -183,7 +183,7 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       return emit(io, { ...empty, selected, global, text });
     }
     const entries = new Map(evaluated.lock.entries);
-    for (const t of selected) entries.set(t.dependent, { covers: t.covers, hash: t.current });
+    for (const t of selected) entries.set(t.dependent, t.current);
     const bound = new Set(evaluated.results.map((r) => r.dependent));
     const removed = sortPaths([...entries.keys()].filter((d) => !bound.has(d)));
     for (const d of removed) entries.delete(d);

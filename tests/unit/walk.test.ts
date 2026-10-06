@@ -46,7 +46,7 @@ describe('§7.2 computeUniverse', () => {
   it('honors nested .gitignore and excludes docsync files and .git', () => {
     const root = makeTree({
       'docsync.yaml': '',
-      'docsync.lock': '',
+      'docsync-lock.yaml': '',
       '.gitignore': 'dist/\n',
       'dist/a.js': '',
       'src/a.ts': '',
@@ -71,8 +71,19 @@ describe('§7.2 computeUniverse', () => {
     expect(computeUniverse(root, config()).paths).toEqual(['lib/a.gen.ts', 'src/.gitignore']);
   });
   it('a nested docsync.yaml stays in the Universe', () => {
-    const root = makeTree({ 'docsync.yaml': '', 'sub/docsync.yaml': '', 'sub/docsync.lock': '' });
-    expect(computeUniverse(root, config()).paths).toEqual(['sub/docsync.lock', 'sub/docsync.yaml']);
+    const root = makeTree({
+      'docsync.yaml': '',
+      'sub/docsync.yaml': '',
+      'sub/docsync-lock.yaml': '',
+    });
+    expect(computeUniverse(root, config()).paths).toEqual([
+      'sub/docsync-lock.yaml',
+      'sub/docsync.yaml',
+    ]);
+  });
+  it('a leftover docsync.lock stays in the Universe', () => {
+    const root = makeTree({ 'docsync.yaml': '', 'docsync.lock': '' });
+    expect(computeUniverse(root, config()).paths).toEqual(['docsync.lock']);
   });
   it('gitignore:false ignores .gitignore files but not config ignore', () => {
     const root = makeTree({ '.gitignore': 'a\n', a: '', b: '' });

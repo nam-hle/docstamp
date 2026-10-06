@@ -35,9 +35,11 @@ The three steps are defined in [SPEC §1](docs/SPEC.md#1-scope):
 
 1. CI runs `pnpm exec docsync`. It exits 1 when a Dependent's covered files changed since its last review.
 2. A person or an agent reviews each stale Dependent against its covered files and edits it if needed.
-3. Run `pnpm exec docsync --write <file>` to record the review in `docsync.lock`, and commit the lock.
+3. Run `pnpm exec docsync --write <file>` to record the review in `docsync-lock.yaml`, and commit the lock.
 
 The first run has no lock; `pnpm exec docsync --write --all` records the initial state once the docs have been reviewed.
+
+Upgrading from a version 1 lock (`docsync.lock`): delete it, review every Dependent, then run `pnpm exec docsync --write --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
 
 ## Reviewing a stale doc
 
