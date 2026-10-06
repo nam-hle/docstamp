@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { types } from 'node:util';
 import { Raised, diag } from '../core/diagnostics.ts';
 import type { Value } from './value.ts';
 
@@ -17,7 +18,9 @@ function toPlain(v: unknown, ancestors: readonly object[], key: string): Value {
     if (Number.isFinite(v)) return v;
     throw new Violation(key);
   }
-  if (typeof v !== 'object' || ancestors.includes(v)) throw new Violation(key);
+  if (typeof v !== 'object' || ancestors.includes(v) || types.isProxy(v)) {
+    throw new Violation(key);
+  }
   const path = [...ancestors, v];
   const own = Reflect.ownKeys(v);
   if (Array.isArray(v)) {

@@ -519,7 +519,7 @@ exported value itself):
 
 1. If *v* is Null, a Boolean or a String, return it.
 2. If *v* is a Number, return it if it is finite, else raise.
-3. If *v* is an object that is in *ancestors*, raise.
+3. If *v* is an object that is in *ancestors*, raise. If *v* is a Proxy, raise.
 4. If *v* is an Array, every own property of it MUST be a data property named by an index below
    its length or `length`, and every index below its length MUST be present; otherwise raise.
    Return the List of `ToPlain(element, ancestors + « v »)` for its elements in index order.
@@ -528,6 +528,16 @@ exported value itself):
    each name to `ToPlain(value, ancestors + « v »)`.
 6. Raise. This covers `undefined`, functions, symbols, big integers, accessors, class instances
    and every other object.
+
+NOTE: A Proxy is rejected wherever it occurs, even one that wraps a plain object or an Array, since
+its traps can answer differently on each access.
+
+NOTE: A value nested too deeply to traverse, so that the host runtime exhausts its stack, raises
+`E_CONFIG` with an empty `[[Subject]]`.
+
+NOTE: A script Carrier is evaluated by the host runtime's module loader, which may cache it. A
+process that reads the same path more than once may observe the first evaluation (the CLI reads
+once).
 
 NOTE: A value reached twice without a cycle is allowed and is converted twice. Duplicate keys
 cannot occur, and the key order of a Map is not significant (§9.3).

@@ -48,7 +48,7 @@ export default defineConfig({
 });
 ```
 
-The file must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carriers)). TypeScript runs through Node's type stripping, so only erasable syntax works (no `enum`, no value `namespace`). Evaluating the file may import other files; docstamp does not track them, so import only `docstamp`.
+The file must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carriers)). TypeScript runs through Node's type stripping, so only erasable syntax works (no `enum`, no value `namespace`). TypeScript and JavaScript configurations were verified on Node.js 24.18.1. Evaluating the file may import other files; docstamp does not track them, so import only `docstamp`.
 
 Pattern syntax is in [SPEC §8](docs/SPEC.md#8-patterns).
 

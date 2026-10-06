@@ -184,7 +184,22 @@ describe('§9.5 script carriers', () => {
       script(`export default JSON.parse('{"version":1,"dependents":{},"__proto__":{"x":1}}');`),
     ).toEqual([['E_UNKNOWN_KEY', '__proto__']]);
   });
-  it('a deeply nested value is E_CONFIG, not a crash', () => {
+  it('§9.5 step 3: a Proxy object is E_CONFIG', () => {
+    expect(script('export default { version: 1, dependents: {}, x: new Proxy({}, {}) };')).toEqual([
+      ['E_CONFIG', 'x'],
+    ]);
+    expect(script('export default new Proxy({ version: 1, dependents: {} }, {});')).toEqual([
+      ['E_CONFIG', ''],
+    ]);
+  });
+  it('§9.5 step 3: a Proxy array is E_CONFIG', () => {
+    expect(
+      script(
+        'export default { version: 1, dependents: { "a.md": { covers: new Proxy(["a"], {}) } } };',
+      ),
+    ).toEqual([['E_CONFIG', 'dependents']]);
+  });
+  it('§9.5 NOTE: a deeply nested value is E_CONFIG, not a crash', () => {
     expect(
       script(
         'let v = []; for (let i = 0; i < 100000; i++) v = [v];\nexport default { version: 1, dependents: {}, x: v };',
