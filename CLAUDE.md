@@ -53,14 +53,14 @@ verification. If the gate cannot run, say which steps did.
 docsync/
 ├── src/
 │   ├── index.ts          # entry; wires the CLI
-│   ├── cli/              # commands, exit codes (SPEC §14, §17)
-│   ├── config/           # docsync.yaml + frontmatter discovery (§9, §10)
+│   ├── cli/              # commands, exit codes (SPEC §13, §16)
+│   ├── config/           # docsync.yaml (§9)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
 │   ├── pattern/          # grammar, matching, selection (§8)
-│   ├── hash/             # normalization, hash (§11)
-│   ├── lock/             # read, canonical write (§12)
-│   ├── engine/           # evaluation; pure, no I/O (§13)
-│   └── report/           # text and JSON output (§15, §16)
+│   ├── hash/             # normalization, file and cover hash (§10)
+│   ├── lock/             # read, canonical write (§11)
+│   ├── engine/           # evaluation; pure, no I/O (§12)
+│   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── tests/
 │   ├── unit/             # one file per spec section
 │   └── e2e/              # temp-repo fixtures driving the built CLI
@@ -94,10 +94,10 @@ Lockfile or the JSON output, and gets a CHANGELOG entry.
 
 ## Docs
 
-Once `docsync` runs, this repo uses it on itself: `CLAUDE.md` and the docs carry `docsync`
-frontmatter and `pnpm test` runs `docsync check`. When it fails:
+Once `docsync` runs, this repo uses it on itself: `docsync.yaml` binds `CLAUDE.md` and the docs
+to the code they describe, and `pnpm test` runs `docsync check`. When it fails:
 
-1. Read the listed files and re-check the doc's claims against them.
+1. Run `docsync ls <file>`, read the covered files that changed, and re-check the doc's claims.
 2. Fix what is no longer true.
 3. Only then run `docsync stamp <doc>`.
 

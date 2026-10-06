@@ -33,8 +33,8 @@ Docs are the main case, not the only one. The same problem appears wherever one 
 depends on another and nothing links them: a test fixture and the schema it mirrors, a
 translation and its source text, a hand-written type and the API it describes, a runbook and the
 deploy script. docsync treats any file in the repository (the same scope git sees) as a possible
-*Dependent* and any file as something it may cover. Markdown declares its links in frontmatter;
-every other file declares them in `docsync.yaml`.
+*Dependent* and any file as something it may cover. Every link is declared in one place,
+`docsync.yaml`; the files themselves carry no markers.
 
 ## Who it is for
 

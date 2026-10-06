@@ -183,6 +183,7 @@ npm package `docsync` (name free on npmjs as of 2026-10-06), bin `docsync`, sing
 - `--json` emits one envelope `{version, command, exitCode, docs[], diagnostics[]}` instead of one object per doc.
 - Frontmatter stripping hashes the remaining frontmatter as canonical JSON, so reformatting frontmatter does not cause staleness.
 - **Superseded per-file hashes:** the lock stores one Cover Hash per Dependent, SHA-256 over `path\0hash\n` of each covered file. Reason: a glob over thousands of files would put thousands of lines in the lock. Paths are part of the input so renames and moves count. Cost: the report no longer lists which files changed; it names the Dependent and its patterns. Reasons are now `unstamped`, `binding-changed`, `content-changed`. Hashes are full 64-char SHA-256.
+- **Superseded frontmatter bindings:** all Bindings live in `docsync.yaml` (required; `E_CONFIG_MISSING` without it). Reasons: one source of truth; removes frontmatter parsing, discovery scanning, `include`/`exclude`, frontmatter stripping before hashing, the duplicate-declaration error, and the YAML-file ambiguity. Cost: a doc does not show its own binding (`docsync ls` does), and renaming a Dependent needs its config key renamed, which fails loudly as `E_DEPENDENT_MISSING`. Config (hand-written, what is bound) and lock (generated, when reviewed) stay separate files so `stamp` never rewrites a hand-edited file.
 - `stamp --rebuild` added for a corrupt lock. Exit code 70 for internal failures.
 - `docsync.yaml` has a required `version: 1`.
 
