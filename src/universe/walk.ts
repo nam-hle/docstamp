@@ -73,6 +73,7 @@ export function computeUniverse(root: string, config: Config): Universe {
         errors.push(diag('E_UNREADABLE', { subject: joinPath(prefix, '.gitignore') }));
       }
     }
+    const activeRules = [...rules, ...configRules];
     for (const e of entries) {
       if (!isValidUtf8(e.name)) {
         errors.push(diag('E_PATH_ENCODING', { subject: prefix }));
@@ -89,7 +90,7 @@ export function computeUniverse(root: string, config: Config): Universe {
             : null;
       if (kind === null) continue;
       const rel = joinPath(prefix, name);
-      if (isIgnored(rel, kind === 'dir', [...rules, ...configRules])) continue;
+      if (isIgnored(rel, kind === 'dir', activeRules)) continue;
       if (kind !== 'dir') {
         found.push({ path: rel, kind });
         continue;

@@ -1,10 +1,31 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { run, type Io } from '../../src/cli/run.ts';
+import { memoizeHash, run, type Io } from '../../src/cli/run.ts';
+import { Raised, diag } from '../../src/core/diagnostics.ts';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 
 afterEach(cleanupTrees);
+
+describe('per-run hash cache', () => {
+  it('hashes a shared file once across callers', () => {
+    const calls: string[] = [];
+    const hash = memoizeHash((p) => (calls.push(p), `h-${p}`));
+    expect(hash('a')).toBe('h-a');
+    expect(hash('a')).toBe('h-a');
+    expect(calls).toEqual(['a']);
+  });
+  it('re-raises a cached failure on every call', () => {
+    let calls = 0;
+    const hash = memoizeHash((p) => {
+      calls++;
+      throw new Raised([diag('E_UNREADABLE', { subject: p })]);
+    });
+    expect(() => hash('a')).toThrow(Raised);
+    expect(() => hash('a')).toThrow(Raised);
+    expect(calls).toBe(1);
+  });
+});
 
 const CONFIG = 'version: 1\ndependents:\n  doc.md:\n    covers:\n      - src/**\n';
 

@@ -39,6 +39,24 @@ interface Evaluated {
   global: Diagnostic[];
 }
 
+export function memoizeHash(hash: (path: string) => string): (path: string) => string {
+  const cache = new Map<string, string | Raised>();
+  return (path) => {
+    let cached = cache.get(path);
+    if (cached === undefined) {
+      try {
+        cached = hash(path);
+      } catch (e) {
+        if (!(e instanceof Raised)) throw e;
+        cached = e;
+      }
+      cache.set(path, cached);
+    }
+    if (cached instanceof Raised) throw cached;
+    return cached;
+  };
+}
+
 // SPEC §12.2
 function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evaluated {
   const { config, attached } = readConfig(root);
@@ -52,7 +70,7 @@ function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evalua
   }
   const fs: EngineFs = {
     isDependentFile: (p) => isDependentFile(root, p),
-    fileHash: (p) => fileHash(root, universe, p),
+    fileHash: memoizeHash((p) => fileHash(root, universe, p)),
   };
   const results = config.bindings.map((b) =>
     evaluate(
