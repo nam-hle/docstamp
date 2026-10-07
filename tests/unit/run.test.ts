@@ -47,7 +47,7 @@ describe('§13.5 check', () => {
   it('unrecorded is stale, exit 1, next line on stdout', () => {
     const r = exec(tree(), '--root', '.');
     expect(r.code).toBe(1);
-    expect(r.out).toContain('STALE    doc.md  (unrecorded)\n  depends  src/**\n');
+    expect(r.out).toContain('STALE    doc.md  (unrecorded)\n  depends   src/**\n');
     expect(r.out).toContain('docstamp update doc.md --root .\n');
     expect(r.err).toBe('');
   });
@@ -59,7 +59,7 @@ describe('§13.5 check', () => {
     const r = exec(root, 'check');
     expect(r.code).toBe(1);
     expect(r.out).toContain('(content-changed)');
-    expect(r.out).not.toContain('  file ');
+    expect(r.out).not.toContain('  resolved ');
   });
   it('removed --write and --files exit 2 naming the replacement', () => {
     const write = exec(tree(), '--write', 'doc.md');
@@ -177,7 +177,7 @@ describe('§13.7 list-dependents', () => {
     const r = exec(tree(), list);
     expect(r).toEqual({
       code: 0,
-      out: 'doc.md\n  depends  src/**\n  file     src/a.ts\n',
+      out: 'doc.md\n  depends   src/**\n  resolved  src/a.ts\n',
       err: '',
     });
   });
@@ -220,7 +220,9 @@ describe('§13.7 list-dependents', () => {
       version: 2,
       mode: 'list-dependents',
       exitCode: 0,
-      files: [{ file: 'doc.md', dependencies: ['src/**'], files: ['src/a.ts'], diagnostics: [] }],
+      files: [
+        { file: 'doc.md', dependencies: ['src/**'], resolvedFiles: ['src/a.ts'], diagnostics: [] },
+      ],
       diagnostics: [],
     });
   });

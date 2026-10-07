@@ -112,11 +112,11 @@ describe('§13 workflow', () => {
     expect(docstamp(root).code).toBe(2);
     expect(docstamp(root, 'list-dependents')).toEqual({
       code: 0,
-      out: 'CLAUDE.md\n  depends  src/**\n  file     src/a.ts\n',
+      out: 'CLAUDE.md\n  depends   src/**\n  resolved  src/a.ts\n',
       err: '',
     });
     const json = JSON.parse(docstamp(root, 'list-dependents', '--json').out);
-    expect(json.files[0].files).toEqual(['src/a.ts']);
+    expect(json.files[0].resolvedFiles).toEqual(['src/a.ts']);
   });
 
   it('§13.7 list-dependents exits 2 for an invalid Dependent', () => {

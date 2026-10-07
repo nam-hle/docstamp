@@ -18,7 +18,7 @@ const res = (dependent: string, state: Result['state'], extra: Partial<Result> =
 describe('§14.3 check text', () => {
   it('lists only non-ok, summary, next line', () => {
     expect(checkText([res('a.md', 'ok'), res('my doc.md', 'stale')])).toBe(
-      'STALE    "my doc.md"  (content-changed)\n  depends  src/**\n' +
+      'STALE    "my doc.md"  (content-changed)\n  depends   src/**\n' +
         '1 ok, 1 stale, 0 invalid\n' +
         'next: review each stale file against its dependencies, then run: ' +
         'docstamp update "my doc.md"\n',
@@ -26,7 +26,7 @@ describe('§14.3 check text', () => {
   });
   it('prints no block for ok and no file lines', () => {
     expect(checkText([res('a.md', 'ok')])).toBe('1 ok, 0 stale, 0 invalid\n');
-    expect(checkText([res('a.md', 'stale')])).not.toContain('  file ');
+    expect(checkText([res('a.md', 'stale')])).not.toContain('  resolved ');
   });
   it('known changes replace the depends lines', () => {
     const changes = [
@@ -40,7 +40,7 @@ describe('§14.3 check text', () => {
     );
   });
   it('unknown or empty changes print depends lines', () => {
-    const dependencies = 'STALE    a.md  (content-changed)\n  depends  src/**\n';
+    const dependencies = 'STALE    a.md  (content-changed)\n  depends   src/**\n';
     expect(checkText([res('a.md', 'stale', { changes: null })])).toContain(dependencies);
     expect(checkText([res('a.md', 'stale', { changes: [] })])).toContain(dependencies);
   });
@@ -81,8 +81,8 @@ describe('§14.6 list-dependents text', () => {
       resolved: ['src/a.ts', 'x'],
     });
     expect(listText([two, res('my doc.md', 'stale', { resolved: ['my file'] })])).toBe(
-      'a.md\n  depends  src/**\n  depends  !src/b.ts\n  file     src/a.ts\n  file     x\n' +
-        '"my doc.md"\n  depends  src/**\n  file     "my file"\n',
+      'a.md\n  depends   src/**\n  depends   !src/b.ts\n  resolved  src/a.ts\n  resolved  x\n' +
+        '"my doc.md"\n  depends   src/**\n  resolved  "my file"\n',
     );
   });
   it('an invalid Result prints its first line only, and there is no summary', () => {
@@ -189,9 +189,14 @@ describe('§14.5 JSON', () => {
     const doc = JSON.parse(out);
     expect(Object.keys(doc)).toEqual(['version', 'mode', 'exitCode', 'files', 'diagnostics']);
     expect(doc.mode).toBe('list-dependents');
-    expect(Object.keys(doc.files[0])).toEqual(['file', 'dependencies', 'files', 'diagnostics']);
-    expect(doc.files[0].files).toEqual(['src/a.ts']);
-    expect(doc.files[1].files).toEqual([]);
+    expect(Object.keys(doc.files[0])).toEqual([
+      'file',
+      'dependencies',
+      'resolvedFiles',
+      'diagnostics',
+    ]);
+    expect(doc.files[0].resolvedFiles).toEqual(['src/a.ts']);
+    expect(doc.files[1].resolvedFiles).toEqual([]);
     expect(doc.files[1].diagnostics[0].code).toBe('E_EMPTY_COVERS');
   });
 });

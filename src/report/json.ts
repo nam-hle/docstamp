@@ -98,7 +98,7 @@ export function listJsonText(doc: ListJsonDoc): string {
     obj([
       ['file', r.dependent],
       ['dependencies', [...r.dependencies]],
-      ['files', [...r.resolved]],
+      ['resolvedFiles', [...r.resolved]],
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ]),
   );

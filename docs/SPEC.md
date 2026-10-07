@@ -908,7 +908,7 @@ One block per selected Result that is not `ok`, in path order.
 
 ```
 STALE    <dependent>  (<reason>, <reason>)
-  depends  <pattern>
+  depends   <pattern>
 ```
 
 or, for a stale Result with a non-empty `[[Changes]]`:
@@ -999,7 +999,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
       {
         "file": "CLAUDE.md",
         "dependencies": ["src/**", "package.json"],
-        "files": ["package.json", "src/cli/run.ts"],
+        "resolvedFiles": ["package.json", "src/cli/run.ts"],
         "diagnostics": []
       }
     ],
@@ -1007,8 +1007,9 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   }
   ```
 
-  It has no `summary`, `state`, `reasons` or `changes`. In an entry, `file` is the Result's `[[Dependent]]` and `files` is its `[[Resolved]]` in
-  path order, and `[]` for an `invalid` Result.
+  It has no `summary`, `state`, `reasons` or `changes`. In an entry, `file` is the Result's
+  `[[Dependent]]` and `resolvedFiles` is its `[[Resolved]]` in path order,
+  and `[]` for an `invalid` Result.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
   empty `[[Dependent]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
 - When a step raises before Results exist, `summary` (not for `list-dependents`) counts zeros and
@@ -1021,11 +1022,11 @@ One block per selected Result, in path order:
 
 ```
 <dependent>
-  depends  <pattern>
-  file     <dependency>
+  depends   <pattern>
+  resolved  <dependency>
 ```
 
-with one `depends` line per pattern in declaration order, then one `file` line per dependency in
+with one `depends` line per pattern in declaration order, then one `resolved` line per dependency in
 path order, each written as in §14.2. An `invalid` Result prints its first line only. There is no
 summary line. Diagnostics as in §14.3.
 

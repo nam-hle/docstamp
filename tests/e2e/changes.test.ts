@@ -91,7 +91,7 @@ describe('§12.3 ChangedSince', () => {
       { status: 'added', path: 'src/new.ts' },
       { status: 'added', path: 'src/untracked.ts' },
     ]);
-    expect('files' in doc.files[0]).toBe(false);
+    expect('resolvedFiles' in doc.files[0]).toBe(false);
   });
 
   it('survives a rewrite of the review commit', () => {
@@ -137,7 +137,7 @@ describe('§12.3 ChangedSince', () => {
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstamp(root);
     expect(r.code).toBe(1);
-    expect(r.out).toContain('  depends  src/**\n');
+    expect(r.out).toContain('  depends   src/**\n');
     expect(JSON.parse(docstamp(root, '--json').out).files[0].changes).toBeNull();
   });
 
@@ -148,7 +148,7 @@ describe('§12.3 ChangedSince', () => {
     docstamp(root, 'update', 'CLAUDE.md');
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstamp(root);
-    expect(r.out).toContain('  depends  src/**\n');
+    expect(r.out).toContain('  depends   src/**\n');
     expect(JSON.parse(docstamp(root, '--json').out).files[0].changes).toBeNull();
   });
 
@@ -254,7 +254,7 @@ describe('§12.3 ChangedSince', () => {
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstamp(root);
     expect(r.code).toBe(1);
-    expect(r.out).toContain('  depends  src/**\n');
+    expect(r.out).toContain('  depends   src/**\n');
     expect(r.err).toBe('');
   });
 
