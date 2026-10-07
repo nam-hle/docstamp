@@ -1,0 +1,8 @@
+# proxy
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.config.ts ---
+export default new Proxy({ version: 2, files: {} }, {});

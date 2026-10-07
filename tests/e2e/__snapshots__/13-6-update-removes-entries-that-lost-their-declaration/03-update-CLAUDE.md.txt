@@ -1,0 +1,7 @@
+$ docstamp update CLAUDE.md
+exit: 0
+--- stdout ---
+unchanged  CLAUDE.md
+removed  README.md
+removed  docs/guide.md
+--- stderr ---

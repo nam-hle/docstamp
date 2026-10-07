@@ -1,0 +1,19 @@
+# config key renamed too
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    GUIDE.md  (unrecorded)
+  depends   src/**
+1 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update GUIDE.md
+--- stderr ---
+warning: W_ORPHAN: README.md: Run "docstamp update" on any file to remove the entry.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  GUIDE.md:
+    dependencies:
+      - src/**
+  docs/api.md:
+    dependencies:
+      - src/lib

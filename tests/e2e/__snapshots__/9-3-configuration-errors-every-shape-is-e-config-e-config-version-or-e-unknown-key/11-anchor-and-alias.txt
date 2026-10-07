@@ -1,0 +1,12 @@
+# anchor and alias
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  DOC.md: &a
+    dependencies: [src/**]
+  B.md: *a

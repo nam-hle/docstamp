@@ -1,0 +1,12 @@
+# invalid UTF-8 file name
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_PATH_ENCODING: src: Rename the file to a valid UTF-8 name.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"

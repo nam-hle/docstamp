@@ -1,0 +1,75 @@
+# twelve invalid patterns
+$ docstamp
+exit: 2
+--- stdout ---
+STALE    DOC.md  (unrecorded)
+  depends   src/**
+INVALID  p01.md
+INVALID  p02.md
+INVALID  p03.md
+INVALID  p04.md
+INVALID  p05.md
+INVALID  p06.md
+INVALID  p07.md
+INVALID  p08.md
+INVALID  p09.md
+INVALID  p10.md
+INVALID  p11.md
+INVALID  p12.md
+0 ok, 1 stale, 12 invalid
+next: review each stale file against its dependencies, then run: docstamp update DOC.md
+--- stderr ---
+error: E_PATTERN: p01.md: src//a.ts: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p02.md: /src/a.ts: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p03.md: src/: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p04.md: src/../a.ts: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p05.md: src/**x: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p06.md: src/[z-a].ts: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p07.md: src/{a}.ts: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p08.md: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p09.md: !: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p10.md: src/[!].ts: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p11.md: src/./a.ts: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p12.md: é.md: Correct the pattern; patterns use "/" and "\" escapes.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"
+  "p01.md":
+    dependencies:
+      - "src//a.ts"
+  "p02.md":
+    dependencies:
+      - "/src/a.ts"
+  "p03.md":
+    dependencies:
+      - "src/"
+  "p04.md":
+    dependencies:
+      - "src/../a.ts"
+  "p05.md":
+    dependencies:
+      - "src/**x"
+  "p06.md":
+    dependencies:
+      - "src/[z-a].ts"
+  "p07.md":
+    dependencies:
+      - "src/{a}.ts"
+  "p08.md":
+    dependencies:
+      - ""
+  "p09.md":
+    dependencies:
+      - "!"
+  "p10.md":
+    dependencies:
+      - "src/[!].ts"
+  "p11.md":
+    dependencies:
+      - "src/./a.ts"
+  "p12.md":
+    dependencies:
+      - "é.md"

@@ -112,6 +112,7 @@ const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'e
 interface Output {
   json: boolean;
   mode: 'check' | 'update';
+  evaluated: boolean;
   exitCode: number;
   selected: Result[];
   global: Diagnostic[];
@@ -125,6 +126,7 @@ function emit(io: Io, o: Output): number {
     io.stdout(
       jsonText({
         mode: o.mode,
+        evaluated: o.evaluated,
         exitCode: o.exitCode,
         selected: o.selected,
         diagnostics: o.global,
@@ -150,10 +152,8 @@ function runList(
   let exitCode = 2;
   try {
     const root = determineRoot(cwd, args.root);
-    const picked = selectResults(args.paths, cwd, root, listAll(root));
-    selected = picked.selected;
-    global = picked.errors;
-    exitCode = hasError(global) || selected.some((r) => r.state === 'invalid') ? 2 : 0;
+    selected = selectResults(args.paths, cwd, root, listAll(root));
+    exitCode = selected.some((r) => r.state === 'invalid') ? 2 : 0;
   } catch (e) {
     if (!(e instanceof Raised)) throw e;
     global = e.diagnostics;
@@ -177,18 +177,16 @@ function reverseEntries(
   const universe = new Set(computeUniverse(root, config).paths);
   const keyed = new Map<string, string | null>();
   for (const arg of paths) keyed.set(toRepoPath(arg, cwd, root) ?? arg, toRepoPath(arg, cwd, root));
-  const entries = sortPaths([...keyed.keys()]).map((key): ReverseEntry => {
-    if (keyed.get(key) === null) {
-      const message = 'Name a file inside the root.';
-      return {
-        file: key,
-        dependents: [],
-        diagnostics: [diag('E_USAGE', { subject: key, message })],
-      };
-    }
-    const dependents = dependentsOf(key, config.declarations, universe, attached);
-    return { file: key, dependents, diagnostics: [] };
-  });
+  const outside = sortPaths([...keyed.keys()].filter((key) => keyed.get(key) === null));
+  if (outside.length > 0) {
+    const message = 'Name a file inside the root.';
+    throw new Raised(outside.map((subject) => diag('E_USAGE', { subject, message })));
+  }
+  const entries = sortPaths([...keyed.keys()]).map((key): ReverseEntry => ({
+    file: key,
+    dependents: dependentsOf(key, config.declarations, universe, attached),
+    diagnostics: [],
+  }));
   return { entries, attached };
 }
 
@@ -244,10 +242,11 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
   const empty: Output = {
     json,
     mode,
+    evaluated: false,
     exitCode: 2,
     selected: [],
     global: [],
-    text: checkText([]),
+    text: '',
     ...(mode === 'update' ? { written: new Set<string>(), removed: [] } : {}),
   };
   try {
@@ -256,23 +255,22 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       root,
       args.mode === 'update' && args.all ? 'discard-invalid' : 'strict',
     );
-    const picked =
+    const selected =
       args.mode === 'update' && args.all
-        ? { selected: evaluated.results, errors: [] }
+        ? evaluated.results
         : selectResults(args.paths, cwd, root, evaluated.results);
-    const { selected } = picked;
-    const global = [...evaluated.global, ...picked.errors];
+    const global = evaluated.global;
     const refused = hasError(global) || selected.some((r) => r.state === 'invalid');
     if (mode === 'check') {
       const stale = selected.some((r) => r.state === 'stale');
       const exitCode = refused ? 2 : stale ? 1 : 0;
       const reported = selected.map((r) => withChanges(root, r, evaluated.lock));
       const text = checkText(reported, args.root);
-      return emit(io, { ...empty, exitCode, selected: reported, global, text });
+      return emit(io, { ...empty, evaluated: true, exitCode, selected: reported, global, text });
     }
     if (refused) {
-      const text = checkText(selected, args.root);
-      return emit(io, { ...empty, selected, global, text });
+      const text = checkText(selected, args.root, false);
+      return emit(io, { ...empty, evaluated: true, selected, global, text });
     }
     const entries = new Map(evaluated.lock.entries);
     for (const t of selected) entries.set(t.file, t.current);
@@ -280,13 +278,18 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     const removed = sortPaths([...entries.keys()].filter((d) => !bound.has(d)));
     for (const d of removed) entries.delete(d);
     writeLock(root, { entries });
-    const written = selected.map((r) => r.file);
-    const text = updateText(written, removed);
+    const written = selected
+      .filter((r) => evaluated.lock.entries.get(r.file) !== r.current)
+      .map((r) => r.file);
+    const unchanged = selected.map((r) => r.file).filter((file) => !written.includes(file));
+    const text = updateText(written, unchanged, removed);
+    const afterWrite = selected.map((r): Result => ({ ...r, state: 'ok', reasons: [] }));
     return emit(io, {
       ...empty,
+      evaluated: true,
       exitCode: 0,
-      selected,
-      global,
+      selected: afterWrite,
+      global: global.filter((d) => d.code !== 'W_ORPHAN'),
       text,
       written: new Set(written),
       removed,

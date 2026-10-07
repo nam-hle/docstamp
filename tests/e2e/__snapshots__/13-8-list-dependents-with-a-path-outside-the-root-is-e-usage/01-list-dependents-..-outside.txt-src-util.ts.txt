@@ -1,0 +1,5 @@
+$ docstamp list-dependents ../outside.txt src/util.ts
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: ../outside.txt: Name a file inside the root.

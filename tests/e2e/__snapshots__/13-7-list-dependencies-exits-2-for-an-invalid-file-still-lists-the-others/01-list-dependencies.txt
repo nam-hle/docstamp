@@ -1,0 +1,14 @@
+$ docstamp list-dependencies
+exit: 2
+--- stdout ---
+CLAUDE.md
+  depends   src/**
+  depends   !src/**/*.test.ts
+  resolved  src/cli/run.ts
+  resolved  src/index.ts
+  resolved  src/util.ts
+README.md
+docs/guide.md
+--- stderr ---
+error: E_EMPTY_PATTERN: README.md: docs/guide.md: Correct or remove the pattern; it matches no file.
+error: E_FILE_MISSING: docs/guide.md: Rename the key under "files" in the configuration file or restore the file.

@@ -1,0 +1,14 @@
+$ docstamp
+cwd: packages/a
+exit: 1
+--- stdout ---
+STALE    ROOT.md  (unrecorded)
+  depends   packages/*/package.json
+STALE    packages/a/README.md  (unrecorded)
+  depends   packages/a/src/**
+STALE    packages/b/README.md  (unrecorded)
+  depends   packages/b/src/**
+  depends   packages/a/src/index.ts
+0 ok, 3 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update ROOT.md packages/a/README.md packages/b/README.md
+--- stderr ---

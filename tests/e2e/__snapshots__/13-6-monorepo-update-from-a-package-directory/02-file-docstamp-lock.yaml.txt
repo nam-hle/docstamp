@@ -1,0 +1,6 @@
+file: docstamp-lock.yaml
+--- content ---
+version: 3
+files:
+  "packages/a/README.md": 3c17016a7a3ea08397974cab60b697b3362e63806a2ef3280228d6f6f15756bc
+  "packages/b/README.md": 7aee48628b313047738ecd8ff7bcaa06f1c419eb4ff01363a2334dd850f5112c

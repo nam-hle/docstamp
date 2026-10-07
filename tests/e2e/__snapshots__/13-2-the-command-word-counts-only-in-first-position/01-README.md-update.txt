@@ -1,0 +1,5 @@
+$ docstamp README.md update
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNKNOWN_FILE: update: Name a file listed under "files" in the configuration file.

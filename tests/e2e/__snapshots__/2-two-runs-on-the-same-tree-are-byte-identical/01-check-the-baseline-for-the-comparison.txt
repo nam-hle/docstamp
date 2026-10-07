@@ -1,0 +1,6 @@
+# check, the baseline for the comparison
+$ docstamp
+exit: 0
+--- stdout ---
+3 ok, 0 stale, 0 invalid
+--- stderr ---

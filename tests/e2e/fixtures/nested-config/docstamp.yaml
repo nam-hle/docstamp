@@ -1,0 +1,5 @@
+version: 2
+files:
+  ROOT.md:
+    dependencies:
+      - src/**

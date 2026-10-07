@@ -1,0 +1,12 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    README.md  (content-changed)
+  added     src/lib/new-name.ts
+  deleted   src/lib/old-name.ts
+STALE    docs/api.md  (content-changed)
+  added     src/lib/new-name.ts
+  deleted   src/lib/old-name.ts
+0 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md docs/api.md
+--- stderr ---

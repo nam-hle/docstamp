@@ -46,8 +46,8 @@ Node.js >= 24. ESM only.
 
 ## The gate
 
-`pnpm test` runs format check, lint, types, knip, the build, every test suite and `docstamp`
-itself. Run it before committing.
+`pnpm test` runs format check, lint, types, knip, the build, every test suite (unit, end-to-end,
+pack) and `docstamp` itself. Run it before committing.
 Nothing narrower is a substitute: a single vitest file or a successful build is iteration, not
 verification. If the gate cannot run, say which steps did.
 
@@ -70,14 +70,48 @@ docstamp/
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json
 ├── tests/
-│   ├── helpers/          # temp-repo fixture builder shared by tests
+│   ├── helpers/          # temp-repo fixture builder shared by unit tests
 │   ├── unit/             # unit tests, grouped by module
-│   └── e2e/              # temp-repo fixtures driving the built CLI
+│   └── e2e/              # the built CLI, spawned as a child process (see End-to-end tests)
+│       ├── harness/      # scenario(), the Repo helpers, snapshot format
+│       ├── scenarios/    # one file per area, each test a scenario
+│       ├── fixtures/     # plain trees copied into a temp repo; data, not code
+│       ├── __snapshots__/<scenario>/NN-<args>.txt   # full result of every run
+│       └── pack.test.ts  # npm pack, extract, run from node_modules
 └── docs/
     ├── SPEC.md           # the contract
     ├── PRINCIPLES.md
     └── VISION.md
 ```
+
+## End-to-end tests
+
+`pnpm test:e2e` runs `node dist/index.js` as a child process (never imported) in a temp repo, so
+build first; `pnpm test:pack` packs the repo, extracts it into `node_modules` and runs the bin.
+Every scenario asserts the exit code and the semantics, and snapshots the full result.
+
+- **Scenario**: `scenario(name, { fixture?, git?, linkLib?, skipIf? }, async (repo) => ...)` in
+  `tests/e2e/scenarios/*.test.ts`. Name it by SPEC clause, unique across files. It gets a fresh
+  temp dir, a copy of `tests/e2e/fixtures/<fixture>/`, and `git init` with a fixed environment
+  (author, dates, no global config, no hooks), so hashes and commit ids are stable.
+- **Repo helpers**: `write`, `append`, `remove`, `rename`, `symlink`, `chmod`, `mkdir`, `read`,
+  `commit(msg)`, `git(...)`, `at(dir)`, `copyTo(dir)`, `shallowClone(dir)`, `fixtureText(path)`.
+  `await repo.run(args, { cwd?, env?, expectExit?, label?, show?, snapshot? })` returns
+  `{ exit, stdout, stderr, json() }` and writes a snapshot: the command line, `exit`, stdout and
+  stderr. `label` names a case in the snapshot, `show` echoes the files under test, `cwd` is
+  relative to the temp repo. `snapFile(path)` snapshots a file such as the lock.
+- **Fixture**: a plain tree under `tests/e2e/fixtures/<use case>/`; add one when a use case needs
+  files the existing ones lack (cwd, nesting, ignore rules). Fixture sources are never formatted,
+  linted, type-checked, collected by vitest or scanned by knip; a `docstamp.config.ts` there imports `docstamp` through
+  `linkLib: true`, which links the repo as `node_modules/docstamp`.
+- **Snapshots**: only the temp root becomes `<root>`; hashes stay real, which pins hash
+  stability. After a deliberate behavior change run `pnpm test:e2e -u`, then read every changed
+  snapshot: a snapshot of a bug is not a test. Obsolete snapshots fail the run: a scenario
+  fails on files in its folder that it did not produce, and `snapshot-guard.test.ts` fails on a
+  folder no scenario names. Delete what they list after renaming or removing a scenario. `E_PATH_ENCODING` and `E_PATH_COLLISION` need a Linux file
+  system: their scenarios skip on macOS and their snapshots come from a Linux run.
+- Tests are hermetic: no sleeps, no network, nothing outside the temp dir. Keep the suite near
+  20 seconds.
 
 ## Critical Invariants
 
@@ -112,8 +146,8 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 - `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
   the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
 - Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
-  `.github/workflows/publish.yml` for that tag. It builds, runs the unit and end-to-end tests
-  (not the docs self-check) and publishes to npm with the secret `NPM_TOKEN`, using
+  `.github/workflows/publish.yml` for that tag. It builds, runs the unit, end-to-end and pack
+  tests (not the docs self-check) and publishes to npm with the secret `NPM_TOKEN`, using
   `npm publish --provenance` (the job holds `id-token: write`). Provenance requires the repository
   to be public; the publish fails while it is private.
 - To retry a failed publish, run the Publish workflow from `main` with the release tag as input.

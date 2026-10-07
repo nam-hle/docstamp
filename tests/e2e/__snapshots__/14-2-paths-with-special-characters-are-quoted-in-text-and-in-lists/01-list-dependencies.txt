@@ -1,0 +1,18 @@
+$ docstamp list-dependencies
+exit: 0
+--- stdout ---
+DOC.md
+  depends   src/**
+  resolved  "src/paren(1).ts"
+  resolved  src/plain.ts
+  resolved  "src/quote\"d.ts"
+  resolved  "src/tab\there.ts"
+  resolved  "src/with space.ts"
+  resolved  src/ünï.ts
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"

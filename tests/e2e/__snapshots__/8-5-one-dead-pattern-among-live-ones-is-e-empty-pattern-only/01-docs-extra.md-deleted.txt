@@ -1,0 +1,18 @@
+# docs/extra.md deleted
+$ docstamp
+exit: 2
+--- stdout ---
+STALE    docs/all.md  (unrecorded)
+  depends   src/**
+STALE    docs/alternation.md  (unrecorded)
+  depends   src/{a,b}.ts
+STALE    docs/directory.md  (unrecorded)
+  depends   src/lib
+STALE    docs/negation.md  (unrecorded)
+  depends   src/**
+  depends   !src/**/*.test.ts
+INVALID  docs/two.md
+0 ok, 4 stale, 1 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/all.md docs/alternation.md docs/directory.md docs/negation.md
+--- stderr ---
+error: E_EMPTY_PATTERN: docs/two.md: docs/extra.md: Correct or remove the pattern; it matches no file.

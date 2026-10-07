@@ -1,0 +1,9 @@
+$ docstamp list-dependents package.json ../b/package.json
+cwd: packages/a
+exit: 0
+--- stdout ---
+packages/a/package.json
+  ROOT.md   via packages/*/package.json
+packages/b/package.json
+  ROOT.md   via packages/*/package.json
+--- stderr ---

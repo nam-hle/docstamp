@@ -1,0 +1,24 @@
+$ docstamp list-dependents --json docs/extra.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependents",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "docs/extra.md",
+      "dependents": [
+        {
+          "file": "docs/two.md",
+          "via": [
+            "docs/extra.md"
+          ]
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

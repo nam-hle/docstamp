@@ -1,0 +1,19 @@
+version: 2
+files:
+  docs/all.md:
+    dependencies:
+      - src/**
+  docs/alternation.md:
+    dependencies:
+      - src/{a,b}.ts
+  docs/negation.md:
+    dependencies:
+      - src/**
+      - "!src/**/*.test.ts"
+  docs/directory.md:
+    dependencies:
+      - src/lib
+  docs/two.md:
+    dependencies:
+      - src/a.ts
+      - docs/extra.md

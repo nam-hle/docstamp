@@ -1,0 +1,10 @@
+$ docstamp update GONE.md CLAUDE.md
+exit: 2
+--- stdout ---
+STALE    CLAUDE.md  (unrecorded)
+  depends   src/**
+  depends   !src/**/*.test.ts
+INVALID  GONE.md
+0 ok, 1 stale, 1 invalid
+--- stderr ---
+error: E_FILE_MISSING: GONE.md: Rename the key under "files" in the configuration file or restore the file.

@@ -1,0 +1,6 @@
+# a file, not a directory
+$ docstamp --root CLAUDE.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_ROOT: Pass an existing directory to --root.

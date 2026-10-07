@@ -1,0 +1,5 @@
+file: sub/docstamp-lock.yaml
+--- content ---
+version: 3
+files:
+  "SUB.md": 0a75499ca746cee7f24e0c746952ede8a98641e07f9440d4b470ec8343c59782

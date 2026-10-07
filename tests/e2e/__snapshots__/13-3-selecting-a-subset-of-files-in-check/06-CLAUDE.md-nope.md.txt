@@ -1,0 +1,5 @@
+$ docstamp CLAUDE.md nope.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNKNOWN_FILE: nope.md: Name a file listed under "files" in the configuration file.

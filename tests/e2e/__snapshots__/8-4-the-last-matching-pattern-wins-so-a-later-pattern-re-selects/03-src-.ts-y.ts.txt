@@ -1,0 +1,31 @@
+# src/*/*.ts !**/y.ts
+$ docstamp list-dependencies --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "DOC.md",
+      "dependencies": [
+        "src/*/*.ts",
+        "!**/y.ts"
+      ],
+      "resolvedFiles": [
+        "src/lib/x.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/*/*.ts"
+      - "!**/y.ts"

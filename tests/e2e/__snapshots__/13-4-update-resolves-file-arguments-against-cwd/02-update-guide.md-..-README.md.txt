@@ -1,0 +1,7 @@
+$ docstamp update guide.md ../README.md
+cwd: docs
+exit: 0
+--- stdout ---
+written  README.md
+written  docs/guide.md
+--- stderr ---

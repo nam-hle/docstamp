@@ -1,0 +1,8 @@
+# exports undefined
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: The configuration module has no default export; use "export default" (a CommonJS module.exports value is also accepted).
+--- setup: docstamp.config.ts ---
+export const nothing = undefined;

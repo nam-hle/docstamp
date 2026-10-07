@@ -1,0 +1,6 @@
+$ docstamp list-dependents src/util.test.ts
+exit: 0
+--- stdout ---
+src/util.test.ts
+  (no dependents)
+--- stderr ---

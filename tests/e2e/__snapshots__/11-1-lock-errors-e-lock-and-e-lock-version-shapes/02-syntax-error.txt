@@ -1,0 +1,9 @@
+# syntax error
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_LOCK: The Lockfile is not valid; after a merge conflict take either side, otherwise run "docstamp update --all" after reviewing every file.
+--- setup: docstamp-lock.yaml ---
+garbage: [
+(no final newline)

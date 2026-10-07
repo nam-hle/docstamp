@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { selectResults, toRepoPath } from '../../src/cli/paths.ts';
+import type { Raised } from '../../src/core/diagnostics.ts';
 import type { Result } from '../../src/core/types.ts';
 
 describe('§13.4 toRepoPath', () => {
@@ -34,16 +35,28 @@ describe('§13.4 toRepoPath', () => {
 describe('§13.3 selectResults', () => {
   const r = (file: string) => ({ file }) as Result;
   const results = [r('a.md'), r('b.md')];
+  const raised = (args: string[]) => {
+    try {
+      selectResults(args, '/r', '/r', results);
+    } catch (error) {
+      return (error as Raised).diagnostics.map((d) => [d.code, d.subject]);
+    }
+    return [];
+  };
   it('all when no args', () => {
-    expect(selectResults([], '/r', '/r', results).selected).toHaveLength(2);
+    expect(selectResults([], '/r', '/r', results)).toHaveLength(2);
   });
-  it('dedupes, path order, unknown is an error', () => {
-    const out = selectResults(['b.md', 'a.md', 'b.md', 'A.md'], '/r', '/r', results);
-    expect(out.selected.map((x) => x.file)).toEqual(['a.md', 'b.md']);
-    expect(out.errors.map((d) => [d.code, d.subject])).toEqual([['E_UNKNOWN_FILE', 'A.md']]);
+  it('dedupes and keeps path order', () => {
+    const out = selectResults(['b.md', 'a.md', 'b.md'], '/r', '/r', results);
+    expect(out.map((x) => x.file)).toEqual(['a.md', 'b.md']);
   });
-  it('outside-root arg is unknown with original subject', () => {
-    const out = selectResults(['../x.md'], '/r', '/r', results);
-    expect(out.errors.map((d) => d.subject)).toEqual(['../x.md']);
+  it('raises for an unknown file, naming every bad argument', () => {
+    expect(raised(['b.md', 'A.md', 'z.md'])).toEqual([
+      ['E_UNKNOWN_FILE', 'A.md'],
+      ['E_UNKNOWN_FILE', 'z.md'],
+    ]);
+  });
+  it('an outside-root arg raises with the original subject', () => {
+    expect(raised(['../x.md'])).toEqual([['E_UNKNOWN_FILE', '../x.md']]);
   });
 });

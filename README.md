@@ -78,13 +78,13 @@ next: review each stale file against its dependencies, then run: docstamp update
 | Command | What it does |
 |---|---|
 | `docstamp [check]` | The verdict. A bare `docstamp` is `check`. |
-| `docstamp update (--all \| <file>...)` | Record that you reviewed the named files. |
+| `docstamp update (--all \| <file>...)` | Record that you reviewed the named files. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line. |
 | `docstamp list-dependencies [<file>...]` | Each file with its dependency patterns and the files they select. It does not read the lock. |
 | `docstamp list-dependents <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only, no lock. |
 | `docstamp help` | Usage. |
 | `docstamp version` | The installed version. |
 
-Every command except `help` and `version` takes `--json` and `--root <dir>`. The options `--write` and `--files` were replaced by `update` and `list-dependencies`.
+Every command except `help` and `version` takes `--json` and `--root <dir>`; `--root` needs a directory and never takes another option as its value. A command that fails before anything is evaluated (bad configuration, lock, root or file argument) prints only its diagnostics: no summary line, and `--json` omits `summary`. A file argument that is unknown or outside the root fails the whole command with only its diagnostics, never a partial report. The options `--write` and `--files` were replaced by `update` and `list-dependencies`. Command line: [SPEC §13](docs/SPEC.md#13-command-line).
 
 ```console
 $ docstamp list-dependents src/main.ts
@@ -186,6 +186,8 @@ Upgrading from a version 1 configuration (`dependents` and `covers`): rename `de
 
 A stale doc lists the dependencies that changed since its last review, as `modified`, `added` or `deleted` ([SPEC §12.3](docs/SPEC.md#123-changedsince)). `--json` carries the same list as `changes`. The list comes from read-only `git` calls and never affects the verdict or exit code.
 
+Known limit: the list is the difference from the commit that introduced the lock entry. An edit committed in the same commit as `docstamp update` makes the doc stale but is not listed, because docstamp stores one hash and no commit id ([SPEC §12.3](docs/SPEC.md#123-changedsince)). Commit the lock separately from the edits it covers.
+
 When git history cannot answer (no git, not a work tree, a shallow clone, or an `update` not yet committed), docstamp prints the dependency patterns (`depends` lines) and `changes` is `null`. Then list the dependencies and diff them yourself:
 
 ```sh
@@ -196,6 +198,10 @@ git diff <base> -- <files>
 ### Lock conflicts
 
 Two branches that write the same file conflict on its `hash` line. Resolution is in [SPEC §11.2](docs/SPEC.md#112-canonical-form).
+
+## What counts as a change
+
+A file's content is hashed as it is, except that CR LF becomes LF in text files ([SPEC §10.2](docs/SPEC.md#102-normalized-content)). Nothing else is normalized: a changed license header, whitespace, a final newline, a lone CR, a byte order mark, UTF-16 text and every binary file all count as changes, byte for byte. Renaming or moving a dependency counts too. A `docstamp.yaml`, `docstamp.config.*` or `docstamp-lock.yaml` below the root is an ordinary file; only the root's own are excluded ([SPEC §7.2](docs/SPEC.md#72-walk)).
 
 ## Documentation
 

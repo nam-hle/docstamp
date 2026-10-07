@@ -1,0 +1,6 @@
+# usage
+$ docstamp --bogus
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --bogus: Unknown option --bogus; see docstamp help.

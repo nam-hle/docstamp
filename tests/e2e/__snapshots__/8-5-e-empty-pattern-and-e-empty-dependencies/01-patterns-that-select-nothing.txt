@@ -1,0 +1,38 @@
+# patterns that select nothing
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  B.md
+INVALID  C.md
+INVALID  D.md
+INVALID  DOC.md
+INVALID  E.md
+0 ok, 0 stale, 5 invalid
+--- stderr ---
+error: E_EMPTY_PATTERN: B.md: nothing/**: Correct or remove the pattern; it matches no file.
+error: E_EMPTY_DEPENDENCIES: C.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_DEPENDENCIES: D.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: D.md: D.md: Correct or remove the pattern; it matches no file.
+error: E_EMPTY_DEPENDENCIES: DOC.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: DOC.md: nothing/**: Correct or remove the pattern; it matches no file.
+error: E_EMPTY_PATTERN: E.md: !src/**/*.spec.ts: Correct or remove the pattern; it matches no file.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "nothing/**"
+  "B.md":
+    dependencies:
+      - "src/**"
+      - "nothing/**"
+  "C.md":
+    dependencies:
+      - "!src/**"
+  "D.md":
+    dependencies:
+      - "D.md"
+  "E.md":
+    dependencies:
+      - "src/**"
+      - "!src/**/*.spec.ts"

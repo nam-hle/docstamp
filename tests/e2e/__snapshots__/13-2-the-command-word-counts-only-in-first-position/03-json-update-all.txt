@@ -1,0 +1,53 @@
+$ docstamp --json update --all
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "update",
+  "exitCode": 0,
+  "summary": {
+    "ok": 3,
+    "stale": 0,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/**",
+        "!src/**/*.test.ts"
+      ],
+      "changes": null,
+      "diagnostics": [],
+      "written": true
+    },
+    {
+      "file": "README.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/index.ts",
+        "docs/guide.md"
+      ],
+      "changes": null,
+      "diagnostics": [],
+      "written": true
+    },
+    {
+      "file": "docs/guide.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/cli"
+      ],
+      "changes": null,
+      "diagnostics": [],
+      "written": true
+    }
+  ],
+  "diagnostics": [],
+  "removed": []
+}
+--- stderr ---

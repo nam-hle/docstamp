@@ -1,0 +1,7 @@
+$ docstamp list-dependencies docs/guide.md
+exit: 0
+--- stdout ---
+docs/guide.md
+  depends   src/cli
+  resolved  src/cli/run.ts
+--- stderr ---

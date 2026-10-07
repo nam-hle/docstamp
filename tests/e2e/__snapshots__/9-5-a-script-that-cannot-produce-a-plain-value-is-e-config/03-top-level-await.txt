@@ -1,0 +1,9 @@
+# top-level await
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.config.ts ---
+await Promise.resolve();
+export default { version: 2, files: {} };

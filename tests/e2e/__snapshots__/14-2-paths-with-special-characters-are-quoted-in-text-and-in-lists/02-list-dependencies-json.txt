@@ -1,0 +1,27 @@
+$ docstamp list-dependencies --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "DOC.md",
+      "dependencies": [
+        "src/**"
+      ],
+      "resolvedFiles": [
+        "src/paren(1).ts",
+        "src/plain.ts",
+        "src/quote\"d.ts",
+        "src/tab\there.ts",
+        "src/with space.ts",
+        "src/ünï.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

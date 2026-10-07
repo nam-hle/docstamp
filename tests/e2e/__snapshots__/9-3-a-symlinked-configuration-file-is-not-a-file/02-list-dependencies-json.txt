@@ -1,0 +1,19 @@
+$ docstamp list-dependencies --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_CONFIG_MISSING",
+      "severity": "error",
+      "file": null,
+      "subject": null,
+      "message": "Create docstamp.yaml with \"version: 2\" and a \"files\" mapping, or docstamp.config.ts exporting the same value."
+    }
+  ]
+}
+--- stderr ---

@@ -1,0 +1,28 @@
+$ docstamp --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 0,
+  "summary": {
+    "ok": 1,
+    "stale": 0,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/**",
+        "!src/**/*.test.ts"
+      ],
+      "changes": null,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

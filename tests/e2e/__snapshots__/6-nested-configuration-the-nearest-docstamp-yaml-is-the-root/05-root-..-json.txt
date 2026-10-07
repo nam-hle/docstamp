@@ -1,0 +1,28 @@
+$ docstamp --root .. --json
+cwd: sub/deep
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 0,
+  "summary": {
+    "ok": 1,
+    "stale": 0,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "SUB.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "lib/**"
+      ],
+      "changes": null,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

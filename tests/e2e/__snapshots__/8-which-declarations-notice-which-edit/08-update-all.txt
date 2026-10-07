@@ -1,0 +1,9 @@
+$ docstamp update --all
+exit: 0
+--- stdout ---
+written  docs/all.md
+written  docs/alternation.md
+unchanged  docs/directory.md
+written  docs/negation.md
+written  docs/two.md
+--- stderr ---
