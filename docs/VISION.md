@@ -18,10 +18,10 @@ coarse to say which doc needs a look.
 **A deterministic snapshot gate between files and the files that depend on them**, built first
 for docs and the code they describe.
 
-Each doc declares which code it covers. `docstamp update` records one hash over the paths and
-contents of every covered file. `docstamp` recomputes it and fails CI when a doc's covered
-code changed since its last review (an edit, a new file, a deletion, a rename), naming the doc
-and the patterns to look at. The lock stays one line per doc however many files it covers.
+Each doc declares which code it depends on. `docstamp update` records one hash over the paths and
+contents of every dependency. `docstamp` recomputes it and fails CI when a doc's dependencies
+changed since its last review (an edit, a new file, a deletion, a rename), naming the doc
+and the patterns to look at. The lock stays one line per doc however many dependencies it has.
 
 The review itself is not docstamp's job. An agent (or a person) reads the report, re-checks the
 doc against the changed files, edits it if needed, and writes it again. docstamp decides *when* a
@@ -33,7 +33,7 @@ Docs are the main case, not the only one. The same problem appears wherever one 
 depends on another and nothing links them: a test fixture and the schema it mirrors, a
 translation and its source text, a hand-written type and the API it describes, a runbook and the
 deploy script. docstamp treats any file in the repository (the same scope git sees) as a possible
-*Dependent* and any file as something it may cover. Every link is declared in one place,
+*Dependent* and any file as something it may depend on. Every link is declared in one place,
 the configuration file (`docstamp.yaml` or a `docstamp.config.*` script); the files themselves
 carry no markers.
 

@@ -1,8 +1,9 @@
 # docstamp
 
 A deterministic snapshot gate for hidden links between files. Each Dependent (usually a doc, but
-any file) declares the files it covers; `docstamp` fails when they changed since the Dependent
-was last reviewed, and `docstamp update <file>` records the review. Terms are defined in
+any file) declares the files it depends on (its dependencies); `docstamp` fails when they changed
+since the Dependent was last reviewed, and `docstamp update <file>` records the review. Terms are
+defined in
 [SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
 
 Why it is built this way is imported below and binds every change. Read both before anything
@@ -62,7 +63,7 @@ docstamp/
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
 │   ├── pattern/          # grammar, matching, selection (§8)
-│   ├── hash/             # normalization, file and cover hash (§10)
+│   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
 │   ├── engine/           # evaluation; pure, no I/O (§12)
 │   ├── history/          # changed-file report from git, read-only (§12.3)
