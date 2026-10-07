@@ -66,7 +66,7 @@ docstamp/
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
-│   ├── engine/           # evaluation, reverse lookup, stats; pure, no I/O (§12, §12.5, §13.8)
+│   ├── engine/           # evaluation, presets, reverse lookup, stats; pure, no I/O (§8.6, §12, §12.5, §13.8)
 │   ├── history/          # changed-file report (§12.3) and stats replay (§12.4), git, read-only
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json
@@ -153,6 +153,15 @@ command treats it like a configured file. To change that behavior, touch `src/in
 `read-inline.ts` the discovery and the atomic write), `src/cli/workspace.ts` (merge with `files`,
 duplicate check) and the `marked` hash rule in `src/hash/hash.ts`. Tests: `tests/unit/inline.test.ts`,
 `tests/e2e/scenarios/inline.test.ts` on the `inline-docs` fixture.
+
+## Presets
+
+`presets` in the configuration and `use` on a file or block (SPEC §8.6). `loadWorkspace`
+(`src/cli/workspace.ts`) calls `expandPresets` (`src/engine/presets.ts`) once, so every command sees
+the effective patterns in `Declaration.dependencies` with `origins`; nothing downstream knows about
+presets except the `(preset <name>)` marker in `listText` and the `use`/`origins` members of
+`listJsonText`. The pattern dialect, the hash and the Lockfile never change for them. Tests:
+`tests/unit/presets.test.ts`, `tests/e2e/scenarios/presets.test.ts` on the `presets` fixture.
 
 ## Pattern diagnostics
 

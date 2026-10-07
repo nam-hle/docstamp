@@ -1,0 +1,12 @@
+# presets that is a list
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: presets: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.yaml ---
+version: 2
+presets: [a]
+files:
+  CLAUDE.md:
+    dependencies: [src]

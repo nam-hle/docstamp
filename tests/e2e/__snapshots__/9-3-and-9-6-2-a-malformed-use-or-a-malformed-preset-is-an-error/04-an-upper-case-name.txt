@@ -1,0 +1,13 @@
+# an upper case name
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: presets.Tests: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  Tests: [x]
+files:
+  CLAUDE.md:
+    dependencies: [src]

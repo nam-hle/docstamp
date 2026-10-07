@@ -1,0 +1,14 @@
+# a preset that is a mapping (no nesting)
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: presets.a: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  a:
+    use: [b]
+files:
+  CLAUDE.md:
+    dependencies: [src]

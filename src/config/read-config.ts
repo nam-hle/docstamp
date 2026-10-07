@@ -6,10 +6,10 @@ import { isRepoPath } from '../core/repo-path.ts';
 import type { Declaration, Config, Diagnostic } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { loadScript } from './script.ts';
-import { CONFIG_NAMES, isMap, isStrings, type Value } from './value.ts';
+import { CONFIG_NAMES, PRESET_NAME, isMap, isStrings, type Value } from './value.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from './yaml-profile.ts';
 
-const TOP_KEYS = ['version', 'gitignore', 'ignore', 'include', 'files'];
+const TOP_KEYS = ['version', 'gitignore', 'ignore', 'include', 'presets', 'files'];
 const DEFAULT_INCLUDE: readonly string[] = ['**/*.md'];
 
 const optional = (message: string | undefined) => (message === undefined ? {} : { message });
@@ -86,8 +86,15 @@ function collectDeclaration(
     fatal.push(diag('E_CONFIG', { file: key }));
     return;
   }
+  const use = value.get('use');
+  if (
+    use !== undefined &&
+    (!isStrings(use) || use.length === 0 || new Set(use).size < use.length)
+  ) {
+    fatal.push(diag('E_CONFIG', { file: key, subject: 'use' }));
+  }
   for (const k of value.keys()) {
-    if (k !== 'dependencies') {
+    if (k !== 'dependencies' && k !== 'use') {
       const message = k === 'covers' ? 'Rename "covers" to "dependencies".' : undefined;
       fatal.push(diag('E_UNKNOWN_KEY', { file: key, subject: k, ...optional(message) }));
     }
@@ -97,7 +104,31 @@ function collectDeclaration(
       attached.push(diag('E_PATTERN', { file: key, subject: pattern }));
     }
   }
-  out.push({ file: key, dependencies });
+  out.push({ file: key, dependencies, ...(isStrings(use) ? { use } : {}) });
+}
+
+// SPEC §9.3 step 6
+function collectPresets(
+  presets: Value | undefined,
+  fatal: Diagnostic[],
+): Map<string, readonly string[]> {
+  const found = new Map<string, readonly string[]>();
+  if (presets === undefined) return found;
+  if (!isMap(presets)) {
+    fatal.push(diag('E_CONFIG', { subject: 'presets' }));
+    return found;
+  }
+  for (const [name, list] of presets) {
+    if (!PRESET_NAME.test(name) || !isStrings(list) || list.length === 0) {
+      fatal.push(diag('E_CONFIG', { subject: `presets.${name}` }));
+      continue;
+    }
+    for (const pattern of list) {
+      if (!parsePattern(pattern)) fatal.push(diag('E_PATTERN', { subject: pattern }));
+    }
+    found.set(name, list);
+  }
+  return found;
 }
 
 // SPEC §9.3
@@ -108,7 +139,13 @@ export function readConfig(root: string): {
 } {
   const top = readValue(root);
   if (top === undefined) {
-    const config = { ignore: [], useGitignore: true, include: DEFAULT_INCLUDE, declarations: [] };
+    const config = {
+      ignore: [],
+      useGitignore: true,
+      include: DEFAULT_INCLUDE,
+      presets: new Map<string, readonly string[]>(),
+      declarations: [],
+    };
     return { config, attached: [], present: false };
   }
   if (!isMap(top)) throw new Raised([diag('E_CONFIG')]);
@@ -139,6 +176,7 @@ export function readConfig(root: string): {
     }
   }
 
+  const presets = collectPresets(top.get('presets'), fatal);
   const declarations: Declaration[] = [];
   const files = top.get('files');
   if (!isMap(files)) {
@@ -155,6 +193,7 @@ export function readConfig(root: string): {
       ignore: isStrings(ignore) ? ignore : [],
       useGitignore: gitignore !== false,
       include: isStrings(include) ? include : DEFAULT_INCLUDE,
+      presets,
       declarations,
     },
     attached,

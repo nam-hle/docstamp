@@ -1,0 +1,16 @@
+$ docstamp list-dependencies docs/EXCLUDED.md docs/REINCLUDED.md
+exit: 0
+--- stdout ---
+docs/EXCLUDED.md
+  depends   src/cli/run.test.ts
+  depends   src/cli/run.ts
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  resolved  src/cli/run.ts
+docs/REINCLUDED.md
+  depends   src/cli/run.ts
+  depends   !docs/SPEC.md
+  depends   docs/SPEC.md (preset spec)
+  resolved  docs/SPEC.md
+  resolved  src/cli/run.ts
+--- stderr ---

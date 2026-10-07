@@ -1,0 +1,48 @@
+$ docstamp
+exit: 2
+--- stdout ---
+STALE    CLAUDE.md  (unrecorded)
+  depends   src
+  depends   !**/*.test.ts
+  depends   !**/__test__/**
+STALE    README.md  (unrecorded)
+  depends   src/cli
+  depends   !**/*.test.ts
+  depends   !**/__test__/**
+  depends   docs/SPEC.md
+INVALID  docs/BLOCK.md
+STALE    docs/GUIDE.md  (unrecorded)
+  depends   src/core
+  depends   !**/*.test.ts
+  depends   !**/__test__/**
+INVALID  docs/SPEC.md
+0 ok, 3 stale, 2 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/GUIDE.md
+--- stderr ---
+error: E_UNKNOWN_PRESET: docs/BLOCK.md: gone: Define the preset under "presets" in the configuration file, or correct the name in "use".
+error: E_UNKNOWN_PRESET: docs/BLOCK.md: nope: Define the preset under "presets" in the configuration file, or correct the name in "use".
+error: E_UNKNOWN_PRESET: docs/SPEC.md: missing: Define the preset under "presets" in the configuration file, or correct the name in "use".
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  tests:
+    - "!**/*.test.ts"
+    - "!**/__test__/**"
+  spec:
+    - docs/SPEC.md
+files:
+  CLAUDE.md:
+    dependencies:
+      - src
+    use:
+      - tests
+  docs/SPEC.md:
+    dependencies: [src/index.ts]
+    use: [missing]
+--- setup: docs/BLOCK.md ---
+---
+docstamp:
+  dependencies: [src/core]
+  use: [nope, tests, gone]
+---
+x

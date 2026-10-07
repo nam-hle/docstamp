@@ -244,6 +244,53 @@ docstamp list-dependencies <doc>
 git diff <base> -- <files>
 ```
 
+## Sharing a list with presets
+
+When many docs repeat the same lines (the same test exclusions, one shared spec), define the lines once under `presets` in the configuration file and name them with `use` in a `files` entry or an inline block. Preset names are `[a-z][a-z0-9-]*`, each preset is a non-empty list of ordinary [patterns](docs/SPEC.md#81-syntax), and a preset cannot refer to another one:
+
+```yaml
+version: 2
+presets:
+  tests:
+    - "!**/*.test.ts"
+    - "!**/__test__/**"
+  spec:
+    - docs/SPEC.md
+files:
+  CLAUDE.md:
+    dependencies: [src]
+    use: [tests]
+```
+
+```md
+---
+title: Project README
+docstamp:
+  dependencies: [src/cli]
+  use: [tests, spec]
+---
+```
+
+A doc's patterns are its own `dependencies`, then the patterns of each preset in `use` order. The last matching pattern still wins, so an exclusion in a preset applies after the doc's own inclusions. The expansion is visible, and so is where each pattern comes from:
+
+```console
+$ docstamp list-dependencies README.md
+README.md
+  depends   src/cli
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  depends   docs/SPEC.md (preset spec)
+  resolved  docs/SPEC.md
+  resolved  src/cli/run.ts
+```
+
+With `--json`, a file that uses presets also has `use` and `origins` (one entry per pattern, `null` for the doc's own). Things to know:
+
+- **Presets are defined in the configuration file only.** An inline block that uses one needs a `docstamp.yaml` (or a script) that defines it. A name that is not defined, in a block or in `files`, makes only that file `invalid` with `E_UNKNOWN_PRESET`.
+- **The hash depends on the selected files only.** Editing a preset makes a file that uses it stale exactly when the edit changes which files it selects; reordering a preset's lines, or adding an exclusion that removes nothing, does not make a doc stale. Nothing in the lock or in an inline `hash:` mentions presets.
+- **Empty patterns.** An exclusion from a preset that matches no file raises no `W_EMPTY_EXCLUSION` (a doc that has nothing to exclude could not remove it); a preset pattern without `!` that matches nothing is `E_EMPTY_PATTERN`, and the message names the preset.
+- **`dependencies` stays required**, with at least one pattern of the doc's own, and `use` must be a non-empty list of distinct names. Details: [SPEC §8.6](docs/SPEC.md#86-presets).
+
 ## Measuring how noisy a list is
 
 A broad list is the easy one to write and the one people stop reading: it goes stale on most commits. `docstamp stats` tells you before you commit to a list. It takes the files each doc resolves to today, replays the commits of a window against them, and counts the commits that would have made the doc stale. It only reports: it reads history, writes nothing, needs no lock, always exits 0 on success and leaves `check` unaffected. This is docstamp's own history since `v0.3.1`:
@@ -321,7 +368,7 @@ Warnings never affect the exit code. Full table: [SPEC §16](docs/SPEC.md#16-exi
 
 ### Configuration
 
-Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
+Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules), `presets` ([shared lists](#sharing-a-list-with-presets)) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
 
 For editor completion and validation in YAML, point the language server at the schema, which the package ships as `schema.json`:
 

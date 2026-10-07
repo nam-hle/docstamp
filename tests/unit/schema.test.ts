@@ -18,6 +18,7 @@ describe('§9.3 schema.json', () => {
       'gitignore',
       'ignore',
       'include',
+      'presets',
       'files',
     ]);
   });

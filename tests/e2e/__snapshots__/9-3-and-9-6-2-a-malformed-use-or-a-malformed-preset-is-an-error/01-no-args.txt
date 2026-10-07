@@ -1,0 +1,27 @@
+$ docstamp
+exit: 2
+--- stdout ---
+STALE    CLAUDE.md  (unrecorded)
+  depends   src
+  depends   !**/*.test.ts
+  depends   !**/__test__/**
+STALE    README.md  (unrecorded)
+  depends   src/cli
+  depends   !**/*.test.ts
+  depends   !**/__test__/**
+  depends   docs/SPEC.md
+INVALID  bad/duplicate.md
+INVALID  bad/empty.md
+INVALID  bad/only-use.md
+INVALID  bad/scalar.md
+STALE    docs/GUIDE.md  (unrecorded)
+  depends   src/core
+  depends   !**/*.test.ts
+  depends   !**/__test__/**
+0 ok, 3 stale, 4 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/GUIDE.md
+--- stderr ---
+error: E_BLOCK: bad/duplicate.md: use: The use key must hold a non-empty list of distinct preset names.
+error: E_BLOCK: bad/empty.md: use: The use key must hold a non-empty list of distinct preset names.
+error: E_BLOCK: bad/only-use.md: dependencies: The dependencies key must hold a non-empty list of patterns.
+error: E_BLOCK: bad/scalar.md: use: The use key must hold a non-empty list of distinct preset names.

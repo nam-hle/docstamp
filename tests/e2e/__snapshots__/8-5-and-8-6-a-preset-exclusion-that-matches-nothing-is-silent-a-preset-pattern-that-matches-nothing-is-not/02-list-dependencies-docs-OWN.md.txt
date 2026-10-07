@@ -1,0 +1,10 @@
+$ docstamp list-dependencies docs/OWN.md
+exit: 0
+--- stdout ---
+docs/OWN.md
+  depends   src/core
+  depends   !src/core/none.ts
+  resolved  src/core/hash.test.ts
+  resolved  src/core/hash.ts
+--- stderr ---
+warning: W_EMPTY_EXCLUSION: docs/OWN.md: !src/core/none.ts: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.

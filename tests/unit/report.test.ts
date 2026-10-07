@@ -85,6 +85,17 @@ describe('§14.6 list-dependencies text', () => {
         '"my doc.md"\n  depends   src/**\n  resolved  "my file"\n',
     );
   });
+  it('marks a pattern that comes from a preset with its name', () => {
+    const doc = res('a.md', 'ok', {
+      dependencies: ['src', '!**/*.test.*', 'a b'],
+      origins: [null, 'tests', 'two-words'],
+      resolved: ['src/a.ts'],
+    });
+    expect(listText([doc])).toBe(
+      'a.md\n  depends   src\n  depends   !**/*.test.* (preset tests)\n' +
+        '  depends   "a b" (preset two-words)\n  resolved  src/a.ts\n',
+    );
+  });
   it('an invalid Result prints its first line only, and there is no summary', () => {
     expect(listText([res('a.md', 'invalid')])).toBe('a.md\n');
     expect(listText([])).toBe('');
@@ -198,5 +209,20 @@ describe('§14.5 JSON', () => {
     expect(doc.files[0].resolvedFiles).toEqual(['src/a.ts']);
     expect(doc.files[1].resolvedFiles).toEqual([]);
     expect(doc.files[1].diagnostics[0].code).toBe('E_EMPTY_DEPENDENCIES');
+  });
+  it('list-dependencies gives the use and one origin per pattern', () => {
+    const out = listJsonText({
+      exitCode: 0,
+      selected: [
+        res('a.md', 'ok', {
+          dependencies: ['src', '!x'],
+          use: ['tests'],
+          origins: [null, 'tests'],
+        }),
+      ],
+      diagnostics: [],
+    });
+    const [file] = JSON.parse(out).files;
+    expect([file.use, file.origins]).toEqual([['tests'], [null, 'tests']]);
   });
 });

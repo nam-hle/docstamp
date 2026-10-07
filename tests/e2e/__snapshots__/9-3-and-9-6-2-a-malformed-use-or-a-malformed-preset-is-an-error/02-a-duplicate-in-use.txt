@@ -1,0 +1,14 @@
+# a duplicate in use
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: CLAUDE.md: use: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  tests: [x]
+files:
+  CLAUDE.md:
+    dependencies: [src]
+    use: [tests, tests]

@@ -1,0 +1,19 @@
+$ docstamp
+exit: 0
+--- stdout ---
+3 ok, 0 stale, 0 invalid
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  tests:
+    - "!**/__test__/**"
+    - "!**/*.test.ts"
+  spec:
+    - docs/SPEC.md
+files:
+  CLAUDE.md:
+    dependencies:
+      - src
+    use:
+      - tests

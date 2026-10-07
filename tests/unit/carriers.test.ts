@@ -71,6 +71,7 @@ describe('§9.3 discovery', () => {
       ignore: [],
       useGitignore: true,
       include: ['**/*.md'],
+      presets: new Map(),
       declarations: [],
     });
   });

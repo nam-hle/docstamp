@@ -35,21 +35,25 @@ function resolveWithWarnings(
   patterns.forEach((pattern, i) => {
     if (candidates.some((path) => patternMatches(pattern, path))) return;
     const subject = b.dependencies[i];
+    const preset = b.origins?.[i] ?? null;
     if (pattern.negated) {
-      warnings.push(diag('W_EMPTY_EXCLUSION', { file: b.file, subject }));
+      if (preset === null) warnings.push(diag('W_EMPTY_EXCLUSION', { file: b.file, subject }));
       return;
     }
     const literal = literalPath(pattern);
     const ignored = literal !== null && isIgnoredPath(literal);
+    const from = preset === null ? '' : ` It comes from the preset "${preset}".`;
+    const message = ignored ? IGNORED_MESSAGE : diag('E_EMPTY_PATTERN').message;
     problems.push(
       diag('E_EMPTY_PATTERN', {
         file: b.file,
         subject,
-        ...(ignored ? { message: IGNORED_MESSAGE } : {}),
+        ...(ignored || preset !== null ? { message: `${message}${from}` } : {}),
       }),
     );
   });
-  const repeated = new Set(b.dependencies.filter((s, i) => b.dependencies.indexOf(s) !== i));
+  const own = b.dependencies.filter((_, i) => (b.origins?.[i] ?? null) === null);
+  const repeated = new Set(own.filter((s, i) => own.indexOf(s) !== i));
   for (const subject of repeated) {
     warnings.push(diag('W_DUPLICATE_PATTERN', { file: b.file, subject }));
   }
@@ -88,7 +92,12 @@ export function evaluate(
   attached: readonly Diagnostic[],
   fs: EngineFs,
 ): Result {
-  const base = { file: b.file, dependencies: b.dependencies };
+  const base = {
+    file: b.file,
+    dependencies: b.dependencies,
+    ...(b.use === undefined ? {} : { use: b.use }),
+    ...(b.origins === undefined ? {} : { origins: b.origins }),
+  };
   const problems: Diagnostic[] = [...attached];
   const collect = (fn: () => void) => {
     try {

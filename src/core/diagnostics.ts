@@ -14,6 +14,8 @@ const FIX: Record<Code, string> = {
     'Rename "dependents" to "files" and "covers" to "dependencies", set "version: 2".',
   E_UNKNOWN_KEY: 'Remove or correct the key.',
   E_PATTERN: 'Correct the pattern; patterns use "/" and "\\" escapes.',
+  E_UNKNOWN_PRESET:
+    'Define the preset under "presets" in the configuration file, or correct the name in "use".',
   E_BLOCK:
     'Write the docstamp block as a block mapping with "dependencies" and, optionally, ' +
     '"hash: <64 hex>" on one line.',

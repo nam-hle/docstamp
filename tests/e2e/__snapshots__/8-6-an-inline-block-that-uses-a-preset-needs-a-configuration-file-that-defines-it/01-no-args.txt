@@ -1,0 +1,21 @@
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  README.md
+INVALID  docs/GUIDE.md
+0 ok, 0 stale, 2 invalid
+--- stderr ---
+error: E_UNKNOWN_PRESET: README.md: spec: There is no configuration file, and presets are defined only there: add docstamp.yaml with a "presets" mapping, or remove the name from "use".
+error: E_UNKNOWN_PRESET: README.md: tests: There is no configuration file, and presets are defined only there: add docstamp.yaml with a "presets" mapping, or remove the name from "use".
+error: E_UNKNOWN_PRESET: docs/GUIDE.md: tests: There is no configuration file, and presets are defined only there: add docstamp.yaml with a "presets" mapping, or remove the name from "use".
+--- setup: README.md ---
+---
+title: Project README
+docstamp:
+  dependencies: [src/cli]
+  use: [tests, spec]
+---
+
+# Project
+
+The command line lives in `src/cli`; the contract is in `docs/SPEC.md`.

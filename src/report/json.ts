@@ -100,14 +100,19 @@ export interface ListJsonDoc {
 
 // SPEC §14.5
 export function listJsonText(doc: ListJsonDoc): string {
-  const dependents = doc.selected.map((r) =>
-    obj([
+  const dependents = doc.selected.map((r) => {
+    const members: Array<[string, Json]> = [
       ['file', r.file],
       ['dependencies', [...r.dependencies]],
-      ['resolvedFiles', [...r.resolved]],
-      ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
-    ]),
-  );
+    ];
+    if ((r.use ?? []).length > 0) {
+      members.push(['use', [...r.use!]]);
+      members.push(['origins', r.dependencies.map((_, i) => r.origins?.[i] ?? null)]);
+    }
+    members.push(['resolvedFiles', [...r.resolved]]);
+    members.push(['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)]);
+    return obj(members);
+  });
   const top: Array<[string, Json]> = [
     ['version', 2],
     ['mode', 'list-dependencies'],

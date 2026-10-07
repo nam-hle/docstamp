@@ -168,6 +168,19 @@ scenario(
   },
 );
 
+scenario('§8.6 E_UNKNOWN_PRESET attaches to the file that names the preset', async (repo) => {
+  base(repo);
+  repo.write(
+    'docstamp.yaml',
+    'version: 2\nfiles:\n  DOC.md:\n    dependencies: [src]\n    use: [shared]\n',
+  );
+  const result = await run(repo, 'a file that uses an undefined preset', [], 2, [
+    'E_UNKNOWN_PRESET',
+  ]);
+  expect(result.stderr).toContain('E_UNKNOWN_PRESET: DOC.md: shared: ');
+  expect(result.stdout).toBe('INVALID  DOC.md\n0 ok, 0 stale, 1 invalid\n');
+});
+
 scenario('§9.3 invalid patterns make only their file invalid', async (repo) => {
   base(repo);
   const bad: Record<string, string> = {

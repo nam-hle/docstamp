@@ -3,6 +3,7 @@ import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadWorkspace } from '../../src/cli/workspace.ts';
 import { evaluate, resolveDependencies } from '../../src/engine/evaluate.ts';
+import { expandPresets } from '../../src/engine/presets.ts';
 import { fileHash } from '../../src/hash/hash.ts';
 import { select } from '../../src/pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
@@ -209,6 +210,38 @@ describe('§17.7 golden selection', () => {
       universe.paths,
     );
     expect(resolved, SELECTION_BREAKING).toEqual(['.hidden/h.txt', 'Zed.txt', 'lib/keep.log']);
+  });
+});
+
+describe('§17.7 golden presets', () => {
+  const presets = new Map([['quiet', ['!lib/**/*.test.ts', '!lib/keep.log']]]);
+  const own = ['lib', '*.txt'];
+  const explicit = [...own, '!lib/**/*.test.ts', '!lib/keep.log'];
+
+  it('a preset expands to the selection of its patterns written out', () => {
+    const { universe } = golden();
+    const expanded = expandPresets(
+      { file: 'DOC.md', dependencies: own, use: ['quiet'] },
+      presets,
+      true,
+    );
+    expect(expanded.dependencies).toEqual(explicit);
+    expect(resolveDependencies(expanded, universe.paths), SELECTION_BREAKING).toEqual([
+      'Zed.txt',
+      'lib/a.ts',
+      'lib/b.ts',
+      'lib/deep/c.ts',
+      'ä.txt',
+    ]);
+  });
+
+  it('the Dependency Hash depends on the selection only, not on how it was written', () => {
+    const { dependencyHash } = golden();
+    const literal = ['Zed.txt', 'lib/a.ts', 'lib/b.ts', 'lib/deep/c.ts', 'ä.txt'];
+    expect(dependencyHash(explicit), BREAKING).toBe(
+      '339924de829984dbc301ca12bddd3df121b27731a3ba60422492032c191f5743',
+    );
+    expect(dependencyHash(literal)).toBe(dependencyHash(explicit));
   });
 });
 

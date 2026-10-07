@@ -12,3 +12,6 @@ export type Value = null | boolean | number | string | Value[] | Map<string, Val
 export const isMap = (v: Value | undefined): v is Map<string, Value> => v instanceof Map;
 export const isStrings = (v: Value | undefined): v is string[] =>
   Array.isArray(v) && v.every((x) => typeof x === 'string');
+
+// SPEC §9.3 step 6
+export const PRESET_NAME = /^[a-z][a-z0-9-]*$/u;

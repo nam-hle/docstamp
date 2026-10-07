@@ -43,7 +43,10 @@ export function listText(selected: readonly Result[]): string {
   for (const r of selected) {
     out += `${shown(r.file)}\n`;
     if (r.state === 'invalid') continue;
-    for (const c of r.dependencies) out += `  depends   ${shown(c)}\n`;
+    r.dependencies.forEach((c, i) => {
+      const preset = r.origins?.[i] ?? null;
+      out += `  depends   ${shown(c)}${preset === null ? '' : ` (preset ${shown(preset)})`}\n`;
+    });
     for (const f of r.resolved) out += `  resolved  ${shown(f)}\n`;
   }
   return out;

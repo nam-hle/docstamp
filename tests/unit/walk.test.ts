@@ -11,6 +11,7 @@ const config = (over: Partial<Config> = {}): Config => ({
   ignore: [],
   useGitignore: true,
   include: ['**/*.md'],
+  presets: new Map(),
   declarations: [],
   ...over,
 });
