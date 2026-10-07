@@ -70,7 +70,7 @@ docstamp/
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json
 ├── tests/
-│   ├── helpers/          # temp-repo fixture builder shared by unit tests
+│   ├── helpers/          # temp-repo fixture builder, golden tree (§17.7)
 │   ├── unit/             # unit tests, grouped by module
 │   └── e2e/              # the built CLI, spawned as a child process (see End-to-end tests)
 │       ├── harness/      # scenario(), the Repo helpers, snapshot format
@@ -133,8 +133,17 @@ Only what no test can check stays here.
 
 ## Commits
 
-Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change to the
-CLI, the Lockfile or the JSON output. Commit types drive releases, so get them right.
+Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change as
+classified by [SPEC §17.2](docs/SPEC.md#172-breaking-changes). Commit types drive releases, so get
+them right.
+
+## Compatibility guard
+
+`tests/unit/golden.test.ts` pins exact file hashes, Dependency Hashes and selected file lists for
+the fixed tree in `tests/helpers/golden-tree.ts` ([SPEC §17.7](docs/SPEC.md#177-pinned-vectors)). A
+failure there is a breaking change, not a stale test: never edit a literal to make it pass.
+To change one on purpose, follow "Breaking changes" in [CONTRIBUTING.md](CONTRIBUTING.md): spec
+first, bump the Lockfile version, then regenerate the literals and review each diff.
 
 ## CI and releases
 

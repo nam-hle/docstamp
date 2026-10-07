@@ -203,6 +203,17 @@ Two branches that write the same file conflict on its `hash` line. Resolution is
 
 A file's content is hashed as it is, except that CR LF becomes LF in text files ([SPEC §10.2](docs/SPEC.md#102-normalized-content)). Nothing else is normalized: a changed license header, whitespace, a final newline, a lone CR, a byte order mark, UTF-16 text and every binary file all count as changes, byte for byte. Renaming or moving a dependency counts too. A `docstamp.yaml`, `docstamp.config.*` or `docstamp-lock.yaml` below the root is an ordinary file; only the root's own are excluded ([SPEC §7.2](docs/SPEC.md#72-walk)).
 
+## Compatibility
+
+Your committed lock and your CI are what docstamp protects:
+
+- Within a lock version, the hash of a given input never changes. A change to hash inputs or to which files a pattern selects always comes with a new lock version.
+- A release that does not support your lock version refuses it with `E_LOCK_VERSION` and names the migration. It never recomputes or accepts a hash that now means something else. Today a release supports one lock version.
+- Breaking changes (hashes, selection, file formats, verdicts, exit codes, error codes, `--json`, the Node.js floor) raise the minor version before 1.0 and the major version after.
+- Each breaking change carries a migration note, shown as "BREAKING CHANGES" in the [release notes](https://github.com/nam-hle/docstamp/releases).
+
+Full policy: [SPEC §17](docs/SPEC.md#17-compatibility).
+
 ## Documentation
 
 - [docs/SPEC.md](docs/SPEC.md): the contract for all observable behavior.
