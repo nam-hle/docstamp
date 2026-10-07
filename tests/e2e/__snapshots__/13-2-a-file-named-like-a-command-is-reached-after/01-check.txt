@@ -1,0 +1,10 @@
+$ docstamp check
+exit: 1
+--- stdout ---
+STALE    check  (unrecorded)
+  depends   src/**
+STALE    update  (unrecorded)
+  depends   src/**
+0 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update check update
+--- stderr ---

@@ -1,0 +1,6 @@
+$ docstamp update --all
+cwd: sub/deep
+exit: 0
+--- stdout ---
+written  SUB.md
+--- stderr ---

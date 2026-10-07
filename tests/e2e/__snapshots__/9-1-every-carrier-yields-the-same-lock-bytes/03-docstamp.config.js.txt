@@ -1,0 +1,6 @@
+# docstamp.config.js
+$ docstamp update --all
+exit: 0
+--- stdout ---
+written  CLAUDE.md
+--- stderr ---

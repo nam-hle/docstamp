@@ -1,0 +1,14 @@
+# list-dependencies does not read dependencies
+$ docstamp list-dependencies
+exit: 0
+--- stdout ---
+DOC.md
+  depends   src/**
+  resolved  src/a.ts
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"

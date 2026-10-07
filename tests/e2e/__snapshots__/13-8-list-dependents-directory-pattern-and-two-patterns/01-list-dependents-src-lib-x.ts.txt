@@ -1,0 +1,8 @@
+$ docstamp list-dependents src/lib/x.ts
+exit: 0
+--- stdout ---
+src/lib/x.ts
+  docs/all.md         via src/**
+  docs/directory.md   via src/lib
+  docs/negation.md    via src/**
+--- stderr ---

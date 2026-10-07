@@ -1,0 +1,8 @@
+$ docstamp list-dependents src/index.ts
+cwd: packages/a
+exit: 0
+--- stdout ---
+packages/a/src/index.ts
+  packages/a/README.md   via packages/a/src/**
+  packages/b/README.md   via packages/a/src/index.ts
+--- stderr ---

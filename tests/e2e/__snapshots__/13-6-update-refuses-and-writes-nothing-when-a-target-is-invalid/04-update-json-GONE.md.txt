@@ -1,0 +1,37 @@
+$ docstamp update --json GONE.md
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "update",
+  "exitCode": 2,
+  "summary": {
+    "ok": 0,
+    "stale": 0,
+    "invalid": 1
+  },
+  "files": [
+    {
+      "file": "GONE.md",
+      "state": "invalid",
+      "reasons": [],
+      "dependencies": [
+        "src/**"
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "E_FILE_MISSING",
+          "severity": "error",
+          "file": "GONE.md",
+          "subject": null,
+          "message": "Rename the key under \"files\" in the configuration file or restore the file."
+        }
+      ],
+      "written": false
+    }
+  ],
+  "diagnostics": [],
+  "removed": []
+}
+--- stderr ---

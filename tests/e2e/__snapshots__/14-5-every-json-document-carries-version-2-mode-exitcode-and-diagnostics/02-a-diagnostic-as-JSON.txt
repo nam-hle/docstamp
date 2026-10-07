@@ -1,0 +1,20 @@
+# a diagnostic as JSON
+$ docstamp --json missing.md
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_UNKNOWN_FILE",
+      "severity": "error",
+      "file": null,
+      "subject": "missing.md",
+      "message": "Name a file listed under \"files\" in the configuration file."
+    }
+  ]
+}
+--- stderr ---

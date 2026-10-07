@@ -1,0 +1,6 @@
+$ docstamp list-dependents src/util.ts
+exit: 0
+--- stdout ---
+src/util.ts
+  CLAUDE.md   via src/**
+--- stderr ---

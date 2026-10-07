@@ -1,0 +1,12 @@
+# unreadable directory, list-dependencies
+$ docstamp list-dependencies
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNREADABLE: src: Fix the permissions or remove the entry.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"

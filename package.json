@@ -34,13 +34,14 @@
     "prepublishOnly": "pnpm run build",
     "schema": "node scripts/write-schema.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint --type-aware src tests scripts",
+    "lint": "oxlint --type-aware --ignore-pattern \"tests/e2e/fixtures/**\" src tests scripts",
     "format": "oxfmt src tests scripts",
     "format:check": "oxfmt --check src tests scripts",
     "knip": "knip",
     "test:unit": "vitest run tests/unit",
-    "test:e2e": "vitest run tests/e2e",
-    "test": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip && pnpm run build && node dist/index.js && pnpm run test:unit && pnpm run test:e2e"
+    "test:e2e": "vitest run tests/e2e/scenarios",
+    "test": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip && pnpm run build && node dist/index.js && pnpm run test:unit && pnpm run test:e2e && pnpm run test:pack",
+    "test:pack": "vitest run tests/e2e/pack.test.ts"
   },
   "dependencies": {
     "yaml": "^2.9.1"

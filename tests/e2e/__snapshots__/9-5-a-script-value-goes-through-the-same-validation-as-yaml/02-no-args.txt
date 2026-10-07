@@ -1,0 +1,9 @@
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  CLAUDE.md
+0 ok, 0 stale, 1 invalid
+--- stderr ---
+error: E_PATTERN: CLAUDE.md: src//a.ts: Correct the pattern; patterns use "/" and "\" escapes.
+--- setup: docstamp.config.ts ---
+export default { version: 2, files: { 'CLAUDE.md': { dependencies: ['src//a.ts'] } } };

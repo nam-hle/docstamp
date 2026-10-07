@@ -1,0 +1,6 @@
+# no configuration anywhere
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG_MISSING: Create docstamp.yaml with "version: 2" and a "files" mapping, or docstamp.config.ts exporting the same value.

@@ -1,0 +1,3 @@
+# Package b
+
+Uses `a`.

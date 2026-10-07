@@ -1,0 +1,5 @@
+$ docstamp --root=
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --root: --root needs a directory.

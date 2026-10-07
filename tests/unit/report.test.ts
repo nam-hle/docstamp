@@ -70,7 +70,7 @@ describe('§14.3 diagnostics text', () => {
 
 describe('§14.4 update text', () => {
   it('written then removed', () => {
-    expect(updateText(['b', 'a'], ['z'])).toBe('written  a\nwritten  b\nremoved  z\n');
+    expect(updateText(['b'], ['a'], ['z'])).toBe('unchanged  a\nwritten  b\nremoved  z\n');
   });
 });
 

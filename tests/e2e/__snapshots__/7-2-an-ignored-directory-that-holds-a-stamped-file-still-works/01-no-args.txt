@@ -1,0 +1,19 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    DOC.md  (unrecorded)
+  depends   src/**
+STALE    notes/NOTE.md  (unrecorded)
+  depends   src/**
+0 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update DOC.md notes/NOTE.md
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"
+  "notes/NOTE.md":
+    dependencies:
+      - "src/**"

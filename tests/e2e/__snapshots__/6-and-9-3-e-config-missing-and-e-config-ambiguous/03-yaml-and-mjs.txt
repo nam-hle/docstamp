@@ -1,0 +1,26 @@
+# yaml and mjs
+$ docstamp --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_CONFIG_AMBIGUOUS",
+      "severity": "error",
+      "file": null,
+      "subject": "docstamp.yaml, docstamp.config.mjs",
+      "message": "Keep one configuration file."
+    }
+  ]
+}
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"

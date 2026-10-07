@@ -11,7 +11,7 @@ function shown(s: string): string {
 const LABEL = { ok: 'OK', stale: 'STALE', invalid: 'INVALID' } as const;
 
 // SPEC §14.3
-export function checkText(selected: readonly Result[], rootArg?: string): string {
+export function checkText(selected: readonly Result[], rootArg?: string, withNext = true): string {
   let out = '';
   for (const r of selected) {
     if (r.state === 'ok') continue;
@@ -26,7 +26,7 @@ export function checkText(selected: readonly Result[], rootArg?: string): string
   const count = (s: Result['state']) => selected.filter((r) => r.state === s).length;
   out += `${count('ok')} ok, ${count('stale')} stale, ${count('invalid')} invalid\n`;
   const stale = selected.filter((r) => r.state === 'stale').map((r) => shown(r.file));
-  if (stale.length > 0) {
+  if (withNext && stale.length > 0) {
     const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
     out +=
       'next: review each stale file against its dependencies, then run: ' +
@@ -48,11 +48,18 @@ export function listText(selected: readonly Result[]): string {
 }
 
 // SPEC §14.4
-export function updateText(written: readonly string[], removed: readonly string[]): string {
+export function updateText(
+  written: readonly string[],
+  unchanged: readonly string[],
+  removed: readonly string[],
+): string {
+  const targets = [
+    ...written.map((file) => ({ file, label: 'written  ' })),
+    ...unchanged.map((file) => ({ file, label: 'unchanged  ' })),
+  ];
+  const order = sortPaths(targets.map((t) => t.file));
   return (
-    sortPaths(written)
-      .map((d) => `written  ${shown(d)}\n`)
-      .join('') +
+    order.map((file) => `${targets.find((t) => t.file === file)!.label}${shown(file)}\n`).join('') +
     sortPaths(removed)
       .map((d) => `removed  ${shown(d)}\n`)
       .join('')

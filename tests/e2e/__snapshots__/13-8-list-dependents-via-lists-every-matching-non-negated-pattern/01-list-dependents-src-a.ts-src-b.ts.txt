@@ -1,0 +1,8 @@
+$ docstamp list-dependents src/a.ts src/b.ts
+exit: 0
+--- stdout ---
+src/a.ts
+  DOC.md   via src/**, src/a.ts, src/*
+src/b.ts
+  (no dependents)
+--- stderr ---

@@ -1,0 +1,5 @@
+$ docstamp --json --json
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --json: --json given twice.

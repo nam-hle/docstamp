@@ -1,0 +1,6 @@
+$ docstamp update docs/guide.md
+cwd: docs
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNKNOWN_FILE: docs/guide.md: Name a file listed under "files" in the configuration file.

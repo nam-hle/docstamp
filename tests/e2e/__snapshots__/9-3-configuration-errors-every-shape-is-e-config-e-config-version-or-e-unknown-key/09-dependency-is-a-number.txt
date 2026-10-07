@@ -1,0 +1,11 @@
+# dependency is a number
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: DOC.md: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  DOC.md:
+    dependencies: [1]

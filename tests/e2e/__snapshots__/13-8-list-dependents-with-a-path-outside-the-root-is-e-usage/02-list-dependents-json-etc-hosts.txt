@@ -1,0 +1,19 @@
+$ docstamp list-dependents --json /etc/hosts
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependents",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_USAGE",
+      "severity": "error",
+      "file": null,
+      "subject": "/etc/hosts",
+      "message": "Name a file inside the root."
+    }
+  ]
+}
+--- stderr ---

@@ -1,0 +1,9 @@
+# throws
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.config.ts ---
+throw new Error('boom');
+export default {};

@@ -1,0 +1,10 @@
+# no version
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG_VERSION: Rename "dependents" to "files" and "covers" to "dependencies", set "version: 2".
+--- setup: docstamp.yaml ---
+files:
+  DOC.md:
+    dependencies: [src/**]

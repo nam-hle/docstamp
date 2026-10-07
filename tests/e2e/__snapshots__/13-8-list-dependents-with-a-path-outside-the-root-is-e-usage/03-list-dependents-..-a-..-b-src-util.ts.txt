@@ -1,0 +1,6 @@
+$ docstamp list-dependents ../a ../b src/util.ts
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: ../a: Name a file inside the root.
+error: E_USAGE: ../b: Name a file inside the root.

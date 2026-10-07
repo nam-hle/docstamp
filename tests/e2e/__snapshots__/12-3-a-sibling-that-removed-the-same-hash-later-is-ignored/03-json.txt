@@ -1,0 +1,60 @@
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 0,
+    "stale": 2,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "B.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/**"
+      ],
+      "changes": [
+        {
+          "status": "added",
+          "path": "src/z.ts"
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "CLAUDE.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/**",
+        "!src/**/*.test.ts"
+      ],
+      "changes": [
+        {
+          "status": "modified",
+          "path": "src/index.ts"
+        },
+        {
+          "status": "modified",
+          "path": "src/util.ts"
+        },
+        {
+          "status": "added",
+          "path": "src/z.ts"
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

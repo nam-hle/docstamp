@@ -1,0 +1,5 @@
+$ docstamp update -- update
+exit: 0
+--- stdout ---
+written  update
+--- stderr ---

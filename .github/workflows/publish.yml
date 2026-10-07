@@ -46,6 +46,9 @@ jobs:
       - name: End-to-end tests
         run: pnpm run test:e2e
 
+      - name: Pack tests
+        run: pnpm run test:pack
+
       - name: Publish to npm
         run: npm publish
         env:

@@ -1,0 +1,31 @@
+$ docstamp list-dependencies --json
+env: LC_ALL=sv_SE.UTF-8
+env: LANG=sv_SE.UTF-8
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "DOC.md",
+      "dependencies": [
+        "src/**"
+      ],
+      "resolvedFiles": [
+        "src/10.ts",
+        "src/9.ts",
+        "src/B.ts",
+        "src/Z.ts",
+        "src/_.ts",
+        "src/a.ts",
+        "src/e.ts",
+        "src/é.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

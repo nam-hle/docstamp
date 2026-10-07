@@ -1,0 +1,6 @@
+# missing directory
+$ docstamp --root nope
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_ROOT: Pass an existing directory to --root.

@@ -1,0 +1,7 @@
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  README.md
+1 ok, 0 stale, 1 invalid
+--- stderr ---
+error: E_FILE_MISSING: README.md: Rename the key under "files" in the configuration file or restore the file.

@@ -1,0 +1,11 @@
+$ docstamp list-dependents src/a.ts
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG_VERSION: Rename "dependents" to "files" and "covers" to "dependencies", set "version: 2".
+--- setup: docstamp.yaml ---
+version: 1
+dependents:
+  CLAUDE.md:
+    covers:
+      - src/**

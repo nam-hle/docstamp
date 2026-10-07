@@ -1,5 +1,5 @@
 import { posix } from 'node:path';
-import { diag } from '../core/diagnostics.ts';
+import { Raised, diag } from '../core/diagnostics.ts';
 import { isRepoPath } from '../core/repo-path.ts';
 import type { Diagnostic, Result } from '../core/types.ts';
 
@@ -28,8 +28,8 @@ export function selectResults(
   cwd: string,
   root: string,
   results: readonly Result[],
-): { selected: Result[]; errors: Diagnostic[] } {
-  if (args.length === 0) return { selected: [...results], errors: [] };
+): Result[] {
+  if (args.length === 0) return [...results];
   const named = new Set<string>();
   const errors: Diagnostic[] = [];
   const known = new Set(results.map((result) => result.file));
@@ -41,5 +41,6 @@ export function selectResults(
       named.add(path);
     }
   }
-  return { selected: results.filter((result) => named.has(result.file)), errors };
+  if (errors.length > 0) throw new Raised(errors);
+  return results.filter((result) => named.has(result.file));
 }

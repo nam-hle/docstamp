@@ -1,0 +1,9 @@
+# future version 4
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_LOCK_VERSION: Run "docstamp update --all" after reviewing every file.
+--- setup: docstamp-lock.yaml ---
+version: 4
+files: {}
