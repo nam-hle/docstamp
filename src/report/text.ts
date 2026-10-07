@@ -12,8 +12,17 @@ function shown(s: string): string {
 
 const LABEL = { ok: 'OK', stale: 'STALE', invalid: 'INVALID' } as const;
 
+export interface CheckTextOptions {
+  root?: string;
+  next?: boolean;
+  quiet?: boolean;
+}
+
 // SPEC §14.3
-export function checkText(selected: readonly Result[], rootArg?: string, withNext = true): string {
+export function checkText(
+  selected: readonly Result[],
+  { root: rootArg, next: withNext = true, quiet = false }: CheckTextOptions = {},
+): string {
   let out = '';
   for (const r of selected) {
     if (r.state === 'ok') continue;
@@ -26,7 +35,9 @@ export function checkText(selected: readonly Result[], rootArg?: string, withNex
     }
   }
   const count = (s: Result['state']) => selected.filter((r) => r.state === s).length;
-  out += `${count('ok')} ok, ${count('stale')} stale, ${count('invalid')} invalid\n`;
+  if (!quiet || count('stale') + count('invalid') > 0) {
+    out += `${count('ok')} ok, ${count('stale')} stale, ${count('invalid')} invalid\n`;
+  }
   const stale = selected.filter((r) => r.state === 'stale').map((r) => shown(r.file));
   if (withNext && stale.length > 0) {
     const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;

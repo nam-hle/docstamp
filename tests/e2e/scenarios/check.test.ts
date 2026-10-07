@@ -181,3 +181,58 @@ scenario('§13.5 explicit check equals bare check', { fixture }, async (repo) =>
   const explicit = await repo.run(['check']);
   expect(explicit).toMatchObject({ exit: bare.exit, stdout: bare.stdout, stderr: bare.stderr });
 });
+
+scenario(
+  '§13.5 --only-stale leaves the ok files out of the JSON list, --quiet out of success',
+  { fixture },
+  async (repo) => {
+    await repo.run(['update', '--all'], { expectExit: 0 });
+
+    const quietOk = await repo.run(['--quiet'], { label: 'quiet, everything ok' });
+    expect(quietOk).toMatchObject({ exit: 0, stdout: '', stderr: '' });
+    const onlyOk = await repo.run(['--json', '--only-stale'], { label: 'only stale, all ok' });
+    expect(onlyOk.json().files).toEqual([]);
+    expect(onlyOk.json().summary).toEqual({ ok: 3, stale: 0, invalid: 0 });
+
+    repo.append('src/util.ts', 'export const triple = (n: number): number => n * 3;\n');
+    const plain = await repo.run([], { label: 'plain, one stale' });
+    const quiet = await repo.run(['--quiet'], { label: 'quiet, one stale' });
+    expect(quiet).toMatchObject({ exit: 1, stdout: plain.stdout, stderr: '' });
+    const only = await repo.run(['--json', '--only-stale'], { label: 'only stale, one stale' });
+    expect(only.exit).toBe(1);
+    expect(only.json().files.map((f: { file: string }) => f.file)).toEqual(['CLAUDE.md']);
+    expect(only.json().summary).toEqual({ ok: 2, stale: 1, invalid: 0 });
+    const full = await repo.run(['--json'], { snapshot: false });
+    expect(full.json().files).toHaveLength(3);
+    const text = await repo.run(['--only-stale'], { label: 'only stale in text mode' });
+    expect(text.stdout).toBe(plain.stdout);
+
+    const withJson = await repo.run(['--json', '--quiet'], {
+      label: 'quiet has no effect on json',
+    });
+    expect(withJson.json()).toEqual(full.json());
+  },
+);
+
+scenario(
+  '§13.5 --quiet still reports an invalid file, and --only-stale keeps it',
+  { fixture },
+  async (repo) => {
+    repo.write(
+      'docstamp.yaml',
+      repo.read('docstamp.yaml') + '  GONE.md:\n    dependencies: [src/**]\n',
+    );
+    const result = await repo.run(['--quiet']);
+    expect(result.exit).toBe(2);
+    expect(result.stdout).toContain('INVALID  GONE.md\n');
+    expect(result.stdout).toContain('0 ok, 3 stale, 1 invalid\n');
+    expect(result.stderr).toContain('error: E_FILE_MISSING: GONE.md');
+    const only = await repo.run(['--json', '--only-stale']);
+    expect(only.json().files.map((f: { state: string }) => f.state)).toEqual([
+      'stale',
+      'invalid',
+      'stale',
+      'stale',
+    ]);
+  },
+);

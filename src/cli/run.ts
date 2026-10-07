@@ -132,6 +132,7 @@ interface Output {
   json: boolean;
   mode: 'check' | 'update';
   evaluated: boolean;
+  onlyStale?: boolean;
   exitCode: number;
   selected: Result[];
   global: Diagnostic[];
@@ -146,6 +147,7 @@ function emit(io: Io, o: Output): number {
       jsonText({
         mode: o.mode,
         evaluated: o.evaluated,
+        onlyStale: o.onlyStale === true,
         exitCode: o.exitCode,
         selected: o.selected,
         diagnostics: o.global,
@@ -347,11 +349,19 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       const stale = selected.some((r) => r.state === 'stale');
       const exitCode = refused ? 2 : stale ? 1 : 0;
       const reported = selected.map((r) => withChanges(root, r, evaluated));
-      const text = checkText(reported, args.root);
-      return emit(io, { ...empty, evaluated: true, exitCode, selected: reported, global, text });
+      const text = checkText(reported, { root: args.root, quiet: args.quiet });
+      return emit(io, {
+        ...empty,
+        evaluated: true,
+        onlyStale: args.onlyStale,
+        exitCode,
+        selected: reported,
+        global,
+        text,
+      });
     }
     if (refused) {
-      const text = checkText(selected, args.root, false);
+      const text = checkText(selected, { root: args.root, next: false });
       return emit(io, { ...empty, evaluated: true, selected, global, text });
     }
     const inlineFiles = new Map(

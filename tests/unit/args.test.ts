@@ -15,13 +15,27 @@ const usage = (argv: string[]) => failure(argv)?.subject ?? 'NO ERROR';
 
 describe('§13.2 parseArgs', () => {
   it('a bare command line is check', () => {
-    expect(parseArgs([])).toEqual({ mode: 'check', json: false, paths: [] });
-    expect(parseArgs(['a.md', '--json'])).toEqual({ mode: 'check', json: true, paths: ['a.md'] });
+    expect(parseArgs([])).toEqual({
+      mode: 'check',
+      json: false,
+      onlyStale: false,
+      quiet: false,
+      paths: [],
+    });
+    expect(parseArgs(['a.md', '--json'])).toEqual({
+      mode: 'check',
+      json: true,
+      onlyStale: false,
+      quiet: false,
+      paths: ['a.md'],
+    });
   });
   it('an explicit check is the same as a bare one', () => {
     expect(parseArgs(['check', 'a.md', '--root', 'x'])).toEqual({
       mode: 'check',
       json: false,
+      onlyStale: false,
+      quiet: false,
       root: 'x',
       paths: ['a.md'],
     });
@@ -91,6 +105,22 @@ describe('§13.2 parseArgs', () => {
     expect(parseArgs(['check', '--', 'check'])).toMatchObject({ mode: 'check', paths: ['check'] });
     expect(parseArgs(['--', 'update'])).toMatchObject({ mode: 'check', paths: ['update'] });
     expect(parseArgs(['update', '--', 'help'])).toMatchObject({ mode: 'update', paths: ['help'] });
+  });
+  it('--only-stale and --quiet belong to check alone', () => {
+    expect(parseArgs(['--only-stale', '--quiet', '--json'])).toMatchObject({
+      mode: 'check',
+      onlyStale: true,
+      quiet: true,
+    });
+    expect(parseArgs(['check', '--quiet'])).toMatchObject({ onlyStale: false, quiet: true });
+    for (const option of ['--only-stale', '--quiet']) {
+      for (const command of ['update', 'list-dependencies', 'list-dependents', 'stats']) {
+        const argv = [command, option, command === 'update' ? '--all' : 'a.md'];
+        expect(usage(argv), argv.join(' ')).toBe(option);
+      }
+      expect(usage([option, option])).toBe(option);
+    }
+    expect(parseArgs(['--help', '--quiet'])).toEqual({ mode: 'help' });
   });
   it('--root forms and --', () => {
     expect(parseArgs(['--root=x', '--', '--json'])).toMatchObject({ root: 'x', paths: ['--json'] });

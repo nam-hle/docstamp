@@ -152,3 +152,24 @@ scenario('§13.2 a lone dash is a file argument', { fixture: 'docs-site' }, asyn
   expect(result.exit).toBe(2);
   expect(result.stderr).toContain('E_UNKNOWN_FILE: -');
 });
+
+scenario(
+  '§13.2 --only-stale and --quiet are options of check alone',
+  { git: false },
+  async (repo) => {
+    for (const option of ['--only-stale', '--quiet']) {
+      for (const args of [
+        ['update', option, '--all'],
+        ['list-dependencies', option],
+        ['list-dependents', option, 'x'],
+        ['stats', option],
+      ]) {
+        const result = await repo.run(args, { snapshot: args[0] === 'update' });
+        expect(result.exit, args.join(' ')).toBe(2);
+        expect(result.stdout).toBe('');
+        expect(result.stderr).toContain('error: E_USAGE: ' + option);
+        expect(result.stderr).toContain('is only valid with "docstamp check"');
+      }
+    }
+  },
+);

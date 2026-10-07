@@ -1,0 +1,5 @@
+# quiet, everything ok
+$ docstamp --quiet
+exit: 0
+--- stdout ---
+--- stderr ---

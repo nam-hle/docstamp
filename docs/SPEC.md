@@ -1165,7 +1165,7 @@ that crosses a reorganization therefore understates how often a list would have 
 ### 13.1 Synopsis
 
 ```
-docstamp [check] [--json] [--root <dir>] [<file>...]
+docstamp [check] [--json] [--only-stale] [--quiet] [--root <dir>] [<file>...]
 docstamp update [--json] [--root <dir>] (--all | <file>...)
 docstamp list-dependencies [--json] [--root <dir>] [<file>...]
 docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
@@ -1183,7 +1183,7 @@ The commands are `check` (§13.5), `update` (§13.6), `list-dependencies` (§13.
 
 The command line is parsed before anything else.
 
-1. The options are `--json`, `--all`, `--transitive`, `--help`, `--version`, and the options with a value, each
+1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--help`, `--version`, and the options with a value, each
    written `--name <value>` or `--name=<value>`: `--root`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
@@ -1205,6 +1205,7 @@ Each message states the problem:
   for `--write` and `docstamp list-dependencies` for `--files`;
 - `--all` with any command but `update`;
 - `--transitive` with any command but `list-dependents`;
+- `--only-stale` or `--quiet` with any command but `check` (`[[Subject]]` the option);
 - `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both;
 - `list-dependents` with no file argument (`[[Subject]]` is `list-dependents`);
 - `--since` or `--from` with any command but `stats`; `--since` and `--from` together (`[[Subject]]`
@@ -1260,6 +1261,12 @@ If a step raises, output the raised Diagnostics as global and exit 2. No evaluat
 exists then, so nothing but the Diagnostics is output (§14.3, §14.5).
 
 Step 4 evaluates Results as §12.1 and then sets `[[Changes]]` of each selected Result as §12.3.
+
+`--only-stale` and `--quiet` change only what step 4 outputs, never a verdict or the exit code
+of step 5. `--only-stale` omits the `ok` Results from `files` in JSON mode (§14.5); it has no
+effect on text mode, which has no block for an `ok` Result. `--quiet` omits the summary line
+of text mode when no selected Result is `stale` or `invalid` (§14.3); it has no effect on JSON
+mode, which always outputs its document.
 
 NOTE: Reviewer's recipe for a stale file. The text output (§14.3) and `changes` in JSON
 (§14.5) name the dependencies that changed since the last Write when the repository history
@@ -1473,7 +1480,9 @@ Then one summary line:
 <n> ok, <m> stale, <k> invalid
 ```
 
-counting the selected Results. When the command raised before any Result existed (§13.5), none
+counting the selected Results. With `--quiet`, the summary line is not output when no selected
+Result is `stale` or `invalid`, so that standard output is empty on success; in every other case
+it is output. When the command raised before any Result existed (§13.5), none
 of this is output: no block, no summary line and no `next:` line, only the Diagnostics. Then, if any selected Result is `stale`:
 
 ```
@@ -1526,7 +1535,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 
 - `mode` is `check`, `update`, `list-dependencies`, `list-dependents` or `stats`.
 - `files` holds every selected Result (check) or every target (update), in path order,
-  including `ok` ones.
+  including `ok` ones. With `check --only-stale` the `ok` ones are omitted, and `summary`
+  still counts every selected Result (§13.5).
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path" }` in this order, or
   `null` when it is *unknown* or not applicable (§12.3), including in update mode.
 - With `update`, each element of `files` adds `"written": true|false` after
@@ -1797,6 +1807,9 @@ The following are not breaking:
   exit code. A bare argument `stats` used to be a
   file argument of `check`; it is now the command, and a file literally named `stats` is reached
   with `--` (§13.2), as for every other command word;
+- `--only-stale` and `--quiet` of `check` (§13.5): new options that no existing command line uses,
+  whose absence leaves every output as it was. Used with another command they are `E_USAGE`, as
+  every unknown option was;
 - a new member of the JSON output (§14.5: consumers ignore unknown members);
 - a change to the output of `--help`, `--version` or the changed-file report (§2); this includes
   the description of `update` in `--help`, reworded to hold for inline files too;

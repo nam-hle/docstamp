@@ -48,10 +48,21 @@ describe('§14.3 check text', () => {
     expect(checkText([res('a.md', 'invalid')])).toBe('INVALID  a.md\n0 ok, 0 stale, 1 invalid\n');
   });
   it('next line carries --root', () => {
-    expect(checkText([res('a.md', 'stale')], 'sub')).toContain('docstamp update a.md --root sub\n');
+    expect(checkText([res('a.md', 'stale')], { root: 'sub' })).toContain(
+      'docstamp update a.md --root sub\n',
+    );
   });
   it('summary is always present', () => {
     expect(checkText([])).toBe('0 ok, 0 stale, 0 invalid\n');
+  });
+  it('--quiet drops the summary only when nothing is stale or invalid', () => {
+    const quiet = { quiet: true };
+    expect(checkText([res('a.md', 'ok')], quiet)).toBe('');
+    expect(checkText([], quiet)).toBe('');
+    expect(checkText([res('a.md', 'ok'), res('b.md', 'stale')], quiet)).toBe(
+      checkText([res('a.md', 'ok'), res('b.md', 'stale')]),
+    );
+    expect(checkText([res('a.md', 'invalid')], quiet)).toBe(checkText([res('a.md', 'invalid')]));
   });
 });
 
@@ -147,6 +158,24 @@ describe('§14.5 JSON', () => {
     expect(doc.files[0].changes).toEqual([{ status: 'added', path: 'src/b.ts' }]);
     expect(doc.files[1].changes).toBeNull();
     expect(doc.files[2].changes).toBeNull();
+  });
+  it('onlyStale omits the ok files and still counts them', () => {
+    const doc = JSON.parse(
+      jsonText({
+        mode: 'check',
+        exitCode: 2,
+        onlyStale: true,
+        selected: [
+          res('a.md', 'ok'),
+          res('b.md', 'stale'),
+          res('c.md', 'invalid'),
+          res('d.md', 'ok'),
+        ],
+        diagnostics: [],
+      }),
+    );
+    expect(doc.files.map((f: { file: string }) => f.file)).toEqual(['b.md', 'c.md']);
+    expect(doc.summary).toEqual({ ok: 2, stale: 1, invalid: 1 });
   });
   it('update adds written and removed', () => {
     const doc = JSON.parse(
