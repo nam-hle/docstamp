@@ -3,6 +3,34 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0](https://github.com/nam-hle/docstamp/compare/v0.2.1...v0.3.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* migrating from 0.2.x. (1) Configuration: rename the top-level key dependents to files and each covers to dependencies, and set version: 2; version 1 is rejected with E_CONFIG_VERSION. A docstamp.config.ts must use the same keys. (2) Lockfile: it is now version 3 with the top-level key files instead of dependents; a version 2 lock is rejected with E_LOCK_VERSION. Hash values are unchanged: review the stamped files as you normally would, then run docstamp update --all, or rename the key and set version: 3 by hand. The first changed-file report after migrating may be empty until the next update. (3) Commands: the old list-dependents is now list-dependencies; list-dependents <file>... now answers the reverse question (which files depend on a file, via which pattern) and requires at least one file. (4) --json (output version 2): the top-level dependents array is files, each entry's dependent member is file, covers is dependencies, list-dependencies adds resolvedFiles, diagnostics carry file instead of dependent, summary is omitted when a run fails before evaluating anything, and in update an entry with written true reports state ok. (5) Text output: covers lines are now depends lines and resolved lines list the selected files; update prints unchanged for an entry whose recorded hash did not change; there is no summary line when a run fails before evaluating anything and no next: line after a refused update. (6) Error codes: E_EMPTY_COVERS is E_EMPTY_DEPENDENCIES, E_UNKNOWN_DEPENDENT is E_UNKNOWN_FILE, E_DEPENDENT_MISSING is E_FILE_MISSING. (7) --root no longer accepts another option as its value: --root --json is now E_USAGE instead of E_ROOT.
+
+### Features
+
+* name config keys files and dependencies, add reverse list-dependents ([d06fa38](https://github.com/nam-hle/docstamp/commit/d06fa38749d895a76323b465d446657e9f3b4398))
+
+
+### Bug Fixes
+
+* end-to-end suite and the output fixes it found ([#6](https://github.com/nam-hle/docstamp/issues/6)) ([8289fc3](https://github.com/nam-hle/docstamp/commit/8289fc33435837d6359730595f4724527376f67a))
+
+
+### Documentation
+
+* add a compatibility policy and lead the README with documentation ([#9](https://github.com/nam-hle/docstamp/issues/9)) ([df72e20](https://github.com/nam-hle/docstamp/commit/df72e20df8232f011190280c5baa16b752b03d8e))
+* prepare the repository for going public ([#7](https://github.com/nam-hle/docstamp/issues/7)) ([0538031](https://github.com/nam-hle/docstamp/commit/05380318a4fd6ec0dfed1984350ab73b19d70b17))
+
+
+### Internal
+
+* Bump pnpm/action-setup from 6.0.8 to 6.1.0 in /.github/actions/setup in the github-actions group across 1 directory ([#8](https://github.com/nam-hle/docstamp/issues/8)) ([e46fd5b](https://github.com/nam-hle/docstamp/commit/e46fd5b06c434a0dd6e6c76eb606e6cfd63e8d8b))
+* ignore major @types/node bumps ([#11](https://github.com/nam-hle/docstamp/issues/11)) ([bcaf2c0](https://github.com/nam-hle/docstamp/commit/bcaf2c0251b8ffe04156c79d75090470b96fd91f))
+
 ## [0.2.1](https://github.com/nam-hle/docstamp/compare/v0.2.0...v0.2.1) (2026-10-06)
 
 
