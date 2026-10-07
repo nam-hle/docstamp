@@ -110,7 +110,10 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
   snapshot: a snapshot of a bug is not a test. Obsolete snapshots fail the run: a scenario
   fails on files in its folder that it did not produce, and `snapshot-guard.test.ts` fails on a
   folder no scenario names. Delete what they list after renaming or removing a scenario. `E_PATH_ENCODING` and `E_PATH_COLLISION` need a Linux file
-  system: their scenarios skip on macOS and their snapshots come from a Linux run.
+  system: their scenarios skip on macOS and their snapshots come from a Linux run. Snapshots render CR
+as `␍` and the BOM as `<BOM>`: `.gitattributes` has `eol=lf`, so a raw CR would not survive a checkout.
+Run the Linux pass (docker, `node:24`, `CI=true`) from `git archive HEAD` of the committed state,
+never the working tree: that is what CI sees.
 - Tests are hermetic: no sleeps, no network, nothing outside the temp dir. Keep the suite near
   20 seconds.
 
