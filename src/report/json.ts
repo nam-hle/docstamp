@@ -1,6 +1,6 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { quote } from '../core/quote.ts';
-import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
+import type { Diagnostic, Result, ReverseDependent, ReverseEntry } from '../core/types.ts';
 import type { FileStats } from '../engine/stats.ts';
 
 export interface JsonDoc {
@@ -129,20 +129,25 @@ export interface ReverseJsonDoc {
   diagnostics: readonly Diagnostic[];
 }
 
+function dependentJson(d: ReverseDependent): JsonObject {
+  const members: Array<[string, Json]> = [
+    ['file', d.file],
+    ['via', [...d.via]],
+  ];
+  if (d.dependents !== undefined) {
+    members.push(['dependents', d.dependents.map(dependentJson)]);
+    members.push(['cycle', d.cycle === true]);
+    members.push(['repeated', d.repeated === true]);
+  }
+  return obj(members);
+}
+
 // SPEC §14.5
 export function reverseJsonText(doc: ReverseJsonDoc): string {
   const files = doc.entries.map((e) =>
     obj([
       ['file', e.file],
-      [
-        'dependents',
-        e.dependents.map((d) =>
-          obj([
-            ['file', d.file],
-            ['via', [...d.via]],
-          ]),
-        ),
-      ],
+      ['dependents', e.dependents.map(dependentJson)],
       ['diagnostics', sortDiagnostics(e.diagnostics).map(diagJson)],
     ]),
   );

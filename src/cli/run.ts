@@ -4,7 +4,7 @@ import { Raised, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
-import { dependentsOf } from '../engine/reverse.ts';
+import { dependentTree, dependentsOf } from '../engine/reverse.ts';
 import { statistics, type FileStats } from '../engine/stats.ts';
 import { fileHash } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
@@ -191,6 +191,7 @@ function reverseEntries(
   root: string,
   cwd: string,
   paths: readonly string[],
+  transitive: boolean,
 ): { entries: ReverseEntry[]; attached: Diagnostic[] } {
   const { universe: walked, declarations, attached } = loadWorkspace(root);
   const universe = new Set(walked.paths);
@@ -214,7 +215,7 @@ function reverseEntries(
   }
   const entries = sortPaths([...keyed.keys()]).map((key): ReverseEntry => ({
     file: key,
-    dependents: dependentsOf(key, declarations, universe, attached),
+    dependents: (transitive ? dependentTree : dependentsOf)(key, declarations, universe, attached),
     diagnostics:
       universe.has(key) || existsUnderRoot(root, key)
         ? []
@@ -225,7 +226,7 @@ function reverseEntries(
 
 // SPEC §13.8
 function runReverse(
-  args: { json: boolean; root?: string; paths: string[] },
+  args: { json: boolean; root?: string; paths: string[]; transitive: boolean },
   cwd: string,
   io: Io,
 ): number {
@@ -234,7 +235,7 @@ function runReverse(
   let exitCode = 2;
   try {
     const root = determineRoot(cwd, args.root);
-    const found = reverseEntries(root, cwd, args.paths);
+    const found = reverseEntries(root, cwd, args.paths, args.transitive);
     entries = found.entries;
     global = found.attached;
     exitCode = hasError(global) || entries.some((e) => hasError(e.diagnostics)) ? 2 : 0;

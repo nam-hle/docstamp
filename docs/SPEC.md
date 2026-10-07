@@ -839,6 +839,14 @@ say) is a content change of *B* (§10.2): every file that depends on *B* becomes
 another form (quoted, wrapped) makes *B* `invalid` (§9.6.2 step 7). Exclude the block from
 formatters, or run `docstamp update` after formatting.
 
+NOTE: Deliberate, for now: an edit that touches only a comment or whitespace inside the `docstamp:`
+block of an inline file *B*, apart from its `hash` line, still counts as a change of *B* (§10.2), so
+the files that depend on *B* become `stale`. Counting only the declaration, or normalizing the
+comments of the block, would change the Hash of every inline file that has such comments: that is a
+hash input change, breaking (§17.2) and needing a deliberate decision and a Lockfile `version`
+(§17.4). It is not part of this version; the issue that tracks it (nam-hle/docstamp#24) stays open
+for that part.
+
 ## 10 Hashing
 
 ### 10.1 Binary Content
@@ -1025,7 +1033,8 @@ NOTE: There is no propagation between files. If C depends on B and B depends on 
 the code makes B stale and leaves C ok. Writing B changes only the Lockfile, which is never in the
 Universe (§7.2 step 3), so C stays ok. C becomes stale only when B's content changes. When B is an
 inline file, writing B changes B itself, but not its `hash` line's part of its content (§10.2
-step 4), so C stays ok in the same way.
+step 4), so C stays ok in the same way. `list-dependents --transitive` (§13.8) lists such chains
+without changing any verdict.
 
 ### 12.3 ChangedSince
 
@@ -1159,7 +1168,7 @@ that crosses a reorganization therefore understates how often a list would have 
 docstamp [check] [--json] [--root <dir>] [<file>...]
 docstamp update [--json] [--root <dir>] (--all | <file>...)
 docstamp list-dependencies [--json] [--root <dir>] [<file>...]
-docstamp list-dependents [--json] [--root <dir>] <file>...
+docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
 docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
 docstamp help
 docstamp version
@@ -1174,7 +1183,7 @@ The commands are `check` (§13.5), `update` (§13.6), `list-dependencies` (§13.
 
 The command line is parsed before anything else.
 
-1. The options are `--json`, `--all`, `--help`, `--version`, and the options with a value, each
+1. The options are `--json`, `--all`, `--transitive`, `--help`, `--version`, and the options with a value, each
    written `--name <value>` or `--name=<value>`: `--root`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
@@ -1195,6 +1204,7 @@ Each message states the problem:
 - `--write` or `--files`, which were removed: the message names the replacement, `docstamp update`
   for `--write` and `docstamp list-dependencies` for `--files`;
 - `--all` with any command but `update`;
+- `--transitive` with any command but `list-dependents`;
 - `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both;
 - `list-dependents` with no file argument (`[[Subject]]` is `list-dependents`);
 - `--since` or `--from` with any command but `stats`; `--since` and `--from` together (`[[Subject]]`
@@ -1334,19 +1344,33 @@ dependents of each: the stamped files that depend on it. At least one file argum
       `b.[[File]]` and `Select(b.[[Dependencies]], « path »)` selects it, append { `[[File]]`:
       `b.[[File]]`, `[[Via]]`: the patterns of `b.[[Dependencies]]` that have no Negation and
       satisfy `PatternMatches(pattern, path)`, in declaration order } to *found*.
-   3. Let *diagnostics* be « `W_UNKNOWN_PATH` », `[[Subject]]` *path*, with no `[[File]]`, if
+   3. If `--transitive` is given, let *found* be `DependentTree(path)` (below).
+   4. Let *diagnostics* be « `W_UNKNOWN_PATH` », `[[Subject]]` *path*, with no `[[File]]`, if
       *path* is not in *universe* and is not an *existing entry*; else « ». An *existing entry* is
       an entry of any kind (§7.1, not followed) at *path* under *root*, whose name in the listing of
       its parent directory, after §7.4, equals the last segment of *path*, as §9.4 requires.
-   4. Add the entry { `[[File]]`: *path*, `[[Dependents]]`: *found*, `[[Diagnostics]]`:
+   5. Add the entry { `[[File]]`: *path*, `[[Dependents]]`: *found*, `[[Diagnostics]]`:
       *diagnostics* }.
 5. Output *entries* and *attached* (§14).
 6. Exit 2 if *attached* holds an error; else 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
-NOTE: Only direct dependency is reported; there is no transitive closure, so C that depends on B
-that depends on code is not a dependent of the code. The Lockfile is not read (§13.7 NOTE), so
+`DependentTree(path)` is the List of the *nodes* below *path*, a node being { `[[File]]`, `[[Via]]`,
+`[[Dependents]]`: a List of nodes, `[[Cycle]]`: Boolean, `[[Repeated]]`: Boolean }. Let *expanded* be
+an empty Set, local to one call, and `Below(p, chain)` the List built from the direct dependents
+of step 4.2 for *p*, *found(p)*, as follows; the result is `Below(path, « path »)`:
+
+1. For each element *d* of *found(p)*, in order, add the node { `[[File]]` `d.[[File]]`, `[[Via]]`
+   `d.[[Via]]` } with:
+   1. if `d.[[File]]` is in *chain*: `[[Cycle]]` true, `[[Repeated]]` false, `[[Dependents]]` « »;
+   2. otherwise, if `d.[[File]]` is in *expanded*: `[[Cycle]]` false, `[[Repeated]]` true,
+      `[[Dependents]]` « »;
+   3. otherwise: add `d.[[File]]` to *expanded*, `[[Cycle]]` and `[[Repeated]]` false, and
+      `[[Dependents]]` `Below(d.[[File]], chain + « d.[[File]] »)`.
+
+NOTE: Without `--transitive` only direct dependency is reported, so C that depends on B that
+depends on code is not a dependent of the code; with it, C is listed below B. The Lockfile is not read (§13.7 NOTE), so
 there is no `stale` information and the exit code is never 1. A file whose pattern is invalid
 cannot be matched: it is skipped and its `E_PATTERN` is output; the same holds for any file with
 an attached Diagnostic, such as an inline file with an `E_BLOCK` or a `use` that raises `E_UNKNOWN_PRESET`. For a file that uses
@@ -1358,6 +1382,15 @@ NOTE: `W_UNKNOWN_PATH` makes a typo visible without breaking a script: the entry
 with no dependents and the exit code stays 0 (§16). A path that exists but is ignored, a directory,
 or the Lockfile is not unknown: it has no dependents and no warning. The arguments are still
 resolved against the current directory (§13.4), not against `--root`.
+
+NOTE: `--transitive` only reports the chains: it changes no verdict, Hash or exit code, and a
+change in a file still makes only its direct dependents `stale` (§12.2 NOTE); the chains show which
+files become stale in later rounds, one Review at a time. A *cycle* is a node whose file is on its
+own chain, the argument included: it is listed once, marked, and not followed. A file reached again
+by another chain that is not a cycle (*repeated*) is listed, marked, and not followed again, so the
+output is finite and its size at most the number of stamped files per argument. The order is the
+path order of §13.8 step 4.2 at each level, depth first, so it is deterministic. There is no depth
+option.
 
 ### 13.9 Stats
 
@@ -1549,8 +1582,12 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   ```
 
   Each entry is { `[[File]]`, `[[Dependents]]` } of §13.8 step 4, `dependents`
-  a List of { `"file"`, `"via"` } in path order, empty when nothing depends on `file`. The `diagnostics`
-  of an entry holds its `W_UNKNOWN_PATH` (§13.8 step 4.3), and is `[]` otherwise. The top-level
+  a List of { `"file"`, `"via"` } in path order, empty when nothing depends on `file`. With
+  `--transitive` each element is instead { `"file"`, `"via"`, `"dependents"`, `"cycle"`,
+  `"repeated"` }: `dependents` the List of the nodes below it in the same shape (`[]` for a
+  node that is a cycle, is repeated, or has no dependents), and `cycle` and `repeated` its
+  Booleans of §13.8. The `diagnostics` of an entry holds its `W_UNKNOWN_PATH` (§13.8 step 4.4),
+  and is `[]` otherwise. The top-level
   `diagnostics` hold the attached `E_PATTERN` Diagnostics, or the raised Diagnostics, in which
   case `files` is empty.
 - The `diagnostics` of a file holds its errors when it is `invalid`, and its warnings (§8.5) in
@@ -1624,6 +1661,18 @@ with one row per dependent, in path order: two spaces, the dependent padded with
 width of the longest dependent of the block, three spaces, `via `, and the patterns joined with
 `, `, each written as in §14.2. An entry with no dependents has the single row `  (no dependents)`,
 also when it has a `W_UNKNOWN_PATH`. Diagnostics as in §14.3, those of the entries included.
+
+With `--transitive` the rows form a tree, depth first (§13.8): the dependents of a dependent follow
+its row, as a group of rows indented by two more spaces per level, each group padded to the width of
+its own longest dependent. The row of a cycle ends with a space and `(cycle)`, the row of a repeated
+node with a space and `(listed above)`; neither has rows below it:
+
+```
+src/core/hash.ts
+  docs/GUIDE.md   via src/core
+    README.md   via docs/GUIDE.md
+      docs/GUIDE.md   via README.md (cycle)
+```
 
 ### 14.8 Stats, Text Mode
 
@@ -1756,6 +1805,8 @@ The following are not breaking:
   for a path it does not know;
 - the `[[Message]]` of the `E_USAGE` of §13.8 step 3 now names the directory and Root it was
   resolved against; the code, the exit code and the resolution of §13.4 are unchanged;
+- `--transitive` (§13.2, §13.8): a new option of `list-dependents` that no existing command line uses;
+  without it the output is unchanged;
 - a new file shipped in the package, such as `schema-frontmatter.json` (§5.6), which no command reads;
 - Presets (§8.6): the optional key `presets` of the Configuration file (§9.3), the optional key `use`
   of a file and of an inline block, the Diagnostic code `E_UNKNOWN_PRESET`, and the members `use` and

@@ -77,9 +77,13 @@ export interface Result {
   readonly changes?: readonly Change[] | null;
 }
 
+// SPEC §13.8: `dependents`, `cycle` and `repeated` are set only by --transitive
 export interface ReverseDependent {
   readonly file: string;
   readonly via: readonly string[];
+  readonly dependents?: readonly ReverseDependent[];
+  readonly cycle?: boolean;
+  readonly repeated?: boolean;
 }
 
 export interface ReverseEntry {

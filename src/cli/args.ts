@@ -8,10 +8,17 @@ export type Args =
   | { mode: 'help' }
   | { mode: 'version' }
   | {
-      mode: 'check' | 'list-dependencies' | 'list-dependents';
+      mode: 'check' | 'list-dependencies';
       json: boolean;
       root?: string;
       paths: string[];
+    }
+  | {
+      mode: 'list-dependents';
+      json: boolean;
+      root?: string;
+      paths: string[];
+      transitive: boolean;
     }
   | {
       mode: 'stats';
@@ -31,8 +38,9 @@ export const HELP = `Usage:
       docstamp block, or in docstamp-lock.yaml for files declared in the configuration).
   docstamp list-dependencies [--json] [--root <dir>] [<file>...]
       List each file with its dependency patterns and the files they select.
-  docstamp list-dependents [--json] [--root <dir>] <file>...
-      List the files that depend on each named file, and the patterns that select it.
+  docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
+      List the files that depend on each named file, and the patterns that select it;
+      --transitive also lists the dependents of those dependents.
   docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
       Report how often each file's dependencies would have made it stale over recent history:
       the last <n> days (default --since 30d), or the commits of <rev>..HEAD.
@@ -51,7 +59,7 @@ const COMMANDS = new Set([
   'help',
   'version',
 ]);
-const FLAGS = new Set(['--json', '--all', '--version', '--help']);
+const FLAGS = new Set(['--json', '--all', '--transitive', '--version', '--help']);
 const REMOVED: Record<string, string> = {
   '--write': 'docstamp update',
   '--files': 'docstamp list-dependencies',
@@ -132,6 +140,9 @@ export function parseArgs(argv: readonly string[]): Args {
     }
     if (all && paths.length > 0) fail('--all', 'Pass either files or --all, not both.');
   } else if (all) fail('--all', '--all is only valid with "docstamp update".');
+  if (seen.has('--transitive') && mode !== 'list-dependents') {
+    fail('--transitive', '--transitive is only valid with "docstamp list-dependents".');
+  }
   if (mode === 'list-dependents' && paths.length === 0) {
     fail('list-dependents', 'Name the files whose dependents you want to list.');
   }
@@ -164,6 +175,9 @@ export function parseArgs(argv: readonly string[]): Args {
           }
         : { kind: 'from', value: from };
     return { mode, json, ...rootOpt, paths, window };
+  }
+  if (mode === 'list-dependents') {
+    return { mode, json, ...rootOpt, paths, transitive: seen.has('--transitive') };
   }
   return mode === 'update'
     ? { mode, all, json, ...rootOpt, paths }

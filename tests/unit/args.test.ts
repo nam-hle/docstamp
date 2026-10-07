@@ -175,7 +175,29 @@ describe('§13.2 list-dependents', () => {
       mode: 'list-dependents',
       json: true,
       paths: ['a', 'b'],
+      transitive: false,
     });
     expect(parseArgs(['list-dependents', '--', 'check'])).toMatchObject({ paths: ['check'] });
+  });
+  it('--transitive is a flag of list-dependents only, in any position', () => {
+    expect(parseArgs(['list-dependents', 'a', '--transitive'])).toMatchObject({
+      transitive: true,
+    });
+    expect(parseArgs(['--transitive', 'list-dependents', 'a'])).toMatchObject({
+      transitive: true,
+    });
+  });
+  it.each([['check'], ['update', '--all'], ['list-dependencies'], ['stats']])(
+    '--transitive with %s is E_USAGE',
+    (...argv) => {
+      expect(() => parseArgs([...argv, '--transitive'])).toThrow(
+        expect.objectContaining({
+          diagnostics: [expect.objectContaining({ code: 'E_USAGE', subject: '--transitive' })],
+        }),
+      );
+    },
+  );
+  it('--transitive given twice is E_USAGE', () => {
+    expect(() => parseArgs(['list-dependents', 'a', '--transitive', '--transitive'])).toThrow();
   });
 });

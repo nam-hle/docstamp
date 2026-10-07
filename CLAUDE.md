@@ -166,6 +166,13 @@ presets except the `(preset <name>)` marker in `listText` and the `use`/`origins
 `listJsonText`. The pattern dialect, the hash and the Lockfile never change for them. Tests:
 `tests/unit/presets.test.ts`, `tests/e2e/scenarios/presets.test.ts` on the `presets` fixture.
 
+## Transitive dependents
+
+`list-dependents --transitive` (SPEC §13.8) is `dependentTree` in `src/engine/reverse.ts`, a depth-first
+walk over `dependentsOf` with the chain (cycle) and a per-argument `expanded` set (repeated); text and
+JSON render the same nodes (`reverseText`, `reverseJsonText`). It reads no verdict. Tests:
+`tests/unit/reverse.test.ts`, `tests/e2e/scenarios/transitive.test.ts` on the `doc-chain` fixture.
+
 ## Pattern diagnostics
 
 `Result.diagnostics` holds the errors of an `invalid` file and the warnings of any file: an `ok` or

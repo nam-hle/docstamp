@@ -158,7 +158,7 @@ Things to know:
 - **With a configuration file.** Both kinds of file live side by side: `update --all` covers both, and the lock holds only the files of `files`. A file declared both ways is `E_DUPLICATE_DECLARATION`; nothing is merged. Every command, `--json` included, treats an inline doc like any other.
 - **A doc that depends on another inline doc.** When `docs/architecture.md` is re-stamped, `README.md` (which depends on it) stays `ok`: the `hash:` line of a doc is not part of its content when another doc hashes it. Its prose, its other frontmatter and its `dependencies` list still count, so editing any of them makes `README.md` stale ([SPEC §10.2](docs/SPEC.md#102-normalized-content)).
 - **Moving a doc.** Rename or move it freely: its declaration and hash travel with it. Dependencies that point at its old path need the new path.
-- **Formatters.** A formatter that reflows or re-quotes the frontmatter of a doc changes that doc's content, so every doc that depends on it becomes stale; one that rewrites the `hash:` line (quotes or wraps it) makes the doc `invalid`. Exclude the `docstamp` block from formatters, or run `docstamp update` after formatting.
+- **Formatters.** A formatter that reflows or re-quotes the frontmatter of a doc changes that doc's content, so every doc that depends on it becomes stale; one that rewrites the `hash:` line (quotes or wraps it) makes the doc `invalid`. Exclude the `docstamp` block from formatters, or run `docstamp update` after formatting. For now, the same holds for an edit that only changes a comment or whitespace inside the block: it counts as a change of that doc (changing that would change hashes, so it needs its own versioned decision, [SPEC §9.6.4](docs/SPEC.md#964-stamping)).
 - **A schema for the block.** The package ships `schema-frontmatter.json` (`docstamp/schema-frontmatter.json`), a JSON Schema (draft-07) for the frontmatter of a doc: the `docstamp` key takes `dependencies` (required, a non-empty list of strings), `use` (a list of preset names) and `hash` (64 lowercase hex digits), and nothing else, while other frontmatter keys stay free. A tool that validates frontmatter against a JSON Schema file can use it to catch a mistyped key before docstamp runs; point it at `node_modules/docstamp/schema-frontmatter.json` for the docs that carry a block. docstamp itself does not read the file, and checks the block as [SPEC §9.6.2](docs/SPEC.md#962-parsing) says. Checked with Ajv 8:
 
   ```js
@@ -200,6 +200,19 @@ src/core/hsh.ts
   (no dependents)
 warning: W_UNKNOWN_PATH: src/core/hsh.ts: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory).
 ```
+
+`list-dependents` is direct by default: a doc that depends on another doc is listed for the code the other doc covers only with `--transitive`, which shows the chain of docs that go stale one review round after another. A doc reached a second time is marked `(listed above)` and a cycle is marked `(cycle)`; neither is followed again, so the output is finite. Nothing about a verdict changes ([SPEC §13.8](docs/SPEC.md#138-listdependents)):
+
+```console
+$ docstamp list-dependents --transitive src/core/hash.ts
+src/core/hash.ts
+  docs/GUIDE.md   via src/core
+    README.md          via docs/GUIDE.md
+      docs/OVERVIEW.md   via README.md
+    docs/OVERVIEW.md   via docs/GUIDE.md (listed above)
+```
+
+With `--json` each dependent also has `dependents` (the same nodes, nested), `cycle` and `repeated`.
 
 `docstamp list-dependencies <doc>` shows what a doc depends on and which files the patterns select. It does not read the lock:
 
@@ -360,7 +373,7 @@ That is one entry of `files`; the report also has `version`, `mode`, `exitCode`,
 | `docstamp [check]` | The verdict. A bare `docstamp` is `check`. |
 | `docstamp update (--all \| <file>...)` | Record that you reviewed the named files, in the lock or, for an inline doc, in its own `hash:` line. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line. |
 | `docstamp list-dependencies [<file>...]` | Each file with its dependency patterns and the files they select. It does not read the lock. |
-| `docstamp list-dependents <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only, no lock. A path that exists nowhere gets a `W_UNKNOWN_PATH` warning and exit 0. |
+| `docstamp list-dependents [--transitive] <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only unless `--transitive`, which also lists the dependents of those dependents. No lock. A path that exists nowhere gets a `W_UNKNOWN_PATH` warning and exit 0. |
 | `docstamp stats [--since <n>d \| --from <rev>] [<file>...]` | Report how often each file's dependencies would have made it stale over the last `n` days or since `<rev>` ([Measuring how noisy a list is](#measuring-how-noisy-a-list-is)). Reads git history, never the lock. |
 | `docstamp help` | Usage. |
 | `docstamp version` | The installed version. |

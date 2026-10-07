@@ -1,7 +1,7 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import { needsQuoting, quote } from '../core/quote.ts';
-import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
+import type { Diagnostic, Result, ReverseDependent, ReverseEntry } from '../core/types.ts';
 import type { FileStats } from '../engine/stats.ts';
 import type { StatsWindow } from './json.ts';
 
@@ -84,16 +84,26 @@ export function diagnosticsText(ds: readonly Diagnostic[]): string {
 }
 
 // SPEC §14.7
+function reverseRows(dependents: readonly ReverseDependent[], depth: number): string {
+  const names = dependents.map((d) => shown(d.file));
+  const width = Math.max(0, ...names.map((n) => n.length));
+  let out = '';
+  dependents.forEach((d, i) => {
+    const mark = d.cycle === true ? ' (cycle)' : d.repeated === true ? ' (listed above)' : '';
+    const via = d.via.map(shown).join(', ');
+    out += `${'  '.repeat(depth + 1)}${names[i]!.padEnd(width)}   via ${via}${mark}\n`;
+    out += reverseRows(d.dependents ?? [], depth + 1);
+  });
+  return out;
+}
+
+// SPEC §14.7
 export function reverseText(entries: readonly ReverseEntry[]): string {
   let out = '';
   for (const entry of entries) {
     out += `${shown(entry.file)}\n`;
     if (entry.dependents.length === 0) out += '  (no dependents)\n';
-    const names = entry.dependents.map((d) => shown(d.file));
-    const width = Math.max(0, ...names.map((n) => n.length));
-    entry.dependents.forEach((d, i) => {
-      out += `  ${names[i]!.padEnd(width)}   via ${d.via.map(shown).join(', ')}\n`;
-    });
+    out += reverseRows(entry.dependents, 0);
   }
   return out;
 }

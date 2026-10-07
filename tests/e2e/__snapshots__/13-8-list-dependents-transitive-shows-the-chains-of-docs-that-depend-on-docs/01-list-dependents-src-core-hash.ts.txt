@@ -1,0 +1,6 @@
+$ docstamp list-dependents src/core/hash.ts
+exit: 0
+--- stdout ---
+src/core/hash.ts
+  docs/GUIDE.md   via src/core
+--- stderr ---

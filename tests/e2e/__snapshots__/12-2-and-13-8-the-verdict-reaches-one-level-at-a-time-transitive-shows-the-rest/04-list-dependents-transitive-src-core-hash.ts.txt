@@ -1,0 +1,9 @@
+$ docstamp list-dependents --transitive src/core/hash.ts
+exit: 0
+--- stdout ---
+src/core/hash.ts
+  docs/GUIDE.md   via src/core
+    README.md          via docs/GUIDE.md
+      docs/OVERVIEW.md   via README.md
+    docs/OVERVIEW.md   via docs/GUIDE.md (listed above)
+--- stderr ---

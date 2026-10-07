@@ -162,3 +162,121 @@ describe('§13.8 list-dependents', () => {
     expect(doc.diagnostics[0].code).toBe('E_CONFIG_MISSING');
   });
 });
+
+describe('§13.8 list-dependents --transitive', () => {
+  const cmd = 'list-dependents';
+  const flag = '--transitive';
+
+  it('lists the dependents of the dependents as an indented tree', () => {
+    const root = tree({ 'a.md': ['b.md'], 'b.md': ['src/**'] });
+    expect(exec(root, cmd, flag, 'src/x.ts')).toEqual({
+      code: 0,
+      out: 'src/x.ts\n  b.md   via src/**\n    a.md   via b.md\n',
+      err: '',
+    });
+  });
+
+  it('is the direct list when nothing depends on a dependent', () => {
+    const root = tree({ 'a.md': ['src/**'] });
+    expect(exec(root, cmd, flag, 'src/x.ts').out).toBe(exec(root, cmd, 'src/x.ts').out);
+    expect(exec(root, cmd, flag, 'b.md').out).toBe('b.md\n  (no dependents)\n');
+  });
+
+  it('pads each group to its own longest name and goes depth first, in path order', () => {
+    const root = tree(
+      { 'a.md': ['src/**'], 'b.md': ['src/**'], 'c.md': ['a.md'], 'dd.md': ['a.md'] },
+      { 'c.md': 'c', 'dd.md': 'd' },
+    );
+    expect(exec(root, cmd, flag, 'src/x.ts').out).toBe(
+      'src/x.ts\n' +
+        '  a.md   via src/**\n' +
+        '    c.md    via a.md\n' +
+        '    dd.md   via a.md\n' +
+        '  b.md   via src/**\n',
+    );
+  });
+
+  it('prints a cycle once, marked, and stops', () => {
+    const root = tree({ 'a.md': ['src/x.ts', 'b.md'], 'b.md': ['a.md'] });
+    expect(exec(root, cmd, flag, 'src/x.ts').out).toBe(
+      'src/x.ts\n  a.md   via src/x.ts\n    b.md   via a.md\n      a.md   via b.md (cycle)\n',
+    );
+  });
+
+  it('a cycle that returns to the argument itself stops there', () => {
+    const root = tree({ 'a.md': ['b.md'], 'b.md': ['a.md'] });
+    expect(exec(root, cmd, flag, 'a.md').out).toBe(
+      'a.md\n  b.md   via a.md\n    a.md   via b.md (cycle)\n',
+    );
+  });
+
+  it('a file reached by two chains is expanded once and marked the second time', () => {
+    const root = tree(
+      { 'a.md': ['src/**'], 'b.md': ['src/**', 'a.md'], 'c.md': ['a.md', 'b.md'] },
+      { 'c.md': 'c' },
+    );
+    expect(exec(root, cmd, flag, 'src/x.ts').out).toBe(
+      'src/x.ts\n' +
+        '  a.md   via src/**\n' +
+        '    b.md   via a.md\n' +
+        '      c.md   via b.md\n' +
+        '    c.md   via a.md (listed above)\n' +
+        '  b.md   via src/** (listed above)\n',
+    );
+  });
+
+  it('does not follow a file whose declaration is invalid, and still reports it', () => {
+    const root = tree({ 'a.md': ['b.md'], 'b.md': ['src/**'], 'c.md': ['"/bad"', 'a.md'] });
+    const r = exec(root, cmd, flag, 'src/x.ts');
+    expect(r.code).toBe(2);
+    expect(r.out).toBe('src/x.ts\n  b.md   via src/**\n    a.md   via b.md\n');
+    expect(r.err).toContain('error: E_PATTERN: c.md: /bad: ');
+  });
+
+  it('--json nests the same nodes and adds cycle and repeated', () => {
+    const root = tree({ 'a.md': ['src/x.ts', 'b.md'], 'b.md': ['a.md'] });
+    const r = exec(root, cmd, flag, '--json', 'src/x.ts');
+    expect(r.err).toBe('');
+    expect(JSON.parse(r.out).files).toEqual([
+      {
+        file: 'src/x.ts',
+        dependents: [
+          {
+            file: 'a.md',
+            via: ['src/x.ts'],
+            dependents: [
+              {
+                file: 'b.md',
+                via: ['a.md'],
+                dependents: [
+                  { file: 'a.md', via: ['b.md'], dependents: [], cycle: true, repeated: false },
+                ],
+                cycle: false,
+                repeated: false,
+              },
+            ],
+            cycle: false,
+            repeated: false,
+          },
+        ],
+        diagnostics: [],
+      },
+    ]);
+  });
+
+  it('--json without the flag keeps the shape of a direct entry', () => {
+    const root = tree({ 'a.md': ['b.md'], 'b.md': ['src/**'] });
+    const doc = JSON.parse(exec(root, cmd, '--json', 'src/x.ts').out);
+    expect(doc.files[0].dependents).toEqual([{ file: 'b.md', via: ['src/**'] }]);
+  });
+
+  it('changes no verdict: a stale dependent leaves the file below it ok', () => {
+    const root = tree({ 'a.md': ['b.md'], 'b.md': ['src/**'] });
+    expect(exec(root, 'update', '--all').code).toBe(0);
+    writeFileSync(join(root, 'src/x.ts'), 'changed');
+    const check = exec(root);
+    expect(check.code).toBe(1);
+    expect(check.out).toContain('STALE    b.md');
+    expect(check.out).not.toContain('STALE    a.md');
+  });
+});
