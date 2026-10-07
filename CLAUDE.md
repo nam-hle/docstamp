@@ -66,8 +66,8 @@ docstamp/
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
-│   ├── engine/           # evaluation, reverse lookup; pure, no I/O (§12, §13.8)
-│   ├── history/          # changed-file report from git, read-only (§12.3)
+│   ├── engine/           # evaluation, reverse lookup, stats; pure, no I/O (§12, §12.5, §13.8)
+│   ├── history/          # changed-file report (§12.3) and stats replay (§12.4), git, read-only
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json
 ├── tests/
@@ -96,7 +96,7 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
   temp dir, a copy of `tests/e2e/fixtures/<fixture>/`, and `git init` with a fixed environment
   (author, dates, no global config, no hooks), so hashes and commit ids are stable.
 - **Repo helpers**: `write`, `append`, `remove`, `rename`, `symlink`, `chmod`, `mkdir`, `read`,
-  `commit(msg)`, `git(...)`, `at(dir)`, `copyTo(dir)`, `shallowClone(dir)`, `fixtureText(path)`.
+  `commit(msg, at?)` (`at` pins the commit time), `git(...)`, `at(dir)`, `copyTo(dir)`, `shallowClone(dir)`, `fixtureText(path)`.
   `await repo.run(args, { cwd?, env?, expectExit?, label?, show?, snapshot? })` returns
   `{ exit, stdout, stderr, json() }` and writes a snapshot: the command line, `exit`, stdout and
   stderr. `label` names a case in the snapshot, `show` echoes the files under test, `cwd` is
@@ -121,9 +121,10 @@ never the working tree: that is what CI sees.
 
 Only what no test can check stays here.
 
-- **No LLM call, no network, no clock** anywhere in `src/` (SPEC §2). `git` is invoked only in
-  `src/history/`, read-only, through `execFileSync` with an argument array (no shell), and never
-  for the verdict, the exit code or the Lockfile.
+- **No LLM call, no network, no clock** anywhere in `src/` (SPEC §2), except the one read of the
+  clock in `runStats` for `stats --since`. `git` is invoked only in `src/history/`, read-only,
+  through `execFileSync` with an argument array (no shell), and never for the verdict, the Lockfile
+  or the exit code of `check`, `update` or the list commands. `stats` only reports (§13.9).
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
 - **Nothing writes the Lockfile automatically.** Only `docstamp update` with named files or
   `--all` may write it, or the `hash:` line of an inline doc (§9.6.4); a Write is the record that a

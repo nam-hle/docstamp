@@ -1,6 +1,6 @@
-import { execFileSync } from 'node:child_process';
 import { comparePaths } from '../core/order.ts';
 import type { Change, Result } from '../core/types.ts';
+import { git } from './git.ts';
 import { recordedHash as inlineHash } from '../inline/frontmatter.ts';
 import { parseLock } from '../lock/lock.ts';
 import { select } from '../pattern/match.ts';
@@ -63,22 +63,6 @@ export function buildChanges(
     .map(([path, status]) => ({ status, path }))
     .sort((a, b) => comparePaths(a.path, b.path));
 }
-
-const gitEnv = (): NodeJS.ProcessEnv => {
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
-  );
-  return { ...env, GIT_OPTIONAL_LOCKS: '0' };
-};
-
-const git = (root: string, args: readonly string[]): string =>
-  execFileSync('git', args, {
-    cwd: root,
-    env: gitEnv(),
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-    maxBuffer: 256 * 1024 * 1024,
-  });
 
 function recordedHash(
   root: string,

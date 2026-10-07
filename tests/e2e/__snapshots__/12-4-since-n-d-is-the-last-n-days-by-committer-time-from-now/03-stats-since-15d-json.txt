@@ -1,0 +1,40 @@
+$ docstamp stats --since=15d --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 0,
+  "window": {
+    "kind": "days",
+    "value": "15d",
+    "commits": 3,
+    "untouched": 1
+  },
+  "files": [
+    {
+      "file": "A.md",
+      "patterns": 1,
+      "resolvedCount": 1,
+      "staleCommits": 2,
+      "days": 2,
+      "staleRate": 0.6667,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    },
+    {
+      "file": "B.md",
+      "patterns": 1,
+      "resolvedCount": 2,
+      "staleCommits": 2,
+      "days": 2,
+      "staleRate": 0.6667,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

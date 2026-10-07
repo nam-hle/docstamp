@@ -1,0 +1,6 @@
+# stats --since=-5d
+$ docstamp stats --since=-5d
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --since: --since needs a number of days written like 30d (1d to 3650d).

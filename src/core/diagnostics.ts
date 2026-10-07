@@ -32,6 +32,9 @@ const FIX: Record<Code, string> = {
   // Lockfile version 2 uses a dedicated message (lock.ts).
   E_UNKNOWN_FILE:
     'Name a file listed under "files" in the configuration file, or one with a docstamp block.',
+  E_HISTORY:
+    'Run in a git work tree with its full history, and give --since a commit, ' +
+    'a date such as 2024-01-01 or a duration such as 90.days.',
   W_ORPHAN: 'Run "docstamp update" on any file to remove the entry.',
   W_EMPTY_EXCLUSION:
     'The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.',

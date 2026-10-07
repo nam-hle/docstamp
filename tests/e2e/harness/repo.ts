@@ -87,6 +87,8 @@ const GIT_FLAGS = [
 ];
 
 export class Repo {
+  private pinnedTime: string | undefined;
+
   constructor(
     readonly root: string,
     private readonly session: Session,
@@ -171,15 +173,25 @@ export class Repo {
     return result.stdout;
   }
 
-  commit(message: string): string {
+  // `at` pins the commit time, an ISO instant such as 2026-02-03T10:00:00Z
+  commit(message: string, at?: string): string {
     this.git('add', '-A');
-    this.git('commit', '-q', '--no-verify', '--allow-empty', '-m', message);
+    this.pinnedTime = at;
+    try {
+      this.git('commit', '-q', '--no-verify', '--allow-empty', '-m', message);
+    } finally {
+      this.pinnedTime = undefined;
+    }
     this.session.clock += 1;
     return this.git('rev-parse', 'HEAD').trim();
   }
 
   private commitEnv(): Record<string, string> {
-    const date = `${FIRST_COMMIT_TIME + this.session.clock * 60} +0000`;
+    const seconds =
+      this.pinnedTime === undefined
+        ? FIRST_COMMIT_TIME + this.session.clock * 60
+        : Date.parse(this.pinnedTime) / 1000;
+    const date = `${seconds} +0000`;
     return {
       GIT_AUTHOR_NAME: 'Docstamp E2E',
       GIT_AUTHOR_EMAIL: 'e2e@example.invalid',

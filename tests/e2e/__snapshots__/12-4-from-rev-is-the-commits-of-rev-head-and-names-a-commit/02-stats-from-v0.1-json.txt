@@ -1,0 +1,51 @@
+$ docstamp stats --from v0.1 --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 0,
+  "window": {
+    "kind": "revision",
+    "value": "v0.1",
+    "commits": 6,
+    "untouched": 2
+  },
+  "files": [
+    {
+      "file": "BROAD.md",
+      "patterns": 1,
+      "resolvedCount": 4,
+      "staleCommits": 4,
+      "days": 3,
+      "staleRate": 0.6667,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    },
+    {
+      "file": "MID.md",
+      "patterns": 2,
+      "resolvedCount": 2,
+      "staleCommits": 3,
+      "days": 2,
+      "staleRate": 0.5,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    },
+    {
+      "file": "NARROW.md",
+      "patterns": 1,
+      "resolvedCount": 1,
+      "staleCommits": 2,
+      "days": 2,
+      "staleRate": 0.3333,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

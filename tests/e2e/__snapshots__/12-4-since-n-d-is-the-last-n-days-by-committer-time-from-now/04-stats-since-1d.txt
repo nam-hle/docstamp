@@ -1,0 +1,8 @@
+$ docstamp stats --since 1d
+exit: 0
+--- stdout ---
+file  patterns  files  commits  days   stale   sweep
+A.md         1      1        1     1  1.0000  0.0000
+B.md         1      2        1     1  1.0000  0.0000
+window: 1 commits in the last 1 days, 0 make no file stale
+--- stderr ---

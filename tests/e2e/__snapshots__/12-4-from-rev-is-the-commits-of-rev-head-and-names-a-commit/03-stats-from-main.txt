@@ -1,0 +1,9 @@
+$ docstamp stats --from=main
+exit: 0
+--- stdout ---
+file       patterns  files  commits  days   stale   sweep
+BROAD.md          1      4        0     0  0.0000  0.0000
+MID.md            2      2        0     0  0.0000  0.0000
+NARROW.md         1      1        0     0  0.0000  0.0000
+window: 0 commits in main..HEAD, 0 make no file stale
+--- stderr ---

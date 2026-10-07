@@ -1,0 +1,20 @@
+$ docstamp stats --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 2,
+  "window": null,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_HISTORY",
+      "severity": "error",
+      "file": null,
+      "subject": null,
+      "message": "The repository is shallow; fetch its full history."
+    }
+  ]
+}
+--- stderr ---

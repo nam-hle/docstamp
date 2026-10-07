@@ -1,0 +1,20 @@
+$ docstamp stats --json --from no-such-rev
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 2,
+  "window": null,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_HISTORY",
+      "severity": "error",
+      "file": null,
+      "subject": "no-such-rev",
+      "message": "--from names no commit of this repository; give a branch, tag or hash."
+    }
+  ]
+}
+--- stderr ---

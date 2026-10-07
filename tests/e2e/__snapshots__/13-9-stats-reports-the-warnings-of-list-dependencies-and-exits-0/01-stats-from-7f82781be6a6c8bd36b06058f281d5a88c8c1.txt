@@ -1,0 +1,8 @@
+$ docstamp stats --from 7f82781be6a6c8bd36b06058f281d5a88c8c1997
+exit: 0
+--- stdout ---
+file    patterns  files  commits  days   stale   sweep
+DOC.md         2      1        1     1  1.0000  0.0000
+window: 1 commits in 7f82781be6a6c8bd36b06058f281d5a88c8c1997..HEAD, 0 make no file stale
+--- stderr ---
+warning: W_EMPTY_EXCLUSION: DOC.md: !src/**/*.spec.ts: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.

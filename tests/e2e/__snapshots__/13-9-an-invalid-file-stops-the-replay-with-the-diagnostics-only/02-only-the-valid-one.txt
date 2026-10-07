@@ -1,0 +1,8 @@
+# only the valid one
+$ docstamp stats --from a822bf884eb54203ee7045710234d91dc9fd571b OK.md
+exit: 0
+--- stdout ---
+file   patterns  files  commits  days   stale   sweep
+OK.md         1      1        0     0  0.0000  0.0000
+window: 0 commits in a822bf884eb54203ee7045710234d91dc9fd571b..HEAD, 0 make no file stale
+--- stderr ---

@@ -1,0 +1,20 @@
+$ docstamp stats --json --from 9e560eb5fc98fdfb970c22644e9499528f682c97 nope.md
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 2,
+  "window": null,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_UNKNOWN_FILE",
+      "severity": "error",
+      "file": null,
+      "subject": "nope.md",
+      "message": "Name a file listed under \"files\" in the configuration file, or one with a docstamp block."
+    }
+  ]
+}
+--- stderr ---

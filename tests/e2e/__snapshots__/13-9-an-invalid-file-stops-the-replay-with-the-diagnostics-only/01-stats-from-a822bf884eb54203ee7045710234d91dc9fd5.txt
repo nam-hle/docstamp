@@ -1,0 +1,6 @@
+$ docstamp stats --from a822bf884eb54203ee7045710234d91dc9fd571b
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_EMPTY_DEPENDENCIES: BAD.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: BAD.md: src/missing.ts: Correct or remove the pattern; it matches no file.

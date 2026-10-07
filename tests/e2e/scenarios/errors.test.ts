@@ -443,6 +443,21 @@ scenario(
   },
 );
 
+scenario(
+  '§12.4 E_HISTORY: no work tree, and a --from of no commit',
+  { git: false },
+  async (repo) => {
+    base(repo);
+    repo.write('docstamp.yaml', config({ 'DOC.md': ['src'] }));
+    await run(repo, 'stats outside a git work tree', ['stats'], 2, ['E_HISTORY']);
+    repo.git('init', '-q');
+    repo.commit('base', '2026-01-01T09:00:00Z');
+    await run(repo, 'stats with a --from of no commit', ['stats', '--from', 'soon'], 2, [
+      'E_HISTORY',
+    ]);
+  },
+);
+
 it('every diagnostic code of SPEC §15 is exercised through the CLI', () => {
   const spec = readFileSync(new URL('../../../docs/SPEC.md', import.meta.url), 'utf8');
   const table = spec.slice(spec.indexOf('## 15 Diagnostics'), spec.indexOf('## 16 Exit Codes'));

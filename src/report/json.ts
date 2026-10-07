@@ -1,6 +1,7 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { quote } from '../core/quote.ts';
 import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
+import type { FileStats } from '../engine/stats.ts';
 
 export interface JsonDoc {
   mode: 'check' | 'update';
@@ -144,6 +145,57 @@ export function reverseJsonText(doc: ReverseJsonDoc): string {
     ['version', 2],
     ['mode', 'list-dependents'],
     ['exitCode', doc.exitCode],
+    ['files', files],
+    ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
+  ];
+  return `${render(obj(top), '')}\n`;
+}
+
+export interface StatsWindow {
+  readonly kind: 'days' | 'revision';
+  readonly value: string;
+  readonly commits: number;
+  readonly untouched: number;
+}
+
+export interface StatsJsonDoc {
+  exitCode: number;
+  window: StatsWindow | null;
+  files: readonly FileStats[];
+  diagnostics: readonly Diagnostic[];
+}
+
+// SPEC §14.5: rates are integers of ten-thousandths in memory, JSON numbers on output
+export function statsJsonText(doc: StatsJsonDoc): string {
+  const { window } = doc;
+  const files = doc.files.map((f) =>
+    obj([
+      ['file', f.file],
+      ['patterns', f.patterns],
+      ['resolvedCount', f.resolvedCount],
+      ['staleCommits', f.staleCommits],
+      ['days', f.days],
+      ['staleRate', f.staleRate / 10000],
+      ['sweepCommits', f.sweepCommits],
+      ['sweepShare', f.sweepShare / 10000],
+      ['diagnostics', sortDiagnostics(f.diagnostics).map(diagJson)],
+    ]),
+  );
+  const top: Array<[string, Json]> = [
+    ['version', 2],
+    ['mode', 'stats'],
+    ['exitCode', doc.exitCode],
+    [
+      'window',
+      window === null
+        ? null
+        : obj([
+            ['kind', window.kind],
+            ['value', window.value],
+            ['commits', window.commits],
+            ['untouched', window.untouched],
+          ]),
+    ],
     ['files', files],
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
   ];
