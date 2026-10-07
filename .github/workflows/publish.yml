@@ -50,11 +50,23 @@ jobs:
       - name: Pack tests
         run: pnpm run test:pack
 
-      # Trusted publishing (OIDC) needs npm 11.5.1 or newer; the token is gone on purpose.
-      - name: Check npm supports trusted publishing
+      # Trusted publishing (OIDC) needs npm 11.5.1 or newer, and staging needs `npm stage`.
+      # The Trusted Publisher on npmjs.com only allows staging, so nothing goes live from CI.
+      - name: Check npm supports trusted and staged publishing
         run: >
           node -e "const [a,b,c]=require('node:child_process').execSync('npm --version').toString().trim().split('.').map(Number);
           if (a<11||(a===11&&(b<5||(b===5&&c<1)))) { console.error('npm >= 11.5.1 is required'); process.exit(1); }"
+          && npm stage --help > /dev/null
 
-      - name: Publish to npm
-        run: npm publish --provenance
+      - name: Stage on npm
+        run: npm stage publish --provenance
+
+      - name: Say how to approve
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          {
+            echo "## Staged on npm: docstamp ${TAG}"
+            echo
+            echo "Nothing is live yet. Approve with 2FA: \`npm stage list docstamp\` then \`npm stage approve <stage-id>\`, or on npmjs.com."
+          } >> "$GITHUB_STEP_SUMMARY"
