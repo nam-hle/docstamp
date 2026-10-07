@@ -18,6 +18,9 @@ The workflow it serves:
    needed.
 3. They run `docstamp update <file>` to record the Review in the Lockfile. CI passes.
 
+A file declares its dependencies in the Configuration file, or inline, in a `docstamp` block in
+the frontmatter of a Markdown file (§5.6, §9.6). Both kinds of file are evaluated alike.
+
 This specification defines how a Root is determined (§6), the Universe (§7), patterns (§8), the
 Configuration file (§9), hashing (§10), the Lockfile (§11), evaluation (§12), the command line
 (§13), output (§14), diagnostics (§15), exit codes (§16) and compatibility (§17).
@@ -98,12 +101,18 @@ parse back to *s*. It is the only escaping used in output and in the Lockfile.
 or trailing `/`, no empty segment, no segment `.` or `..`, no U+0000, and is in Unicode
 Normalization Form C (NFC).
 
-**Declaration**: the entry of `files` in the Configuration file that gives a file its dependencies,
-as a List of patterns.
+**Declaration**: what gives a file its dependencies, as a List of patterns: an entry of `files` in
+the Configuration file (a *configured* Declaration), or the `docstamp` block in the frontmatter of
+the file itself (an *inline* Declaration, §5.6).
 
 **File** (stamped file): a file that has a Declaration, and so rests on other files, its
 dependencies. The Configuration file, the Lockfile and the JSON output name it `file`, and the
 Configuration file's key for all of them `files`.
+
+**Inline file**: a file with an inline Declaration. **Inline block**: its `docstamp` block (§5.6).
+
+**Include**: the List of patterns (§9.3) that selects the files of the Universe searched for inline
+blocks. Its default is « `**/*.md` ».
 
 **Dependency**: a file selected by a file's Declaration (§8.5).
 
@@ -121,7 +130,8 @@ Written by people.
 **Carrier**: the format a Configuration file is written in (§9.1). Every Carrier produces the same
 *normalized value* (§9.2, §9.5), and only that value is validated (§9.3).
 
-**Lockfile**: the file `docstamp-lock.yaml` at Root. Written only by `docstamp update`.
+**Lockfile**: the file `docstamp-lock.yaml` at Root. Written only by `docstamp update`. It holds
+the Dependency Hash of configured Declarations only (§5.3).
 
 ## 5 Records
 
@@ -131,6 +141,8 @@ Written by people.
 |---|---|---|
 | `[[File]]` | RepoPath | |
 | `[[Dependencies]]` | List of String | the patterns, verbatim, in declaration order |
+| `[[Origin]]` | `config` or `inline` | where it is declared |
+| `[[Recorded]]` | Hash, or none | inline only: the Hash recorded in the block (§5.6), none if it has no `hash` key |
 
 ### 5.2 Config
 
@@ -138,10 +150,12 @@ Written by people.
 |---|---|---|
 | `[[Ignore]]` | List of String (ignore rule lines, §7.3) | « » |
 | `[[UseGitignore]]` | Boolean | true |
-| `[[Declarations]]` | List of Declaration, in path order of `[[File]]` | (required) |
+| `[[Include]]` | non-empty List of String (patterns, §8.1) | « `**/*.md` » |
+| `[[Declarations]]` | List of configured Declaration, in path order of `[[File]]` | (required) |
 
 NOTE: A Config is built from the normalized value of the Configuration file (§9.3), whatever its
-Carrier.
+Carrier. When there is no Configuration file, every field has the default of this table, and
+`[[Declarations]]` is « » (§9.3 step 2).
 
 ### 5.3 Lock
 
@@ -150,6 +164,10 @@ Carrier.
 | `[[Entries]]` | Map from RepoPath (a file) to LockEntry |
 
 A *LockEntry* is a Hash: the file's Dependency Hash (§10.4) at the last Write.
+
+NOTE: The Lockfile has an entry for a configured Declaration only. An inline Declaration records
+its Hash in its own file (§5.6), and the Lockfile is not created for a Root with no configured
+Declaration (§13.6).
 
 NOTE: The Lockfile does not record the patterns. The Dependency Hash includes every dependency
 path, so a pattern change that changes the set of dependencies changes the Dependency Hash and the
@@ -198,6 +216,51 @@ duplicates (all fields equal) removed.
 error text, parser error text, or absolute paths; it MAY contain an error code name such as
 `EACCES`.
 
+### 5.6 Inline Block
+
+An *inline block* is a mapping under the key `docstamp` in the frontmatter of a file:
+
+```md
+---
+title: README
+docstamp:
+  dependencies: [src/cli, docs/SPEC.md]
+  hash: v1:0f3a...64 lowercase hexadecimal digits...
+---
+```
+
+`dependencies` is required: a non-empty List of patterns of the dialect of §8.1. `hash` is optional:
+the String `v1:` followed by a Hash (§10.3), the Dependency Hash (§10.4) recorded at the last Write
+of the file. `v1` names the version of the Dependency Hash algorithm (§17.5).
+
+The following definitions are lexical: they do not depend on the text being valid YAML, so that
+the Hash of a file (§10.2) never depends on whether its block parses.
+
+The *lines* of a text are its parts after each LF, each with its terminator (LF or CR LF; the
+last line may have none). A line is *blank* if it has only U+0020 and U+0009. The *indent* of a
+line is its leading run of U+0020 and U+0009.
+
+`ScanFrontmatter(text)` returns a Scan or *none*:
+
+1. Let *lines* be the lines of *text*, with a leading U+FEFF removed from the first.
+2. If the first line, without its terminator and trailing blanks, is not `---`, return *none*.
+3. Let *close* be the index of the first later line that, without its terminator and trailing
+   blanks, is `---`. If there is none, return *none*.
+4. Let *marker* be the index of the first line between them that starts with `docstamp:` followed
+   by U+0020, U+0009, a line terminator or the end of the text. If there is none, return *none*.
+5. Let *end* be the index of the first line after *marker* and before *close* that is neither
+   blank nor indented, else *close*. Let *last* be the index of the last line from *marker* up to
+   *end* that is not blank.
+6. Let *keyIndent* be the indent of the first line after *marker* and before *end* that is neither
+   blank nor starts with `#` after its indent; *keyIndent* is *absent* if there is none.
+7. Let *hashLines* be the lines after *marker* and before *end* whose indent is *keyIndent* and
+   which start with `hash:` after their indent.
+8. Return the Scan { *lines*, *close*, *marker*, *last*, *keyIndent*, *hashLines* }.
+
+NOTE: Only a `docstamp:` in column 0 marks a block: a quoted key (`"docstamp":`), an indented
+`docstamp:` and a key such as `docstamp-x:` do not. A frontmatter that has no such line is never
+parsed (§9.6.2), so unrelated frontmatter cannot make a run fail.
+
 ## 6 Root
 
 `DetermineRoot(cwd, rootOption)`:
@@ -210,8 +273,17 @@ error text, parser error text, or absolute paths; it MAY contain an error code n
 3. Repeat:
    1. If *dir* contains an entry named by any of the Configuration file names of §9.1, return
       *dir*.
+   2. If *dir* is the filesystem root, stop this loop.
+   3. Set *dir* to the parent of *dir*.
+4. Let *dir* be *cwd*.
+5. Repeat:
+   1. If *dir* contains an entry named `.git`, of any kind, return *dir*.
    2. If *dir* is the filesystem root, raise `E_CONFIG_MISSING`.
    3. Set *dir* to the parent of *dir*.
+
+NOTE: A Configuration file in any ancestor wins over a nearer `.git`. The entry `.git` may be a
+file, as in a linked work tree or a submodule. A Root found by step 5 has no Configuration file, so
+the defaults of §5.2 apply (§9.3 step 2).
 
 ## 7 Universe
 
@@ -408,7 +480,8 @@ The Configuration file is a file at Root named, in this order of discovery, one 
 | `docstamp.config.ts`, `docstamp.config.mts` | script (§9.5), TypeScript |
 | `docstamp.config.js`, `docstamp.config.mjs` | script (§9.5), JavaScript |
 
-Exactly one of these names MAY be an entry of Root (§9.3). The Carrier is only a format: every
+Exactly one of these names MAY be an entry of Root (§9.3). A Root with none of them uses the
+defaults of §5.2 and declares its files inline only (§9.6). The Carrier is only a format: every
 Carrier yields the same normalized value, and the rules of §9.3 apply to that value alone. The
 Lockfile is always YAML.
 
@@ -463,22 +536,26 @@ version 2.
 
 ### 9.3 Reading
 
-`ReadConfig(root)` returns a Config and a List of attached Diagnostics, or raises:
+`ReadConfig(root)` returns a Config, a List of attached Diagnostics and a Boolean *present*, or
+raises:
 
 1. Let *fatal* be an empty List. Let *attached* be an empty List.
 2. Let *names* be the names of §9.1 that are entries of Root, of any kind, in the order of §9.1.
    1. If *names* has more than one element, raise « `E_CONFIG_AMBIGUOUS` », `[[Subject]]` the
       elements of *names* joined with `, `.
-   2. If *names* is empty, or its element is not an entry of kind *file*, raise
-      « `E_CONFIG_MISSING` ».
+   2. If *names* is empty, return the Config of the defaults of §5.2, « » and *present* false.
+   3. If its element is not an entry of kind *file*, raise « `E_CONFIG_MISSING` ».
 3. Let *value* be the normalized value of that file: under §9.2 for `docstamp.yaml`, under §9.5
    for any other name. On failure, or if *value* is not a Map, raise « `E_CONFIG` ».
 4. If the key `version` is absent, or its value is not the Number 2, raise « `E_CONFIG_VERSION` »,
    whose message names the migration from version 1.
-5. For each key of *value* other than `version`, `gitignore`, `ignore` and `files`,
+5. For each key of *value* other than `version`, `gitignore`, `ignore`, `include` and `files`,
    collect `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` the key.
 6. If `gitignore` is present and not a Boolean, or `ignore` is present and not a List of
-   Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` the key.
+   Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` the key. If `include` is present and
+   not a non-empty List of Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` `include`;
+   otherwise, for each string *s* of `include` that is not a valid Pattern (§8.1), collect
+   `E_PATTERN` into *fatal*, `[[Subject]]` *s*.
 7. If `files` is absent, or not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]`
    `files`.
 8. Otherwise, for each (*key*, *value*) of `files`:
@@ -491,22 +568,27 @@ version 2.
    4. For each string *s* of `dependencies` that is not a valid Pattern (§8.1), collect
       `E_PATTERN` into *attached*, `[[File]]` *key*, `[[Subject]]` *s*.
    5. Produce the Declaration { `[[File]]`: *key*, `[[Dependencies]]`: the strings of
-      `dependencies` }.
+      `dependencies`, `[[Origin]]`: `config`, `[[Recorded]]`: none }.
 9. If *fatal* is not empty, raise *fatal*.
-10. Return the Config, with defaults (§5.2) for absent keys and the Declarations in path order, and
-    *attached*.
+10. Return the Config, with defaults (§5.2) for absent keys and the Declarations in path order,
+    *attached* and *present* true.
 
 NOTE: A bad pattern makes only its file `invalid`; every other file is still evaluated.
 A structural error stops evaluation.
+
+NOTE: `include` replaces the default `**/*.md` (§5.2); it selects only where inline blocks are
+searched (§9.6.1), never which files may be dependencies. `files` stays required: a Configuration
+file that only sets `ignore` or `include` writes `files: {}`.
 
 NOTE: Steps 5 to 10 never see the Carrier. Key order in a Map is not significant: the Declarations are
 in path order (step 10).
 
 ### 9.4 Stamped Files
 
-A file MUST be an entry of kind *file* whose name, in the listing of its parent directory,
-is equal to the last segment of the file's RepoPath after §7.4. A file need not be in
-the Universe; it may be an ignored file.
+A file with a configured Declaration MUST be an entry of kind *file* whose name, in the listing of
+its parent directory, is equal to the last segment of the file's RepoPath after §7.4. A file
+need not be in the Universe; it may be an ignored file. An inline file is in the Universe
+(§9.6.3).
 
 NOTE: The check uses the directory listing, not a lookup by path, so `claude.md` does not resolve
 to `CLAUDE.md` on a case-insensitive file system. Renaming a file without renaming its key
@@ -564,6 +646,84 @@ files are not dependencies, not hashed and not part of the Universe, so a change
 no verdict. A script Carrier SHOULD import only `docstamp`, and its value SHOULD NOT depend on the
 environment, the clock or the network (§2).
 
+### 9.6 Inline Declarations
+
+#### 9.6.1 Candidates
+
+A *candidate* is a file of the Universe of kind *file* that `config.[[Include]]` selects
+(`Select`, §8.4). A candidate is an *inline file* when `ScanFrontmatter` (§5.6) of its text is not
+*none*. The text of a file is its bytes decoded as UTF-8, a leading U+FEFF kept; a file that is
+binary (§10.1) or not valid UTF-8 has no text and is not an inline file.
+
+#### 9.6.2 Parsing
+
+`ParseBlock(file, scan)` returns a Declaration or raises a List of Diagnostics attached to *file*:
+
+1. Let *problems* be an empty List.
+2. If the marker line, after `docstamp:`, is not only blanks and an optional `#` comment, collect
+   `E_BLOCK`, `[[Subject]]` `docstamp`, and return the Declaration with no dependencies together
+   with *problems*: the block MUST be a block mapping.
+3. Parse the lines between the delimiters, joined, under the strict profile of §9.2 (the profile
+   of §9.2 applies to this text and to no other frontmatter). If that fails, collect `E_BLOCK`,
+   `[[Subject]]` `frontmatter`, and return as in step 2. A duplicate `docstamp` key fails here.
+4. If the document is not a mapping, or its key `docstamp` is not a mapping, collect `E_BLOCK`,
+   `[[Subject]]` `docstamp`, and return as in step 2.
+5. For each key of the block other than `dependencies` and `hash`, collect `E_UNKNOWN_KEY`,
+   `[[Subject]]` the key.
+6. If `dependencies` is absent, or not a non-empty List of Strings, collect `E_BLOCK`,
+   `[[Subject]]` `dependencies`. Otherwise, for each string *s* of it that is not a valid Pattern
+   (§8.1), collect `E_PATTERN`, `[[Subject]]` *s*.
+7. If `hash` is present, let *recorded* be it. Collect `E_BLOCK`, `[[Subject]]` `hash`, unless
+   *recorded* is a String of `v1:` and 64 characters of `[0-9a-f]`, the scan has exactly one
+   line of *hashLines*, and that line, after `hash:`, is one or more blanks, *recorded* itself,
+   optional blanks, an optional `#` comment and its terminator.
+8. If *problems* is empty, return the Declaration { `[[File]]` *file*, `[[Dependencies]]` the
+   strings of `dependencies`, `[[Origin]]` `inline`, `[[Recorded]]` the Hash after `v1:` of
+   *recorded*, or none }. Otherwise raise *problems*, and the Declaration of the Result
+   (§12.1) is { *file*, the strings of `dependencies` if it is a List of Strings else « » }.
+
+#### 9.6.3 Discovery
+
+`ReadInline(root, universe, config)` returns the inline Declarations, the attached Diagnostics
+and the *marked* Map from RepoPath to the `[[hashLines]]` of its scan, or raises:
+
+1. Let *fatal* be an empty List, and let *candidates* be as in §9.6.1.
+2. For each candidate *c*, in path order: read its text. If it cannot be read, collect
+   `E_UNREADABLE` into *fatal*, `[[Subject]]` *c*, and continue. If `ScanFrontmatter` is *none*,
+   continue. Add *c* and the hash lines of its scan to *marked*, and call `ParseBlock`: add the
+   Declaration it returns to the Declarations, and its raised Diagnostics to *attached*.
+3. If *fatal* is not empty, raise it. Otherwise return the three Lists.
+
+NOTE: Only a file in the Universe is a candidate, so an inline file is never ignored by an ignore
+rule or `.gitignore`, never a link, and is never the Configuration file or the Lockfile. A file
+can be moved or renamed, because its declaration is in the file itself.
+
+NOTE: The frontmatter of a candidate with no `docstamp:` line is not read as YAML at all, so
+anchors, tags and every other YAML feature the profile rejects are harmless there.
+
+#### 9.6.4 Stamping
+
+`Stamp(root, file, hash)` writes the Hash *hash* into the inline block of *file*, whose scan is
+*scan*. It changes no byte of the file other than the ones it names:
+
+1. If *scan* has exactly one line of *hashLines*, replace in that line the 67 characters of its
+   value by `v1:` and *hash*.
+2. Otherwise insert, after the line *last* of *scan*, the line *keyIndent*, `hash: v1:`, *hash*
+   and the terminator of the line *last*, which has one because *close* follows it.
+3. Replace *file* atomically with the resulting bytes, with its file mode: a concurrent reader sees
+   either the old contents or the new. If this fails, raise « `E_UNREADABLE` » with `[[Subject]]`
+   *file*, leaving the old contents.
+
+NOTE: The text is not re-serialized: comments, quoting, key order, other frontmatter, the byte
+order mark, the body and the line terminators of every line survive. The appended `hash` line uses
+the terminator of the last line of the block, so CR LF files stay CR LF.
+
+NOTE: Reformatting the frontmatter of an inline file *B* (a formatter reflowing `dependencies`,
+say) is a content change of *B* (§10.2): every file that depends on *B* becomes `stale` with
+`content-changed`, although no fact changed. A formatter that rewrites the `hash` line into
+another form (quoted, wrapped) makes *B* `invalid` (§9.6.2 step 7). Exclude the block from
+formatters, or run `docstamp update` after formatting.
+
 ## 10 Hashing
 
 ### 10.1 Binary Content
@@ -572,14 +732,24 @@ A byte sequence is *binary* iff its first min(8192, length) bytes contain the by
 
 ### 10.2 Normalized Content
 
-`NormalizedContent(path)`, for a RepoPath of the Universe:
+`NormalizedContent(path, marked)`, for a RepoPath of the Universe and the Map *marked* of §9.6.3
+(empty when no file has an inline block):
 
 1. If the entry is a *link*, return the bytes `link`, 0x00, and the UTF-8 encoding of its target
    String as stored, with every `\` replaced by `/`.
 2. Read the file's bytes. If reading fails, raise « `E_UNREADABLE` » with `[[Subject]]` *path*.
 3. If the bytes are binary, let *body* be the bytes. Otherwise let *body* be the bytes with every
    pair 0x0D 0x0A replaced by 0x0A.
-4. Return the bytes `file`, 0x00, and *body*.
+4. If *path* is in *marked* (§9.6.3), remove from *body* every line whose index is in the
+   `[[hashLines]]` recorded for *path*, each with its LF.
+5. Return the bytes `file`, 0x00, and *body*.
+
+NOTE: Step 4 is the hash input rule for an inline file: the line holding its `hash` key, and only
+it, is not part of its content, so that a Write of file *B* never makes a file *A* that depends on
+*B* stale. Everything else of *B* counts: its prose, its other frontmatter and its `dependencies`.
+A file that is not in *marked* is hashed exactly as before, and so is an inline file that has no
+`hash` line. A file is *marked* only when it is in the Universe and selected by `[[Include]]`; the
+same file hashes with its `hash` line when `[[Include]]` does not select it.
 
 NOTE: The only normalization is CR LF to LF in text. There is no normalization of license or
 copyright headers, of whitespace, of a final newline, or of formatting, so a change to any of
@@ -678,13 +848,13 @@ declare `docstamp-lock.yaml text eol=lf` in `.gitattributes`.
 ### 12.1 Evaluate
 
 `Evaluate(declaration, universe, lock, attached)`, where *attached* is the List of Diagnostics
-from §9.3 attached to `declaration.[[File]]`:
+from §9.3, §9.6 and §12.2 attached to `declaration.[[File]]`:
 
 1. Let *r* be a Result with `[[File]]` and `[[Dependencies]]` from *declaration*, empty
    `[[Reasons]]`, `[[Resolved]]` and `[[Diagnostics]]`, and empty `[[Current]]`.
 2. Let *problems* be a copy of *attached*.
 3. If `declaration.[[File]]` does not satisfy §9.4, collect `E_FILE_MISSING` into
-   *problems*.
+   *problems*. (An inline file always satisfies it.)
 4. If *attached* is empty, let *resolved* be `ResolveDependencies(declaration, universe)`; if it
    raises, add its Diagnostics to *problems*.
 5. If *problems* is empty, let *current* be `DependencyHash(resolved)`; if it raises, add its
@@ -692,7 +862,8 @@ from §9.3 attached to `declaration.[[File]]`:
 6. If *problems* is not empty, set *r*.`[[State]]` to `invalid` and *r*.`[[Diagnostics]]` to
    *problems*, each with `[[File]]` set to `declaration.[[File]]`, and return *r*.
 7. Set *r*.`[[Resolved]]` to *resolved* and *r*.`[[Current]]` to *current*.
-8. Let *entry* be the LockEntry of `declaration.[[File]]` in *lock*, or *none*.
+8. Let *entry* be `declaration.[[Recorded]]` if `declaration.[[Origin]]` is `inline`, else the
+   LockEntry of `declaration.[[File]]` in *lock*, or *none*.
 9. If *entry* is *none*, append `unrecorded`. Otherwise, if *entry* is not equal to *current*,
    append `content-changed`.
 10. Set *r*.`[[State]]` to `stale` if *r*.`[[Reasons]]` is non-empty, else `ok`. Return *r*.
@@ -707,26 +878,39 @@ leaves the file `ok`.
 `EvaluateAll(root, lockPolicy)` returns Results, the Lock, and a List of global Diagnostics, or
 raises:
 
-1. Let (*config*, *attached*) be `? ReadConfig(root)`.
+1. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`.
 2. Let *universe* be `? ComputeUniverse(root, config)`.
-3. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
+3. Let (*inline*, *more*, *marked*) be `? ReadInline(root, universe, config)`. Let *attached* be
+   *attached* and *more*.
+4. If *present* is false and *marked* is empty, raise « `E_CONFIG_MISSING` ».
+5. Let *declarations* be `config.[[Declarations]]` and the Declarations of *inline*, in path order
+   of `[[File]]`. For each file declared by both a configured and an inline Declaration, drop the
+   inline Declaration and the Diagnostics of *attached* for that file that came from *inline*, and
+   collect `E_DUPLICATE_DECLARATION` into *attached*, `[[File]]` that file.
+6. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
    entries. Otherwise let *lock* be `? ReadLock(root)`.
-4. Let *results* be `Evaluate(b, universe, lock, attached of b)` for each Declaration *b* of
-   `config.[[Declarations]]`, in path order.
-5. Let *global* be a List holding, for each file of *lock* with no Declaration, a `W_ORPHAN` with
-   `[[Subject]]` that file.
-6. Return *results*, *lock* and *global*.
+7. Let *results* be `Evaluate(b, universe, lock, attached of b)` for each *b* of *declarations*,
+   in path order, hashing every file with `NormalizedContent(path, marked)`.
+8. Let *global* be a List holding, for each file of *lock* with no configured Declaration, a
+   `W_ORPHAN` with `[[Subject]]` that file.
+9. Return *results*, *lock* and *global*.
+
+NOTE: A Root with no Configuration file and no inline block raises in step 4, as it did before
+inline blocks existed, so that a gate that checks nothing never passes unnoticed. A Root with a
+Configuration file and `files: {}` and no inline block has no Results and passes.
 
 NOTE: There is no propagation between files. If C depends on B and B depends on code, a change in
 the code makes B stale and leaves C ok. Writing B changes only the Lockfile, which is never in the
-Universe (§7.2 step 3), so C stays ok. C becomes stale only when B's content changes.
+Universe (§7.2 step 3), so C stays ok. C becomes stale only when B's content changes. When B is an
+inline file, writing B changes B itself, but not its `hash` line's part of its content (§10.2
+step 4), so C stays ok in the same way.
 
 ### 12.3 ChangedSince
 
 `ChangedSince(root, result, entry)` returns a List of Change or *unknown*. It is
 run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
-contain `content-changed`, and whose file has a LockEntry *entry*; for every other Result
-`[[Changes]]` is *unknown*.
+contain `content-changed`, and whose file has a LockEntry *entry*, or an inline `[[Recorded]]`
+Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
 
 1. Run `git` in Root with every environment variable starting with `GIT_` removed and
    `GIT_OPTIONAL_LOCKS=0` set, so that no inherited repository or index selection applies and
@@ -739,6 +923,12 @@ contain `content-changed`, and whose file has a LockEntry *entry*; for every oth
       not parse (for example a version 1 or 2 file); that is never an error.
    3. Let *C* be the first commit in which the file's LockEntry equals *entry* and its
       parent's does not. If there is none, return *unknown*.
+
+   For an inline file, steps 1.1 to 1.3 are instead: list the commits of
+   `git log --format=%H -S<entry> -- <file>`, newest first; the recorded Hash of the file as of a
+   commit or its first parent is the Hash after `v1:` on the one line of *hashLines* of
+   `ScanFrontmatter` (§5.6) of its text there, *none* if the file is absent, has no such line or no
+   such value; *C* is as above. A file renamed since the commit yields *unknown*.
 2. Let *diff* be the output of `git diff --name-status --no-renames -z
    --relative <C> --` run in Root (the work tree against *C*, so staged and unstaged edits are
    included), and *untracked* the output of `git ls-files --others --exclude-standard -z` run in
@@ -841,7 +1031,8 @@ happens.
 3. If the result is not *root* followed by `/` and at least one segment, fail.
 4. Return the remainder after *root* and `/`, converted to NFC. Fail if it is not a RepoPath.
 
-No case folding is applied: the argument must equal the key under `files`.
+No case folding is applied: the argument must equal the key under `files`, or the RepoPath of an
+inline file.
 
 ### 13.5 Check
 
@@ -873,13 +1064,16 @@ reviewer compares them with the state at the last Write using its own tools.
    `? SelectResults(args, cwd, root, results)`.
 5. If *global* contains an error or any of *targets* is `invalid`: output *targets* as a check
    does (§14.3) but without its `next:` line, and *global*, write nothing, and exit 2.
-6. For each *t* of *targets*, set the LockEntry of *t*.`[[File]]` in *lock* to
-   *t*.`[[Current]]`.
-7. Let *removed* be the files of *lock* that have no Declaration, in path order. Remove their
-   entries.
-8. `WriteLock(root, lock)`.
-9. Output, for each of *targets*, whether its LockEntry changed in step 6 (*written*) or was
-   already equal to *t*.`[[Current]]` (*unchanged*), and *removed* (§14), and *global* without its `W_ORPHAN`
+6. For each *t* of *targets* whose Declaration is configured, set the LockEntry of
+   *t*.`[[File]]` in *lock* to *t*.`[[Current]]`.
+7. Let *removed* be the files of *lock* that have no configured Declaration, in path order. Remove
+   their entries.
+8. If some Declaration is configured, or `docstamp-lock.yaml` exists, `WriteLock(root, lock)`.
+9. For each *t* of *targets* whose Declaration is inline, in path order, whose `[[Recorded]]` is
+   not equal to *t*.`[[Current]]`: `Stamp(root, t.[[File]], t.[[Current]])` (§9.6.4).
+10. Output, for each of *targets*, whether its LockEntry changed in step 6, or its `[[Recorded]]`
+   Hash was none or differed from *t*.`[[Current]]` in step 9 (*written*), or was already equal to
+   *t*.`[[Current]]` (*unchanged*), and *removed* (§14), and *global* without its `W_ORPHAN`
    Diagnostics, since step 7 removed those entries. Exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
@@ -891,6 +1085,10 @@ NOTE: `update --all` recovers from the legacy `docsync.lock` (§11.1 step 1) by 
 `docstamp-lock.yaml`, but does not delete `docsync.lock`: deletions stay explicit, and every
 later run that reads the Lockfile raises `E_LOCK_VERSION` until the user deletes it.
 
+NOTE: The Lockfile is not created for a Root whose Declarations are all inline: its first Write
+leaves no `docstamp-lock.yaml`. A Write of an inline file is a Write of that file only: it
+changes no other file, and a file that depends on it stays `ok` (§12.2 NOTE).
+
 NOTE: A Write asserts that a Review happened; docstamp cannot check that, and trusts its caller.
 `update` requires naming the files, or `--all` on purpose (first adoption, or recovery from an
 unreadable Lockfile), so no file is marked reviewed by accident.
@@ -898,10 +1096,11 @@ unreadable Lockfile), so no file is marked reviewed by accident.
 ### 13.7 ListDependencies
 
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
-2. Let (*config*, *attached*) be `? ReadConfig(root)` and *universe* be
-   `? ComputeUniverse(root, config)`.
+2. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`, *universe* be
+   `? ComputeUniverse(root, config)`, and (*declarations*, *attached*, *marked*) be the Declarations
+   and attached Diagnostics of steps 3 to 5 of §12.2.
 3. Let *results* be `Evaluate(b, universe, « », attached of b)` for each Declaration *b* of
-   `config.[[Declarations]]`, in path order, except that no dependency is read or hashed (§10.4 is
+   *declarations*, in path order, except that no dependency is read or hashed (§10.4 is
    skipped), so a Result is never `invalid` for `E_UNREADABLE`.
 4. Let *selected* be `? SelectResults(args, cwd, root, results)`.
 5. Output *selected* (§14).
@@ -919,15 +1118,16 @@ The reverse query of §13.7: the arguments are any files, not only stamped files
 dependents of each: the stamped files that depend on it. At least one file argument is required (§13.2).
 
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
-2. Let (*config*, *attached*) be `? ReadConfig(root)` and *universe* be
-   `? ComputeUniverse(root, config)`.
+2. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`, *universe* be
+   `? ComputeUniverse(root, config)`, and (*declarations*, *attached*, *marked*) be the Declarations
+   and attached Diagnostics of steps 3 to 5 of §12.2.
 3. If `ToRepoPath(arg, cwd, root)` fails for any file argument *arg*, raise « `E_USAGE` with
    `[[Subject]]` *arg* » for each such *arg*; no entry is output. A *path* need not exist.
 4. Let *entries* be an empty List. For each distinct *arg* of the file arguments, in path order of
    its *path*:
    1. Let *path* be `ToRepoPath(arg, cwd, root)`.
-   2. Let *found* be an empty List. For each Declaration *b* of `config.[[Declarations]]` in path order
-      whose file has no `E_PATTERN` in *attached*: if *path* is in *universe*, *path* is not
+   2. Let *found* be an empty List. For each Declaration *b* of *declarations* in path order
+      whose file has no Diagnostic in *attached*: if *path* is in *universe*, *path* is not
       `b.[[File]]` and `Select(b.[[Dependencies]], « path »)` selects it, append { `[[File]]`:
       `b.[[File]]`, `[[Via]]`: the patterns of `b.[[Dependencies]]` that have no Negation and
       satisfy `PatternMatches(pattern, path)`, in declaration order } to *found*.
@@ -940,7 +1140,8 @@ If a step raises, output the raised Diagnostics as global and exit 2.
 NOTE: Only direct dependency is reported; there is no transitive closure, so C that depends on B
 that depends on code is not a dependent of the code. The Lockfile is not read (§13.7 NOTE), so
 there is no `stale` information and the exit code is never 1. A file whose pattern is invalid
-cannot be matched: it is skipped and its `E_PATTERN` is output. A file that is not in the Universe
+cannot be matched: it is skipped and its `E_PATTERN` is output; the same holds for any file with
+an attached Diagnostic, such as an inline file with an `E_BLOCK`. A file that is not in the Universe
 (ignored, absent, or the Lockfile) has no dependents. A stamped file may itself be an argument.
 
 ## 14 Output
@@ -1012,7 +1213,7 @@ omitting the bracketed parts when empty.
 
 ### 14.4 Update, Text Mode
 
-One line per target in path order: `written  <file>` if its LockEntry changed, else
+One line per target in path order: `written  <file>` if it was written (§13.6 step 10), else
 `unchanged  <file>`; then one line `removed  <file>` per removed entry in path order.
 Diagnostics as in §14.3. When step 5 of §13.6 refused, the blocks and summary line of §14.3 are
 output for the targets, without the `next:` line, and nothing is written. When the command
@@ -1049,8 +1250,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path" }` in this order, or
   `null` when it is *unknown* or not applicable (§12.3), including in update mode.
 - With `update`, each element of `files` adds `"written": true|false` after
-  `diagnostics` (true only when its LockEntry changed; false when it was unchanged or when step 5 of
-  §13.6 refused), and the top level adds `"removed"`, a
+  `diagnostics` (true only when it was written, §13.6 step 10; false when it was unchanged or when
+  step 5 of §13.6 refused), and the top level adds `"removed"`, a
   List of files, after `diagnostics`. An element with `"written": true` reports the state after
   the Write: `state` is `ok` and `reasons` is empty; `summary` counts those states. An unchanged
   element also reports `ok`; a refused element reports the state evaluated by §12.1.
@@ -1140,21 +1341,23 @@ Diagnostics as in §14.3.
 |---|---|---|---|
 | `E_USAGE` | error | §13.2, §13.8 | correct the command line; for a removed option, use the command it names |
 | `E_ROOT` | error | §6 | pass an existing directory |
-| `E_CONFIG_MISSING` | error | §6, §9.3 | create a Configuration file (§9.1) |
+| `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6) |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
 | `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key; for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
-| `E_UNKNOWN_KEY` | error | §9.3 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies` |
-| `E_PATTERN` | error | §9.3 | correct the pattern (§8.1) |
+| `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; attached to the file when it is a key of an inline block |
+| `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1) |
+| `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: v1:<64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies` or `hash` |
+| `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
-| `E_UNREADABLE` | error | §7.2, §10.2, §11.3 | fix permissions, or make the Root writable |
+| `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |
 | `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 Lockfile, `docstamp update --all` rewrites it as version 3 (hashes are unchanged); otherwise as `E_LOCK` |
-| `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file |
+| `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 
 ## 16 Exit Codes
@@ -1214,6 +1417,15 @@ The following are not breaking:
 - a bug fix whose previous behavior contradicted this specification, unless it changes a Dependency
   Hash or the selection of dependencies (§17.4): a Lockfile records the value the previous release
   computed, so such a fix is breaking.
+- inline declarations (§5.6, §9.6) and what they bring with them: the key `include` (§9.3), the
+  Diagnostic codes `E_BLOCK` and `E_DUPLICATE_DECLARATION`, the Root found by `.git` (§6), and the
+  rule that a Root with no Configuration file may have inline files only. A Root with no `docstamp:`
+  line in column 0 in the frontmatter of a file that `[[Include]]` selects behaves exactly as
+  before: the same Dependency Hashes, selection, verdicts, exit codes and output, and the same
+  Lockfile bytes. The one exception is a Root that already has such a line in a Markdown
+  frontmatter, which no earlier release gave a meaning; it can opt out with `include`. This is
+  also why §10.2 step 4 does not change a Hash for a file with no inline block, and for one with an
+  inline block that has no `hash` line.
 
 ### 17.4 The Hash Guarantee
 
@@ -1245,6 +1457,12 @@ A release that keeps verifying an older Lockfile version MUST, before it ships:
 
 A deprecation notice for an older version MAY be a new `warning` Diagnostic (§17.3).
 
+The prefix `v1` of an inline `hash` (§5.6) is the version of the Dependency Hash algorithm and is
+independent of the Lockfile version. A change that needs a new Lockfile version (§17.4) also needs
+a new prefix, and a release that does not support the prefix of a `hash` reports `E_BLOCK`
+for it, as it reports `E_LOCK_VERSION` for a Lockfile of another version. It never accepts a `v1`
+Hash computed by another algorithm.
+
 ### 17.6 Versioning and migration notes
 
 - Before version 1.0.0 of the package, a breaking change raises the minor version; from 1.0.0 it
@@ -1264,7 +1482,11 @@ The test suite of an implementation MUST pin, as literals computed once from a r
   dependency, a directory dependency of several files, a glob with a negation, and the order of
   entries;
 - the selected dependencies (§8.4) of a fixed tree and pattern list, with ignore rules and
-  `.gitignore` files in effect (§7).
+  `.gitignore` files in effect (§7);
+- the file Hashes (§10.2 step 4) of a fixed tree of inline files: one with and one without a `hash`
+  line (the same Hash), one whose `dependencies` differ (another Hash), one in CR LF, one with a
+  byte order mark and one in `include` and one outside it, and a file with no block, whose Hash
+  is the one of §10.3.
 
 A change that makes a vector fail is breaking (§17.2). The vector is updated only together with a
 new Lockfile `version` (§17.4) and its migration note (§17.6).
