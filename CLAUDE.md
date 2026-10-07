@@ -156,9 +156,10 @@ first, bump the Lockfile version, then regenerate the literals and review each d
   the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
 - Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
   `.github/workflows/publish.yml` for that tag. It builds, runs the unit, end-to-end and pack
-  tests (not the docs self-check) and publishes to npm with the secret `NPM_TOKEN`, using
-  `npm publish --provenance` (the job holds `id-token: write`). Provenance requires the repository
-  to be public; the publish fails while it is private.
+  tests (not the docs self-check) and publishes to npm with `npm publish --provenance`. There is no
+  npm token: npm trusts this workflow through a Trusted Publisher configured on npmjs.com for
+  `nam-hle/docstamp` and `publish.yml` (the job holds `id-token: write`; npm 11.5.1 or newer is
+  checked first). Provenance requires the repository to be public.
 - To retry a failed publish, run the Publish workflow from `main` with the release tag as input.
   It refuses a tag that is not on `main` or whose version differs from `package.json`. Nothing
   else publishes.
