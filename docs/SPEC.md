@@ -754,15 +754,16 @@ so does an empty result, since a stale `content-changed` Result must have change
 ```
 docstamp [check] [--json] [--root <dir>] [<file>...]
 docstamp update [--json] [--root <dir>] (--all | <file>...)
-docstamp list-dependents [--json] [--root <dir>] [<file>...]
+docstamp list-dependencies [--json] [--root <dir>] [<file>...]
+docstamp list-dependents [--json] [--root <dir>] <file>...
 docstamp help
 docstamp version
 docstamp --help
 docstamp --version
 ```
 
-The commands are `check` (§13.5), `update` (§13.6), `list-dependents` (§13.7), `help` and
-`version`. `--help` is the same command as `help`, and `--version` the same as `version`.
+The commands are `check` (§13.5), `update` (§13.6), `list-dependencies` (§13.7),
+`list-dependents` (§13.8), `help` and `version`. `--help` is the same command as `help`, and `--version` the same as `version`.
 
 ### 13.2 Parsing
 
@@ -772,7 +773,7 @@ The command line is parsed before anything else.
    Before any `--`, an argument starting with `-` other than a lone `-` is an option; `--root`
    consumes the next argument as its value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
-   `list-dependents`, `help` or `version`; it is then not a file argument. Otherwise, and when there
+   `list-dependencies`, `list-dependents`, `help` or `version`; it is then not a file argument. Otherwise, and when there
    is none, the command is `check` and that argument stays a file argument. A command word in any
    later position, or after `--`, is a file argument. Options and file arguments may appear in
    any order.
@@ -785,9 +786,10 @@ Each message states the problem:
 
 - an unknown option, a missing value for `--root`, or an option given twice;
 - `--write` or `--files`, which were removed: the message names the replacement, `docstamp update`
-  for `--write` and `docstamp list-dependents` for `--files`;
+  for `--write` and `docstamp list-dependencies` for `--files`;
 - `--all` with any command but `update`;
-- `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both.
+- `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both;
+- `list-dependents` with no file argument (`[[Subject]]` is `list-dependents`).
 
 `help` prints usage and `version` prints the version; both exit 0 (§14.1). A file named like a
 command is reached as `docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`.
@@ -834,7 +836,7 @@ Step 4 evaluates Results as §12.1 and then sets `[[Changes]]` of each selected 
 
 NOTE: Reviewer's recipe for a stale Dependent. The text output (§14.3) and `changes` in JSON
 (§14.5) name the dependencies that changed since the last Write when the repository history
-allows (§12.3). Otherwise `docstamp list-dependents <file>` lists the dependencies and the
+allows (§12.3). Otherwise `docstamp list-dependencies <file>` lists the dependencies and the
 reviewer compares them with the state at the last Write using its own tools.
 
 ### 13.6 Update
@@ -866,7 +868,7 @@ NOTE: A Write asserts that a Review happened; docstamp cannot check that, and tr
 `update` requires naming the files, or `--all` on purpose (first adoption, or recovery from an
 unreadable Lockfile), so no file is marked reviewed by accident.
 
-### 13.7 ListDependents
+### 13.7 ListDependencies
 
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
 2. Let (*config*, *attached*) be `? ReadConfig(root)` and *universe* be
@@ -880,9 +882,39 @@ unreadable Lockfile), so no file is marked reviewed by accident.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
-NOTE: `list-dependents` reads neither `docstamp-lock.yaml` nor `docsync.lock`, so it does not
+NOTE: `list-dependencies` reads neither `docstamp-lock.yaml` nor `docsync.lock`, so it does not
 evaluate staleness, raises no `E_LOCK` or `E_LOCK_VERSION`, and emits no `W_ORPHAN`. It works before
 the first `update` and while a legacy `docsync.lock` is still present.
+
+### 13.8 ListDependents
+
+The reverse query of §13.7: the arguments are any files, not only Dependents, and the answer is the
+Dependents that depend on them. At least one file argument is required (§13.2).
+
+1. Let *root* be `? DetermineRoot(cwd, --root)`.
+2. Let (*config*, *attached*) be `? ReadConfig(root)` and *universe* be
+   `? ComputeUniverse(root, config)`.
+3. Let *entries* be an empty List. For each distinct *arg* of the file arguments, in path order of
+   its *path* (an *arg* whose *path* cannot be computed sorts by its text):
+   1. Let *path* be `ToRepoPath(arg, cwd, root)`. If that fails, add the entry { `[[File]]`:
+      *arg*, `[[Dependents]]`: « », `[[Diagnostics]]`: « `E_USAGE` with `[[Subject]]` *arg* » }
+      and continue. *path* need not exist.
+   2. Let *found* be an empty List. For each Binding *b* of `config.[[Bindings]]` in path order
+      whose Dependent has no `E_PATTERN` in *attached*: if *path* is in *universe*, *path* is not
+      `b.[[Dependent]]` and `Select(b.[[Dependencies]], « path »)` selects it, append { `[[File]]`:
+      `b.[[Dependent]]`, `[[Via]]`: the patterns of `b.[[Dependencies]]` that have no Negation and
+      satisfy `PatternMatches(pattern, path)`, in declaration order } to *found*.
+   3. Add the entry { `[[File]]`: *path*, `[[Dependents]]`: *found*, `[[Diagnostics]]`: « » }.
+4. Output *entries* and *attached* (§14).
+5. Exit 2 if *attached* or any entry holds an error; else 0.
+
+If a step raises, output the raised Diagnostics as global and exit 2.
+
+NOTE: Only direct dependency is reported; there is no transitive closure, so C that depends on B
+that depends on code is not a Dependent of the code. The Lockfile is not read (§13.7 NOTE), so
+there is no `stale` information and the exit code is never 1. A Dependent whose pattern is invalid
+cannot be matched: it is skipped and its `E_PATTERN` is output. A file that is not in the Universe
+(ignored, absent, or the Lockfile) has no Dependents. A Dependent may itself be an argument.
 
 ## 14 Output
 
@@ -980,7 +1012,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 }
 ```
 
-- `mode` is `check`, `update` or `list-dependents`.
+- `mode` is `check`, `update`, `list-dependencies` or `list-dependents`.
 - `files` holds every selected Result (check) or every target (update), in path order,
   including `ok` ones.
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path" }` in this order, or
@@ -988,12 +1020,12 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (false only when step 5 of §13.6 refused), and the top level adds `"removed"`, a
   List of Dependents, after `diagnostics`.
-- With `list-dependents` the document is instead (§13.7):
+- With `list-dependencies` the document is instead (§13.7):
 
   ```json
   {
     "version": 2,
-    "mode": "list-dependents",
+    "mode": "list-dependencies",
     "exitCode": 0,
     "files": [
       {
@@ -1010,13 +1042,34 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   It has no `summary`, `state`, `reasons` or `changes`. In an entry, `file` is the Result's
   `[[Dependent]]` and `resolvedFiles` is its `[[Resolved]]` in path order,
   and `[]` for an `invalid` Result.
+- With `list-dependents` the document is instead (§13.8):
+
+  ```json
+  {
+    "version": 2,
+    "mode": "list-dependents",
+    "exitCode": 0,
+    "files": [
+      {
+        "file": "src/cli/run.ts",
+        "dependents": [{ "file": "CLAUDE.md", "via": ["src/**"] }],
+        "diagnostics": []
+      }
+    ],
+    "diagnostics": []
+  }
+  ```
+
+  Each entry is { `[[File]]`, `[[Dependents]]`, `[[Diagnostics]]` } of §13.8 step 3, `dependents`
+  a List of { `"file"`, `"via"` } in path order, empty when nothing depends on `file`. The top-level
+  `diagnostics` hold the attached `E_PATTERN` Diagnostics.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
   empty `[[Dependent]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
-- When a step raises before Results exist, `summary` (not for `list-dependents`) counts zeros and
-  `files` is empty.
+- When a step raises before Results exist, `summary` (not for `list-dependencies` or
+  `list-dependents`) counts zeros and `files` is empty.
 - Consumers MUST ignore unknown members. Within version 2, later revisions only add members.
 
-### 14.6 List-Dependents, Text Mode
+### 14.6 List-Dependencies, Text Mode
 
 One block per selected Result, in path order:
 
@@ -1030,11 +1083,25 @@ with one `depends` line per pattern in declaration order, then one `resolved` li
 path order, each written as in §14.2. An `invalid` Result prints its first line only. There is no
 summary line. Diagnostics as in §14.3.
 
+### 14.7 List-Dependents, Text Mode
+
+One block per entry, in the order of §13.8:
+
+```
+<file>
+  <dependent>   via <pattern>, <pattern>
+```
+
+with one row per Dependent, in path order: two spaces, the Dependent padded with spaces to the
+width of the longest Dependent of the block, three spaces, `via `, and the patterns joined with
+`, `, each written as in §14.2. An entry with no Dependents has the single row `  (no dependents)`.
+Diagnostics as in §14.3.
+
 ## 15 Diagnostics
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2 | correct the command line; for a removed option, use the command it names |
+| `E_USAGE` | error | §13.2, §13.8 | correct the command line; for a removed option, use the command it names |
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3 | create a Configuration file (§9.1) |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
@@ -1057,7 +1124,7 @@ summary line. Diagnostics as in §14.3.
 
 | Code | Meaning |
 |---|---|
-| 0 | check: every selected Dependent is `ok`; update: the Lockfile was written or already current; list-dependents: the Dependents were listed; help, version |
+| 0 | check: every selected Dependent is `ok`; update: the Lockfile was written or already current; list-dependencies, list-dependents: the answer was listed; help, version |
 | 1 | check only: a selected Dependent is `stale`, none is `invalid`, no global error |
 | 2 | an error Diagnostic, an `invalid` Dependent, or a usage error |
 | 70 | an unexpected internal failure, reported on standard error |

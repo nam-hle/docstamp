@@ -3,7 +3,12 @@ import { Raised, diag } from '../core/diagnostics.ts';
 export type Args =
   | { mode: 'help' }
   | { mode: 'version' }
-  | { mode: 'check' | 'list-dependents'; json: boolean; root?: string; paths: string[] }
+  | {
+      mode: 'check' | 'list-dependencies' | 'list-dependents';
+      json: boolean;
+      root?: string;
+      paths: string[];
+    }
   | { mode: 'update'; all: boolean; json: boolean; root?: string; paths: string[] };
 
 export const HELP = `Usage:
@@ -12,19 +17,28 @@ export const HELP = `Usage:
       The default command: a bare docstamp is docstamp check.
   docstamp update [--json] [--root <dir>] (--all | <file>...)
       Record in docstamp-lock.yaml that you reviewed the named files against their dependencies.
-  docstamp list-dependents [--json] [--root <dir>] [<file>...]
+  docstamp list-dependencies [--json] [--root <dir>] [<file>...]
       List each file with its dependency patterns and the files they select.
+  docstamp list-dependents [--json] [--root <dir>] <file>...
+      List the files that depend on each named file, and the patterns that select it.
   docstamp help
       Print this usage (also --help).
   docstamp version
       Print the version (also --version).
 `;
 
-const COMMANDS = new Set(['check', 'update', 'list-dependents', 'help', 'version']);
+const COMMANDS = new Set([
+  'check',
+  'update',
+  'list-dependencies',
+  'list-dependents',
+  'help',
+  'version',
+]);
 const FLAGS = new Set(['--json', '--all', '--version', '--help']);
 const REMOVED: Record<string, string> = {
   '--write': 'docstamp update',
-  '--files': 'docstamp list-dependents',
+  '--files': 'docstamp list-dependencies',
 };
 const usage = (subject: string, message?: string) =>
   new Raised([diag('E_USAGE', { subject, ...(message === undefined ? {} : { message }) })]);
@@ -67,7 +81,7 @@ export function parseArgs(argv: readonly string[]): Args {
   }
   if (seen.has('--help') || command === 'help') return { mode: 'help' };
   if (seen.has('--version') || command === 'version') return { mode: 'version' };
-  const mode = (command ?? 'check') as 'check' | 'update' | 'list-dependents';
+  const mode = (command ?? 'check') as 'check' | 'update' | 'list-dependencies' | 'list-dependents';
   const all = seen.has('--all');
   if (mode === 'update') {
     if (!all && paths.length === 0) {
@@ -75,6 +89,9 @@ export function parseArgs(argv: readonly string[]): Args {
     }
     if (all && paths.length > 0) fail('--all', 'Pass either files or --all, not both.');
   } else if (all) fail('--all', '--all is only valid with "docstamp update".');
+  if (mode === 'list-dependents' && paths.length === 0) {
+    fail('list-dependents', 'Name the files whose Dependents you want to list.');
+  }
   if (failure) throw failure;
   const json = seen.has('--json');
   const rootOpt = root === undefined ? {} : { root };

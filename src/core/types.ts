@@ -59,3 +59,14 @@ export interface Result {
   readonly diagnostics: readonly Diagnostic[];
   readonly changes?: readonly Change[] | null;
 }
+
+export interface Dependent {
+  readonly file: string;
+  readonly via: readonly string[];
+}
+
+export interface ReverseEntry {
+  readonly file: string;
+  readonly dependents: readonly Dependent[];
+  readonly diagnostics: readonly Diagnostic[];
+}

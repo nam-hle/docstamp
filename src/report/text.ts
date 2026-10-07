@@ -1,7 +1,7 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import { needsQuoting, quote } from '../core/quote.ts';
-import type { Diagnostic, Result } from '../core/types.ts';
+import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
 
 // SPEC §14.2
 function shown(s: string): string {
@@ -69,4 +69,19 @@ export function diagnosticsText(ds: readonly Diagnostic[]): string {
       return `${parts.join(': ')}: ${d.message}\n`;
     })
     .join('');
+}
+
+// SPEC §14.7
+export function reverseText(entries: readonly ReverseEntry[]): string {
+  let out = '';
+  for (const entry of entries) {
+    out += `${shown(entry.file)}\n`;
+    if (entry.dependents.length === 0) out += '  (no dependents)\n';
+    const names = entry.dependents.map((d) => shown(d.file));
+    const width = Math.max(0, ...names.map((n) => n.length));
+    entry.dependents.forEach((d, i) => {
+      out += `  ${names[i]!.padEnd(width)}   via ${d.via.map(shown).join(', ')}\n`;
+    });
+  }
+  return out;
 }

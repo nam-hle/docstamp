@@ -106,22 +106,32 @@ describe('§13 workflow', () => {
     expect(docstamp(root).code).toBe(0);
   });
 
-  it('§13.7 list-dependents works while a legacy docsync.lock is present', () => {
+  it('§13.7 list-dependencies works while a legacy docsync.lock is present', () => {
     const root = repo();
     writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
     expect(docstamp(root).code).toBe(2);
-    expect(docstamp(root, 'list-dependents')).toEqual({
+    expect(docstamp(root, 'list-dependencies')).toEqual({
       code: 0,
       out: 'CLAUDE.md\n  depends   src/**\n  resolved  src/a.ts\n',
       err: '',
     });
-    const json = JSON.parse(docstamp(root, 'list-dependents', '--json').out);
+    const json = JSON.parse(docstamp(root, 'list-dependencies', '--json').out);
     expect(json.files[0].resolvedFiles).toEqual(['src/a.ts']);
   });
 
-  it('§13.7 list-dependents exits 2 for an invalid Dependent', () => {
+  it('§13.8 list-dependents answers the reverse question without a lock', () => {
+    const root = repo();
+    expect(docstamp(root, 'list-dependents', 'src/a.ts')).toEqual({
+      code: 0,
+      out: 'src/a.ts\n  CLAUDE.md   via src/**\n',
+      err: '',
+    });
+    expect(docstamp(root, 'list-dependents').code).toBe(2);
+  });
+
+  it('§13.7 list-dependencies exits 2 for an invalid Dependent', () => {
     const root = makeTree({ 'docstamp.yaml': CONFIG, 'src/a.ts': 'a\n' });
-    const r = docstamp(root, 'list-dependents');
+    const r = docstamp(root, 'list-dependencies');
     expect(r.code).toBe(2);
     expect(r.out).toBe('CLAUDE.md\n');
     expect(r.err).toContain('E_DEPENDENT_MISSING');
@@ -136,7 +146,7 @@ describe('§13 workflow', () => {
   it('§13.2 removed options exit 2 naming the replacement', () => {
     const root = repo();
     expect(docstamp(root, '--write', 'CLAUDE.md').err).toContain('docstamp update');
-    expect(docstamp(root, '--files').err).toContain('docstamp list-dependents');
+    expect(docstamp(root, '--files').err).toContain('docstamp list-dependencies');
     expect(docstamp(root, 'update').code).toBe(2);
   });
 

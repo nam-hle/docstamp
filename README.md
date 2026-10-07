@@ -73,7 +73,7 @@ A stale doc lists the dependencies that changed since its last review, as `modif
 When git history cannot answer (no git, not a work tree, a shallow clone, or an `update` not yet committed), docstamp prints the dependency patterns (`depends` lines) and `changes` is `null`. Then list the dependencies and diff them yourself:
 
 ```sh
-pnpm exec docstamp list-dependents <file>
+pnpm exec docstamp list-dependencies <file>
 git diff <base> -- <files>
 ```
 
@@ -81,10 +81,11 @@ git diff <base> -- <files>
 
 - `docstamp [check]`: the verdict; exit 0 when every Dependent is ok, 1 when one is stale, 2 on an error. A bare `docstamp` is `check`.
 - `docstamp update (--all | <file>...)`: record that you reviewed the named files.
-- `docstamp list-dependents [<file>...]`: each Dependent with its dependency patterns and the files they select. It does not read the lock.
+- `docstamp list-dependencies [<file>...]`: each Dependent with its dependency patterns and the files they select. It does not read the lock.
+- `docstamp list-dependents <file>...`: the reverse query. For each named file (any file in the repository), the Dependents that depend on it and the patterns that select it. Direct only, no lock.
 - `docstamp help` and `docstamp version`.
 
-Every command except `help` and `version` takes `--json` and `--root <dir>`. The options `--write` and `--files` were replaced by `update` and `list-dependents`.
+Every command except `help` and `version` takes `--json` and `--root <dir>`. The options `--write` and `--files` were replaced by `update` and `list-dependencies`.
 
 Command line and exit codes: [SPEC §13](docs/SPEC.md#13-command-line) and [SPEC §16](docs/SPEC.md#16-exit-codes).
 

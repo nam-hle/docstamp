@@ -74,7 +74,7 @@ describe('§14.4 update text', () => {
   });
 });
 
-describe('§14.6 list-dependents text', () => {
+describe('§14.6 list-dependencies text', () => {
   it('one block per Result: depends lines, then file lines', () => {
     const two = res('a.md', 'ok', {
       dependencies: ['src/**', '!src/b.ts'],
@@ -176,7 +176,7 @@ describe('§14.5 JSON', () => {
     expect(doc.diagnostics[0].file).toBeNull();
     expect(doc.diagnostics[0].subject).toBeNull();
   });
-  it('list-dependents has no summary, state, reasons or changes', () => {
+  it('list-dependencies has no summary, state, reasons or changes', () => {
     const out = listJsonText({
       exitCode: 2,
       selected: [
@@ -188,7 +188,7 @@ describe('§14.5 JSON', () => {
     expect(out).toBe(`${JSON.stringify(JSON.parse(out), null, 2)}\n`);
     const doc = JSON.parse(out);
     expect(Object.keys(doc)).toEqual(['version', 'mode', 'exitCode', 'files', 'diagnostics']);
-    expect(doc.mode).toBe('list-dependents');
+    expect(doc.mode).toBe('list-dependencies');
     expect(Object.keys(doc.files[0])).toEqual([
       'file',
       'dependencies',

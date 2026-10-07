@@ -1,18 +1,19 @@
 import { lstatSync, readdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { readConfig } from '../config/read-config.ts';
-import { Raised } from '../core/diagnostics.ts';
+import { Raised, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
-import type { Diagnostic, Lock, Result } from '../core/types.ts';
+import type { Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
+import { dependentsOf } from '../engine/reverse.ts';
 import { fileHash } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
 import { readLock, writeLock } from '../lock/lock.ts';
-import { jsonText, listJsonText } from '../report/json.ts';
-import { checkText, diagnosticsText, listText, updateText } from '../report/text.ts';
+import { jsonText, listJsonText, reverseJsonText } from '../report/json.ts';
+import { checkText, diagnosticsText, listText, reverseText, updateText } from '../report/text.ts';
 import { computeUniverse, determineRoot } from '../universe/walk.ts';
 import { HELP, parseArgs } from './args.ts';
-import { selectResults } from './paths.ts';
+import { selectResults, toRepoPath } from './paths.ts';
 
 export interface Io {
   stdout(s: string): void;
@@ -166,7 +167,60 @@ function runList(
   return exitCode;
 }
 
-// SPEC §13.5, §13.6, §13.7
+// SPEC §13.8
+function reverseEntries(
+  root: string,
+  cwd: string,
+  paths: readonly string[],
+): { entries: ReverseEntry[]; attached: Diagnostic[] } {
+  const { config, attached } = readConfig(root);
+  const universe = new Set(computeUniverse(root, config).paths);
+  const keyed = new Map<string, string | null>();
+  for (const arg of paths) keyed.set(toRepoPath(arg, cwd, root) ?? arg, toRepoPath(arg, cwd, root));
+  const entries = sortPaths([...keyed.keys()]).map((key): ReverseEntry => {
+    if (keyed.get(key) === null) {
+      const message = 'Name a file inside the root.';
+      return {
+        file: key,
+        dependents: [],
+        diagnostics: [diag('E_USAGE', { subject: key, message })],
+      };
+    }
+    const dependents = dependentsOf(key, config.bindings, universe, attached);
+    return { file: key, dependents, diagnostics: [] };
+  });
+  return { entries, attached };
+}
+
+// SPEC §13.8
+function runReverse(
+  args: { json: boolean; root?: string; paths: string[] },
+  cwd: string,
+  io: Io,
+): number {
+  let entries: ReverseEntry[] = [];
+  let global: Diagnostic[] = [];
+  let exitCode = 2;
+  try {
+    const root = determineRoot(cwd, args.root);
+    const found = reverseEntries(root, cwd, args.paths);
+    entries = found.entries;
+    global = found.attached;
+    exitCode = hasError(global) || entries.some((e) => hasError(e.diagnostics)) ? 2 : 0;
+  } catch (e) {
+    if (!(e instanceof Raised)) throw e;
+    global = e.diagnostics;
+  }
+  if (args.json) {
+    io.stdout(reverseJsonText({ exitCode, entries, diagnostics: global }));
+  } else {
+    io.stdout(reverseText(entries));
+    io.stderr(diagnosticsText([...global, ...entries.flatMap((e) => e.diagnostics)]));
+  }
+  return exitCode;
+}
+
+// SPEC §13.5, §13.6, §13.7, §13.8
 export function run(argv: readonly string[], cwd: string, io: Io): number {
   let args: ReturnType<typeof parseArgs>;
   try {
@@ -184,7 +238,8 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     io.stdout(`${typeof VERSION === 'string' ? VERSION : '0.0.0'}\n`);
     return 0;
   }
-  if (args.mode === 'list-dependents') return runList(args, cwd, io);
+  if (args.mode === 'list-dependencies') return runList(args, cwd, io);
+  if (args.mode === 'list-dependents') return runReverse(args, cwd, io);
   const { mode, json } = args;
   const empty: Output = {
     json,

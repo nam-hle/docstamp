@@ -68,7 +68,7 @@ describe('§13.5 check', () => {
     expect(write.err).toContain('docstamp update');
     const files = exec(tree(), '--files');
     expect(files.code).toBe(2);
-    expect(files.err).toContain('docstamp list-dependents');
+    expect(files.err).toContain('docstamp list-dependencies');
     expect(files.out).toBe('');
   });
   it('unknown dependent is exit 2 on stderr', () => {
@@ -171,8 +171,8 @@ describe('§13.6 update', () => {
   });
 });
 
-describe('§13.7 list-dependents', () => {
-  const list = 'list-dependents';
+describe('§13.7 list-dependencies', () => {
+  const list = 'list-dependencies';
   it('lists patterns and dependencies per Dependent, exit 0, without a lock', () => {
     const r = exec(tree(), list);
     expect(r).toEqual({
@@ -213,12 +213,12 @@ describe('§13.7 list-dependents', () => {
     expect(r.code).toBe(2);
     expect(r.err).toContain('E_UNKNOWN_DEPENDENT: nope.md');
   });
-  it('--json has the list-dependents shape and nothing on stderr', () => {
+  it('--json has the list-dependencies shape and nothing on stderr', () => {
     const r = exec(tree(), list, '--json');
     expect(r.err).toBe('');
     expect(JSON.parse(r.out)).toEqual({
       version: 2,
-      mode: 'list-dependents',
+      mode: 'list-dependencies',
       exitCode: 0,
       files: [
         { file: 'doc.md', dependencies: ['src/**'], resolvedFiles: ['src/a.ts'], diagnostics: [] },

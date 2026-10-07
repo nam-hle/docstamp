@@ -65,7 +65,7 @@ docstamp/
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
-│   ├── engine/           # evaluation; pure, no I/O (§12)
+│   ├── engine/           # evaluation, reverse lookup; pure, no I/O (§12, §13.8)
 │   ├── history/          # changed-file report from git, read-only (§12.3)
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json
@@ -125,7 +125,7 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 Once `docstamp` runs, this repo uses it on itself: `docstamp.yaml` binds `CLAUDE.md` and the docs
 to the code they describe, and `pnpm test` runs `docstamp`. When it fails:
 
-1. Run `docstamp list-dependents <file>`, then `git diff origin/main -- <those files>`, and
+1. Run `docstamp list-dependencies <file>`, then `git diff origin/main -- <those files>`, and
    re-check the doc's claims against the change.
 2. Fix what is no longer true.
 3. Only then run `docstamp update <file>`.

@@ -1,6 +1,6 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { quote } from '../core/quote.ts';
-import type { Diagnostic, Result } from '../core/types.ts';
+import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
 
 export interface JsonDoc {
   mode: 'check' | 'update';
@@ -104,9 +104,42 @@ export function listJsonText(doc: ListJsonDoc): string {
   );
   const top: Array<[string, Json]> = [
     ['version', 2],
-    ['mode', 'list-dependents'],
+    ['mode', 'list-dependencies'],
     ['exitCode', doc.exitCode],
     ['files', dependents],
+    ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
+  ];
+  return `${render(obj(top), '')}\n`;
+}
+
+export interface ReverseJsonDoc {
+  exitCode: number;
+  entries: readonly ReverseEntry[];
+  diagnostics: readonly Diagnostic[];
+}
+
+// SPEC §14.5
+export function reverseJsonText(doc: ReverseJsonDoc): string {
+  const files = doc.entries.map((e) =>
+    obj([
+      ['file', e.file],
+      [
+        'dependents',
+        e.dependents.map((d) =>
+          obj([
+            ['file', d.file],
+            ['via', [...d.via]],
+          ]),
+        ),
+      ],
+      ['diagnostics', sortDiagnostics(e.diagnostics).map(diagJson)],
+    ]),
+  );
+  const top: Array<[string, Json]> = [
+    ['version', 2],
+    ['mode', 'list-dependents'],
+    ['exitCode', doc.exitCode],
+    ['files', files],
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
   ];
   return `${render(obj(top), '')}\n`;
