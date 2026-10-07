@@ -15,8 +15,9 @@ that has to bend is named in the commit message. Each reads _prefer X over Y_.
    a file declares, and only when its content changed.
 5. **Doable output over prose**: data on stdout, messages on stderr, every finding names the
    command that resolves it. A missing input fails rather than prompts.
-6. **Explicit over implicit**: stated defaults, refusal over guesswork. A pattern that matches
-   nothing, an unknown key, a doc declared twice: each is an error, never ignored.
+6. **Explicit over implicit**: stated defaults, refusal over guesswork. A dependency pattern that
+   matches nothing, an unknown key, a doc declared twice: each is an error, never ignored. An
+   exclusion that matches nothing excludes nothing and harms nothing: a warning, never silent.
 7. **Verified over claimed**: the whole gate, and what was not checked is said. A Write means a
    review happened; the tool cannot check that, so nothing in it may write the Lockfile on its
    own.

@@ -50,8 +50,9 @@ describe('§5.5 diagnostic order', () => {
       ['b', 'E_PATTERN', 'x'],
     ]);
   });
-  it('W_ORPHAN is a warning, others errors', () => {
+  it('W_ codes are warnings, others errors', () => {
     expect(diag('W_ORPHAN').severity).toBe('warning');
+    expect(diag('W_EMPTY_EXCLUSION').severity).toBe('warning');
     expect(diag('E_LOCK').severity).toBe('error');
   });
 });

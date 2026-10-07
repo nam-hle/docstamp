@@ -33,6 +33,8 @@ const FIX: Record<Code, string> = {
   E_UNKNOWN_FILE:
     'Name a file listed under "files" in the configuration file, or one with a docstamp block.',
   W_ORPHAN: 'Run "docstamp update" on any file to remove the entry.',
+  W_EMPTY_EXCLUSION:
+    'The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.',
 };
 
 // SPEC §5
@@ -42,7 +44,7 @@ export function diag(
 ): Diagnostic {
   return {
     code,
-    severity: code === 'W_ORPHAN' ? 'warning' : 'error',
+    severity: code.startsWith('W_') ? 'warning' : 'error',
     file: fields.file ?? '',
     subject: fields.subject ?? '',
     message: fields.message ?? FIX[code],

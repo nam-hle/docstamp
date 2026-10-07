@@ -1,0 +1,7 @@
+# reviewed, the warning stays
+$ docstamp
+exit: 0
+--- stdout ---
+2 ok, 0 stale, 0 invalid
+--- stderr ---
+warning: W_EMPTY_EXCLUSION: docs/all.md: !src/**/__test__/**: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.

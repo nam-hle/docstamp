@@ -153,6 +153,13 @@ command treats it like a configured file. To change that behavior, touch `src/in
 duplicate check) and the `marked` hash rule in `src/hash/hash.ts`. Tests: `tests/unit/inline.test.ts`,
 `tests/e2e/scenarios/inline.test.ts` on the `inline-docs` fixture.
 
+## Warnings on a file
+
+`Result.diagnostics` holds the errors of an `invalid` file and the warnings of any file: an `ok` or
+`stale` file can carry `W_EMPTY_EXCLUSION` (SPEC §8.5, produced by `resolveWithWarnings` in
+`src/engine/evaluate.ts`). A warning never changes a state, a hash or an exit code, so code that
+asks "is this file invalid" reads `state`, never `diagnostics.length`.
+
 ## Compatibility guard
 
 `tests/unit/golden.test.ts` pins exact file hashes, Dependency Hashes and selected file lists for

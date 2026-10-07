@@ -1,0 +1,48 @@
+# json carries the warning on the file
+$ docstamp --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 0,
+  "summary": {
+    "ok": 2,
+    "stale": 0,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "docs/all.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/**",
+        "!src/**/__test__/**"
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "W_EMPTY_EXCLUSION",
+          "severity": "warning",
+          "file": "docs/all.md",
+          "subject": "!src/**/__test__/**",
+          "message": "The exclusion matches no file, so it excludes nothing; remove it, or keep it for later."
+        }
+      ]
+    },
+    {
+      "file": "docs/negation.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/**",
+        "!src/**/*.test.ts"
+      ],
+      "changes": null,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

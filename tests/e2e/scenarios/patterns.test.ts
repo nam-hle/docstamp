@@ -164,3 +164,146 @@ scenario('§3.3 path order is by UTF-16 code unit, not by locale', async (repo) 
     'src/é.ts',
   ]);
 });
+
+const WARNING =
+  'warning: W_EMPTY_EXCLUSION: docs/all.md: !src/**/__test__/**: ' +
+  'The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.\n';
+
+scenario(
+  '§8.5 an exclusion that matches nothing is a warning and never changes the verdict',
+  { fixture },
+  async (repo) => {
+    repo.write(
+      'docstamp.yaml',
+      config({
+        'docs/all.md': ['src/**', '!src/**/__test__/**'],
+        'docs/negation.md': ['src/**', '!src/**/*.test.ts'],
+      }),
+    );
+    const first = await repo.run([], { label: 'no __test__ folder yet', show: ['docstamp.yaml'] });
+    expect(first.exit).toBe(1);
+    expect(first.stderr).toBe(WARNING);
+    expect(first.stdout).toContain('STALE    docs/all.md  (unrecorded)');
+
+    const update = await repo.run(['update', '--all'], { expectExit: 0 });
+    expect(update.stderr).toBe(WARNING);
+
+    const ok = await repo.run([], { label: 'reviewed, the warning stays' });
+    expect([ok.exit, ok.stdout, ok.stderr]).toEqual([0, '2 ok, 0 stale, 0 invalid\n', WARNING]);
+
+    const json = await repo.run(['--json'], { label: 'json carries the warning on the file' });
+    expect(json.exit).toBe(0);
+    expect(json.stderr).toBe('');
+    const doc = json.json();
+    expect(doc.exitCode).toBe(0);
+    expect(doc.diagnostics).toEqual([]);
+    expect(doc.files.map((f: { state: string }) => f.state)).toEqual(['ok', 'ok']);
+    expect(doc.files[0].diagnostics).toEqual([
+      {
+        code: 'W_EMPTY_EXCLUSION',
+        severity: 'warning',
+        file: 'docs/all.md',
+        subject: '!src/**/__test__/**',
+        message: expect.any(String),
+      },
+    ]);
+    expect(doc.files[1].diagnostics).toEqual([]);
+
+    repo.write('src/lib/__test__/t.ts', 'a test\n');
+    const present = await repo.run([], { label: 'the folder appears, the exclusion works' });
+    expect([present.exit, present.stdout, present.stderr]).toEqual([
+      1,
+      expect.stringContaining('STALE    docs/negation.md  (content-changed)'),
+      '',
+    ]);
+    expect(present.stdout).not.toContain('docs/all.md');
+
+    repo.remove('src/lib/__test__');
+    const gone = await repo.run([], { label: 'the folder is deleted again: ok, not invalid' });
+    expect([gone.exit, gone.stdout, gone.stderr]).toEqual([
+      0,
+      '2 ok, 0 stale, 0 invalid\n',
+      WARNING,
+    ]);
+
+    const list = await repo.run(['list-dependencies', '--json', 'docs/all.md'], {
+      label: 'list-dependencies shows it too',
+    });
+    expect(list.exit).toBe(0);
+    expect(list.json().files[0].diagnostics.map((d: { code: string }) => d.code)).toEqual([
+      'W_EMPTY_EXCLUSION',
+    ]);
+  },
+);
+
+scenario(
+  '§8.5 a file whose patterns select nothing stays E_EMPTY_DEPENDENCIES, with the warning',
+  { fixture },
+  async (repo) => {
+    for (const name of ['only', 'mixed']) repo.write(`docs/${name}.md`, `# ${name}\n`);
+    repo.write(
+      'docstamp.yaml',
+      config({
+        'docs/all.md': ['src/**'],
+        'docs/only.md': ['!nothing', '!src/a.ts'],
+        'docs/mixed.md': ['nothing/**', '!nothing/x'],
+      }),
+    );
+    const text = await repo.run([], { label: 'text', show: ['docstamp.yaml'] });
+    expect(text.exit).toBe(2);
+    expect(text.stderr).toBe(
+      'error: E_EMPTY_DEPENDENCIES: docs/mixed.md: Correct the patterns in "dependencies"; together they select no file.\n' +
+        'error: E_EMPTY_PATTERN: docs/mixed.md: nothing/**: Correct or remove the pattern; it matches no file.\n' +
+        'warning: W_EMPTY_EXCLUSION: docs/mixed.md: !nothing/x: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.\n' +
+        'error: E_EMPTY_DEPENDENCIES: docs/only.md: Correct the patterns in "dependencies"; together they select no file.\n' +
+        'warning: W_EMPTY_EXCLUSION: docs/only.md: !nothing: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.\n',
+    );
+    const json = await repo.run(['--json'], { label: 'json' });
+    expect(json.exit).toBe(2);
+    const codes = (file: string) =>
+      json
+        .json()
+        .files.find((f: { file: string }) => f.file === file)
+        .diagnostics.map((d: { code: string; severity: string }) => `${d.severity} ${d.code}`);
+    expect(codes('docs/only.md')).toEqual([
+      'error E_EMPTY_DEPENDENCIES',
+      'warning W_EMPTY_EXCLUSION',
+    ]);
+    expect(codes('docs/all.md')).toEqual([]);
+  },
+);
+
+scenario(
+  '§8.5 the position of an exclusion does not change its warning or the result',
+  async (repo) => {
+    repo.write('DOC.md', '# doc\n');
+    for (const file of ['src/a.ts', 'src/lib/x.ts']) repo.write(file, 'x\n');
+    const run = async (patterns: string[]) => {
+      repo.write('docstamp.yaml', config({ 'DOC.md': patterns }));
+      const result = await repo.run(['list-dependencies', '--json'], {
+        label: patterns.join(' '),
+        show: ['docstamp.yaml'],
+      });
+      expect(result.exit).toBe(0);
+      const [file] = result.json().files;
+      return [file.resolvedFiles, file.diagnostics.map((d: { subject: string }) => d.subject)];
+    };
+    const same = [['src/a.ts', 'src/lib/x.ts'], ['!nothing']];
+    expect(await run(['!nothing', 'src/**'])).toEqual(same);
+    expect(await run(['src/**', '!nothing'])).toEqual(same);
+    expect(await run(['src/a.ts', '!nothing', 'src/lib'])).toEqual(same);
+    expect(await run(['src/**', '!src/lib', 'src/lib/x.ts', '!nothing'])).toEqual(same);
+  },
+);
+
+scenario('§8.5 an inline block gets the same warning', async (repo) => {
+  repo.write('src/a.ts', 'a\n');
+  repo.write('DOC.md', '---\ndocstamp:\n  dependencies: [src/**, "!src/gone/**"]\n---\n# doc\n');
+  const first = await repo.run([], { label: 'inline, unrecorded' });
+  expect(first.exit).toBe(1);
+  expect(first.stderr).toContain('warning: W_EMPTY_EXCLUSION: DOC.md: !src/gone/**');
+  await repo.run(['update', 'DOC.md'], { expectExit: 0 });
+  const ok = await repo.run([], { label: 'inline, reviewed' });
+  expect([ok.exit, ok.stdout]).toEqual([0, '1 ok, 0 stale, 0 invalid\n']);
+  expect(ok.stderr).toContain('W_EMPTY_EXCLUSION');
+});

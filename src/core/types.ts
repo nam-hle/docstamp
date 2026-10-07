@@ -18,7 +18,8 @@ export type Code =
   | 'E_LOCK'
   | 'E_LOCK_VERSION'
   | 'E_UNKNOWN_FILE'
-  | 'W_ORPHAN';
+  | 'W_ORPHAN'
+  | 'W_EMPTY_EXCLUSION';
 
 export interface Diagnostic {
   readonly code: Code;

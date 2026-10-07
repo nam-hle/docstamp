@@ -237,6 +237,7 @@ scenario('§8.5 E_EMPTY_PATTERN and E_EMPTY_DEPENDENCIES', async (repo) => {
   const result = await run(repo, 'patterns that select nothing', [], 2, [
     'E_EMPTY_PATTERN',
     'E_EMPTY_DEPENDENCIES',
+    'W_EMPTY_EXCLUSION',
   ]);
   expect(result.stderr).toContain('E_EMPTY_PATTERN: DOC.md: nothing/**');
   expect(result.stderr).toContain('E_EMPTY_DEPENDENCIES: DOC.md');
@@ -244,8 +245,11 @@ scenario('§8.5 E_EMPTY_PATTERN and E_EMPTY_DEPENDENCIES', async (repo) => {
   expect(result.stderr).not.toContain('E_EMPTY_DEPENDENCIES: B.md');
   expect(result.stderr).toContain('E_EMPTY_DEPENDENCIES: C.md');
   expect(result.stderr).toContain('E_EMPTY_PATTERN: D.md: D.md');
-  expect(result.stderr).toContain('E_EMPTY_PATTERN: E.md: !src/**/*.spec.ts');
-  expect(result.stdout).toContain('0 ok, 0 stale, 5 invalid');
+  expect(result.stderr).toContain('warning: W_EMPTY_EXCLUSION: E.md: !src/**/*.spec.ts');
+  expect(result.stderr).not.toContain('E_EMPTY_PATTERN: E.md');
+  expect(result.stderr).not.toContain('error: W_EMPTY_EXCLUSION');
+  expect(result.stdout).toContain('STALE    E.md  (unrecorded)');
+  expect(result.stdout).toContain('0 ok, 1 stale, 4 invalid');
 });
 
 scenario(

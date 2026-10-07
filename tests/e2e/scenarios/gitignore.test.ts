@@ -144,3 +144,26 @@ scenario(
     expect(files).toContain('src/a.ts');
   },
 );
+
+scenario(
+  '§8.5 an exclusion that matches only ignored files matches nothing',
+  { fixture },
+  async (repo) => {
+    repo.write('build/out.js', 'built\n');
+    repo.write('docstamp.yaml', config({ 'DOC.md': ['**', '!build/out.js'] }));
+    const ignored = await repo.run([], { label: 'build/ is ignored', show: ['docstamp.yaml'] });
+    expect(ignored.exit).toBe(1);
+    expect(ignored.stderr).toContain('warning: W_EMPTY_EXCLUSION: DOC.md: !build/out.js');
+
+    repo.write(
+      'docstamp.yaml',
+      config({ 'DOC.md': ['**', '!build/out.js'] }, 'gitignore: false\n'),
+    );
+    const listed = await repo.run(['list-dependencies', '--json'], {
+      label: 'gitignore: false, the exclusion has something to exclude',
+      show: ['docstamp.yaml'],
+    });
+    expect(listed.stderr).toBe('');
+    expect(listed.json().files[0].resolvedFiles).not.toContain('build/out.js');
+  },
+);

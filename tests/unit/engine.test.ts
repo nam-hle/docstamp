@@ -33,16 +33,96 @@ describe('§8.5 resolveDependencies', () => {
   it('excludes the file itself', () => {
     expect(resolveDependencies(declare('src/a.ts', ['src/**']), universe)).toEqual(['src/b.ts']);
   });
-  it('every pattern, negated or not, must match', () => {
+  it('a positive pattern that matches nothing is E_EMPTY_PATTERN', () => {
     try {
-      resolveDependencies(declare('B.md', ['src/**', '!nope/**', 'src\\cli']), universe);
+      resolveDependencies(declare('B.md', ['src/**', 'nope/**', 'src\\cli']), universe);
       expect.unreachable();
     } catch (e) {
       expect((e as Raised).diagnostics.map((d) => [d.code, d.subject])).toEqual([
-        ['E_EMPTY_PATTERN', '!nope/**'],
+        ['E_EMPTY_PATTERN', 'nope/**'],
         ['E_EMPTY_PATTERN', 'src\\cli'],
       ]);
     }
+  });
+  it('an exclusion that matches nothing is a warning and changes nothing', () => {
+    const plain = resolveDependencies(declare('B.md', ['src/**']), universe);
+    expect(resolveDependencies(declare('B.md', ['src/**', '!nope/**']), universe)).toEqual(plain);
+    const r = evaluate(declare('B.md', ['src/**', '!nope/**']), universe, lockOf({}), [], fs);
+    expect([r.state, r.reasons, r.resolved]).toEqual(['stale', ['unrecorded'], plain]);
+    expect(r.diagnostics.map((d) => [d.code, d.severity, d.file, d.subject])).toEqual([
+      ['W_EMPTY_EXCLUSION', 'warning', 'B.md', '!nope/**'],
+    ]);
+  });
+  it('an ok file keeps its warning, and its hash is the one without the exclusion', () => {
+    const current = hashOf(['src/a.ts', 'src/b.ts']);
+    const r = evaluate(
+      declare('B.md', ['src/**', '!nope']),
+      universe,
+      lockOf({ 'B.md': current }),
+      [],
+      fs,
+    );
+    expect([r.state, r.current, r.diagnostics.map((d) => d.code)]).toEqual([
+      'ok',
+      current,
+      ['W_EMPTY_EXCLUSION'],
+    ]);
+  });
+  it('an exclusion that matches a file nothing selected is not warned about', () => {
+    const r = evaluate(declare('B.md', ['src/a.ts', '!src/b.ts']), universe, lockOf({}), [], fs);
+    expect([r.resolved, r.diagnostics]).toEqual([['src/a.ts'], []]);
+  });
+  it('the warning does not depend on the order of the patterns', () => {
+    for (const patterns of [
+      ['!nope', 'src/**'],
+      ['src/**', '!nope'],
+      ['src/a.ts', '!nope', 'src/b.ts'],
+    ]) {
+      const r = evaluate(declare('B.md', patterns), universe, lockOf({}), [], fs);
+      expect(
+        r.diagnostics.map((d) => d.code),
+        patterns.join(' '),
+      ).toEqual(['W_EMPTY_EXCLUSION']);
+    }
+  });
+  it('an exclusion that matches only the file itself matches nothing', () => {
+    const r = evaluate(declare('B.md', ['src/**', '!B.md']), universe, lockOf({}), [], fs);
+    expect(r.diagnostics.map((d) => d.subject)).toEqual(['!B.md']);
+  });
+  it('a file with only exclusions selects nothing: E_EMPTY_DEPENDENCIES, plus the warning', () => {
+    const r = evaluate(declare('B.md', ['!nope', '!src/a.ts']), universe, lockOf({}), [], fs);
+    expect([r.state, r.diagnostics.map((d) => [d.code, d.severity])]).toEqual([
+      'invalid',
+      [
+        ['E_EMPTY_DEPENDENCIES', 'error'],
+        ['W_EMPTY_EXCLUSION', 'warning'],
+      ],
+    ]);
+  });
+  it('an invalid file reports the warning next to its errors, in diagnostic order', () => {
+    const r = evaluate(
+      declare('B.md', ['gone', '!nope', '!also-nope']),
+      universe,
+      lockOf({}),
+      [],
+      fs,
+    );
+    expect(r.diagnostics.map((d) => [d.code, d.subject])).toEqual([
+      ['E_EMPTY_DEPENDENCIES', ''],
+      ['E_EMPTY_PATTERN', 'gone'],
+      ['W_EMPTY_EXCLUSION', '!also-nope'],
+      ['W_EMPTY_EXCLUSION', '!nope'],
+    ]);
+  });
+  it('an exclusion that matches only files outside the universe is warned about', () => {
+    const r = evaluate(
+      declare('B.md', ['src/**', '!src/ignored.ts']),
+      universe,
+      lockOf({}),
+      [],
+      fs,
+    );
+    expect(r.diagnostics.map((d) => d.code)).toEqual(['W_EMPTY_EXCLUSION']);
   });
   it('empty selection', () => {
     expect(() => resolveDependencies(declare('B.md', ['src/**', '!src/**']), universe)).toThrow(

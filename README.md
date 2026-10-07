@@ -196,7 +196,15 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
 
 - **Bind to the narrowest files that make the doc true.** A doc that depends on all of `src` goes stale on every commit, and people then stop reading the reports. `docs/architecture.md` should depend on `src/core`, not on the repository.
 - **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns are in [SPEC §8](docs/SPEC.md#8-patterns).
-- **Exclude generated or noisy files with `!`.** The last matching pattern wins, so put exclusions after the pattern they cut from. Every pattern must select at least one file, or it is an error (`E_EMPTY_PATTERN`).
+- **Exclude generated or noisy files with `!`.** The last matching pattern wins, so put exclusions after the pattern they cut from. A pattern without `!` must select at least one file, or it is an error (`E_EMPTY_PATTERN`). An exclusion that matches no file is only a warning (`W_EMPTY_EXCLUSION`), so a standard block such as `!src/core/**/__test__/**` can be copied into every doc before any test folder exists, and survives the deletion of the last test. The warning never changes the exit code or the verdict:
+
+  ```
+  $ docstamp
+  1 ok, 0 stale, 0 invalid
+  warning: W_EMPTY_EXCLUSION: docs/architecture.md: !src/core/**/__test__/**: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
+  ```
+
+  A doc whose patterns together select nothing is still an error (`E_EMPTY_DEPENDENCIES`).
 - **Do not depend on the lock, the configuration or the doc itself.** The root configuration and lock are not selectable, and a file is never one of its own dependencies ([SPEC §8.5](docs/SPEC.md#85-resolution)), so editing a doc never makes it stale.
 - **Know what counts as a change.** A file is hashed as it is, except that CR LF becomes LF in text files ([SPEC §10.2](docs/SPEC.md#102-normalized-content)). Nothing else is normalized: a changed license header, whitespace, a final newline, a byte order mark and every binary file all count, byte for byte. Renaming or moving a dependency counts too.
 - **Commit the lock separately from the edits.** Known limit: the changed-file list is the difference from the commit that introduced the lock entry. An edit committed in the same commit as `docstamp update` makes the doc stale but is not listed, because docstamp stores one hash and no commit id ([SPEC §12.3](docs/SPEC.md#123-changedsince)). Commit the lock separately from the dependency edits it covers.
