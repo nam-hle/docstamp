@@ -3,6 +3,7 @@ exit: 2
 --- stdout ---
 STALE    README.md  (content-changed)
   modified  docs/GUIDE.md
+  review: git diff e1923b101cf9eb2d636e4d9b5bdf8d821da4ebde -- docs/GUIDE.md
 INVALID  docs/GUIDE.md
 0 ok, 1 stale, 1 invalid
 next: review each stale file against its dependencies, then run: docstamp update README.md

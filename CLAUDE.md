@@ -191,7 +191,9 @@ ignored (§8.5 NOTE): it never touches selection, codes or order, and never call
 `checkChunks` in `src/report/text.ts` returns the check report as a List of stdout and stderr writes
 in the order of SPEC §14.3.2 (an `INVALID` line, then its Diagnostics). `emit` in `src/cli/run.ts`
 writes them one by one, in that order: never all of stdout first. Each stream alone must stay what
-§14.1 says; `tests/unit/run.test.ts` pins the interleaving.
+§14.1 says; `tests/unit/run.test.ts` pins the interleaving. `reviewLine` (§14.3.4) only builds the
+text of a git command for the reader; `git` still runs in `src/history/` alone, read-only, and
+`isWhitespaceOnly` (§12.3 step 7) is its one more call.
 
 ## Compatibility guard
 

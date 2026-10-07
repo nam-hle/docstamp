@@ -1,6 +1,6 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
-import { needsQuoting, quote } from '../core/quote.ts';
+import { needsQuoting, quote, shellQuote } from '../core/quote.ts';
 import type {
   Change,
   Diagnostic,
@@ -19,6 +19,8 @@ function shown(s: string): string {
 const LABEL = { ok: 'OK', stale: 'STALE', invalid: 'INVALID' } as const;
 const GROUP_MIN = 5;
 const NEXT_MAX = 10;
+const REVIEW_PATH_MAX = 10;
+const LITERAL_NEEDED = /^:|[*?[\\]/u;
 
 export interface CheckTextOptions {
   root?: string;
@@ -45,7 +47,8 @@ export function changeLines(changes: readonly Change[]): string[] {
     const size = groupable(c) ? (sizes.get(runKey(c)) ?? 0) : 0;
     const status = c.status.padEnd(8);
     if (size < GROUP_MIN) {
-      entries.push({ sort: c.path, rank: 0, line: `  ${status}  ${shown(c.path)}\n` });
+      const marker = c.whitespaceOnly ? ' (whitespace only)' : '';
+      entries.push({ sort: c.path, rank: 0, line: `  ${status}  ${shown(c.path)}${marker}\n` });
     } else if (!grouped.has(runKey(c))) {
       grouped.add(runKey(c));
       const dir = directoryOf(c.path);
@@ -55,6 +58,30 @@ export function changeLines(changes: readonly Change[]): string[] {
   }
   entries.sort((a, b) => comparePaths(a.sort, b.sort) || a.rank - b.rank);
   return entries.map((entry) => entry.line);
+}
+
+// SPEC §14.3.4
+function pathspecsOf(dependencies: readonly string[]): string[] | null {
+  if (dependencies.some((pattern) => pattern.includes('{'))) return null;
+  return dependencies.flatMap((pattern) => {
+    const negated = pattern.startsWith('!');
+    const glob = negated ? pattern.slice(1) : pattern;
+    const magic = negated ? ':(exclude,glob)' : ':(glob)';
+    const wildcard = /[*?[]/u.test(glob) && !glob.endsWith('**');
+    return wildcard ? [`${magic}${glob}`, `${magic}${glob}/**`] : [`${magic}${glob}`];
+  });
+}
+
+// SPEC §14.3.4
+export function reviewLine(r: Result, rootArg?: string): string {
+  if (r.base === undefined || !r.changes || r.changes.length === 0) return '';
+  const args =
+    r.changes.length <= REVIEW_PATH_MAX
+      ? r.changes.map((c) => (LITERAL_NEEDED.test(c.path) ? `:(literal)${c.path}` : c.path))
+      : pathspecsOf(r.dependencies);
+  if (args === null) return '';
+  const git = rootArg === undefined ? 'git' : `git -C ${shellQuote(rootArg)}`;
+  return `  review: ${git} diff ${r.base} -- ${args.map(shellQuote).join(' ')}\n`;
 }
 
 // SPEC §14.3.3
@@ -80,8 +107,9 @@ export function checkChunks(
       let block = `${LABEL[r.state].padEnd(9)}${shown(r.file)}`;
       block += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
       if (r.state === 'stale') {
-        if (r.changes && r.changes.length > 0) block += changeLines(r.changes).join('');
-        else for (const c of r.dependencies) block += `  depends   ${shown(c)}\n`;
+        if (r.changes && r.changes.length > 0) {
+          block += changeLines(r.changes).join('') + reviewLine(r, rootArg);
+        } else for (const c of r.dependencies) block += `  depends   ${shown(c)}\n`;
       }
       emit('stdout', block);
     }

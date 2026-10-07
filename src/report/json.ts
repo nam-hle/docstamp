@@ -63,6 +63,8 @@ export function jsonText(doc: JsonDoc): string {
               obj([
                 ['status', c.status],
                 ['path', c.path],
+                ['via', [...c.via]],
+                ...(c.whitespaceOnly ? [['whitespaceOnly', true] as [string, Json]] : []),
               ]),
             )
           : null,

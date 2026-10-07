@@ -118,13 +118,21 @@ function listAll(root: string): Result[] {
 }
 
 // SPEC §12.3
-function withChanges(root: string, result: Result, evaluated: Evaluated): Result {
+function withChanges(
+  root: string,
+  result: Result,
+  evaluated: Evaluated,
+  whitespace: Map<string, boolean>,
+): Result {
   const inline = evaluated.declarations.find((b) => b.file === result.file)?.inline;
   const entry = inline ? inline.recorded : evaluated.lock.entries.get(result.file);
   if (result.state !== 'stale' || !result.reasons.includes('content-changed') || !entry) {
     return result;
   }
-  return { ...result, changes: changedSince(root, result, entry, inline !== undefined) };
+  const report = changedSince(root, result, entry, inline !== undefined, whitespace);
+  return report === null
+    ? { ...result, changes: null }
+    : { ...result, changes: report.changes, base: report.base };
 }
 
 const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'error');
@@ -356,7 +364,8 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     if (mode === 'check') {
       const stale = selected.some((r) => r.state === 'stale');
       const exitCode = refused ? 2 : stale ? 1 : 0;
-      const reported = selected.map((r) => withChanges(root, r, evaluated));
+      const whitespace = new Map<string, boolean>();
+      const reported = selected.map((r) => withChanges(root, r, evaluated, whitespace));
       const chunks = checkChunks(reported, global, { root: args.root, quiet: args.quiet });
       return emit(io, {
         ...empty,

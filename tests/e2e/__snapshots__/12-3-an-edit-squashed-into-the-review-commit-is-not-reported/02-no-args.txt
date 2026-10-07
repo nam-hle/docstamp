@@ -3,6 +3,7 @@ exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
   modified  src/d.ts
+  review: git diff 982850fb99172089a9b48c7c1ff7561432fba943 -- src/d.ts
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 --- stderr ---

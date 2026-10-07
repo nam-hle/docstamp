@@ -24,11 +24,17 @@ exit: 1
       "changes": [
         {
           "status": "added",
-          "path": "src/lib/new-name.ts"
+          "path": "src/lib/new-name.ts",
+          "via": [
+            "src/**"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/lib/old-name.ts"
+          "path": "src/lib/old-name.ts",
+          "via": [
+            "src/**"
+          ]
         }
       ],
       "diagnostics": []
@@ -45,11 +51,17 @@ exit: 1
       "changes": [
         {
           "status": "added",
-          "path": "src/lib/new-name.ts"
+          "path": "src/lib/new-name.ts",
+          "via": [
+            "src/lib"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/lib/old-name.ts"
+          "path": "src/lib/old-name.ts",
+          "via": [
+            "src/lib"
+          ]
         }
       ],
       "diagnostics": []

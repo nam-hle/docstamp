@@ -81,18 +81,23 @@ $ docstamp
 3 ok, 0 stale, 0 invalid
 ```
 
-Later, a commit changes `src/cli/run.ts` and `src/core/generated/types.ts`. CI fails and names the docs and the files that changed (`docs/architecture.md` stays `ok`: the only core file that changed is excluded):
+Later, a commit changes `src/cli/run.ts` and `src/core/generated/types.ts`, and reformats `src/index.ts`. CI fails and names the docs and the files that changed (`docs/architecture.md` stays `ok`: the only core file that changed is excluded):
 
 ```console
 $ docstamp
 STALE    CLAUDE.md  (content-changed)
   modified  src/cli/run.ts
   modified  src/core/generated/types.ts
+  modified  src/index.ts (whitespace only)
+  review: git diff 260bd0a3cbed145f3afa9ec3db9c02f1d30f0360 -- src/cli/run.ts src/core/generated/types.ts src/index.ts
 STALE    README.md  (content-changed)
   modified  src/cli/run.ts
+  review: git diff 260bd0a3cbed145f3afa9ec3db9c02f1d30f0360 -- src/cli/run.ts
 1 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
 ```
+
+The `review:` line is a read-only git command that shows the change since the last `update` (the work tree against that commit, so uncommitted edits are in it, but untracked files are not until `git add -N`). `(whitespace only)` is git's judgement that a modified file differs only in white space and blank lines, to help you skim; it never changes the verdict. With more than 10 changed files the `review:` line gives a pathspec of the patterns instead of the paths.
 
 When a directory moves, the report does not list every file twice. Five or more `added` (or `deleted`) files directly in one directory become one line, and a doc that became `invalid` keeps its errors right under its line on a terminal (each stream alone is unchanged: errors are still on standard error):
 
@@ -162,6 +167,7 @@ $ docstamp
 $ docstamp
 STALE    docs/architecture.md  (content-changed)
   modified  src/core/hash.ts
+  review: git diff 086c7e92ed3634dd8464f9ca9feccba0fa01c06a -- src/core/hash.ts
 1 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
 $ docstamp update docs/architecture.md
@@ -426,7 +432,7 @@ A script must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carrie
 
 ### JSON output
 
-`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)). Here is the stale `README.md` from the example above, with `changes` listing the changed dependencies (`null` when git history cannot answer):
+`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)). Here is the stale `README.md` from the example above, with `changes` listing the changed dependencies (`null` when git history cannot answer). `via` names the patterns that select each path, and `"whitespaceOnly": true` appears on a modified file whose change is white space only:
 
 ```json
 {
@@ -434,12 +440,12 @@ A script must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carrie
   "state": "stale",
   "reasons": ["content-changed"],
   "dependencies": ["src/cli"],
-  "changes": [{ "status": "modified", "path": "src/cli/run.ts" }],
+  "changes": [{ "status": "modified", "path": "src/cli/run.ts", "via": ["src/cli"] }],
   "diagnostics": []
 }
 ```
 
-This is one entry of `files`; the report also has `version`, `mode`, `exitCode`, `summary` and top-level `diagnostics`.
+This is one entry of `files`; the report also has `version`, `mode`, `exitCode`, `summary` and top-level `diagnostics`. `docstamp --json --only-stale` leaves the `ok` files out of `files` and keeps counting them in `summary`.
 
 ### GitHub Actions
 

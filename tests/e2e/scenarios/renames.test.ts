@@ -25,8 +25,8 @@ scenario('§12.1 renaming a dependency inside a dependency directory', { fixture
   repo.commit('rename');
   const committed = await repo.run(['--json'], { label: 'rename committed' });
   expect(committed.json().files[0].changes).toEqual([
-    { status: 'added', path: 'src/lib/new-name.ts' },
-    { status: 'deleted', path: 'src/lib/old-name.ts' },
+    { status: 'added', path: 'src/lib/new-name.ts', via: ['src/**'] },
+    { status: 'deleted', path: 'src/lib/old-name.ts', via: ['src/**'] },
   ]);
 
   repo.rename('src/lib/new-name.ts', 'src/lib/old-name.ts');

@@ -1,0 +1,6 @@
+$ docstamp update --all
+exit: 0
+--- stdout ---
+written  CLAUDE.md
+written  NOTES.md
+--- stderr ---

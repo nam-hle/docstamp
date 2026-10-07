@@ -23,107 +23,185 @@ exit: 1
       "changes": [
         {
           "status": "added",
-          "path": "src/new/file-01.ts"
+          "path": "src/new/file-01.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-02.ts"
+          "path": "src/new/file-02.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-03.ts"
+          "path": "src/new/file-03.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-04.ts"
+          "path": "src/new/file-04.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-05.ts"
+          "path": "src/new/file-05.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-06.ts"
+          "path": "src/new/file-06.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-07.ts"
+          "path": "src/new/file-07.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-08.ts"
+          "path": "src/new/file-08.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-09.ts"
+          "path": "src/new/file-09.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-10.ts"
+          "path": "src/new/file-10.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-11.ts"
+          "path": "src/new/file-11.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-12.ts"
+          "path": "src/new/file-12.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new/file-13.ts"
+          "path": "src/new/file-13.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-01.ts"
+          "path": "src/old/file-01.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-02.ts"
+          "path": "src/old/file-02.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-03.ts"
+          "path": "src/old/file-03.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-04.ts"
+          "path": "src/old/file-04.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-05.ts"
+          "path": "src/old/file-05.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-06.ts"
+          "path": "src/old/file-06.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-07.ts"
+          "path": "src/old/file-07.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-08.ts"
+          "path": "src/old/file-08.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-09.ts"
+          "path": "src/old/file-09.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-10.ts"
+          "path": "src/old/file-10.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-11.ts"
+          "path": "src/old/file-11.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-12.ts"
+          "path": "src/old/file-12.ts",
+          "via": [
+            "src"
+          ]
         },
         {
           "status": "deleted",
-          "path": "src/old/file-13.ts"
+          "path": "src/old/file-13.ts",
+          "via": [
+            "src"
+          ]
         }
       ],
       "diagnostics": []

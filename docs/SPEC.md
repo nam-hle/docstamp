@@ -202,10 +202,12 @@ identical needs no Review (Principle 4).
 | `[[Current]]` | Hash or empty | empty iff `[[State]]` is `invalid` |
 | `[[Diagnostics]]` | List of Diagnostic, §5.5 order | holds an error iff `[[State]]` is `invalid`; any Result may also hold warnings (§8.5) |
 | `[[Changes]]` | List of Change in path order, or *unknown* | known only as defined in §12.3 |
+| `[[Base]]` | a commit Id, or none | the commit *C* of §12.3 when `[[Changes]]` is known, else none |
 
 A *Reason* is `unrecorded` or `content-changed`; exactly one applies to a `stale` Result.
 
-A *Change* is { `[[Status]]`: `modified`, `added` or `deleted`, `[[Path]]`: RepoPath }.
+A *Change* is { `[[Status]]`: `modified`, `added` or `deleted`, `[[Path]]`: RepoPath, `[[Via]]`: a
+non-empty List of String, `[[WhitespaceOnly]]`: Boolean }.
 
 NOTE: The Lockfile keeps one Hash per file, so a Declaration over thousands of files costs one
 entry and the verdict cannot say which dependencies changed. `[[Changes]]` is a best-effort report
@@ -1038,7 +1040,7 @@ without changing any verdict.
 
 ### 12.3 ChangedSince
 
-`ChangedSince(root, result, entry)` returns a List of Change or *unknown*. It is
+`ChangedSince(root, result, entry)` returns a List of Change and the commit *C* below, or *unknown*. It is
 run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
 contain `content-changed`, and whose file has a LockEntry *entry*, or an inline `[[Recorded]]`
 Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
@@ -1072,7 +1074,15 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
    `modified`, the path is in `result.[[Resolved]]`; for `deleted`, the path is not
    `result.[[File]]` and `Select(result.[[Dependencies]], « path »)` selects it, since a deleted
    file is no longer a dependency.
-5. If the Changes are empty, return *unknown*. Otherwise return them in path order.
+5. If the Changes are empty, return *unknown*.
+6. Set `[[Via]]` of each Change to the patterns of `result.[[Dependencies]]` that have no Negation
+   and satisfy `PatternMatches(pattern, path)`, in declaration order (as §13.8 step 4.2 does).
+7. Set `[[WhitespaceOnly]]` of each Change: true iff its status is `modified`,
+   `git --literal-pathspecs diff --ignore-all-space --ignore-blank-lines --quiet <C> -- <path>`,
+   run in Root as step 1 does, exits with status 0, and `git --literal-pathspecs diff --raw
+   --no-renames <C> -- <path>` shows no change of file mode; false for any other status, any other
+   exit status and any failure.
+8. Return the Changes in path order, and *C*, which is `[[Base]]` of the Result.
 
 Any error at any step returns *unknown*. `ChangedSince` never raises a Diagnostic and never affects
 the exit code.
@@ -1081,6 +1091,14 @@ NOTE: *entry* is searched as text; no commit ID is stored. A rebase, squash or a
 the review commit therefore keeps working. Step 1.3 ignores commits where another file with
 the same Hash removed it. A shallow clone, or a Write that is not yet committed, yields *unknown*;
 so does an empty result, since a stale `content-changed` Result must have changed something.
+
+NOTE: `[[Via]]` names the patterns that select a path, so that a reviewer sees why a file is
+in the report. `[[WhitespaceOnly]]` is the judgement of git on the text: it ignores any change in
+the amount of white space, a carriage return at the end of a line, and blank lines. A change of
+file mode or of file type is a difference, which the second command makes certain of: the first
+alone depends on the version of git. `[[WhitespaceOnly]]` says nothing about meaning (white space
+is significant in some formats) and never changes a state: the Dependency Hash still counts the
+change (§10.2).
 
 NOTE: Known limit. The report is the difference between the work tree and the commit *C* that
 introduced the LockEntry, so an edit committed in the same commit as the Write is not in the
@@ -1509,13 +1527,15 @@ more segment, where *d* is a String that ends with `/`. A run with at least 5 Ch
 
 two spaces, the status padded with spaces to 8 characters, two spaces, *d* as in §14.2, two
 spaces and `(<n> files)` with *n* the number of Changes of the run. Every other Change, a
-`modified` one always and one of a run of fewer than 5, is one *change line* as above. A Change
+`modified` one always and one of a run of fewer than 5, is one *change line* as above, followed by
+` (whitespace only)` when its `[[WhitespaceOnly]]` is true. A Change
 is in the run of the directory it is directly in only: a Change in a subdirectory is never in the
 run of its parent.
 
 The lines are in path order of their path, a group line by *d* with its trailing `/`; a group
 line of `added` precedes a group line of `deleted` with the same *d*. Group lines are in text
-mode only: `changes` in `--json` always lists every Change (§14.5).
+mode only: `changes` in `--json` always lists every Change (§14.5). The last line of the block is
+the review line of §14.3.4.
 
 NOTE: A moved directory of 13 files, on which 5 files depend, prints 2 lines per file, not 26.
 Git is not asked about renames (§12.3 step 2 passes `--no-renames`): the group lines `deleted
@@ -1561,6 +1581,38 @@ has, and none when §13.6 step 5 refused an update (§14.4).
 NOTE: The second line points at the Diagnostics that §14.3.2 writes under each `INVALID` line.
 Updating the first 10 stale files and running `docstamp` again lists the next 10.
 
+#### 14.3.4 Review Line
+
+For a stale Result with a known `[[Changes]]`, the block ends with one line:
+
+```
+  review: git diff <C> -- <arg> <arg>
+```
+
+two spaces, `review: `, and a read-only git command that shows what changed: *C* is `[[Base]]`
+as git printed it, and each *arg* is written with `ShellQuote`. If `--root` was given, `git diff`
+is `git -C <root> diff`, *root* the value as given, written with `ShellQuote`. The *args* are:
+
+- if the Result has at most 10 Changes (the *path cap*): the `[[Path]]` of each Change in path
+  order, written as `:(literal)<path>` when it starts with `:` or contains `*`, `?`, `[` or `\`,
+  so that git does not read it as a pattern;
+- otherwise, for each pattern of `[[Dependencies]]` in declaration order, with *glob* the pattern
+  without its Negation: `:(glob)<glob>` and, if *glob* contains `*`, `?` or `[` and its last
+  segment is not `**`, also `:(glob)<glob>/**` (git reads a name as a directory, but not a
+  wildcard); for a pattern with a Negation, `:(exclude,glob)` in place of `:(glob)`. If any
+  pattern contains `{`, the line is not output.
+
+`ShellQuote(s)` is *s* if it is not empty and each of its code points is one of `A-Z`, `a-z`,
+`0-9` and `_@%+=:,./-`; otherwise `'`, *s* with each `'` replaced by `'\''`, then `'`.
+
+NOTE: The command compares the work tree with *C*, as §12.3 step 2 does, so the edits that are not
+committed are in it; `<C>..HEAD` would leave them out. Git pathspecs are not patterns (§8): git lets
+an exclusion win over every selection where the last matching pattern wins (§8.4), git has no
+alternation (hence no line), and a file that git tracks but an ignore rule removed from the
+Universe (§7.2) is in the diff. The second form may therefore list more files than the report. A
+file that git does not track (an `added` Change from `git ls-files --others`, §12.3 step 2) is not
+in the diff until `git add -N` names it.
+
 ### 14.4 Update, Text Mode
 
 One line per target in path order: `written  <file>` if it was written (§13.6 step 10), else
@@ -1586,7 +1638,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
       "state": "stale",
       "reasons": ["content-changed"],
       "dependencies": ["src/**", "!src/**/*.test.ts", "package.json"],
-      "changes": [{ "status": "modified", "path": "src/cli/run.ts" }],
+      "changes": [{ "status": "modified", "path": "src/cli/run.ts", "via": ["src/**"] }],
       "diagnostics": []
     }
   ],
@@ -1598,8 +1650,11 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - `files` holds every selected Result (check) or every target (update), in path order,
   including `ok` ones. With `check --only-stale` the `ok` ones are omitted, and `summary`
   still counts every selected Result (§13.5).
-- `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path" }` in this order, or
-  `null` when it is *unknown* or not applicable (§12.3), including in update mode.
+- `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path", "via" }` in this
+  order, or `null` when it is *unknown* or not applicable (§12.3), including in update mode.
+  `via` is `[[Via]]`, the List of patterns that selected the path. A fourth member,
+  `"whitespaceOnly": true`, follows `via` in the entry of a Change whose `[[WhitespaceOnly]]` is
+  true, and is absent otherwise.
 - With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (true only when it was written, §13.6 step 10; false when it was unchanged or when
   step 5 of §13.6 refused), and the top level adds `"removed"`, a
@@ -1872,7 +1927,8 @@ The following are not breaking:
   whose absence leaves every output as it was. Used with another command they are `E_USAGE`, as
   every unknown option was;
 - the layout of the text output of §14.3: group lines (§14.3.1), the order in which the two streams
-  are written (§14.3.2) and the `next:` lines (§14.3.3). A program reads the verdict from the exit
+  are written (§14.3.2), the `next:` lines (§14.3.3), and the whitespace marker and the review line
+  (§14.3.1, §14.3.4). A program reads the verdict from the exit
   code and from `--json` (§14.5), never from this layout. Standard error keeps every line and its
   order;
 - a new member of the JSON output (§14.5: consumers ignore unknown members);

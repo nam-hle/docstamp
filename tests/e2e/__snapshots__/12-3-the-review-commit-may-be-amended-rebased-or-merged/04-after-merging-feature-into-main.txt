@@ -6,6 +6,7 @@ STALE    CLAUDE.md  (content-changed)
   modified  src/c.ts
   modified  src/d.ts
   modified  src/util.ts
+  review: git diff e7f26864cdedce76bfe4fe6e0c807c6fabb9a9b7 -- src/c.ts src/d.ts src/util.ts
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 --- stderr ---

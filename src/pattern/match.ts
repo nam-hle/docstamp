@@ -72,3 +72,12 @@ export function select(
     return selected;
   });
 }
+
+// SPEC §12.3 step 6, §13.8 step 4.2
+export function viaOf(
+  dependencies: readonly string[],
+  patterns: readonly ParsedPattern[],
+  path: string,
+): string[] {
+  return dependencies.filter((_, i) => !patterns[i]!.negated && patternMatches(patterns[i]!, path));
+}

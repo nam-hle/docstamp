@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   changeLines,
   checkChunks,
+  reviewLine,
   checkText,
   diagnosticsText,
   listText,
@@ -22,6 +23,14 @@ const res = (file: string, state: Result['state'], extra: Partial<Result> = {}):
   ...extra,
 });
 
+const change = (status: Change['status'], path: string, extra: Partial<Change> = {}): Change => ({
+  status,
+  path,
+  via: ['src/**'],
+  whitespaceOnly: false,
+  ...extra,
+});
+
 describe('§14.3 check text', () => {
   it('lists only non-ok, summary, next line', () => {
     expect(checkText([res('a.md', 'ok'), res('my doc.md', 'stale')])).toBe(
@@ -37,10 +46,10 @@ describe('§14.3 check text', () => {
   });
   it('known changes replace the depends lines', () => {
     const changes = [
-      { status: 'modified', path: 'src/a.ts' },
-      { status: 'deleted', path: 'src/c.ts' },
-      { status: 'added', path: 'src/my b.ts' },
-    ] as const;
+      change('modified', 'src/a.ts'),
+      change('deleted', 'src/c.ts'),
+      change('added', 'src/my b.ts'),
+    ];
     expect(checkText([res('a.md', 'stale', { changes })])).toContain(
       'STALE    a.md  (content-changed)\n' +
         '  modified  src/a.ts\n  deleted   src/c.ts\n  added     "src/my b.ts"\n0 ok',
@@ -76,7 +85,6 @@ describe('§14.3 check text', () => {
   });
 });
 
-const change = (status: Change['status'], path: string): Change => ({ status, path });
 const many = (status: Change['status'], dir: string, count: number): Change[] =>
   Array.from({ length: count }, (_, i) =>
     change(status, `${dir}f${String(i).padStart(2, '0')}.ts`),
@@ -139,6 +147,75 @@ describe('§14.3.1 change lines', () => {
     const changes = [...many('deleted', 'src/old/', 5), change('modified', 'src/m.ts')];
     expect(checkText([res('a.md', 'stale', { changes })])).toContain(
       'STALE    a.md  (content-changed)\n  modified  src/m.ts\n  deleted   src/old/  (5 files)\n0 ok',
+    );
+  });
+});
+
+describe('§14.3.1 whitespace marker', () => {
+  it('follows the path of a change line, and never a group line', () => {
+    const changes = [
+      change('modified', 'src/a.ts', { whitespaceOnly: true }),
+      change('modified', 'src/b.ts'),
+      change('modified', 'src/my c.ts', { whitespaceOnly: true }),
+    ];
+    expect(changeLines(changes)).toEqual([
+      '  modified  src/a.ts (whitespace only)\n',
+      '  modified  src/b.ts\n',
+      '  modified  "src/my c.ts" (whitespace only)\n',
+    ]);
+  });
+});
+
+describe('§14.3.4 review line', () => {
+  const stale = (changes: Change[], dependencies = ['src/**']) =>
+    res('a.md', 'stale', { changes, dependencies, base: 'c0ffee' });
+  it('names the base commit and every changed path, in path order', () => {
+    const changes = [change('modified', 'src/a.ts'), change('deleted', 'src/b.ts')];
+    expect(reviewLine(stale(changes))).toBe('  review: git diff c0ffee -- src/a.ts src/b.ts\n');
+  });
+  it('quotes for the shell, and reads a path with a wildcard or a colon literally', () => {
+    const changes = [
+      change('modified', "src/it's.ts"),
+      change('modified', 'src/my file.ts'),
+      change('modified', 'src/[id].ts'),
+      change('added', ':odd.ts'),
+    ];
+    expect(reviewLine(stale(changes))).toBe(
+      "  review: git diff c0ffee -- 'src/it'\\''s.ts' 'src/my file.ts' " +
+        "':(literal)src/[id].ts' ':(literal):odd.ts'\n",
+    );
+  });
+  it('--root becomes git -C', () => {
+    const changes = [change('modified', 'src/a.ts')];
+    expect(reviewLine(stale(changes), 'my dir')).toBe(
+      "  review: git -C 'my dir' diff c0ffee -- src/a.ts\n",
+    );
+  });
+  it('up to 10 paths are listed, from 11 the patterns become pathspecs', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => change('modified', `src/f${i}.ts`));
+    expect(reviewLine(stale(ten))).toContain(' -- src/f0.ts src/f1.ts ');
+    const eleven = [...ten, change('modified', 'src/f10.ts')];
+    expect(reviewLine(stale(eleven, ['src/**', 'lib', '!src/**/*.test.ts', 'a.ts', 'x/*']))).toBe(
+      "  review: git diff c0ffee -- ':(glob)src/**' ':(glob)lib' " +
+        "':(exclude,glob)src/**/*.test.ts' ':(exclude,glob)src/**/*.test.ts/**' " +
+        "':(glob)a.ts' ':(glob)x/*' ':(glob)x/*/**'\n",
+    );
+  });
+  it('from 11 paths, a pattern with an alternation leaves no review line', () => {
+    const eleven = Array.from({ length: 11 }, (_, i) => change('modified', `src/f${i}.ts`));
+    expect(reviewLine(stale(eleven, ['src/**/*.{ts,js}']))).toBe('');
+    expect(checkText([stale(eleven, ['src/**/*.{ts,js}'])])).not.toContain('review:');
+  });
+  it('no line without a known base or changes', () => {
+    expect(reviewLine(res('a.md', 'stale', { changes: [change('added', 'x')] }))).toBe('');
+    expect(reviewLine(res('a.md', 'stale', { base: 'c0ffee', changes: null }))).toBe('');
+    expect(checkText([res('a.md', 'stale')])).not.toContain('review:');
+  });
+  it('is the last line of the block of its file', () => {
+    const changes = [change('modified', 'src/a.ts', { whitespaceOnly: true })];
+    expect(checkText([stale(changes)])).toContain(
+      'STALE    a.md  (content-changed)\n  modified  src/a.ts (whitespace only)\n' +
+        '  review: git diff c0ffee -- src/a.ts\n0 ok',
     );
   });
 });
@@ -301,7 +378,7 @@ describe('§14.5 JSON', () => {
     ]);
   });
   it('changes: list when known, null otherwise', () => {
-    const changes = [{ status: 'added', path: 'src/b.ts' }] as const;
+    const changes = [change('added', 'src/b.ts')];
     const doc = JSON.parse(
       jsonText({
         mode: 'check',
@@ -314,9 +391,34 @@ describe('§14.5 JSON', () => {
         diagnostics: [],
       }),
     );
-    expect(doc.files[0].changes).toEqual([{ status: 'added', path: 'src/b.ts' }]);
+    expect(doc.files[0].changes).toEqual([{ status: 'added', path: 'src/b.ts', via: ['src/**'] }]);
     expect(doc.files[1].changes).toBeNull();
     expect(doc.files[2].changes).toBeNull();
+  });
+  it('a change has via, and whitespaceOnly only when true, in this order', () => {
+    const changes = [
+      change('modified', 'src/a.ts', { via: ['src', 'src/*.ts'], whitespaceOnly: true }),
+      change('modified', 'src/b.ts'),
+    ];
+    const out = jsonText({
+      mode: 'check',
+      exitCode: 1,
+      selected: [res('a.md', 'stale', { changes })],
+      diagnostics: [],
+    });
+    const doc = JSON.parse(out);
+    expect(Object.keys(doc.files[0].changes[0])).toEqual([
+      'status',
+      'path',
+      'via',
+      'whitespaceOnly',
+    ]);
+    expect(doc.files[0].changes[0]).toMatchObject({
+      via: ['src', 'src/*.ts'],
+      whitespaceOnly: true,
+    });
+    expect(Object.keys(doc.files[0].changes[1])).toEqual(['status', 'path', 'via']);
+    expect(out).toBe(`${JSON.stringify(doc, null, 2)}\n`);
   });
   it('onlyStale omits the ok files and still counts them', () => {
     const doc = JSON.parse(
