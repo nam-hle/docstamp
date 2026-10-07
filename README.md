@@ -4,17 +4,28 @@
 [![CI](https://github.com/nam-hle/docstamp/actions/workflows/ci.yml/badge.svg)](https://github.com/nam-hle/docstamp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/npm/l/docstamp)](LICENSE)
 
-A deterministic snapshot gate for hidden links between files. Some files quietly depend on others: a `CLAUDE.md` or `AGENTS.md` that describes your source tree, a README that documents a CLI, a fixture that mirrors a schema. When the dependencies change, nothing tells you the file is out of date. With `docstamp`, each file declares the files it depends on, and CI fails when those changed since a person or an agent last reviewed it. There is no LLM and no network access: the verdict is a content hash comparison and never depends on git. See [docs/VISION.md](docs/VISION.md) for the motivation.
+Documentation (`README.md`, `CLAUDE.md`, `AGENTS.md`, `docs/*.md`, ADRs, runbooks) describes code, and it silently goes stale when that code changes. docstamp is a CI gate for that: you declare which files a doc depends on, and the build fails when any of them changed since a person or an AI agent last reviewed the doc. It is deterministic: content hashes, no LLM, no network, and git is only read, for an advisory list of changed files.
+
+1. Declare what each doc depends on, in `docstamp.yaml`.
+2. Someone changes the code.
+3. CI runs `docstamp`. It fails, naming the doc and the changed files.
+4. A person or an agent re-reads the doc, fixes it if needed, and runs `docstamp update <doc>`. CI passes.
+
+## Why not just ...
+
+- **Timestamps or `git blame`?** A rebase, squash or merge rewrites them. docstamp compares content hashes, so history never changes a verdict.
+- **A header in each doc?** Declarations live in one central file, so they also work for files that cannot carry a header (JSON, generated files, binaries).
+- **An LLM judge?** It costs tokens on every run, answers differently from run to run, and its false alarms teach people to ignore it. A hash comparison is free and reproducible. The review itself still needs a reader; docstamp only decides when one is due.
 
 ## Quick start
 
-Install it (requires Node.js 24 or newer), or run it with `npx docstamp`:
+Requires Node.js 24 or newer. Install it, or run it with `npx docstamp`:
 
 ```sh
 pnpm add -D docstamp
 ```
 
-Declare the dependencies of each file in `docstamp.yaml` at the repository root:
+Declare the dependencies of each doc in `docstamp.yaml` at the repository root. A directory selects every file under it, `!` removes files again (here, generated ones):
 
 ```yaml
 # yaml-language-server: $schema=https://unpkg.com/docstamp/schema.json
@@ -22,8 +33,15 @@ version: 2
 files:
   CLAUDE.md:
     dependencies:
-      - src/**
+      - src
       - package.json
+  README.md:
+    dependencies:
+      - src/cli
+  docs/architecture.md:
+    dependencies:
+      - src/core
+      - "!src/core/generated"
 ```
 
 Or write the same thing as `docstamp.config.ts` (keep exactly one configuration file):
@@ -34,46 +52,111 @@ import { defineConfig } from 'docstamp';
 export default defineConfig({
   version: 2,
   files: {
-    'CLAUDE.md': { dependencies: ['src/**', 'package.json'] },
+    'CLAUDE.md': { dependencies: ['src', 'package.json'] },
+    'README.md': { dependencies: ['src/cli'] },
+    'docs/architecture.md': { dependencies: ['src/core', '!src/core/generated'] },
   },
 });
 ```
 
-The first run has no lock, so the file is stale. Review it against its dependencies, then record the review and commit `docstamp-lock.yaml`:
+The first run has no lock, so every doc is stale. Read each doc against its dependencies once, then record the baseline and commit `docstamp-lock.yaml`:
 
 ```console
 $ docstamp
 STALE    CLAUDE.md  (unrecorded)
-  depends   src/**
+  depends   src
   depends   package.json
-0 ok, 1 stale, 0 invalid
-next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
-$ docstamp update CLAUDE.md
+STALE    README.md  (unrecorded)
+  depends   src/cli
+STALE    docs/architecture.md  (unrecorded)
+  depends   src/core
+  depends   !src/core/generated
+0 ok, 3 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/architecture.md
+$ docstamp update --all
 written  CLAUDE.md
+written  README.md
+written  docs/architecture.md
 $ docstamp
-1 ok, 0 stale, 0 invalid
+3 ok, 0 stale, 0 invalid
 ```
 
-Run `docstamp` in CI. After `src/main.ts` changes (shown outside a git work tree; inside one, the lines under `STALE` list the changed dependencies as `modified`, `added` or `deleted`):
+Later, a commit changes `src/cli/run.ts` and `src/core/generated/types.ts`. CI fails and names the docs and the files that changed (`docs/architecture.md` stays `ok`: the only core file that changed is excluded):
 
 ```console
 $ docstamp
 STALE    CLAUDE.md  (content-changed)
-  depends   src/**
-  depends   package.json
-0 ok, 1 stale, 0 invalid
-next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  modified  src/cli/run.ts
+  modified  src/core/generated/types.ts
+STALE    README.md  (content-changed)
+  modified  src/cli/run.ts
+1 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
 ```
 
-## How it works
+Review each stale doc against the listed files, fix what is no longer true, then record the review and commit the lock:
 
-1. A configuration file maps each file to the patterns that select its dependencies ([SPEC §8](docs/SPEC.md#8-patterns)).
-2. `docstamp update <file>` hashes the normalized content of the file's dependencies and records the digest in `docstamp-lock.yaml`.
-3. `docstamp` recomputes the digest of every file's dependencies and compares it with the lock.
-4. A file is `ok` when the digests match and `stale` when they differ or were never recorded.
-5. Only `docstamp update` writes the lock, so a lock entry means a review happened. Nothing else changes it.
+```console
+$ docstamp update CLAUDE.md README.md
+written  CLAUDE.md
+written  README.md
+$ docstamp
+3 ok, 0 stale, 0 invalid
+```
 
-## Commands
+Run `docstamp` in CI; see [GitHub Actions](#github-actions).
+
+## Working with AI agents
+
+An agent is usually the one that reads the failure and does the review. Put this paragraph in your `CLAUDE.md` or `AGENTS.md`:
+
+```md
+## Docs
+
+`docstamp` fails when a doc's dependencies changed since it was last reviewed. When it fails, for each stale doc: read the changed files it lists (`git diff` if more context is needed), compare them with what the doc claims, and fix every claim that is no longer true. Only then run `docstamp update <doc>`. Never run `docstamp update` without that re-check, and never use `--all` to make the check pass.
+```
+
+Two commands help an agent before and during the work. `docstamp list-dependents <file>` shows which docs a code change affects, so the agent can update them in the same change, before CI complains:
+
+```console
+$ docstamp list-dependents src/cli/run.ts
+src/cli/run.ts
+  CLAUDE.md   via src
+  README.md   via src/cli
+```
+
+`docstamp list-dependencies <doc>` shows what a doc depends on and which files the patterns select. It does not read the lock:
+
+```console
+$ docstamp list-dependencies docs/architecture.md
+docs/architecture.md
+  depends   src/core
+  depends   !src/core/generated
+  resolved  src/core/hash.ts
+```
+
+Every command except `help` and `version` takes `--json`, so an agent can read the verdict as data ([JSON output](#json-output)).
+
+## Writing good dependencies
+
+- **Bind to the narrowest files that make the doc true.** A doc that depends on all of `src` goes stale on every commit, and people then stop reading the reports. `docs/architecture.md` should depend on `src/core`, not on the repository.
+- **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns are in [SPEC §8](docs/SPEC.md#8-patterns).
+- **Exclude generated or noisy files with `!`.** The last matching pattern wins, so put exclusions after the pattern they cut from. Every pattern must select at least one file, or it is an error (`E_EMPTY_PATTERN`).
+- **Do not depend on the lock, the configuration or the doc itself.** The root configuration and lock are not selectable, and a file is never one of its own dependencies ([SPEC §8.5](docs/SPEC.md#85-resolution)), so editing a doc never makes it stale.
+- **Know what counts as a change.** A file is hashed as it is, except that CR LF becomes LF in text files ([SPEC §10.2](docs/SPEC.md#102-normalized-content)). Nothing else is normalized: a changed license header, whitespace, a final newline, a byte order mark and every binary file all count, byte for byte. Renaming or moving a dependency counts too.
+- **Squash the doc edit into the review commit.** Known limit: the changed-file list is the difference from the commit that introduced the lock entry. An edit committed in the same commit as `docstamp update` makes the doc stale but is not listed, because docstamp stores one hash and no commit id ([SPEC §12.3](docs/SPEC.md#123-changedsince)). Commit the lock separately from the dependency edits it covers.
+- **Lock conflicts.** Two branches that update the same doc conflict on its `hash` line. Resolution is in [SPEC §11.2](docs/SPEC.md#112-canonical-form); take either side, run `docstamp`, review what it reports stale, and write again.
+
+When git history cannot answer (no git, not a work tree, a shallow clone, or an `update` not yet committed), the report prints the `depends` patterns instead of changed files, and `changes` in `--json` is `null`. Then list the dependencies and diff them yourself:
+
+```sh
+docstamp list-dependencies <doc>
+git diff <base> -- <files>
+```
+
+## Reference
+
+### Commands
 
 | Command | What it does |
 |---|---|
@@ -86,18 +169,6 @@ next: review each stale file against its dependencies, then run: docstamp update
 
 Every command except `help` and `version` takes `--json` and `--root <dir>`; `--root` needs a directory and never takes another option as its value. A command that fails before anything is evaluated (bad configuration, lock, root or file argument) prints only its diagnostics: no summary line, and `--json` omits `summary`. A file argument that is unknown or outside the root fails the whole command with only its diagnostics, never a partial report. The options `--write` and `--files` were replaced by `update` and `list-dependencies`. Command line: [SPEC §13](docs/SPEC.md#13-command-line).
 
-```console
-$ docstamp list-dependents src/main.ts
-src/main.ts
-  CLAUDE.md   via src/**
-$ docstamp list-dependencies CLAUDE.md
-CLAUDE.md
-  depends   src/**
-  depends   package.json
-  resolved  package.json
-  resolved  src/main.ts
-```
-
 ### Exit codes
 
 | Code | Meaning |
@@ -109,24 +180,11 @@ CLAUDE.md
 
 Warnings never affect the exit code. Full table: [SPEC §16](docs/SPEC.md#16-exit-codes).
 
-## Configuration
+### Configuration
 
-Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The example under Quick start is the whole shape; a longer one:
+Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`.
 
-```yaml
-version: 2
-files:
-  CLAUDE.md:
-    dependencies:
-      - src/**
-      - "!src/**/*.test.ts"
-      - package.json
-  tests/fixtures/user.json:
-    dependencies:
-      - schemas/user.schema.json
-```
-
-For editor completion and validation, point the YAML language server at the schema, which the package ships as `schema.json`:
+For editor completion and validation in YAML, point the language server at the schema, which the package ships as `schema.json`:
 
 ```yaml
 # yaml-language-server: $schema=https://unpkg.com/docstamp/schema.json
@@ -134,15 +192,26 @@ For editor completion and validation, point the YAML language server at the sche
 
 Offline, use `# yaml-language-server: $schema=./node_modules/docstamp/schema.json`.
 
-### TypeScript or JavaScript
+A script must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carriers)). TypeScript runs through Node's type stripping, so only erasable syntax works (no `enum`, no value `namespace`). TypeScript and JavaScript configurations were verified on Node.js 24.18.1. Evaluating the file may import other files; docstamp does not track them, so import only `docstamp`.
 
-The configuration can be a script instead: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`.
+### JSON output
 
-The file must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carriers)). TypeScript runs through Node's type stripping, so only erasable syntax works (no `enum`, no value `namespace`). TypeScript and JavaScript configurations were verified on Node.js 24.18.1. Evaluating the file may import other files; docstamp does not track them, so import only `docstamp`.
+`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)). Here is the stale `README.md` from the example above, with `changes` listing the changed dependencies (`null` when git history cannot answer):
 
-Pattern syntax is in [SPEC §8](docs/SPEC.md#8-patterns).
+```json
+{
+  "file": "README.md",
+  "state": "stale",
+  "reasons": ["content-changed"],
+  "dependencies": ["src/cli"],
+  "changes": [{ "status": "modified", "path": "src/cli/run.ts" }],
+  "diagnostics": []
+}
+```
 
-## GitHub Actions
+This is one entry of `files`; the report also has `version`, `mode`, `exitCode`, `summary` and top-level `diagnostics`.
+
+### GitHub Actions
 
 Fetch full history so the changed-file report can read it ([SPEC §12.3](docs/SPEC.md#123-changedsince)); the verdict itself does not need it.
 
@@ -168,40 +237,11 @@ jobs:
 
 `pnpm/action-setup` installs the pnpm version named by `packageManager` in your `package.json`. The job fails when `docstamp` exits 1 (a stale file) or 2 (an error). With npm, drop the `pnpm/action-setup` step and `cache: pnpm`, then run `npm ci` and `npx docstamp`. Pin the actions to commit SHAs if your policy requires it.
 
-## Workflow
+### Upgrading
 
-The three steps are defined in [SPEC §1](docs/SPEC.md#1-scope):
+From a version 1 lock (`docsync.lock`): delete it, review every file, then run `docstamp update --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
 
-1. CI runs `pnpm exec docstamp`. It exits 1 when a file's dependencies changed since its last review.
-2. A person or an agent reviews each stale file against its dependencies and edits it if needed.
-3. Run `pnpm exec docstamp update <file>` to record the review in `docstamp-lock.yaml`, and commit the lock.
-
-The first run has no lock; `pnpm exec docstamp update --all` records the initial state once the docs have been reviewed.
-
-Upgrading from a version 1 lock (`docsync.lock`): delete it, review every file, then run `pnpm exec docstamp update --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
-
-Upgrading from a version 1 configuration (`dependents` and `covers`): rename `dependents` to `files` and `covers` to `dependencies`, and set `version: 2`. Then run `pnpm exec docstamp update --all` to rewrite the version 2 lock as version 3; the hashes do not change, so first review the files with the previous docstamp version or `git diff`, because the version 2 lock stops `docstamp check` (E_LOCK_VERSION) and it reports nothing stale.
-
-### Reviewing a stale doc
-
-A stale doc lists the dependencies that changed since its last review, as `modified`, `added` or `deleted` ([SPEC §12.3](docs/SPEC.md#123-changedsince)). `--json` carries the same list as `changes`. The list comes from read-only `git` calls and never affects the verdict or exit code.
-
-Known limit: the list is the difference from the commit that introduced the lock entry. An edit committed in the same commit as `docstamp update` makes the doc stale but is not listed, because docstamp stores one hash and no commit id ([SPEC §12.3](docs/SPEC.md#123-changedsince)). Commit the lock separately from the edits it covers.
-
-When git history cannot answer (no git, not a work tree, a shallow clone, or an `update` not yet committed), docstamp prints the dependency patterns (`depends` lines) and `changes` is `null`. Then list the dependencies and diff them yourself:
-
-```sh
-pnpm exec docstamp list-dependencies <file>
-git diff <base> -- <files>
-```
-
-### Lock conflicts
-
-Two branches that write the same file conflict on its `hash` line. Resolution is in [SPEC §11.2](docs/SPEC.md#112-canonical-form).
-
-## What counts as a change
-
-A file's content is hashed as it is, except that CR LF becomes LF in text files ([SPEC §10.2](docs/SPEC.md#102-normalized-content)). Nothing else is normalized: a changed license header, whitespace, a final newline, a lone CR, a byte order mark, UTF-16 text and every binary file all count as changes, byte for byte. Renaming or moving a dependency counts too. A `docstamp.yaml`, `docstamp.config.*` or `docstamp-lock.yaml` below the root is an ordinary file; only the root's own are excluded ([SPEC §7.2](docs/SPEC.md#72-walk)).
+From a version 1 configuration (`dependents` and `covers`): rename `dependents` to `files` and `covers` to `dependencies`, and set `version: 2`. Then run `docstamp update --all` to rewrite the version 2 lock as version 3; the hashes do not change, so first review the files with the previous docstamp version or `git diff`, because the version 2 lock stops `docstamp check` (E_LOCK_VERSION) and it reports nothing stale.
 
 ## Compatibility
 
@@ -213,6 +253,10 @@ Your committed lock and your CI are what docstamp protects:
 - Each breaking change carries a migration note, shown as "BREAKING CHANGES" in the [release notes](https://github.com/nam-hle/docstamp/releases).
 
 Full policy: [SPEC §17](docs/SPEC.md#17-compatibility).
+
+## Beyond docs
+
+The mechanism does not care that the dependent file is a doc. Any hidden link between two files can be declared the same way: a schema and the fixtures that mirror it, a migration and its seed data, generated code and the template it comes from. Any file in the repository can have dependencies, and any file can be one ([SPEC §1](docs/SPEC.md#1-scope)). See [docs/VISION.md](docs/VISION.md) for the motivation.
 
 ## Documentation
 
