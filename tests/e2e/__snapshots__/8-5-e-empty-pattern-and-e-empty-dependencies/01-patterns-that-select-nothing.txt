@@ -6,8 +6,11 @@ INVALID  B.md
 INVALID  C.md
 INVALID  D.md
 INVALID  DOC.md
-INVALID  E.md
-0 ok, 0 stale, 5 invalid
+STALE    E.md  (unrecorded)
+  depends   src/**
+  depends   !src/**/*.spec.ts
+0 ok, 1 stale, 4 invalid
+next: review each stale file against its dependencies, then run: docstamp update E.md
 --- stderr ---
 error: E_EMPTY_PATTERN: B.md: nothing/**: Correct or remove the pattern; it matches no file.
 error: E_EMPTY_DEPENDENCIES: C.md: Correct the patterns in "dependencies"; together they select no file.
@@ -15,7 +18,7 @@ error: E_EMPTY_DEPENDENCIES: D.md: Correct the patterns in "dependencies"; toget
 error: E_EMPTY_PATTERN: D.md: D.md: Correct or remove the pattern; it matches no file.
 error: E_EMPTY_DEPENDENCIES: DOC.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: DOC.md: nothing/**: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_PATTERN: E.md: !src/**/*.spec.ts: Correct or remove the pattern; it matches no file.
+warning: W_EMPTY_EXCLUSION: E.md: !src/**/*.spec.ts: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
 --- setup: docstamp.yaml ---
 version: 2
 files:

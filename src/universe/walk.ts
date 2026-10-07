@@ -11,6 +11,8 @@ export interface Universe {
   paths: string[];
   kinds: Map<string, Kind>;
   onDisk: Map<string, string>;
+  // SPEC §7.2 step 3.4: the entries a rule skipped, not the ones below a skipped directory
+  ignored: string[];
   // SPEC §9.6.3: inline files and the lines of their hash keys, set once they are read
   marked?: Map<string, readonly number[]>;
 }
@@ -62,6 +64,7 @@ export function computeUniverse(
 ): Universe {
   const errors: Diagnostic[] = [];
   const found: Array<{ path: string; kind: Kind }> = [];
+  const ignored: string[] = [];
   const configRules = config.ignore.flatMap((line) => parseIgnoreLines(line, ''));
   let rules: IgnoreRule[] = [];
 
@@ -100,7 +103,10 @@ export function computeUniverse(
             : null;
       if (kind === null) continue;
       const rel = joinPath(prefix, name);
-      if (isIgnored(rel, kind === 'dir', activeRules)) continue;
+      if (isIgnored(rel, kind === 'dir', activeRules)) {
+        ignored.push(rel.normalize('NFC'));
+        continue;
+      }
       if (kind !== 'dir') {
         found.push({ path: rel, kind });
         continue;
@@ -112,7 +118,7 @@ export function computeUniverse(
   };
   walk(root, '');
 
-  const universe: Universe = { paths: [], kinds: new Map(), onDisk: new Map() };
+  const universe: Universe = { paths: [], kinds: new Map(), onDisk: new Map(), ignored };
   for (const { path, kind } of found) {
     if ((CONFIG_NAMES as readonly string[]).includes(path) || path === 'docstamp-lock.yaml')
       continue;
@@ -130,4 +136,13 @@ export function computeUniverse(
   }
   if (errors.length > 0) throw new Raised(errors);
   return universe;
+}
+
+// SPEC §8.5 NOTE: a path that exists under Root, is not in the Universe, and is ignored
+export function isIgnoredPath(root: string, universe: Universe, path: string): boolean {
+  const ignored = new Set(universe.ignored);
+  const segments = path.split('/');
+  const aboveOrSelf = segments.some((_, i) => ignored.has(segments.slice(0, i + 1).join('/')));
+  const below = universe.ignored.some((entry) => entry.startsWith(`${path}/`));
+  return (aboveOrSelf || below) && hasEntry(root, path);
 }

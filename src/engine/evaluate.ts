@@ -3,15 +3,26 @@ import { sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Reason, Result } from '../core/types.ts';
 import { dependencyHashFrom } from '../hash/hash.ts';
 import { patternMatches, select } from '../pattern/match.ts';
-import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
+import { literalPath, parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 
 export interface EngineFs {
   isStampedFile(path: string): boolean;
   fileHash(path: string): string;
+  // SPEC §8.5 NOTE: the path exists under Root but §7.3 keeps it out of the Universe
+  isIgnoredPath?(path: string): boolean;
 }
 
+const IGNORED_MESSAGE =
+  'Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore ' +
+  'or the ignore list; depend on its source, or remove that rule (gitignore: false skips ' +
+  '.gitignore files).';
+
 // SPEC §8.5
-export function resolveDependencies(b: Declaration, universe: readonly string[]): string[] {
+function resolveWithWarnings(
+  b: Declaration,
+  universe: readonly string[],
+  isIgnoredPath: (path: string) => boolean = () => false,
+): { resolved: string[]; warnings: Diagnostic[] } {
   const parsed = b.dependencies.map((source) => parsePattern(source));
   const invalid = b.dependencies.filter((_, i) => parsed[i] === null);
   if (invalid.length > 0) {
@@ -20,15 +31,33 @@ export function resolveDependencies(b: Declaration, universe: readonly string[])
   const patterns = parsed as ParsedPattern[];
   const candidates = universe.filter((path) => path !== b.file);
   const problems: Diagnostic[] = [];
+  const warnings: Diagnostic[] = [];
   patterns.forEach((pattern, i) => {
-    if (!candidates.some((path) => patternMatches(pattern, path))) {
-      problems.push(diag('E_EMPTY_PATTERN', { file: b.file, subject: b.dependencies[i] }));
+    if (candidates.some((path) => patternMatches(pattern, path))) return;
+    const subject = b.dependencies[i];
+    if (pattern.negated) {
+      warnings.push(diag('W_EMPTY_EXCLUSION', { file: b.file, subject }));
+      return;
     }
+    const literal = literalPath(pattern);
+    const ignored = literal !== null && isIgnoredPath(literal);
+    problems.push(
+      diag('E_EMPTY_PATTERN', {
+        file: b.file,
+        subject,
+        ...(ignored ? { message: IGNORED_MESSAGE } : {}),
+      }),
+    );
   });
   const resolved = select(patterns, candidates);
   if (resolved.length === 0) problems.push(diag('E_EMPTY_DEPENDENCIES', { file: b.file }));
-  if (problems.length > 0) throw new Raised(problems);
-  return resolved;
+  if (problems.length > 0) throw new Raised([...problems, ...warnings]);
+  return { resolved, warnings };
+}
+
+// SPEC §8.5
+export function resolveDependencies(b: Declaration, universe: readonly string[]): string[] {
+  return resolveWithWarnings(b, universe).resolved;
 }
 
 // SPEC §10.4
@@ -69,7 +98,11 @@ export function evaluate(
     problems.push(diag('E_FILE_MISSING', { file: b.file }));
   }
   let resolved: string[] = [];
-  if (attached.length === 0) collect(() => (resolved = resolveDependencies(b, universe)));
+  let warnings: Diagnostic[] = [];
+  if (attached.length === 0) {
+    const ignored = (path: string) => fs.isIgnoredPath?.(path) ?? false;
+    collect(() => ({ resolved, warnings } = resolveWithWarnings(b, universe, ignored)));
+  }
   let current = '';
   if (problems.length === 0) collect(() => (current = dependencyHash(resolved, fs)));
   if (problems.length > 0) {
@@ -81,7 +114,8 @@ export function evaluate(
   if (entry === undefined || entry === null) reasons.push('unrecorded');
   else if (entry !== current) reasons.push('content-changed');
   const state = reasons.length > 0 ? 'stale' : 'ok';
-  return { ...base, state, reasons, resolved, current, diagnostics: [] };
+  const diagnostics = sortDiagnostics(warnings.map((d) => ({ ...d, file: b.file })));
+  return { ...base, state, reasons, resolved, current, diagnostics };
 }
 
 // SPEC §12.2 step 8: only a configured Declaration binds a LockEntry

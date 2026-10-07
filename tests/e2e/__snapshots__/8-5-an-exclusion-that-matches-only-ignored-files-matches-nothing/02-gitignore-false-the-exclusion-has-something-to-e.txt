@@ -1,0 +1,35 @@
+# gitignore: false, the exclusion has something to exclude
+$ docstamp list-dependencies --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "DOC.md",
+      "dependencies": [
+        "**",
+        "!build/out.js"
+      ],
+      "resolvedFiles": [
+        ".gitignore",
+        "keep.log",
+        "src/.gitignore",
+        "src/a.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+gitignore: false
+files:
+  "DOC.md":
+    dependencies:
+      - "**"
+      - "!build/out.js"

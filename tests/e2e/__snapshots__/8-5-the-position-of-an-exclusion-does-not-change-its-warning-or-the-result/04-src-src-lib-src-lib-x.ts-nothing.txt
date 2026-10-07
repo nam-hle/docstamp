@@ -1,0 +1,44 @@
+# src/** !src/lib src/lib/x.ts !nothing
+$ docstamp list-dependencies --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "DOC.md",
+      "dependencies": [
+        "src/**",
+        "!src/lib",
+        "src/lib/x.ts",
+        "!nothing"
+      ],
+      "resolvedFiles": [
+        "src/a.ts",
+        "src/lib/x.ts"
+      ],
+      "diagnostics": [
+        {
+          "code": "W_EMPTY_EXCLUSION",
+          "severity": "warning",
+          "file": "DOC.md",
+          "subject": "!nothing",
+          "message": "The exclusion matches no file, so it excludes nothing; remove it, or keep it for later."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"
+      - "!src/lib"
+      - "src/lib/x.ts"
+      - "!nothing"

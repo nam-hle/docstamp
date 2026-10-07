@@ -1,0 +1,25 @@
+# no __test__ folder yet
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    docs/all.md  (unrecorded)
+  depends   src/**
+  depends   !src/**/__test__/**
+STALE    docs/negation.md  (unrecorded)
+  depends   src/**
+  depends   !src/**/*.test.ts
+0 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/all.md docs/negation.md
+--- stderr ---
+warning: W_EMPTY_EXCLUSION: docs/all.md: !src/**/__test__/**: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "docs/all.md":
+    dependencies:
+      - "src/**"
+      - "!src/**/__test__/**"
+  "docs/negation.md":
+    dependencies:
+      - "src/**"
+      - "!src/**/*.test.ts"

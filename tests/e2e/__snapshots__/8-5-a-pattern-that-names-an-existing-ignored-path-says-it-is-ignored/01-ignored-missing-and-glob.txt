@@ -1,0 +1,25 @@
+# ignored, missing and glob
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  DOC.md
+0 ok, 0 stale, 1 invalid
+--- stderr ---
+error: E_EMPTY_PATTERN: DOC.md: .npmrc: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+error: E_EMPTY_PATTERN: DOC.md: build: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+error: E_EMPTY_PATTERN: DOC.md: build/*: Correct or remove the pattern; it matches no file.
+error: E_EMPTY_PATTERN: DOC.md: build/missing.js: Correct or remove the pattern; it matches no file.
+error: E_EMPTY_PATTERN: DOC.md: build/output/index.js: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+error: E_EMPTY_PATTERN: DOC.md: src/gone.ts: Correct or remove the pattern; it matches no file.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/a.ts"
+      - ".npmrc"
+      - "build/output/index.js"
+      - "build"
+      - "build/missing.js"
+      - "build/*"
+      - "src/gone.ts"

@@ -184,7 +184,7 @@ identical needs no Review (Principle 4).
 | `[[Reasons]]` | List of Reason | non-empty iff `[[State]]` is `stale` |
 | `[[Resolved]]` | List of RepoPath, path order | empty iff `[[State]]` is `invalid` |
 | `[[Current]]` | Hash or empty | empty iff `[[State]]` is `invalid` |
-| `[[Diagnostics]]` | List of Diagnostic, §5.5 order | non-empty iff `[[State]]` is `invalid` |
+| `[[Diagnostics]]` | List of Diagnostic, §5.5 order | holds an error iff `[[State]]` is `invalid`; any Result may also hold warnings (§8.5) |
 | `[[Changes]]` | List of Change in path order, or *unknown* | known only as defined in §12.3 |
 
 A *Reason* is `unrecorded` or `content-changed`; exactly one applies to a `stale` Result.
@@ -312,7 +312,7 @@ Symbolic links are never followed: a link is an entry of kind *link*, whatever i
          and continue.
       2. If *n* is `.git`, of any kind, skip *e*.
       3. If *e* is *other*, skip *e*.
-      4. If `IsIgnored(q, kind of e, rules, config)` (§7.3), skip *e*.
+      4. If `IsIgnored(q, kind of e, rules, config)` (§7.3), skip *e*; *q* is then an *ignored entry*.
       5. If *e* is a *directory*: if it contains an entry named `.git`, skip *e* (a nested
          repository); otherwise call `WalkDirectory(e, q)`.
       6. If *e* is a *file* or *link*, add *q* to the Universe.
@@ -455,18 +455,39 @@ a file under a directory an earlier negation removed.
 
 `ResolveDependencies(declaration, universe)`:
 
-1. Let *problems* be an empty List.
+1. Let *problems* and *warnings* be empty Lists.
 2. Let *candidates* be *universe* without `declaration.[[File]]`.
 3. For each *pattern* of `declaration.[[Dependencies]]`: if no *path* of *candidates* satisfies
-   `PatternMatches(pattern, path)`, collect `E_EMPTY_PATTERN` into *problems*, with
-   `[[Subject]]` *pattern*.
+   `PatternMatches(pattern, path)`, then, with `[[Subject]]` *pattern*: if *pattern* has no
+   Negation, collect `E_EMPTY_PATTERN` into *problems*; otherwise collect `W_EMPTY_EXCLUSION` into
+   *warnings*.
 4. Let *resolved* be `Select(declaration.[[Dependencies]], candidates)`.
 5. If *resolved* is empty, collect `E_EMPTY_DEPENDENCIES` into *problems*.
-6. If *problems* is not empty, raise *problems*. Otherwise return *resolved*.
+6. If *problems* is not empty, raise *problems* followed by *warnings*. Otherwise return *resolved*
+   and *warnings*.
 
 NOTE: A file is never one of its own dependencies (step 2), so editing a file never
-makes it stale. Every pattern, negated or not, must match something (Principle 6): a negation
-that removes nothing is a stale or mistyped rule.
+makes it stale. A pattern without Negation must match something (Principle 6): a dependency that
+matches nothing is a mistyped or stale rule, and a declaration whose patterns together select
+nothing is a mistake (step 5).
+
+NOTE: An exclusion *matches nothing* when no file of *candidates* satisfies `PatternMatches` for the
+exclusion itself (step 3). The test looks at the exclusion alone: it does not depend on the
+patterns before it, so an exclusion that matches a file nothing selected is not warned about, and
+one that matches only files outside the Universe (ignored, §7.3) is. It never changes `Select`
+(§8.4), the last matching pattern still wins, the resolved files, the Dependency Hash or the state
+of the file. A warning lets a standard exclusion block be declared before the files it excludes
+exist, and survive their deletion.
+
+NOTE: The `[[Message]]` of `E_EMPTY_PATTERN` is informative (§5.5), and SHOULD say when the pattern
+is a *literal path* that exists under Root but is not in the Universe because it is ignored, so
+that nobody hunts for a typo. A literal path is a Pattern whose every Segment is made of Literals
+only (no `*`, `?`, Class, Alternation or `**`); it denotes the String of those Literals, Escapes
+resolved. It is *ignored* when it exists as an entry under Root (a file, link or directory, not
+followed) and either it or a directory above it is an ignored entry (§7.2 step 3.4), or an ignored
+entry is below it (a directory whose content is all ignored). This changes neither the selection,
+nor the Diagnostic code, nor the Diagnostic order, nor any verdict. `git` is not consulted, so a
+renamed file is not traced.
 
 ## 9 Configuration File
 
@@ -851,16 +872,18 @@ from §9.3, §9.6 and §12.2 attached to `declaration.[[File]]`:
 
 1. Let *r* be a Result with `[[File]]` and `[[Dependencies]]` from *declaration*, empty
    `[[Reasons]]`, `[[Resolved]]` and `[[Diagnostics]]`, and empty `[[Current]]`.
-2. Let *problems* be a copy of *attached*.
+2. Let *problems* be a copy of *attached*, and *warnings* an empty List.
 3. If `declaration.[[File]]` does not satisfy §9.4, collect `E_FILE_MISSING` into
    *problems*. (An inline file always satisfies it.)
-4. If *attached* is empty, let *resolved* be `ResolveDependencies(declaration, universe)`; if it
-   raises, add its Diagnostics to *problems*.
+4. If *attached* is empty, let *resolved* and *warnings* be the result of
+   `ResolveDependencies(declaration, universe)`; if it raises, add its Diagnostics, warnings
+   included, to *problems*.
 5. If *problems* is empty, let *current* be `DependencyHash(resolved)`; if it raises, add its
    Diagnostics to *problems*.
 6. If *problems* is not empty, set *r*.`[[State]]` to `invalid` and *r*.`[[Diagnostics]]` to
    *problems*, each with `[[File]]` set to `declaration.[[File]]`, and return *r*.
-7. Set *r*.`[[Resolved]]` to *resolved* and *r*.`[[Current]]` to *current*.
+7. Set *r*.`[[Resolved]]` to *resolved*, *r*.`[[Current]]` to *current* and *r*.`[[Diagnostics]]`
+   to *warnings*, each with `[[File]]` set to `declaration.[[File]]`.
 8. Let *entry* be `declaration.[[Recorded]]` if `declaration.[[Origin]]` is `inline`, else the
    LockEntry of `declaration.[[File]]` in *lock*, or *none*.
 9. If *entry* is *none*, append `unrecorded`. Otherwise, if *entry* is not equal to *current*,
@@ -1073,7 +1096,7 @@ reviewer compares them with the state at the last Write using its own tools.
 10. Output, for each of *targets*, whether its LockEntry changed in step 6, or its `[[Recorded]]`
    Hash was none or differed from *t*.`[[Current]]` in step 9 (*written*), or was already equal to
    *t*.`[[Current]]` (*unchanged*), and *removed* (§14), and *global* without its `W_ORPHAN`
-   Diagnostics, since step 7 removed those entries. Exit 0.
+   Diagnostics, since step 7 removed those entries, and the warnings of *targets*. Exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
@@ -1299,6 +1322,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   of an entry is always `[]`, kept for the shape of the other modes. The top-level
   `diagnostics` hold the attached `E_PATTERN` Diagnostics, or the raised Diagnostics, in which
   case `files` is empty.
+- The `diagnostics` of a file holds its errors when it is `invalid`, and its warnings (§8.5) in
+  every state, so an `ok` or `stale` file may have a non-empty `diagnostics`.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
   empty `[[File]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
 - When a step raises before Results exist, `summary` is omitted (as it always is for
@@ -1349,7 +1374,7 @@ Diagnostics as in §14.3.
 | `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies` or `hash` |
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
-| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern |
+| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
 | `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
@@ -1358,6 +1383,7 @@ Diagnostics as in §14.3.
 | `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 Lockfile, `docstamp update --all` rewrites it as version 3 (hashes are unchanged); otherwise as `E_LOCK` |
 | `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
+| `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
 
 ## 16 Exit Codes
 
@@ -1402,6 +1428,12 @@ A change to any of the following is breaking:
 | Verdicts | what is `stale` or `ok`; the Reasons (§5.4); any Diagnostic that turns a run from passing to failing or the reverse, including a warning that becomes an error and an error that becomes a warning (§15, §16) |
 | Contract | an exit code or its meaning (§16); the name, severity or meaning of a Diagnostic code (§15); a member of the JSON output removed, renamed or given another meaning, or the JSON output `version` (§14.5); a command name, an option name, or the meaning of an argument (§13) |
 | Platform | the minimum Node.js version (the `engines` field of the package); how a script Carrier is loaded or what it may export (§9.5) |
+
+NOTE: An exclusion that matches nothing was `E_EMPTY_PATTERN` and is `W_EMPTY_EXCLUSION` (§8.5): an
+error that becomes a warning, so a *Verdicts* change and breaking. A file that was `invalid` for
+this reason alone becomes `ok` or `stale`, and exit code 2 becomes 0 or 1; nothing needs to
+migrate. No Hash input and no selection changes (§8.4 is unchanged), so the Lockfile `version`, the
+Dependency Hashes and the pinned vectors of §17.7 stay as they are.
 
 ### 17.3 Non-breaking changes
 

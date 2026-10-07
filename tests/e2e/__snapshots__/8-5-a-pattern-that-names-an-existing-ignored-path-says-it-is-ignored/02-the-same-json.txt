@@ -1,0 +1,77 @@
+# the same, json
+$ docstamp --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "summary": {
+    "ok": 0,
+    "stale": 0,
+    "invalid": 1
+  },
+  "files": [
+    {
+      "file": "DOC.md",
+      "state": "invalid",
+      "reasons": [],
+      "dependencies": [
+        "src/a.ts",
+        ".npmrc",
+        "build/output/index.js",
+        "build",
+        "build/missing.js",
+        "build/*",
+        "src/gone.ts"
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "E_EMPTY_PATTERN",
+          "severity": "error",
+          "file": "DOC.md",
+          "subject": ".npmrc",
+          "message": "Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files)."
+        },
+        {
+          "code": "E_EMPTY_PATTERN",
+          "severity": "error",
+          "file": "DOC.md",
+          "subject": "build",
+          "message": "Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files)."
+        },
+        {
+          "code": "E_EMPTY_PATTERN",
+          "severity": "error",
+          "file": "DOC.md",
+          "subject": "build/*",
+          "message": "Correct or remove the pattern; it matches no file."
+        },
+        {
+          "code": "E_EMPTY_PATTERN",
+          "severity": "error",
+          "file": "DOC.md",
+          "subject": "build/missing.js",
+          "message": "Correct or remove the pattern; it matches no file."
+        },
+        {
+          "code": "E_EMPTY_PATTERN",
+          "severity": "error",
+          "file": "DOC.md",
+          "subject": "build/output/index.js",
+          "message": "Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files)."
+        },
+        {
+          "code": "E_EMPTY_PATTERN",
+          "severity": "error",
+          "file": "DOC.md",
+          "subject": "src/gone.ts",
+          "message": "Correct or remove the pattern; it matches no file."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

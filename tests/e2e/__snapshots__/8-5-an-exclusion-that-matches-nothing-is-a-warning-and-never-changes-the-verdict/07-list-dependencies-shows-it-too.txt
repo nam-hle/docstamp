@@ -1,0 +1,37 @@
+# list-dependencies shows it too
+$ docstamp list-dependencies --json docs/all.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "docs/all.md",
+      "dependencies": [
+        "src/**",
+        "!src/**/__test__/**"
+      ],
+      "resolvedFiles": [
+        "src/a.test.ts",
+        "src/a.ts",
+        "src/b.ts",
+        "src/c.ts",
+        "src/lib/x.ts",
+        "src/lib/y.test.ts"
+      ],
+      "diagnostics": [
+        {
+          "code": "W_EMPTY_EXCLUSION",
+          "severity": "warning",
+          "file": "docs/all.md",
+          "subject": "!src/**/__test__/**",
+          "message": "The exclusion matches no file, so it excludes nothing; remove it, or keep it for later."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

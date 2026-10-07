@@ -192,7 +192,7 @@ describe('§9.6.4 Stamp', () => {
   });
   it('stampFile writes atomically, keeps the mode, and leaves no temporary file', () => {
     const root = makeTree({ 'd.md': '---\ndocstamp:\n  dependencies: [src]\n---\nbody\n' });
-    const universe = { paths: ['d.md'], kinds: new Map(), onDisk: new Map() };
+    const universe = { paths: ['d.md'], kinds: new Map(), onDisk: new Map(), ignored: [] };
     stampFile(root, universe, 'd.md', H);
     expect(readFileSync(join(root, 'd.md'), 'utf8')).toBe(
       `---\ndocstamp:\n  dependencies: [src]\n  hash: ${H}\n---\nbody\n`,

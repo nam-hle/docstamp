@@ -1,0 +1,12 @@
+# list-dependencies
+$ docstamp list-dependencies DOC.md
+exit: 2
+--- stdout ---
+DOC.md
+--- stderr ---
+error: E_EMPTY_PATTERN: DOC.md: .npmrc: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+error: E_EMPTY_PATTERN: DOC.md: build: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+error: E_EMPTY_PATTERN: DOC.md: build/*: Correct or remove the pattern; it matches no file.
+error: E_EMPTY_PATTERN: DOC.md: build/missing.js: Correct or remove the pattern; it matches no file.
+error: E_EMPTY_PATTERN: DOC.md: build/output/index.js: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+error: E_EMPTY_PATTERN: DOC.md: src/gone.ts: Correct or remove the pattern; it matches no file.

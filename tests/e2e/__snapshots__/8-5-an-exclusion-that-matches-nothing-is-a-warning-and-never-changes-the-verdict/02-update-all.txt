@@ -1,0 +1,7 @@
+$ docstamp update --all
+exit: 0
+--- stdout ---
+written  docs/all.md
+written  docs/negation.md
+--- stderr ---
+warning: W_EMPTY_EXCLUSION: docs/all.md: !src/**/__test__/**: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.

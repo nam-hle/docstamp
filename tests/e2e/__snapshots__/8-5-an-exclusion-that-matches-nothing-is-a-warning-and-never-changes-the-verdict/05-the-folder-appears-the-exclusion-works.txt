@@ -1,0 +1,10 @@
+# the folder appears, the exclusion works
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    docs/negation.md  (content-changed)
+  depends   src/**
+  depends   !src/**/*.test.ts
+1 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/negation.md
+--- stderr ---

@@ -1,0 +1,89 @@
+# json
+$ docstamp --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "summary": {
+    "ok": 0,
+    "stale": 1,
+    "invalid": 2
+  },
+  "files": [
+    {
+      "file": "docs/all.md",
+      "state": "stale",
+      "reasons": [
+        "unrecorded"
+      ],
+      "dependencies": [
+        "src/**"
+      ],
+      "changes": null,
+      "diagnostics": []
+    },
+    {
+      "file": "docs/mixed.md",
+      "state": "invalid",
+      "reasons": [],
+      "dependencies": [
+        "nothing/**",
+        "!nothing/x"
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "E_EMPTY_DEPENDENCIES",
+          "severity": "error",
+          "file": "docs/mixed.md",
+          "subject": null,
+          "message": "Correct the patterns in \"dependencies\"; together they select no file."
+        },
+        {
+          "code": "E_EMPTY_PATTERN",
+          "severity": "error",
+          "file": "docs/mixed.md",
+          "subject": "nothing/**",
+          "message": "Correct or remove the pattern; it matches no file."
+        },
+        {
+          "code": "W_EMPTY_EXCLUSION",
+          "severity": "warning",
+          "file": "docs/mixed.md",
+          "subject": "!nothing/x",
+          "message": "The exclusion matches no file, so it excludes nothing; remove it, or keep it for later."
+        }
+      ]
+    },
+    {
+      "file": "docs/only.md",
+      "state": "invalid",
+      "reasons": [],
+      "dependencies": [
+        "!nothing",
+        "!src/a.ts"
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "E_EMPTY_DEPENDENCIES",
+          "severity": "error",
+          "file": "docs/only.md",
+          "subject": null,
+          "message": "Correct the patterns in \"dependencies\"; together they select no file."
+        },
+        {
+          "code": "W_EMPTY_EXCLUSION",
+          "severity": "warning",
+          "file": "docs/only.md",
+          "subject": "!nothing",
+          "message": "The exclusion matches no file, so it excludes nothing; remove it, or keep it for later."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

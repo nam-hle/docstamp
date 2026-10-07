@@ -1,0 +1,30 @@
+# text
+$ docstamp
+exit: 2
+--- stdout ---
+STALE    docs/all.md  (unrecorded)
+  depends   src/**
+INVALID  docs/mixed.md
+INVALID  docs/only.md
+0 ok, 1 stale, 2 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/all.md
+--- stderr ---
+error: E_EMPTY_DEPENDENCIES: docs/mixed.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: docs/mixed.md: nothing/**: Correct or remove the pattern; it matches no file.
+warning: W_EMPTY_EXCLUSION: docs/mixed.md: !nothing/x: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
+error: E_EMPTY_DEPENDENCIES: docs/only.md: Correct the patterns in "dependencies"; together they select no file.
+warning: W_EMPTY_EXCLUSION: docs/only.md: !nothing: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "docs/all.md":
+    dependencies:
+      - "src/**"
+  "docs/only.md":
+    dependencies:
+      - "!nothing"
+      - "!src/a.ts"
+  "docs/mixed.md":
+    dependencies:
+      - "nothing/**"
+      - "!nothing/x"
