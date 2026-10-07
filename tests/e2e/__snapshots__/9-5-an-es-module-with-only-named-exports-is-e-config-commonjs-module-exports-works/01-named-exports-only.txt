@@ -4,7 +4,7 @@ exit: 2
 --- stdout ---
 0 ok, 0 stale, 0 invalid
 --- stderr ---
-error: E_CONFIG: Fix the named key in the configuration file.
+error: E_CONFIG: The configuration module has no default export; use "export default" (a CommonJS module.exports value is also accepted).
 --- setup: docstamp.config.mjs ---
 export const version = 2;
 export const files = { 'CLAUDE.md': { dependencies: ['src/**'] } };

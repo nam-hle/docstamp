@@ -4,4 +4,3 @@ exit: 0
 written  GUIDE.md
 removed  README.md
 --- stderr ---
-warning: W_ORPHAN: README.md: Run "docstamp update" on any file to remove the entry.

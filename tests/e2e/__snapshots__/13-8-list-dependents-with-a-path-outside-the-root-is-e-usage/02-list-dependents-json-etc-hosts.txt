@@ -5,21 +5,15 @@ exit: 2
   "version": 2,
   "mode": "list-dependents",
   "exitCode": 2,
-  "files": [
+  "files": [],
+  "diagnostics": [
     {
-      "file": "/etc/hosts",
-      "dependents": [],
-      "diagnostics": [
-        {
-          "code": "E_USAGE",
-          "severity": "error",
-          "file": null,
-          "subject": "/etc/hosts",
-          "message": "Name a file inside the root."
-        }
-      ]
+      "code": "E_USAGE",
+      "severity": "error",
+      "file": null,
+      "subject": "/etc/hosts",
+      "message": "Name a file inside the root."
     }
-  ],
-  "diagnostics": []
+  ]
 }
 --- stderr ---

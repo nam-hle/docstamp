@@ -29,6 +29,7 @@ export interface Session {
   base: string;
   home: string;
   counter: number;
+  produced: Set<string>;
   clock: number;
   fixtureDir: string | undefined;
 }
@@ -260,6 +261,7 @@ export class Repo {
     const session = this.session;
     session.counter += 1;
     const file = `${String(session.counter).padStart(2, '0')}-${name}.txt`;
+    session.produced.add(file);
     const normalized = this.normalize(text);
     await session
       .expect(normalized)

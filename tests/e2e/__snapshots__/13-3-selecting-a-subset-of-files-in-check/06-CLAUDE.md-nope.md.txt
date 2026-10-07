@@ -1,10 +1,6 @@
 $ docstamp CLAUDE.md nope.md
 exit: 2
 --- stdout ---
-STALE    CLAUDE.md  (content-changed)
-  depends   src/**
-  depends   !src/**/*.test.ts
-0 ok, 1 stale, 0 invalid
-next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+0 ok, 0 stale, 0 invalid
 --- stderr ---
 error: E_UNKNOWN_FILE: nope.md: Name a file listed under "files" in the configuration file.

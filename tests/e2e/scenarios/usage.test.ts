@@ -56,6 +56,13 @@ scenario('§13.2 usage errors exit 2 before any root discovery', { git: false },
     [['--bogus'], 'E_USAGE: --bogus'],
     [['-x'], 'E_USAGE: -x'],
     [['--root'], 'E_USAGE: --root'],
+    [['check', '--root'], '--root needs a directory'],
+    [['--root', '--json'], '--root needs a directory'],
+    [['--root', '--root', '.'], '--root needs a directory'],
+    [['--root', '--root=.'], '--root needs a directory'],
+    [['--root', '--'], '--root needs a directory'],
+    [['--root', '--all', 'update'], '--root needs a directory'],
+    [['--root='], '--root needs a directory'],
     [['--root', '.', '--root', '.'], 'E_USAGE: --root'],
     [['--root=.', '--root=.'], 'E_USAGE: --root'],
     [['--json', '--json'], 'E_USAGE: --json'],
@@ -92,7 +99,7 @@ scenario(
     const later = await repo.run(['README.md', 'update']);
     expect(later.exit).toBe(2);
     expect(later.stderr).toContain('E_UNKNOWN_FILE: update');
-    expect(later.stdout).toContain('README.md  (unrecorded)');
+    expect(later.stdout).not.toContain('README.md');
 
     const second = await repo.run(['check', 'update']);
     expect(second.exit).toBe(2);

@@ -7,17 +7,15 @@ exit: 0
   "mode": "update",
   "exitCode": 0,
   "summary": {
-    "ok": 0,
-    "stale": 3,
+    "ok": 3,
+    "stale": 0,
     "invalid": 0
   },
   "files": [
     {
       "file": "ROOT.md",
-      "state": "stale",
-      "reasons": [
-        "unrecorded"
-      ],
+      "state": "ok",
+      "reasons": [],
       "dependencies": [
         "packages/*/package.json"
       ],
@@ -27,10 +25,8 @@ exit: 0
     },
     {
       "file": "packages/a/README.md",
-      "state": "stale",
-      "reasons": [
-        "unrecorded"
-      ],
+      "state": "ok",
+      "reasons": [],
       "dependencies": [
         "packages/a/src/**"
       ],
@@ -40,10 +36,8 @@ exit: 0
     },
     {
       "file": "packages/b/README.md",
-      "state": "stale",
-      "reasons": [
-        "unrecorded"
-      ],
+      "state": "ok",
+      "reasons": [],
       "dependencies": [
         "packages/b/src/**",
         "packages/a/src/index.ts"

@@ -1,8 +1,24 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { it } from 'vitest';
-import { REPO_DIR, Repo, copyFixture, hermeticEnv, restoreModes, type Session } from './repo.ts';
+import {
+  E2E_DIR,
+  REPO_DIR,
+  Repo,
+  copyFixture,
+  hermeticEnv,
+  restoreModes,
+  type Session,
+} from './repo.ts';
 import { spawnSync } from 'node:child_process';
 
 export interface ScenarioOptions {
@@ -14,7 +30,7 @@ export interface ScenarioOptions {
 
 type Body = (repo: Repo) => Promise<void> | void;
 
-const slugOf = (name: string): string =>
+export const slugOf = (name: string): string =>
   name
     .toLowerCase()
     .replace(/[^a-z0-9]+/gu, '-')
@@ -43,6 +59,15 @@ function prepare(options: ScenarioOptions, session: Session): Repo {
   return new Repo(root, session);
 }
 
+function assertNoObsoleteSnapshots(session: Session): void {
+  const folder = join(E2E_DIR, '__snapshots__', session.slug);
+  const present = existsSync(folder) ? readdirSync(folder) : [];
+  const obsolete = present.filter((file) => !session.produced.has(file));
+  if (obsolete.length > 0) {
+    throw new Error(`obsolete snapshot files in ${folder}: ${obsolete.join(', ')}; delete them`);
+  }
+}
+
 export function scenario(name: string, body: Body): void;
 export function scenario(name: string, options: ScenarioOptions, body: Body): void;
 export function scenario(name: string, second: ScenarioOptions | Body, third?: Body): void {
@@ -62,11 +87,13 @@ export function scenario(name: string, second: ScenarioOptions | Body, third?: B
       base,
       home: join(base, 'home'),
       counter: 0,
+      produced: new Set<string>(),
       clock: 0,
       fixtureDir: undefined,
     };
     try {
       await body(prepare(options, session));
+      assertNoObsoleteSnapshots(session);
     } finally {
       restoreModes(base);
       rmSync(base, { recursive: true, force: true });

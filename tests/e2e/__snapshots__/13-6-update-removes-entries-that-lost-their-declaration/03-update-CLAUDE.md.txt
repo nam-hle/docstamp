@@ -5,5 +5,3 @@ written  CLAUDE.md
 removed  README.md
 removed  docs/guide.md
 --- stderr ---
-warning: W_ORPHAN: README.md: Run "docstamp update" on any file to remove the entry.
-warning: W_ORPHAN: docs/guide.md: Run "docstamp update" on any file to remove the entry.

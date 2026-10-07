@@ -109,6 +109,7 @@ scenario('§13.3 selecting a subset of files in check', { fixture }, async (repo
   expect(unknown.exit).toBe(2);
   expect(unknown.stderr).toContain('E_UNKNOWN_FILE');
   expect(unknown.stderr).toContain('nope.md');
+  expect(unknown.stdout).toBe('0 ok, 0 stale, 0 invalid\n');
 
   const notStamped = await repo.run(['src/util.ts']);
   expect(notStamped.exit).toBe(2);

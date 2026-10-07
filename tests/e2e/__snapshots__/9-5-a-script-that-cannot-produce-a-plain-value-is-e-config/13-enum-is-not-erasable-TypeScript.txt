@@ -4,7 +4,7 @@ exit: 2
 --- stdout ---
 0 ok, 0 stale, 0 invalid
 --- stderr ---
-error: E_CONFIG: Fix the named key in the configuration file.
+error: E_CONFIG: Fix the configuration file; the key named, if any, is the problem.
 --- setup: docstamp.config.ts ---
 enum E { A }
 export default { version: E.A };

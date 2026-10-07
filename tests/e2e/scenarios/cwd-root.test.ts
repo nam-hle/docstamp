@@ -149,5 +149,17 @@ scenario(
     expect(resolved).toContain('sub/docstamp.yaml');
     expect(resolved).not.toContain('docstamp.yaml');
     expect(resolved).not.toContain('docstamp-lock.yaml');
+
+    await repo.run(['update', '--all'], { expectExit: 0 });
+    expect(repo.exists('docstamp-lock.yaml')).toBe(true);
+    repo.write('sub/docstamp-lock.yaml', 'version: 3\nfiles: {}\n');
+    const nestedLock = await repo.run(['--json'], { label: 'a nested lock file appears' });
+    expect(nestedLock.exit).toBe(1);
+    await repo.run(['update', '--all'], { expectExit: 0 });
+
+    repo.append('sub/docstamp.yaml', '# edited\n');
+    const edited = await repo.run([], { label: 'the nested configuration file is edited' });
+    expect(edited.exit).toBe(1);
+    expect(edited.stdout).toContain('STALE    ROOT.md  (content-changed)');
   },
 );

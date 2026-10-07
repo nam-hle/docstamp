@@ -6,17 +6,15 @@ exit: 0
   "mode": "update",
   "exitCode": 0,
   "summary": {
-    "ok": 0,
-    "stale": 1,
+    "ok": 1,
+    "stale": 0,
     "invalid": 0
   },
   "files": [
     {
       "file": "CLAUDE.md",
-      "state": "stale",
-      "reasons": [
-        "unrecorded"
-      ],
+      "state": "ok",
+      "reasons": [],
       "dependencies": [
         "src/**",
         "!src/**/*.test.ts"

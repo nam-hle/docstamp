@@ -93,6 +93,7 @@ scenario('§13.6 update removes entries that lost their Declaration', { fixture 
 
   const update = await repo.run(['update', 'CLAUDE.md']);
   expect(update.stdout).toBe('written  CLAUDE.md\nremoved  README.md\nremoved  docs/guide.md\n');
+  expect(update.stderr).toBe('');
   await repo.snapFile('docstamp-lock.yaml');
   const after = await repo.run([]);
   expect(after).toMatchObject({ exit: 0, stdout: '1 ok, 0 stale, 0 invalid\n', stderr: '' });
@@ -121,8 +122,26 @@ scenario('§14.5 update JSON adds written and removed', { fixture }, async (repo
     'diagnostics',
     'written',
   ]);
-  expect(doc).toMatchObject({ mode: 'update', exitCode: 0, removed: [] });
-  expect(doc.files[0]).toMatchObject({ file: 'CLAUDE.md', written: true, changes: null });
+  expect(doc).toMatchObject({
+    mode: 'update',
+    exitCode: 0,
+    summary: { ok: 1, stale: 0, invalid: 0 },
+    removed: [],
+  });
+  expect(doc.files[0]).toMatchObject({
+    file: 'CLAUDE.md',
+    state: 'ok',
+    reasons: [],
+    written: true,
+    changes: null,
+  });
+  const check = await repo.run(['--json', 'CLAUDE.md'], { snapshot: false });
+  expect(check.json().files[0]).toMatchObject({ state: 'ok', reasons: [] });
+  repo.append('src/util.ts', '// edit\n');
+  const stale = await repo.run(['--json', 'CLAUDE.md'], { snapshot: false });
+  expect(stale.json().files[0]).toMatchObject({ state: 'stale', reasons: ['content-changed'] });
+  const again = await repo.run(['update', '--json', 'CLAUDE.md'], { snapshot: false });
+  expect(again.json().files[0]).toMatchObject({ state: 'ok', reasons: [], written: true });
 });
 
 scenario(
@@ -147,7 +166,12 @@ scenario(
 
     const json = await repo.run(['update', '--json', 'GONE.md']);
     expect(json.exit).toBe(2);
-    expect(json.json().files[0]).toMatchObject({ file: 'GONE.md', written: false });
+    expect(json.json().files[0]).toMatchObject({
+      file: 'GONE.md',
+      state: 'invalid',
+      written: false,
+    });
+    expect(json.json().files[0].diagnostics[0].code).toBe('E_FILE_MISSING');
 
     const fine = await repo.run(['update', 'CLAUDE.md']);
     expect(fine.exit).toBe(0);
@@ -210,7 +234,7 @@ scenario(
     const check = await repo.run([]);
     expect(check.exit).toBe(2);
     expect(check.stderr).toContain('E_LOCK');
-    expect(check.stderr).toContain('Resolve the conflict');
+    expect(check.stderr).toContain('take either side');
     const update = await repo.run(['update', 'CLAUDE.md']);
     expect(update.exit).toBe(2);
     expect(update.stderr).toContain('E_LOCK');

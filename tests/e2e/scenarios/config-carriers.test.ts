@@ -125,6 +125,8 @@ scenario(
     });
     expect(named.exit).toBe(2);
     expect(named.stderr).toContain('error: E_CONFIG');
+    expect(named.stderr).toContain('export default');
+    expect(named.stderr).toContain('module.exports');
 
     repo.remove('docstamp.config.mjs');
     repo.remove('package.json');

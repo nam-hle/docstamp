@@ -163,15 +163,17 @@ scenario(
   async (repo) => {
     const result = await repo.run(['list-dependents', '../outside.txt', 'src/util.ts']);
     expect(result.exit).toBe(2);
-    expect(result.stdout).toContain('src/util.ts\n  CLAUDE.md   via src/**\n');
-    expect(result.stderr).toContain('error: E_USAGE: ../outside.txt');
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toBe('error: E_USAGE: ../outside.txt: Name a file inside the root.\n');
 
     const json = await repo.run(['list-dependents', '--json', '/etc/hosts']);
     expect(json.exit).toBe(2);
-    expect(json.json().files[0].diagnostics[0]).toMatchObject({
-      code: 'E_USAGE',
-      subject: '/etc/hosts',
-    });
+    expect(json.json().files).toEqual([]);
+    expect(json.json().diagnostics[0]).toMatchObject({ code: 'E_USAGE', subject: '/etc/hosts' });
+
+    const both = await repo.run(['list-dependents', '../a', '../b', 'src/util.ts']);
+    expect(both.stdout).toBe('');
+    expect(both.stderr.match(/E_USAGE/gu)).toHaveLength(2);
   },
 );
 
