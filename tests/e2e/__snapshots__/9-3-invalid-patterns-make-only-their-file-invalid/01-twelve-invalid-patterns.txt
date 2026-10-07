@@ -18,6 +18,8 @@ INVALID  p11.md
 INVALID  p12.md
 0 ok, 1 stale, 12 invalid
 next: review each stale file against its dependencies, then run: docstamp update DOC.md
+next: fix the configuration of each invalid file, then run: docstamp check p01.md p02.md p03.md p04.md p05.md p06.md p07.md p08.md p09.md p10.md
+  and 2 more
 --- stderr ---
 error: E_PATTERN: p01.md: src//a.ts: Correct the pattern; patterns use "/" and "\" escapes.
 error: E_PATTERN: p02.md: /src/a.ts: Correct the pattern; patterns use "/" and "\" escapes.

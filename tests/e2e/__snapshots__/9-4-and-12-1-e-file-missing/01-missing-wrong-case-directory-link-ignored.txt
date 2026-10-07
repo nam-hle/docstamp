@@ -12,6 +12,7 @@ INVALID  doc.md
 INVALID  src
 0 ok, 2 stale, 4 invalid
 next: review each stale file against its dependencies, then run: docstamp update DOC.md IGNORED.md
+next: fix the configuration of each invalid file, then run: docstamp check GONE.md LINK.md doc.md src
 --- stderr ---
 error: E_FILE_MISSING: GONE.md: Rename the key under "files" in the configuration file or restore the file.
 error: E_FILE_MISSING: LINK.md: Rename the key under "files" in the configuration file or restore the file.

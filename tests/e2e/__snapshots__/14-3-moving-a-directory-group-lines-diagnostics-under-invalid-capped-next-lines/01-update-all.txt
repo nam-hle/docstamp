@@ -1,0 +1,27 @@
+$ docstamp update --all
+exit: 0
+--- stdout ---
+written  docs/invalid-01.md
+written  docs/invalid-02.md
+written  docs/invalid-03.md
+written  docs/invalid-04.md
+written  docs/invalid-05.md
+written  docs/invalid-06.md
+written  docs/invalid-07.md
+written  docs/invalid-08.md
+written  docs/invalid-09.md
+written  docs/invalid-10.md
+written  docs/invalid-11.md
+written  docs/stale-01.md
+written  docs/stale-02.md
+written  docs/stale-03.md
+written  docs/stale-04.md
+written  docs/stale-05.md
+written  docs/stale-06.md
+written  docs/stale-07.md
+written  docs/stale-08.md
+written  docs/stale-09.md
+written  docs/stale-10.md
+written  docs/stale-11.md
+written  docs/stale-12.md
+--- stderr ---

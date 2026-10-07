@@ -94,6 +94,24 @@ STALE    README.md  (content-changed)
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
 ```
 
+When a directory moves, the report does not list every file twice. Five or more `added` (or `deleted`) files directly in one directory become one line, and a doc that became `invalid` keeps its errors right under its line on a terminal (each stream alone is unchanged: errors are still on standard error):
+
+```console
+$ git mv src/old src/new
+$ docstamp docs/api.md docs/old.md
+STALE    docs/api.md  (content-changed)
+  added     src/new/  (13 files)
+  deleted   src/old/  (13 files)
+INVALID  docs/old.md
+error: E_EMPTY_DEPENDENCIES: docs/old.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: docs/old.md: src/old: Correct or remove the pattern; it matches no file.
+0 ok, 1 stale, 1 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/api.md
+next: fix the configuration of each invalid file, then run: docstamp check docs/old.md
+```
+
+Each `next:` line names at most 10 files and ends with `  and <m> more` when there are more; update those and run `docstamp` again ([SPEC §14.3](docs/SPEC.md#143-check-text-mode)). `--json` still lists every changed file.
+
 Review each stale doc against the listed files, fix what is no longer true, then record the review and commit the lock:
 
 ```console
@@ -234,8 +252,8 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
 
   ```
   $ docstamp
-  1 ok, 0 stale, 0 invalid
   warning: W_EMPTY_EXCLUSION: docs/architecture.md: !src/core/**/__test__/**: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
+  1 ok, 0 stale, 0 invalid
   ```
 
   A doc whose patterns together select nothing is still an error (`E_EMPTY_DEPENDENCIES`).
@@ -251,9 +269,10 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
   ```
   $ docstamp
   INVALID  docs/output.md
-  0 ok, 0 stale, 1 invalid
   error: E_EMPTY_DEPENDENCIES: docs/output.md: Correct the patterns in "dependencies"; together they select no file.
   error: E_EMPTY_PATTERN: docs/output.md: build/output/index.js: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+  0 ok, 0 stale, 1 invalid
+  next: fix the configuration of each invalid file, then run: docstamp check docs/output.md
   ```
 
   Name the files that produce `build/output/index.js` instead. `gitignore: false` ends the exclusion for every `.gitignore` in the repository, not for one path. Only a literal path (no `*`, `?`, `[`, `{`) gets this hint, and the selection never changes. docstamp does not trace a renamed file, because that needs git history ([SPEC §8.5](docs/SPEC.md#85-resolution)).

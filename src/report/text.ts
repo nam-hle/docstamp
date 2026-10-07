@@ -1,7 +1,13 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
-import { sortPaths } from '../core/order.ts';
+import { comparePaths, sortPaths } from '../core/order.ts';
 import { needsQuoting, quote } from '../core/quote.ts';
-import type { Diagnostic, Result, ReverseDependent, ReverseEntry } from '../core/types.ts';
+import type {
+  Change,
+  Diagnostic,
+  Result,
+  ReverseDependent,
+  ReverseEntry,
+} from '../core/types.ts';
 import type { FileStats } from '../engine/stats.ts';
 import type { StatsWindow } from './json.ts';
 
@@ -11,6 +17,8 @@ function shown(s: string): string {
 }
 
 const LABEL = { ok: 'OK', stale: 'STALE', invalid: 'INVALID' } as const;
+const GROUP_MIN = 5;
+const NEXT_MAX = 10;
 
 export interface CheckTextOptions {
   root?: string;
@@ -18,34 +26,96 @@ export interface CheckTextOptions {
   quiet?: boolean;
 }
 
-// SPEC §14.3
-export function checkText(
-  selected: readonly Result[],
-  { root: rootArg, next: withNext = true, quiet = false }: CheckTextOptions = {},
-): string {
-  let out = '';
-  for (const r of selected) {
-    if (r.state === 'ok') continue;
-    out += `${LABEL[r.state].padEnd(9)}${shown(r.file)}`;
-    out += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
-    if (r.state === 'stale') {
-      if (r.changes && r.changes.length > 0) {
-        for (const c of r.changes) out += `  ${c.status.padEnd(8)}  ${shown(c.path)}\n`;
-      } else for (const c of r.dependencies) out += `  depends   ${shown(c)}\n`;
+export interface Chunk {
+  readonly stream: 'stdout' | 'stderr';
+  readonly text: string;
+}
+
+const directoryOf = (path: string): string => path.slice(0, path.lastIndexOf('/') + 1);
+
+// SPEC §14.3.1
+export function changeLines(changes: readonly Change[]): string[] {
+  const sizes = new Map<string, number>();
+  const runKey = (c: Change) => `${c.status}\0${directoryOf(c.path)}`;
+  const groupable = (c: Change) => c.status !== 'modified' && directoryOf(c.path) !== '';
+  for (const c of changes.filter(groupable)) sizes.set(runKey(c), (sizes.get(runKey(c)) ?? 0) + 1);
+  const entries: Array<{ sort: string; rank: number; line: string }> = [];
+  const grouped = new Set<string>();
+  for (const c of changes) {
+    const size = groupable(c) ? (sizes.get(runKey(c)) ?? 0) : 0;
+    const status = c.status.padEnd(8);
+    if (size < GROUP_MIN) {
+      entries.push({ sort: c.path, rank: 0, line: `  ${status}  ${shown(c.path)}\n` });
+    } else if (!grouped.has(runKey(c))) {
+      grouped.add(runKey(c));
+      const dir = directoryOf(c.path);
+      const line = `  ${status}  ${shown(dir)}  (${size} files)\n`;
+      entries.push({ sort: dir, rank: c.status === 'added' ? 0 : 1, line });
     }
   }
-  const count = (s: Result['state']) => selected.filter((r) => r.state === s).length;
-  if (!quiet || count('stale') + count('invalid') > 0) {
-    out += `${count('ok')} ok, ${count('stale')} stale, ${count('invalid')} invalid\n`;
+  entries.sort((a, b) => comparePaths(a.sort, b.sort) || a.rank - b.rank);
+  return entries.map((entry) => entry.line);
+}
+
+// SPEC §14.3.3
+function nextLine(lead: string, command: string, files: readonly string[], root: string): string {
+  const listed = files.slice(0, NEXT_MAX).map(shown).join(' ');
+  const more = files.length > NEXT_MAX ? `  and ${files.length - NEXT_MAX} more\n` : '';
+  return `next: ${lead}, then run: docstamp ${command} ${listed}${root}\n${more}`;
+}
+
+// SPEC §14.3, §14.3.2
+export function checkChunks(
+  selected: readonly Result[],
+  global: readonly Diagnostic[],
+  { root: rootArg, next: withNext = true, quiet = false }: CheckTextOptions = {},
+): Chunk[] {
+  const chunks: Chunk[] = [];
+  const emit = (stream: Chunk['stream'], text: string) => {
+    if (text !== '') chunks.push({ stream, text });
+  };
+  emit('stderr', diagnosticsText(global));
+  for (const r of selected) {
+    if (r.state !== 'ok') {
+      let block = `${LABEL[r.state].padEnd(9)}${shown(r.file)}`;
+      block += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
+      if (r.state === 'stale') {
+        if (r.changes && r.changes.length > 0) block += changeLines(r.changes).join('');
+        else for (const c of r.dependencies) block += `  depends   ${shown(c)}\n`;
+      }
+      emit('stdout', block);
+    }
+    emit('stderr', diagnosticsText(r.diagnostics));
   }
-  const stale = selected.filter((r) => r.state === 'stale').map((r) => shown(r.file));
-  if (withNext && stale.length > 0) {
+  const files = (state: Result['state']) =>
+    selected.filter((r) => r.state === state).map((r) => r.file);
+  const [stale, invalid] = [files('stale'), files('invalid')];
+  if (!quiet || stale.length + invalid.length > 0) {
+    const ok = selected.length - stale.length - invalid.length;
+    emit('stdout', `${ok} ok, ${stale.length} stale, ${invalid.length} invalid\n`);
+  }
+  if (withNext) {
     const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
-    out +=
-      'next: review each stale file against its dependencies, then run: ' +
-      `docstamp update ${stale.join(' ')}${root}\n`;
+    if (stale.length > 0) {
+      const lead = 'review each stale file against its dependencies';
+      emit('stdout', nextLine(lead, 'update', stale, root));
+    }
+    if (invalid.length > 0) {
+      emit(
+        'stdout',
+        nextLine('fix the configuration of each invalid file', 'check', invalid, root),
+      );
+    }
   }
-  return out;
+  return chunks;
+}
+
+// SPEC §14.3
+export function checkText(selected: readonly Result[], options: CheckTextOptions = {}): string {
+  return checkChunks(selected, [], options)
+    .filter((chunk) => chunk.stream === 'stdout')
+    .map((chunk) => chunk.text)
+    .join('');
 }
 
 // SPEC §14.6

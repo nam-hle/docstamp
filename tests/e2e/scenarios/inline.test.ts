@@ -313,7 +313,8 @@ scenario(
         'STALE    docs/GUIDE.md  (unrecorded)\n' +
         '  depends   src/core\n' +
         '0 ok, 1 stale, 1 invalid\n' +
-        'next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md\n',
+        'next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md\n' +
+        'next: fix the configuration of each invalid file, then run: docstamp check README.md\n',
     );
     expect(check.stderr).toContain('error: E_DUPLICATE_DECLARATION: README.md: ');
     const before = repo.read('README.md');

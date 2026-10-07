@@ -1281,7 +1281,7 @@ reviewer compares them with the state at the last Write using its own tools.
 4. If `--all` is given, let *targets* be *results*. Otherwise let *targets* be
    `? SelectResults(args, cwd, root, results)`.
 5. If *global* contains an error or any of *targets* is `invalid`: output *targets* as a check
-   does (§14.3) but without its `next:` line, and *global*, write nothing, and exit 2.
+   does (§14.3) but without its `next:` lines, and *global*, write nothing, and exit 2.
 6. For each *t* of *targets* whose Declaration is configured, set the LockEntry of
    *t*.`[[File]]` in *lock* to *t*.`[[Current]]`.
 7. Let *removed* be the files of *lock* that have no configured Declaration, in path order. Remove
@@ -1469,9 +1469,10 @@ STALE    <file>  (<reason>, <reason>)
 
 - The first line is `STALE` or `INVALID`, padded with spaces to 9 characters, then the
   file; for `stale`, two spaces and the Reasons in parentheses, separated by `, `.
-- For `stale` with a non-empty `[[Changes]]`: one line per Change, in path order, instead of the
-  `depends` lines: two spaces, the status padded with spaces to 8 characters, two spaces, and the
-  path as in §14.2 (`  modified  <path>`, `  added     <path>`, `  deleted   <path>`).
+- For `stale` with a non-empty `[[Changes]]`: the *change lines* of §14.3.1, instead of the
+  `depends` lines. Each is two spaces, the status padded with spaces to 8 characters, two spaces,
+  and the path as in §14.2 (`  modified  <path>`, `  added     <path>`, `  deleted   <path>`), or
+  a group line.
 - For any other `stale`: one `depends` line per pattern, in declaration order.
 
 Then one summary line:
@@ -1483,14 +1484,8 @@ Then one summary line:
 counting the selected Results. With `--quiet`, the summary line is not output when no selected
 Result is `stale` or `invalid`, so that standard output is empty on success; in every other case
 it is output. When the command raised before any Result existed (§13.5), none
-of this is output: no block, no summary line and no `next:` line, only the Diagnostics. Then, if any selected Result is `stale`:
-
-```
-next: review each stale file against its dependencies, then run: docstamp update <file> <file>
-```
-
-with the stale files in path order, each written as in §14.2, followed by ` --root ` and
-the `--root` value as given, if one was given.
+of this is output: no block, no summary line and no `next:` line, only the Diagnostics. Then the
+`next:` lines of §14.3.3.
 
 Each Diagnostic, global and attached, in Diagnostic order, is written to standard error as:
 
@@ -1498,14 +1493,80 @@ Each Diagnostic, global and attached, in Diagnostic order, is written to standar
 <severity>: <code>[: <file>][: <subject>]: <message>
 ```
 
-omitting the bracketed parts when empty.
+omitting the bracketed parts when empty. §14.3.2 says when each is written.
+
+#### 14.3.1 Change Lines
+
+Let *changes* be the `[[Changes]]` of a stale Result, in path order. A *run* is the set of Changes
+of one status, `added` or `deleted`, whose path is one *directory* *d* followed by exactly one
+more segment, where *d* is a String that ends with `/`. A run with at least 5 Changes is
+*grouped*: its Changes are replaced by one *group line*:
+
+```
+  added     <d>  (<n> files)
+  deleted   <d>  (<n> files)
+```
+
+two spaces, the status padded with spaces to 8 characters, two spaces, *d* as in §14.2, two
+spaces and `(<n> files)` with *n* the number of Changes of the run. Every other Change, a
+`modified` one always and one of a run of fewer than 5, is one *change line* as above. A Change
+is in the run of the directory it is directly in only: a Change in a subdirectory is never in the
+run of its parent.
+
+The lines are in path order of their path, a group line by *d* with its trailing `/`; a group
+line of `added` precedes a group line of `deleted` with the same *d*. Group lines are in text
+mode only: `changes` in `--json` always lists every Change (§14.5).
+
+NOTE: A moved directory of 13 files, on which 5 files depend, prints 2 lines per file, not 26.
+Git is not asked about renames (§12.3 step 2 passes `--no-renames`): the group lines `deleted
+src/old/  (13 files)` and `added     src/new/  (13 files)` do not claim that the files are the
+same files. A run is the files of one directory, so a moved tree of many small directories is not
+shortened.
+
+#### 14.3.2 Order of Output
+
+Text mode writes to standard output and standard error in this order, so that on a terminal, or
+with both streams merged, each Diagnostic follows the line it belongs to:
+
+1. the global Diagnostics, to standard error;
+2. for each selected Result in path order: its block, to standard output, when it is not `ok`;
+   then its attached Diagnostics, to standard error, in Diagnostic order;
+3. the summary line and the `next:` lines, to standard output.
+
+Each stream, taken alone, holds what §14.3 and §14.1 define, in the same order (global
+Diagnostics first, then the Diagnostics of each file in path order): the order above is not
+visible to a consumer that reads the streams separately, as a command substitution does. With
+`--json` nothing is written to standard error (§14.1).
+
+#### 14.3.3 Next Lines
+
+If any selected Result is `stale`, the line
+
+```
+next: review each stale file against its dependencies, then run: docstamp update <file> <file>
+```
+
+and then, if any selected Result is `invalid`, the line
+
+```
+next: fix the configuration of each invalid file, then run: docstamp check <file> <file>
+```
+
+Each lists the files of its state in path order, each written as in §14.2, followed by ` --root `
+and the `--root` value as given, if one was given. At most 10 files are listed. When there are
+more, the line lists the first 10 and is followed by the line `  and <m> more`, two spaces, with
+*m* the number of files not listed. There is no `next:` line for a state that no selected Result
+has, and none when §13.6 step 5 refused an update (§14.4).
+
+NOTE: The second line points at the Diagnostics that §14.3.2 writes under each `INVALID` line.
+Updating the first 10 stale files and running `docstamp` again lists the next 10.
 
 ### 14.4 Update, Text Mode
 
 One line per target in path order: `written  <file>` if it was written (§13.6 step 10), else
 `unchanged  <file>`; then one line `removed  <file>` per removed entry in path order.
 Diagnostics as in §14.3. When step 5 of §13.6 refused, the blocks and summary line of §14.3 are
-output for the targets, without the `next:` line, and nothing is written. When the command
+output for the targets, in the order of §14.3.2, without the `next:` lines, and nothing is written. When the command
 raised before any Result existed, only the Diagnostics are output.
 
 ### 14.5 JSON Mode
@@ -1810,6 +1871,10 @@ The following are not breaking:
 - `--only-stale` and `--quiet` of `check` (§13.5): new options that no existing command line uses,
   whose absence leaves every output as it was. Used with another command they are `E_USAGE`, as
   every unknown option was;
+- the layout of the text output of §14.3: group lines (§14.3.1), the order in which the two streams
+  are written (§14.3.2) and the `next:` lines (§14.3.3). A program reads the verdict from the exit
+  code and from `--json` (§14.5), never from this layout. Standard error keeps every line and its
+  order;
 - a new member of the JSON output (§14.5: consumers ignore unknown members);
 - a change to the output of `--help`, `--version` or the changed-file report (§2); this includes
   the description of `update` in `--help`, reworded to hold for inline files too;

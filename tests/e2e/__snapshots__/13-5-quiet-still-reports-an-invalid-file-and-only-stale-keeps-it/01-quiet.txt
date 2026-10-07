@@ -12,5 +12,6 @@ STALE    docs/guide.md  (unrecorded)
   depends   src/cli
 0 ok, 3 stale, 1 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/guide.md
+next: fix the configuration of each invalid file, then run: docstamp check GONE.md
 --- stderr ---
 error: E_FILE_MISSING: GONE.md: Rename the key under "files" in the configuration file or restore the file.

@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { checkText, diagnosticsText, listText, updateText } from '../../src/report/text.ts';
+import {
+  changeLines,
+  checkChunks,
+  checkText,
+  diagnosticsText,
+  listText,
+  updateText,
+} from '../../src/report/text.ts';
 import { jsonText, listJsonText } from '../../src/report/json.ts';
 import { diag } from '../../src/core/diagnostics.ts';
-import type { Result } from '../../src/core/types.ts';
+import type { Change, Result } from '../../src/core/types.ts';
 
 const res = (file: string, state: Result['state'], extra: Partial<Result> = {}): Result => ({
   file,
@@ -31,12 +38,12 @@ describe('§14.3 check text', () => {
   it('known changes replace the depends lines', () => {
     const changes = [
       { status: 'modified', path: 'src/a.ts' },
-      { status: 'added', path: 'src/my b.ts' },
       { status: 'deleted', path: 'src/c.ts' },
+      { status: 'added', path: 'src/my b.ts' },
     ] as const;
     expect(checkText([res('a.md', 'stale', { changes })])).toContain(
       'STALE    a.md  (content-changed)\n' +
-        '  modified  src/a.ts\n  added     "src/my b.ts"\n  deleted   src/c.ts\n0 ok',
+        '  modified  src/a.ts\n  deleted   src/c.ts\n  added     "src/my b.ts"\n0 ok',
     );
   });
   it('unknown or empty changes print depends lines', () => {
@@ -45,7 +52,10 @@ describe('§14.3 check text', () => {
     expect(checkText([res('a.md', 'stale', { changes: [] })])).toContain(dependencies);
   });
   it('invalid prints a bare line and counts', () => {
-    expect(checkText([res('a.md', 'invalid')])).toBe('INVALID  a.md\n0 ok, 0 stale, 1 invalid\n');
+    expect(checkText([res('a.md', 'invalid')])).toBe(
+      'INVALID  a.md\n0 ok, 0 stale, 1 invalid\n' +
+        'next: fix the configuration of each invalid file, then run: docstamp check a.md\n',
+    );
   });
   it('next line carries --root', () => {
     expect(checkText([res('a.md', 'stale')], { root: 'sub' })).toContain(
@@ -63,6 +73,155 @@ describe('§14.3 check text', () => {
       checkText([res('a.md', 'ok'), res('b.md', 'stale')]),
     );
     expect(checkText([res('a.md', 'invalid')], quiet)).toBe(checkText([res('a.md', 'invalid')]));
+  });
+});
+
+const change = (status: Change['status'], path: string): Change => ({ status, path });
+const many = (status: Change['status'], dir: string, count: number): Change[] =>
+  Array.from({ length: count }, (_, i) =>
+    change(status, `${dir}f${String(i).padStart(2, '0')}.ts`),
+  );
+
+describe('§14.3.1 change lines', () => {
+  it('a run of 5 or more added or deleted files in one directory is one group line', () => {
+    expect(
+      changeLines([...many('deleted', 'src/old/', 13), ...many('added', 'src/new/', 13)]),
+    ).toEqual(['  added     src/new/  (13 files)\n', '  deleted   src/old/  (13 files)\n']);
+  });
+  it('the threshold is 5: 4 files stay as lines, 5 collapse', () => {
+    expect(changeLines(many('deleted', 'src/a/', 4))).toHaveLength(4);
+    expect(changeLines(many('deleted', 'src/a/', 5))).toEqual(['  deleted   src/a/  (5 files)\n']);
+  });
+  it('modified files are never grouped', () => {
+    expect(changeLines(many('modified', 'src/a/', 6))).toHaveLength(6);
+  });
+  it('a run counts the files directly in the directory, never those of a subdirectory', () => {
+    const changes = [
+      ...many('added', 'src/a/', 5),
+      ...many('added', 'src/a/b/', 3),
+      change('added', 'src/a/z.ts'),
+    ];
+    const lines = changeLines(changes.sort((x, y) => (x.path < y.path ? -1 : 1)));
+    expect(lines).toEqual([
+      '  added     src/a/  (6 files)\n',
+      '  added     src/a/b/f00.ts\n',
+      '  added     src/a/b/f01.ts\n',
+      '  added     src/a/b/f02.ts\n',
+    ]);
+  });
+  it('files of the root directory and of different statuses are not mixed', () => {
+    expect(changeLines(many('added', '', 6))).toHaveLength(6);
+    const mixed = [...many('added', 'src/a/', 3), ...many('deleted', 'src/a/', 3)];
+    expect(changeLines(mixed.sort((x, y) => (x.path < y.path ? -1 : 1)))).toHaveLength(6);
+  });
+  it('lines are in path order, a group line at its directory, added before deleted on a tie', () => {
+    const changes = [
+      change('modified', 'a.ts'),
+      ...many('added', 'src/', 5),
+      ...many('deleted', 'src/', 5),
+      change('deleted', 'src.ts'),
+      change('added', 'z.ts'),
+    ];
+    expect(changeLines(changes)).toEqual([
+      '  modified  a.ts\n',
+      '  deleted   src.ts\n',
+      '  added     src/  (5 files)\n',
+      '  deleted   src/  (5 files)\n',
+      '  added     z.ts\n',
+    ]);
+  });
+  it('a directory with a space or parenthesis is quoted', () => {
+    expect(changeLines(many('added', 'my dir/', 5))).toEqual([
+      '  added     "my dir/"  (5 files)\n',
+    ]);
+  });
+  it('is part of the block of a stale file', () => {
+    const changes = [...many('deleted', 'src/old/', 5), change('modified', 'src/m.ts')];
+    expect(checkText([res('a.md', 'stale', { changes })])).toContain(
+      'STALE    a.md  (content-changed)\n  modified  src/m.ts\n  deleted   src/old/  (5 files)\n0 ok',
+    );
+  });
+});
+
+describe('§14.3.3 next lines', () => {
+  const stales = Array.from({ length: 12 }, (_, i) =>
+    res(`d${String(i).padStart(2, '0')}.md`, 'stale'),
+  );
+  it('lists at most 10 files, then says how many more', () => {
+    const out = checkText(stales);
+    expect(out).toContain(
+      'docstamp update d00.md d01.md d02.md d03.md d04.md d05.md d06.md d07.md d08.md d09.md\n  and 2 more\n',
+    );
+    expect(out).not.toContain('d10.md d11.md');
+    expect(out.endsWith('  and 2 more\n')).toBe(true);
+  });
+  it('exactly 10 files have no continuation line', () => {
+    expect(checkText(stales.slice(0, 10))).not.toContain(' more');
+  });
+  it('invalid files get their own line with another instruction, after the stale one', () => {
+    const out = checkText([res('a.md', 'invalid'), res('b.md', 'stale'), res('c.md', 'invalid')], {
+      root: 'sub',
+    });
+    expect(out).toBe(
+      'INVALID  a.md\n' +
+        'STALE    b.md  (content-changed)\n  depends   src/**\n' +
+        'INVALID  c.md\n' +
+        '0 ok, 1 stale, 2 invalid\n' +
+        'next: review each stale file against its dependencies, then run: ' +
+        'docstamp update b.md --root sub\n' +
+        'next: fix the configuration of each invalid file, then run: ' +
+        'docstamp check a.md c.md --root sub\n',
+    );
+  });
+  it('--root follows each list, and the cap applies to the invalid line too', () => {
+    const invalid = Array.from({ length: 11 }, (_, i) =>
+      res(`i${String(i).padStart(2, '0')}.md`, 'invalid'),
+    );
+    const out = checkText(invalid, { root: 'sub' });
+    expect(out).toContain('then run: docstamp check i00.md i01.md');
+    expect(out).toContain('i09.md --root sub\n  and 1 more\n');
+  });
+  it('an update refused by an invalid file prints no next line', () => {
+    expect(checkText([res('a.md', 'invalid')], { next: false })).toBe(
+      'INVALID  a.md\n0 ok, 0 stale, 1 invalid\n',
+    );
+  });
+});
+
+describe('§14.3.2 order of output', () => {
+  const warning = diag('W_EMPTY_EXCLUSION', { file: 'ok.md', subject: '!x', message: 'w.' });
+  const error = diag('E_EMPTY_PATTERN', { file: 'inv.md', subject: 'p', message: 'e.' });
+  const orphan = diag('W_ORPHAN', { subject: 'gone.md', message: 'o.' });
+  const selected = [
+    res('inv.md', 'invalid', { diagnostics: [error] }),
+    res('ok.md', 'ok', { diagnostics: [warning] }),
+    res('stale.md', 'stale'),
+  ];
+  const chunks = checkChunks(selected, [orphan]);
+  it('global diagnostics, then each file block followed by its own diagnostics, then the summary', () => {
+    expect(chunks.map((c) => [c.stream, c.text.split('\n')[0]])).toEqual([
+      ['stderr', 'warning: W_ORPHAN: gone.md: o.'],
+      ['stdout', 'INVALID  inv.md'],
+      ['stderr', 'error: E_EMPTY_PATTERN: inv.md: p: e.'],
+      ['stderr', 'warning: W_EMPTY_EXCLUSION: ok.md: !x: w.'],
+      ['stdout', 'STALE    stale.md  (content-changed)'],
+      ['stdout', '1 ok, 1 stale, 1 invalid'],
+      [
+        'stdout',
+        'next: review each stale file against its dependencies, then run: docstamp update stale.md',
+      ],
+      [
+        'stdout',
+        'next: fix the configuration of each invalid file, then run: docstamp check inv.md',
+      ],
+    ]);
+  });
+  it('each stream alone holds what it held before: global first, then the files in path order', () => {
+    const stderr = chunks
+      .filter((c) => c.stream === 'stderr')
+      .map((c) => c.text)
+      .join('');
+    expect(stderr).toBe(diagnosticsText([orphan, error, warning]));
   });
 });
 
