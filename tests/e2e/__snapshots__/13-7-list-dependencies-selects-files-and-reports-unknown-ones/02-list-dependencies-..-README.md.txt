@@ -1,0 +1,10 @@
+$ docstamp list-dependencies ../README.md
+cwd: docs
+exit: 0
+--- stdout ---
+README.md
+  depends   src/index.ts
+  depends   docs/guide.md
+  resolved  docs/guide.md
+  resolved  src/index.ts
+--- stderr ---

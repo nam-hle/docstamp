@@ -1,0 +1,13 @@
+version: 2
+files:
+  CLAUDE.md:
+    dependencies:
+      - src/**
+      - "!src/**/*.test.ts"
+  README.md:
+    dependencies:
+      - src/index.ts
+      - docs/guide.md
+  docs/guide.md:
+    dependencies:
+      - src/cli

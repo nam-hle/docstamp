@@ -1,0 +1,7 @@
+# orphan entry is a warning, exit 0
+$ docstamp
+exit: 0
+--- stdout ---
+2 ok, 0 stale, 0 invalid
+--- stderr ---
+warning: W_ORPHAN: docs/guide.md: Run "docstamp update" on any file to remove the entry.

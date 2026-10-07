@@ -1,0 +1,10 @@
+# enum is not erasable TypeScript
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_CONFIG: Fix the named key in the configuration file.
+--- setup: docstamp.config.ts ---
+enum E { A }
+export default { version: E.A };

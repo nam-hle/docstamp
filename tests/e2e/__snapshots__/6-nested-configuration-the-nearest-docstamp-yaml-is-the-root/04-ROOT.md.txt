@@ -1,0 +1,7 @@
+$ docstamp ROOT.md
+cwd: sub/deep
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_UNKNOWN_FILE: ROOT.md: Name a file listed under "files" in the configuration file.

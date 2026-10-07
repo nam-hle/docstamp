@@ -1,0 +1,7 @@
+$ docstamp --root <root> update ROOT.md
+cwd: packages/a
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_UNKNOWN_FILE: ROOT.md: Name a file listed under "files" in the configuration file.

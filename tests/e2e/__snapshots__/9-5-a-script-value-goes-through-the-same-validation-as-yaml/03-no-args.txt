@@ -1,0 +1,6 @@
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_CONFIG_VERSION: Rename "dependents" to "files" and "covers" to "dependencies", set "version: 2".

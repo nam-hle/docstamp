@@ -1,0 +1,8 @@
+version: 2
+files:
+  README.md:
+    dependencies:
+      - src/**
+  docs/api.md:
+    dependencies:
+      - src/lib

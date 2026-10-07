@@ -1,0 +1,9 @@
+# accessor
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_CONFIG: version: Fix the named key in the configuration file.
+--- setup: docstamp.config.ts ---
+export default { get version() { return 2; }, files: {} };

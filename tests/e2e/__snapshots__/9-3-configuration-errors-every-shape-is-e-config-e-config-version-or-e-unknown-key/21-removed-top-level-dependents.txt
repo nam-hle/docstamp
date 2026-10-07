@@ -1,0 +1,13 @@
+# removed top-level dependents
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_UNKNOWN_KEY: dependents: Rename "dependents" to "files".
+--- setup: docstamp.yaml ---
+version: 2
+dependents: {}
+files:
+  DOC.md:
+    dependencies: [src/**]

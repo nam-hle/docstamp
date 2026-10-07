@@ -1,0 +1,9 @@
+$ docstamp list-dependents ../outside.txt src/util.ts
+exit: 2
+--- stdout ---
+../outside.txt
+  (no dependents)
+src/util.ts
+  CLAUDE.md   via src/**
+--- stderr ---
+error: E_USAGE: ../outside.txt: Name a file inside the root.

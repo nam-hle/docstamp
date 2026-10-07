@@ -1,0 +1,14 @@
+# case and normalization collisions
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_PATH_COLLISION: src/README.md: Rename one of the files; names differ only by case or normalization.
+error: E_PATH_COLLISION: src/é.txt: Rename one of the files; names differ only by case or normalization.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"

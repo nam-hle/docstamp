@@ -1,0 +1,9 @@
+# a file the nested rule does not scope
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    DOC.md  (content-changed)
+  depends   **
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update DOC.md
+--- stderr ---

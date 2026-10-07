@@ -1,0 +1,13 @@
+# unknown top-level key
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_UNKNOWN_KEY: extra: Remove or correct the key.
+--- setup: docstamp.yaml ---
+version: 2
+extra: 1
+files:
+  DOC.md:
+    dependencies: [src/**]

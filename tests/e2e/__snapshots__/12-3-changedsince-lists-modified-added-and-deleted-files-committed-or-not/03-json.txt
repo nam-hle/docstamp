@@ -1,0 +1,51 @@
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 0,
+    "stale": 1,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/**",
+        "!src/**/*.test.ts"
+      ],
+      "changes": [
+        {
+          "status": "deleted",
+          "path": "src/c.ts"
+        },
+        {
+          "status": "modified",
+          "path": "src/d.ts"
+        },
+        {
+          "status": "added",
+          "path": "src/new.ts"
+        },
+        {
+          "status": "added",
+          "path": "src/untracked.ts"
+        },
+        {
+          "status": "modified",
+          "path": "src/util.ts"
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

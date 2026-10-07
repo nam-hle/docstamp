@@ -1,0 +1,59 @@
+$ docstamp update --all --json --root <root>
+cwd: packages/b
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "update",
+  "exitCode": 0,
+  "summary": {
+    "ok": 0,
+    "stale": 3,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "ROOT.md",
+      "state": "stale",
+      "reasons": [
+        "unrecorded"
+      ],
+      "dependencies": [
+        "packages/*/package.json"
+      ],
+      "changes": null,
+      "diagnostics": [],
+      "written": true
+    },
+    {
+      "file": "packages/a/README.md",
+      "state": "stale",
+      "reasons": [
+        "unrecorded"
+      ],
+      "dependencies": [
+        "packages/a/src/**"
+      ],
+      "changes": null,
+      "diagnostics": [],
+      "written": true
+    },
+    {
+      "file": "packages/b/README.md",
+      "state": "stale",
+      "reasons": [
+        "unrecorded"
+      ],
+      "dependencies": [
+        "packages/b/src/**",
+        "packages/a/src/index.ts"
+      ],
+      "changes": null,
+      "diagnostics": [],
+      "written": true
+    }
+  ],
+  "diagnostics": [],
+  "removed": []
+}
+--- stderr ---

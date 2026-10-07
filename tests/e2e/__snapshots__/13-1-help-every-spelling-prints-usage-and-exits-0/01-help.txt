@@ -1,0 +1,18 @@
+$ docstamp help
+exit: 0
+--- stdout ---
+Usage:
+  docstamp check [--json] [--root <dir>] [<file>...]
+      Check that each file's dependencies are unchanged since its last review.
+      The default command: a bare docstamp is docstamp check.
+  docstamp update [--json] [--root <dir>] (--all | <file>...)
+      Record in docstamp-lock.yaml that you reviewed the named files against their dependencies.
+  docstamp list-dependencies [--json] [--root <dir>] [<file>...]
+      List each file with its dependency patterns and the files they select.
+  docstamp list-dependents [--json] [--root <dir>] <file>...
+      List the files that depend on each named file, and the patterns that select it.
+  docstamp help
+      Print this usage (also --help).
+  docstamp version
+      Print the version (also --version).
+--- stderr ---

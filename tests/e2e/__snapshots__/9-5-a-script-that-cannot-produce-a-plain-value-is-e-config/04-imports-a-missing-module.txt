@@ -1,0 +1,10 @@
+# imports a missing module
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_CONFIG: Fix the named key in the configuration file.
+--- setup: docstamp.config.ts ---
+import 'nonexistent-module-xyz';
+export default {};

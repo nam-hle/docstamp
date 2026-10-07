@@ -1,0 +1,9 @@
+# not finite
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_CONFIG: ignore: Fix the named key in the configuration file.
+--- setup: docstamp.config.ts ---
+export default { version: 2, files: {}, ignore: [Infinity] };

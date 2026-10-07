@@ -1,0 +1,5 @@
+file: docstamp-lock.yaml
+--- content ---
+version: 3
+files:
+  "update": 189eefb027528087868d0dca3fcc8fdfde2e51a118b3da732b9b37bcf5d84d7b

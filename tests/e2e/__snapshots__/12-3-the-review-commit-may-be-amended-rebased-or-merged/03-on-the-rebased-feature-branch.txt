@@ -1,0 +1,10 @@
+# on the rebased feature branch
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (content-changed)
+  modified  src/d.ts
+  modified  src/util.ts
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+--- stderr ---

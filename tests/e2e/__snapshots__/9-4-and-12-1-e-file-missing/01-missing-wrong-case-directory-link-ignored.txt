@@ -1,0 +1,40 @@
+# missing, wrong case, directory, link, ignored
+$ docstamp
+exit: 2
+--- stdout ---
+STALE    DOC.md  (unrecorded)
+  depends   src/**
+INVALID  GONE.md
+STALE    IGNORED.md  (unrecorded)
+  depends   src/**
+INVALID  LINK.md
+INVALID  doc.md
+INVALID  src
+0 ok, 2 stale, 4 invalid
+next: review each stale file against its dependencies, then run: docstamp update DOC.md IGNORED.md
+--- stderr ---
+error: E_FILE_MISSING: GONE.md: Rename the key under "files" in the configuration file or restore the file.
+error: E_FILE_MISSING: LINK.md: Rename the key under "files" in the configuration file or restore the file.
+error: E_FILE_MISSING: doc.md: Rename the key under "files" in the configuration file or restore the file.
+error: E_FILE_MISSING: src: Rename the key under "files" in the configuration file or restore the file.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"
+  "GONE.md":
+    dependencies:
+      - "src/**"
+  "doc.md":
+    dependencies:
+      - "src/**"
+  "src":
+    dependencies:
+      - "src/**"
+  "LINK.md":
+    dependencies:
+      - "src/**"
+  "IGNORED.md":
+    dependencies:
+      - "src/**"

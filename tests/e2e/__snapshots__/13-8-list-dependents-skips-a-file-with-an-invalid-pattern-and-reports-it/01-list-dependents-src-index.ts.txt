@@ -1,0 +1,7 @@
+$ docstamp list-dependents src/index.ts
+exit: 2
+--- stdout ---
+src/index.ts
+  CLAUDE.md   via src/**
+--- stderr ---
+error: E_PATTERN: README.md: src//index.ts: Correct the pattern; patterns use "/" and "\" escapes.

@@ -1,0 +1,36 @@
+# ignore: *.gen.ts and /src/c.ts
+$ docstamp list-dependencies --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "DOC.md",
+      "dependencies": [
+        "**"
+      ],
+      "resolvedFiles": [
+        ".gitignore",
+        "keep.log",
+        "src/.gitignore",
+        "src/a.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+ignore:
+  - "*.gen.ts"
+  - /src/c.ts
+  - "!keep.log"
+files:
+  "DOC.md":
+    dependencies:
+      - "**"

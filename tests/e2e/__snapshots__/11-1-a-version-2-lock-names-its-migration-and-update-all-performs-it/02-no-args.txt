@@ -1,0 +1,10 @@
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_LOCK_VERSION: The version 2 Lockfile is no longer read; run "docstamp update --all" to rewrite it as version 3 (hashes are unchanged).
+--- setup: docstamp-lock.yaml ---
+version: 2
+dependents:
+  "CLAUDE.md": 419090f74a5515d156b6c169a989fa36db00867d2089947765cbb82c0eb28035

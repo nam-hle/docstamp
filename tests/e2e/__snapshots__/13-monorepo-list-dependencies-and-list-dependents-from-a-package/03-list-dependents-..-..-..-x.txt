@@ -1,0 +1,8 @@
+$ docstamp list-dependents ../../../x
+cwd: packages/a
+exit: 2
+--- stdout ---
+../../../x
+  (no dependents)
+--- stderr ---
+error: E_USAGE: ../../../x: Name a file inside the root.

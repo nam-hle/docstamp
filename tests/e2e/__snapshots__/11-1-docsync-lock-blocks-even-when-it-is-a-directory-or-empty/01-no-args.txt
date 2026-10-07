@@ -1,0 +1,6 @@
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_LOCK_VERSION: docsync.lock: The version 1 Lockfile docsync.lock is no longer read; delete docsync.lock, review every file, then run "docstamp update --all".

@@ -1,0 +1,6 @@
+$ docstamp list-dependents src/not-there.ts
+exit: 0
+--- stdout ---
+src/not-there.ts
+  (no dependents)
+--- stderr ---

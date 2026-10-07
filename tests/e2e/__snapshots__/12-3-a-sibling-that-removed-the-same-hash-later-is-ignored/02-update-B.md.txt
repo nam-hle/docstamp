@@ -1,0 +1,5 @@
+$ docstamp update B.md
+exit: 0
+--- stdout ---
+written  B.md
+--- stderr ---

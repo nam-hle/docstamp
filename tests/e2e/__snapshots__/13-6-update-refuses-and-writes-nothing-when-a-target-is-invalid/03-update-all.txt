@@ -1,0 +1,13 @@
+$ docstamp update --all
+exit: 2
+--- stdout ---
+STALE    CLAUDE.md  (unrecorded)
+  depends   src/**
+  depends   !src/**/*.test.ts
+INVALID  GONE.md
+STALE    docs/guide.md  (unrecorded)
+  depends   src/cli
+1 ok, 2 stale, 1 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md docs/guide.md
+--- stderr ---
+error: E_FILE_MISSING: GONE.md: Rename the key under "files" in the configuration file or restore the file.

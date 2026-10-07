@@ -1,0 +1,9 @@
+# files is absent
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_CONFIG: files: Fix the named key in the configuration file.
+--- setup: docstamp.yaml ---
+version: 2

@@ -1,0 +1,7 @@
+$ docstamp list-dependents src/index.ts
+exit: 0
+--- stdout ---
+src/index.ts
+  CLAUDE.md   via src/**
+  README.md   via src/index.ts
+--- stderr ---

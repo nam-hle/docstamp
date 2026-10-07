@@ -1,0 +1,9 @@
+$ docstamp list-dependents src/a.ts
+exit: 0
+--- stdout ---
+src/a.ts
+  docs/all.md           via src/**
+  docs/alternation.md   via src/{a,b}.ts
+  docs/negation.md      via src/**
+  docs/two.md           via src/a.ts
+--- stderr ---

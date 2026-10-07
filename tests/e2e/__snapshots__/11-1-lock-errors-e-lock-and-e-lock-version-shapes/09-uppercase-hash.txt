@@ -1,0 +1,11 @@
+# uppercase hash
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_LOCK: Resolve the conflict by taking either side, or run "docstamp update --all" after reviewing every file.
+--- setup: docstamp-lock.yaml ---
+version: 3
+files:
+  "CLAUDE.md": 8F88C6FA45DF5FBB7513D0E6F634794B2BED50BE9B82D742682207F66CCD96A8

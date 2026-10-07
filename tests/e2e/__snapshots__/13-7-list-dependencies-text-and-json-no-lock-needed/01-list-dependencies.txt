@@ -1,0 +1,18 @@
+$ docstamp list-dependencies
+exit: 0
+--- stdout ---
+CLAUDE.md
+  depends   src/**
+  depends   !src/**/*.test.ts
+  resolved  src/cli/run.ts
+  resolved  src/index.ts
+  resolved  src/util.ts
+README.md
+  depends   src/index.ts
+  depends   docs/guide.md
+  resolved  docs/guide.md
+  resolved  src/index.ts
+docs/guide.md
+  depends   src/cli
+  resolved  src/cli/run.ts
+--- stderr ---

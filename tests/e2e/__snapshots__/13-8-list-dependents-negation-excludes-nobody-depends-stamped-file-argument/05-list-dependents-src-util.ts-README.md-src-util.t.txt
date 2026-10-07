@@ -1,0 +1,8 @@
+$ docstamp list-dependents src/util.ts README.md src/util.ts
+exit: 0
+--- stdout ---
+README.md
+  (no dependents)
+src/util.ts
+  CLAUDE.md   via src/**
+--- stderr ---

@@ -1,0 +1,10 @@
+# version is the string "3"
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_LOCK_VERSION: Run "docstamp update --all" after reviewing every file.
+--- setup: docstamp-lock.yaml ---
+version: "3"
+files: {}

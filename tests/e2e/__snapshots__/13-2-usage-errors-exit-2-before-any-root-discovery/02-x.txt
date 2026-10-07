@@ -1,0 +1,5 @@
+$ docstamp -x
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: -x: Unknown option -x; see docstamp help.

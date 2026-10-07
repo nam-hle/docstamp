@@ -1,0 +1,12 @@
+version: 2
+files:
+  ROOT.md:
+    dependencies:
+      - packages/*/package.json
+  packages/a/README.md:
+    dependencies:
+      - packages/a/src/**
+  packages/b/README.md:
+    dependencies:
+      - packages/b/src/**
+      - packages/a/src/index.ts

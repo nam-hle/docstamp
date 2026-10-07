@@ -1,0 +1,6 @@
+$ docstamp update docs/guide.md CLAUDE.md
+exit: 0
+--- stdout ---
+written  CLAUDE.md
+written  docs/guide.md
+--- stderr ---

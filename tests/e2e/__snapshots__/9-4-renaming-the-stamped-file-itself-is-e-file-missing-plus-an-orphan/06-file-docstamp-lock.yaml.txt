@@ -1,0 +1,6 @@
+file: docstamp-lock.yaml
+--- content ---
+version: 3
+files:
+  "GUIDE.md": ff02e2f8012be716a138e08968cac495a6e16cd77473472647fb6434d8e44070
+  "docs/api.md": ff02e2f8012be716a138e08968cac495a6e16cd77473472647fb6434d8e44070

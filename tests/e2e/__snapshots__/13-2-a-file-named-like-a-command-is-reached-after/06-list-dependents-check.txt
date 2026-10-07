@@ -1,0 +1,6 @@
+$ docstamp list-dependents -- check
+exit: 0
+--- stdout ---
+check
+  (no dependents)
+--- stderr ---

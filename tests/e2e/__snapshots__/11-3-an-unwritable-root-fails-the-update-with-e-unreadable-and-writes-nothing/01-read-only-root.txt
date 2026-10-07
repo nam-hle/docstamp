@@ -1,0 +1,7 @@
+# read-only root
+$ docstamp update --all
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_UNREADABLE: docstamp-lock.yaml: Cannot write docstamp-lock.yaml; fix the permissions or remove the obstruction.

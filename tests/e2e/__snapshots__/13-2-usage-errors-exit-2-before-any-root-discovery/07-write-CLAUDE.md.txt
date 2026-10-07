@@ -1,0 +1,5 @@
+$ docstamp --write CLAUDE.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --write: --write was removed; use "docstamp update".

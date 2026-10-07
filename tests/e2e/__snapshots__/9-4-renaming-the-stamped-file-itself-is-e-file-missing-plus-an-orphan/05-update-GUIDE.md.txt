@@ -1,0 +1,7 @@
+$ docstamp update GUIDE.md
+exit: 0
+--- stdout ---
+written  GUIDE.md
+removed  README.md
+--- stderr ---
+warning: W_ORPHAN: README.md: Run "docstamp update" on any file to remove the entry.

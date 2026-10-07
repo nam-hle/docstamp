@@ -1,0 +1,30 @@
+$ docstamp list-dependents --json src/cli/run.ts
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependents",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "src/cli/run.ts",
+      "dependents": [
+        {
+          "file": "CLAUDE.md",
+          "via": [
+            "src/**"
+          ]
+        },
+        {
+          "file": "docs/guide.md",
+          "via": [
+            "src/cli"
+          ]
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

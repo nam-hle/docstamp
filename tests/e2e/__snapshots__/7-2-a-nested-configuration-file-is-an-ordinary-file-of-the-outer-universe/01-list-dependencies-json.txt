@@ -1,0 +1,26 @@
+$ docstamp list-dependencies --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "ROOT.md",
+      "dependencies": [
+        "**"
+      ],
+      "resolvedFiles": [
+        "src/a.ts",
+        "sub/SUB.md",
+        "sub/deep/note.txt",
+        "sub/docstamp.yaml",
+        "sub/lib/b.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

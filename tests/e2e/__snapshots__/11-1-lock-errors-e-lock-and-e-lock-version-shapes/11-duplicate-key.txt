@@ -1,0 +1,12 @@
+# duplicate key
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_LOCK: Resolve the conflict by taking either side, or run "docstamp update --all" after reviewing every file.
+--- setup: docstamp-lock.yaml ---
+version: 3
+files:
+  "CLAUDE.md": 8f88c6fa45df5fbb7513d0e6f634794b2bed50be9b82d742682207f66ccd96a8
+  "CLAUDE.md": 8f88c6fa45df5fbb7513d0e6f634794b2bed50be9b82d742682207f66ccd96a8

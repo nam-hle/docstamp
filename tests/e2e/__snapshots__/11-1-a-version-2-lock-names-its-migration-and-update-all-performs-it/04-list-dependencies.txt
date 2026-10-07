@@ -1,0 +1,7 @@
+$ docstamp list-dependencies
+exit: 0
+--- stdout ---
+CLAUDE.md
+  depends   src/**
+  resolved  src/a.ts
+--- stderr ---

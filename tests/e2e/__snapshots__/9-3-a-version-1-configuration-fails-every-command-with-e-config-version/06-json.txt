@@ -1,0 +1,24 @@
+$ docstamp --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "summary": {
+    "ok": 0,
+    "stale": 0,
+    "invalid": 0
+  },
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_CONFIG_VERSION",
+      "severity": "error",
+      "file": null,
+      "subject": null,
+      "message": "Rename \"dependents\" to \"files\" and \"covers\" to \"dependencies\", set \"version: 2\"."
+    }
+  ]
+}
+--- stderr ---

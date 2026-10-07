@@ -1,0 +1,10 @@
+$ docstamp list-dependencies ../b/README.md
+cwd: packages/a
+exit: 0
+--- stdout ---
+packages/b/README.md
+  depends   packages/b/src/**
+  depends   packages/a/src/index.ts
+  resolved  packages/a/src/index.ts
+  resolved  packages/b/src/index.ts
+--- stderr ---

@@ -1,0 +1,10 @@
+# class instance
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_CONFIG: Fix the named key in the configuration file.
+--- setup: docstamp.config.ts ---
+class C {}
+export default new C();

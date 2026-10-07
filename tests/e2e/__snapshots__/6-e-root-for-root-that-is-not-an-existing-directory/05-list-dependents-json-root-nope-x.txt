@@ -1,0 +1,19 @@
+$ docstamp list-dependents --json --root nope x
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependents",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_ROOT",
+      "severity": "error",
+      "file": null,
+      "subject": null,
+      "message": "Pass an existing directory to --root."
+    }
+  ]
+}
+--- stderr ---

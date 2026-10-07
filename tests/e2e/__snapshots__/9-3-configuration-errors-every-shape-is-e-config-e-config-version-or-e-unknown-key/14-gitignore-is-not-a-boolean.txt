@@ -1,0 +1,13 @@
+# gitignore is not a boolean
+$ docstamp
+exit: 2
+--- stdout ---
+0 ok, 0 stale, 0 invalid
+--- stderr ---
+error: E_CONFIG: gitignore: Fix the named key in the configuration file.
+--- setup: docstamp.yaml ---
+version: 2
+gitignore: "yes"
+files:
+  DOC.md:
+    dependencies: [src/**]

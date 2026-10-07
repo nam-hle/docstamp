@@ -1,0 +1,60 @@
+# rename committed
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 0,
+    "stale": 2,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "README.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/**"
+      ],
+      "changes": [
+        {
+          "status": "added",
+          "path": "src/lib/new-name.ts"
+        },
+        {
+          "status": "deleted",
+          "path": "src/lib/old-name.ts"
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "docs/api.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/lib"
+      ],
+      "changes": [
+        {
+          "status": "added",
+          "path": "src/lib/new-name.ts"
+        },
+        {
+          "status": "deleted",
+          "path": "src/lib/old-name.ts"
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---
