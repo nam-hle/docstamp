@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
-import { computeUniverse, determineRoot } from '../../src/universe/walk.ts';
+import { computeUniverse, determineRoot, isIgnoredPath } from '../../src/universe/walk.ts';
 import { CONFIG_NAMES } from '../../src/config/value.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import type { Config } from '../../src/core/types.ts';
@@ -163,5 +163,63 @@ describe('§7.4 / §7.5 collisions', () => {
   it.runIf(process.platform === 'linux')('case collision is an error', () => {
     const root = makeTree({ 'A.md': '', 'a.md': '' });
     expect(codes(() => computeUniverse(root, config()))).toEqual(['E_PATH_COLLISION']);
+  });
+});
+
+describe('§8.5 NOTE isIgnoredPath', () => {
+  const ignoredBy = (files: Record<string, string>, over: Partial<Config>, ...paths: string[]) => {
+    const root = makeTree(files);
+    const universe = computeUniverse(root, config(over));
+    return paths.map((path) => isIgnoredPath(root, universe, path));
+  };
+
+  it('records the entries a rule skipped, not what is below them', () => {
+    const root = makeTree({
+      '.gitignore': 'build/\n*.log\n',
+      'build/a/b.js': '',
+      'x.log': '',
+      y: '',
+    });
+    expect(computeUniverse(root, config()).ignored).toEqual(['build', 'x.log']);
+  });
+  it('a gitignored file, a file below a gitignored directory and the directory itself', () => {
+    const files = { '.gitignore': '.npmrc\nbuild/\n', '.npmrc': '', 'build/out/index.js': '' };
+    expect(ignoredBy(files, {}, '.npmrc', 'build', 'build/out', 'build/out/index.js')).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+  });
+  it('an entry of the ignore list', () => {
+    const files = { 'gen/types.ts': '', 'keep.ts': '' };
+    expect(ignoredBy(files, { ignore: ['gen/'] }, 'gen', 'gen/types.ts', 'keep.ts')).toEqual([
+      true,
+      true,
+      false,
+    ]);
+  });
+  it('gitignore: false reads no .gitignore, so nothing is ignored', () => {
+    const files = { '.gitignore': 'build/\n', 'build/o.js': '' };
+    expect(ignoredBy(files, { useGitignore: false }, 'build', 'build/o.js')).toEqual([
+      false,
+      false,
+    ]);
+  });
+  it('a path that does not exist is not ignored, even below an ignored directory', () => {
+    const files = { '.gitignore': 'build/\n', 'build/o.js': '' };
+    expect(ignoredBy(files, {}, 'build/nope.js', 'nope', 'nope/x')).toEqual([false, false, false]);
+  });
+  it('a directory that holds only ignored entries is ignored', () => {
+    const files = { 'out/.gitignore': '*\n', 'out/a.js': '' };
+    expect(ignoredBy(files, {}, 'out')).toEqual([true]);
+  });
+  it('a path in the Universe or a negated one is not ignored', () => {
+    const files = { '.gitignore': '*.log\n!keep.log\n', 'keep.log': '', 'src/a.ts': '' };
+    expect(ignoredBy(files, {}, 'keep.log', 'src', 'src/a.ts')).toEqual([false, false, false]);
+  });
+  it('a sibling that merely starts with the same letters is not ignored', () => {
+    const files = { '.gitignore': 'build/\n', 'build/o.js': '', 'builder.ts': '' };
+    expect(ignoredBy(files, {}, 'builder.ts', 'buil')).toEqual([false, false]);
   });
 });

@@ -131,6 +131,36 @@ describe('§8.5 resolveDependencies', () => {
   });
 });
 
+describe('§8.5 NOTE E_EMPTY_PATTERN names an ignored path', () => {
+  const ignoredPaths = new Set(['.npmrc', 'build', 'build/out']);
+  const withIgnored: EngineFs = { ...fs, isIgnoredPath: (p) => ignoredPaths.has(p) };
+  const messageOf = (pattern: string, engine: EngineFs = withIgnored) => {
+    const r = evaluate(declare('B.md', ['src/**', pattern]), universe, lockOf({}), [], engine);
+    return r.diagnostics.find((d) => d.code === 'E_EMPTY_PATTERN')?.message;
+  };
+  it('says so for a literal path that exists and is ignored', () => {
+    for (const pattern of ['.npmrc', 'build', 'build/out']) {
+      expect(messageOf(pattern), pattern).toContain('it exists but is ignored');
+    }
+  });
+  it('keeps the old message for a missing path, a glob and when nothing can tell', () => {
+    const plain = 'Correct or remove the pattern; it matches no file.';
+    expect(messageOf('missing.js')).toBe(plain);
+    expect(messageOf('build/*')).toBe(plain);
+    expect(messageOf('.npmrc', fs)).toBe(plain);
+  });
+  it('changes only the message: code, subject, state and order stay', () => {
+    const run = (engine: EngineFs) =>
+      evaluate(declare('B.md', ['.npmrc', 'build', 'src/**']), universe, lockOf({}), [], engine);
+    const shape = (r: ReturnType<typeof run>) => [
+      r.state,
+      r.diagnostics.map((d) => [d.code, d.subject]),
+    ];
+    expect(shape(run(withIgnored))).toEqual(shape(run(fs)));
+    expect(run(withIgnored).diagnostics.map((d) => d.subject)).toEqual(['.npmrc', 'build']);
+  });
+});
+
 describe('§12.1 evaluate', () => {
   const b = declare('B.md', ['src/**']);
   const current = hashOf(['src/a.ts', 'src/b.ts']);

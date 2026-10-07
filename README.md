@@ -205,6 +205,17 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
   ```
 
   A doc whose patterns together select nothing is still an error (`E_EMPTY_DEPENDENCIES`).
+- **Depend on the source of generated output, not on the output.** Files that `.gitignore` or the `ignore` list excludes are not in the universe, so they cannot be dependencies, whether or not they exist on disk. When a pattern names such a path, the error says so instead of suggesting a typo:
+
+  ```
+  $ docstamp
+  INVALID  docs/output.md
+  0 ok, 0 stale, 1 invalid
+  error: E_EMPTY_DEPENDENCIES: docs/output.md: Correct the patterns in "dependencies"; together they select no file.
+  error: E_EMPTY_PATTERN: docs/output.md: build/output/index.js: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+  ```
+
+  Name the files that produce `build/output/index.js` instead. `gitignore: false` ends the exclusion for every `.gitignore` in the repository, not for one path. Only a literal path (no `*`, `?`, `[`, `{`) gets this hint, and the selection never changes. docstamp does not trace a renamed file, because that needs git history ([SPEC §8.5](docs/SPEC.md#85-resolution)).
 - **Do not depend on the lock, the configuration or the doc itself.** The root configuration and lock are not selectable, and a file is never one of its own dependencies ([SPEC §8.5](docs/SPEC.md#85-resolution)), so editing a doc never makes it stale.
 - **Know what counts as a change.** A file is hashed as it is, except that CR LF becomes LF in text files ([SPEC §10.2](docs/SPEC.md#102-normalized-content)). Nothing else is normalized: a changed license header, whitespace, a final newline, a byte order mark and every binary file all count, byte for byte. Renaming or moving a dependency counts too.
 - **Commit the lock separately from the edits.** Known limit: the changed-file list is the difference from the commit that introduced the lock entry. An edit committed in the same commit as `docstamp update` makes the doc stale but is not listed, because docstamp stores one hash and no commit id ([SPEC §12.3](docs/SPEC.md#123-changedsince)). Commit the lock separately from the dependency edits it covers.

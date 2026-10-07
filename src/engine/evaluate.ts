@@ -3,17 +3,25 @@ import { sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Reason, Result } from '../core/types.ts';
 import { dependencyHashFrom } from '../hash/hash.ts';
 import { patternMatches, select } from '../pattern/match.ts';
-import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
+import { literalPath, parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 
 export interface EngineFs {
   isStampedFile(path: string): boolean;
   fileHash(path: string): string;
+  // SPEC §8.5 NOTE: the path exists under Root but §7.3 keeps it out of the Universe
+  isIgnoredPath?(path: string): boolean;
 }
+
+const IGNORED_MESSAGE =
+  'Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore ' +
+  'or the ignore list; depend on its source, or remove that rule (gitignore: false skips ' +
+  '.gitignore files).';
 
 // SPEC §8.5
 function resolveWithWarnings(
   b: Declaration,
   universe: readonly string[],
+  isIgnoredPath: (path: string) => boolean = () => false,
 ): { resolved: string[]; warnings: Diagnostic[] } {
   const parsed = b.dependencies.map((source) => parsePattern(source));
   const invalid = b.dependencies.filter((_, i) => parsed[i] === null);
@@ -26,9 +34,19 @@ function resolveWithWarnings(
   const warnings: Diagnostic[] = [];
   patterns.forEach((pattern, i) => {
     if (candidates.some((path) => patternMatches(pattern, path))) return;
-    const code = pattern.negated ? 'W_EMPTY_EXCLUSION' : 'E_EMPTY_PATTERN';
-    (pattern.negated ? warnings : problems).push(
-      diag(code, { file: b.file, subject: b.dependencies[i] }),
+    const subject = b.dependencies[i];
+    if (pattern.negated) {
+      warnings.push(diag('W_EMPTY_EXCLUSION', { file: b.file, subject }));
+      return;
+    }
+    const literal = literalPath(pattern);
+    const ignored = literal !== null && isIgnoredPath(literal);
+    problems.push(
+      diag('E_EMPTY_PATTERN', {
+        file: b.file,
+        subject,
+        ...(ignored ? { message: IGNORED_MESSAGE } : {}),
+      }),
     );
   });
   const resolved = select(patterns, candidates);
@@ -82,7 +100,8 @@ export function evaluate(
   let resolved: string[] = [];
   let warnings: Diagnostic[] = [];
   if (attached.length === 0) {
-    collect(() => ({ resolved, warnings } = resolveWithWarnings(b, universe)));
+    const ignored = (path: string) => fs.isIgnoredPath?.(path) ?? false;
+    collect(() => ({ resolved, warnings } = resolveWithWarnings(b, universe, ignored)));
   }
   let current = '';
   if (problems.length === 0) collect(() => (current = dependencyHash(resolved, fs)));

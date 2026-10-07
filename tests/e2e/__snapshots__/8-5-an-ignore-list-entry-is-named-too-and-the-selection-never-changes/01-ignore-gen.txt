@@ -1,0 +1,17 @@
+# ignore: gen/
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  DOC.md
+0 ok, 0 stale, 1 invalid
+--- stderr ---
+error: E_EMPTY_PATTERN: DOC.md: gen/types.ts: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+--- setup: docstamp.yaml ---
+version: 2
+ignore:
+  - gen/
+files:
+  "DOC.md":
+    dependencies:
+      - "gen/types.ts"
+      - "src/a.ts"

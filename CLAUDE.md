@@ -153,12 +153,16 @@ command treats it like a configured file. To change that behavior, touch `src/in
 duplicate check) and the `marked` hash rule in `src/hash/hash.ts`. Tests: `tests/unit/inline.test.ts`,
 `tests/e2e/scenarios/inline.test.ts` on the `inline-docs` fixture.
 
-## Warnings on a file
+## Pattern diagnostics
 
 `Result.diagnostics` holds the errors of an `invalid` file and the warnings of any file: an `ok` or
 `stale` file can carry `W_EMPTY_EXCLUSION` (SPEC §8.5, produced by `resolveWithWarnings` in
 `src/engine/evaluate.ts`). A warning never changes a state, a hash or an exit code, so code that
 asks "is this file invalid" reads `state`, never `diagnostics.length`.
+
+`Universe.ignored` lists the entries a rule skipped (SPEC §7.2 step 3.4). `isIgnoredPath` in
+`src/universe/walk.ts` uses it only to word `E_EMPTY_PATTERN` for a literal path that exists but is
+ignored (§8.5 NOTE): it never touches selection, codes or order, and never calls `git`.
 
 ## Compatibility guard
 

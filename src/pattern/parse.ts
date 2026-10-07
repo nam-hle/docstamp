@@ -136,3 +136,13 @@ export function parsePattern(
     throw e;
   }
 }
+
+// SPEC §8.5 NOTE: the path a pattern of Literals only denotes, else null
+export function literalPath(pattern: ParsedPattern): string | null {
+  const segments: string[] = [];
+  for (const segment of pattern.segments) {
+    if (segment.kind !== 'parts' || segment.atoms.some((atom) => atom.kind !== 'lit')) return null;
+    segments.push(segment.atoms.map((atom) => (atom.kind === 'lit' ? atom.value : '')).join(''));
+  }
+  return segments.join('/');
+}

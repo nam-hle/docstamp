@@ -312,7 +312,7 @@ Symbolic links are never followed: a link is an entry of kind *link*, whatever i
          and continue.
       2. If *n* is `.git`, of any kind, skip *e*.
       3. If *e* is *other*, skip *e*.
-      4. If `IsIgnored(q, kind of e, rules, config)` (§7.3), skip *e*.
+      4. If `IsIgnored(q, kind of e, rules, config)` (§7.3), skip *e*; *q* is then an *ignored entry*.
       5. If *e* is a *directory*: if it contains an entry named `.git`, skip *e* (a nested
          repository); otherwise call `WalkDirectory(e, q)`.
       6. If *e* is a *file* or *link*, add *q* to the Universe.
@@ -478,6 +478,16 @@ one that matches only files outside the Universe (ignored, §7.3) is. It never c
 (§8.4), the last matching pattern still wins, the resolved files, the Dependency Hash or the state
 of the file. A warning lets a standard exclusion block be declared before the files it excludes
 exist, and survive their deletion.
+
+NOTE: The `[[Message]]` of `E_EMPTY_PATTERN` is informative (§5.5), and SHOULD say when the pattern
+is a *literal path* that exists under Root but is not in the Universe because it is ignored, so
+that nobody hunts for a typo. A literal path is a Pattern whose every Segment is made of Literals
+only (no `*`, `?`, Class, Alternation or `**`); it denotes the String of those Literals, Escapes
+resolved. It is *ignored* when it exists as an entry under Root (a file, link or directory, not
+followed) and either it or a directory above it is an ignored entry (§7.2 step 3.4), or an ignored
+entry is below it (a directory whose content is all ignored). This changes neither the selection,
+nor the Diagnostic code, nor the Diagnostic order, nor any verdict. `git` is not consulted, so a
+renamed file is not traced.
 
 ## 9 Configuration File
 
@@ -1364,7 +1374,7 @@ Diagnostics as in §14.3.
 | `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies` or `hash` |
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
-| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation |
+| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
 | `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |

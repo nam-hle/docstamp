@@ -11,7 +11,7 @@ import { stampFile } from '../inline/read-inline.ts';
 import { lockExists, readLock, writeLock } from '../lock/lock.ts';
 import { jsonText, listJsonText, reverseJsonText } from '../report/json.ts';
 import { checkText, diagnosticsText, listText, reverseText, updateText } from '../report/text.ts';
-import { determineRoot, type Universe } from '../universe/walk.ts';
+import { determineRoot, isIgnoredPath, type Universe } from '../universe/walk.ts';
 import { HELP, parseArgs } from './args.ts';
 import { selectResults, toRepoPath } from './paths.ts';
 import { loadWorkspace } from './workspace.ts';
@@ -67,6 +67,7 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
   const lock = readLockFor();
   const fs: EngineFs = {
     isStampedFile: (p) => isStampedFile(root, p),
+    isIgnoredPath: (p) => isIgnoredPath(root, universe, p),
     fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
   };
   const results = declarations.map((b) =>
