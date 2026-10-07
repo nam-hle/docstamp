@@ -3,6 +3,27 @@
   "version": "0.2.1",
   "description": "Deterministic snapshot gate for hidden links between files",
   "license": "MIT",
+  "author": {
+    "name": "Nam Hoang Le",
+    "url": "https://github.com/nam-hle"
+  },
+  "homepage": "https://github.com/nam-hle/docstamp#readme",
+  "bugs": {
+    "url": "https://github.com/nam-hle/docstamp/issues"
+  },
+  "keywords": [
+    "documentation",
+    "docs",
+    "freshness",
+    "staleness",
+    "ci",
+    "ai-context",
+    "claude-md",
+    "agents-md",
+    "lockfile",
+    "snapshot",
+    "hash"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nam-hle/docstamp.git"

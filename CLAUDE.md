@@ -20,8 +20,9 @@ codes. It is the source of truth.
 - Code that implements an algorithm cites its clause (`// §8.4`). Tests are named by clause
   (`describe('§12.1 Evaluate', ...)`).
 - A behavior the spec does not define is a spec gap: fix the spec, do not invent behavior in code.
-- [docs/superpowers/specs/](docs/superpowers/specs/) holds design rationale: why, not what. It is
-  frozen once its plan ships.
+- Design rationale lives in [docs/VISION.md](docs/VISION.md) and
+  [docs/PRINCIPLES.md](docs/PRINCIPLES.md). Working plans and scratch design notes are not
+  committed: `docs/superpowers/` is gitignored.
 
 ## Runtime
 
@@ -80,8 +81,7 @@ docstamp/
 └── docs/
     ├── SPEC.md           # the contract
     ├── PRINCIPLES.md
-    ├── VISION.md
-    └── superpowers/      # design rationale and plans
+    └── VISION.md
 ```
 
 ## End-to-end tests
@@ -147,12 +147,27 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
   the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
 - Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
   `.github/workflows/publish.yml` for that tag. It builds, runs the unit, end-to-end and pack
-  tests (not the docs self-check) and publishes to npm with the secret `NPM_TOKEN`.
+  tests (not the docs self-check) and publishes to npm with the secret `NPM_TOKEN`, using
+  `npm publish --provenance` (the job holds `id-token: write`). Provenance requires the repository
+  to be public; the publish fails while it is private.
 - To retry a failed publish, run the Publish workflow from `main` with the release tag as input.
   It refuses a tag that is not on `main` or whose version differs from `package.json`. Nothing
   else publishes.
 - Version bumps edit `package.json`, so the docs deliberately do not depend on it: a release must
   not make the docs check fail.
+
+## Public repository
+
+The repository is public and used by strangers, so the root files are part of the product:
+
+- `README.md` is the landing page. Every command and output in it was run for real; keep it so.
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `SECURITY.md` are the community files. Contact goes
+  through GitHub-native channels (private vulnerability reporting, the maintainer's profile), never
+  an email address.
+- `.github/` also holds issue forms, the pull request template, `CODEOWNERS` and
+  `dependabot.yml` (weekly, minor and patch grouped, at most 5 open pull requests).
+- Never name an employer or an internal project, in any file, commit message or issue. Cite
+  findings without attribution.
 
 ## Docs
 
