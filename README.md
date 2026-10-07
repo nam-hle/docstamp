@@ -159,6 +159,18 @@ Things to know:
 - **A doc that depends on another inline doc.** When `docs/architecture.md` is re-stamped, `README.md` (which depends on it) stays `ok`: the `hash:` line of a doc is not part of its content when another doc hashes it. Its prose, its other frontmatter and its `dependencies` list still count, so editing any of them makes `README.md` stale ([SPEC §10.2](docs/SPEC.md#102-normalized-content)).
 - **Moving a doc.** Rename or move it freely: its declaration and hash travel with it. Dependencies that point at its old path need the new path.
 - **Formatters.** A formatter that reflows or re-quotes the frontmatter of a doc changes that doc's content, so every doc that depends on it becomes stale; one that rewrites the `hash:` line (quotes or wraps it) makes the doc `invalid`. Exclude the `docstamp` block from formatters, or run `docstamp update` after formatting.
+- **A schema for the block.** The package ships `schema-frontmatter.json` (`docstamp/schema-frontmatter.json`), a JSON Schema (draft-07) for the frontmatter of a doc: the `docstamp` key takes `dependencies` (required, a non-empty list of strings), `use` (a list of preset names) and `hash` (64 lowercase hex digits), and nothing else, while other frontmatter keys stay free. A tool that validates frontmatter against a JSON Schema file can use it to catch a mistyped key before docstamp runs; point it at `node_modules/docstamp/schema-frontmatter.json` for the docs that carry a block. docstamp itself does not read the file, and checks the block as [SPEC §9.6.2](docs/SPEC.md#962-parsing) says. Checked with Ajv 8:
+
+  ```js
+  import { readFileSync } from 'node:fs';
+  import Ajv from 'ajv';
+
+  const schema = JSON.parse(readFileSync('node_modules/docstamp/schema-frontmatter.json', 'utf8'));
+  const validate = new Ajv().compile(schema);
+  validate({ docstamp: { dependencies: ['src'] } }); // true
+  validate({ docstamp: { dependancies: ['src'] } }); // false: no "dependencies"
+  ```
+- **One typo, one diagnostic.** An unknown key in the block is reported once, as `E_UNKNOWN_KEY` for the file, and not also as `E_BLOCK` for the `dependencies` it replaced ([SPEC §9.6.2](docs/SPEC.md#962-parsing)).
 - **Changed files.** The list of changed dependencies comes from git history of the doc's own `hash:` line, like the lock's history ([SPEC §12.3](docs/SPEC.md#123-changedsince)); a doc that was renamed since the review prints `depends` lines instead.
 
 ## Working with AI agents

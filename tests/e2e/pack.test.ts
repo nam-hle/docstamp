@@ -75,6 +75,7 @@ describe('§9.5 the packed tarball works from node_modules', () => {
       'dist/lib.js',
       'dist/lib.d.ts',
       'schema.json',
+      'schema-frontmatter.json',
       'package.json',
     ]) {
       expect(existsSync(join(packaged(), file)), file).toBe(true);

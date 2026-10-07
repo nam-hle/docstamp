@@ -3,10 +3,9 @@ import { diag } from '../core/diagnostics.ts';
 import type { Declaration, Diagnostic } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { hashOnLine, type Scan } from './frontmatter.ts';
+import { BLOCK_KEYS, HASH } from './keys.ts';
 
 const MARKER_REST = /^[ \t]*(?:#.*)?\r?\n?$/u;
-const BLOCK_KEYS: readonly string[] = ['dependencies', 'use', 'hash'];
-const HASH = /^[0-9a-f]{64}$/u;
 const isMap = (v: YamlValue | undefined): v is YamlMap =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -50,7 +49,9 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
     return done([], null);
   }
   const keys = entry.value.entries;
-  const unknown = [...keys.keys()].filter((key) => !BLOCK_KEYS.includes(key));
+  const unknown = [...keys.keys()].filter(
+    (key) => !(BLOCK_KEYS as readonly string[]).includes(key),
+  );
   for (const key of unknown) problems.push(diag('E_UNKNOWN_KEY', { file, subject: key }));
 
   const listed = keys.get('dependencies')?.value;

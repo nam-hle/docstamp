@@ -279,6 +279,13 @@ NOTE: Only a `docstamp:` in column 0 marks a block: a quoted key (`"docstamp":`)
 `docstamp:` and a key such as `docstamp-x:` do not. A frontmatter that has no such line is never
 parsed (§9.6.2), so unrelated frontmatter cannot make a run fail.
 
+NOTE: The package ships `schema-frontmatter.json`, a JSON Schema (draft-07) for the frontmatter of a
+file with an inline block, so that tools that validate frontmatter can catch a mistyped key: the
+`docstamp` key is an object with `dependencies` (required, a non-empty array of strings), `use` (a
+non-empty array of distinct Preset names) and `hash` (64 lowercase hexadecimal digits), and no other
+key; other frontmatter keys are free. It is generated from the same keys as §9.6.2 and is
+informative: docstamp does not read it, and §9.6.2 decides.
+
 ## 6 Root
 
 `DetermineRoot(cwd, rootOption)`:
@@ -1749,6 +1756,7 @@ The following are not breaking:
   for a path it does not know;
 - the `[[Message]]` of the `E_USAGE` of §13.8 step 3 now names the directory and Root it was
   resolved against; the code, the exit code and the resolution of §13.4 are unchanged;
+- a new file shipped in the package, such as `schema-frontmatter.json` (§5.6), which no command reads;
 - Presets (§8.6): the optional key `presets` of the Configuration file (§9.3), the optional key `use`
   of a file and of an inline block, the Diagnostic code `E_UNKNOWN_PRESET`, and the members `use` and
   `origins` of `list-dependencies` for a file that uses a Preset. No existing input uses them: a Configuration file or block that
