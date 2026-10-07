@@ -1,6 +1,6 @@
 import { Raised, diag, sortDiagnostics } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
-import type { Binding, Diagnostic, Lock, Reason, Result } from '../core/types.ts';
+import type { Declaration, Diagnostic, Lock, Reason, Result } from '../core/types.ts';
 import { dependencyHashFrom } from '../hash/hash.ts';
 import { patternMatches, select } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
@@ -11,7 +11,7 @@ export interface EngineFs {
 }
 
 // SPEC §8.5
-export function resolveDependencies(b: Binding, universe: readonly string[]): string[] {
+export function resolveDependencies(b: Declaration, universe: readonly string[]): string[] {
   const parsed = b.dependencies.map((source) => parsePattern(source));
   const invalid = b.dependencies.filter((_, i) => parsed[i] === null);
   if (invalid.length > 0) {
@@ -30,7 +30,8 @@ export function resolveDependencies(b: Binding, universe: readonly string[]): st
     }
   });
   const resolved = select(patterns, candidates);
-  if (resolved.length === 0) problems.push(diag('E_EMPTY_COVERS', { dependent: b.dependent }));
+  if (resolved.length === 0)
+    problems.push(diag('E_EMPTY_DEPENDENCIES', { dependent: b.dependent }));
   if (problems.length > 0) throw new Raised(problems);
   return resolved;
 }
@@ -53,7 +54,7 @@ function dependencyHash(resolved: readonly string[], fs: EngineFs): string {
 
 // SPEC §12.1
 export function evaluate(
-  b: Binding,
+  b: Declaration,
   universe: readonly string[],
   lock: Lock,
   attached: readonly Diagnostic[],
@@ -89,8 +90,8 @@ export function evaluate(
 }
 
 // SPEC §12.2
-export function orphans(bindings: readonly Binding[], lock: Lock): Diagnostic[] {
-  const bound = new Set(bindings.map((b) => b.dependent));
+export function orphans(declarations: readonly Declaration[], lock: Lock): Diagnostic[] {
+  const bound = new Set(declarations.map((b) => b.dependent));
   return sortPaths([...lock.entries.keys()])
     .filter((dependent) => !bound.has(dependent))
     .map((dependent) => diag('W_ORPHAN', { subject: dependent }));

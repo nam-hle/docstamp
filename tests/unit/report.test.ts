@@ -158,7 +158,7 @@ describe('§14.5 JSON', () => {
       exitCode: 2,
       selected: [
         res('a.md', 'stale'),
-        res('b.md', 'invalid', { diagnostics: [diag('E_EMPTY_COVERS')] }),
+        res('b.md', 'invalid', { diagnostics: [diag('E_EMPTY_DEPENDENCIES')] }),
       ],
       diagnostics: [diag('W_ORPHAN', { subject: 'z.md' })],
     });
@@ -181,7 +181,7 @@ describe('§14.5 JSON', () => {
       exitCode: 2,
       selected: [
         res('a.md', 'ok', { resolved: ['src/a.ts'] }),
-        res('b.md', 'invalid', { diagnostics: [diag('E_EMPTY_COVERS')] }),
+        res('b.md', 'invalid', { diagnostics: [diag('E_EMPTY_DEPENDENCIES')] }),
       ],
       diagnostics: [],
     });
@@ -197,6 +197,6 @@ describe('§14.5 JSON', () => {
     ]);
     expect(doc.files[0].resolvedFiles).toEqual(['src/a.ts']);
     expect(doc.files[1].resolvedFiles).toEqual([]);
-    expect(doc.files[1].diagnostics[0].code).toBe('E_EMPTY_COVERS');
+    expect(doc.files[1].diagnostics[0].code).toBe('E_EMPTY_DEPENDENCIES');
   });
 });

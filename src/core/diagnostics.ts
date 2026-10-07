@@ -15,7 +15,7 @@ const FIX: Record<Code, string> = {
   E_PATTERN: 'Correct the pattern; patterns use "/" and "\\" escapes.',
   E_DEPENDENT_MISSING: 'Rename the key in the configuration file or restore the file.',
   E_EMPTY_PATTERN: 'Correct or remove the pattern; it matches no file.',
-  E_EMPTY_COVERS: 'Correct the patterns in "dependencies"; together they select no file.',
+  E_EMPTY_DEPENDENCIES: 'Correct the patterns in "dependencies"; together they select no file.',
   E_UNREADABLE: 'Fix the permissions or remove the entry.',
   E_PATH_ENCODING: 'Rename the file to a valid UTF-8 name.',
   E_PATH_COLLISION: 'Rename one of the files; names differ only by case or normalization.',

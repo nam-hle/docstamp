@@ -59,7 +59,7 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
   };
 }
 
-function evaluateBindings(root: string, readLockFor: () => Lock, hashFiles: boolean) {
+function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: boolean) {
   const { config, attached } = readConfig(root);
   const universe = computeUniverse(root, config);
   const lock = readLockFor();
@@ -67,7 +67,7 @@ function evaluateBindings(root: string, readLockFor: () => Lock, hashFiles: bool
     isDependentFile: (p) => isDependentFile(root, p),
     fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
   };
-  const results = config.bindings.map((b) =>
+  const results = config.declarations.map((b) =>
     evaluate(
       b,
       universe.paths,
@@ -76,7 +76,7 @@ function evaluateBindings(root: string, readLockFor: () => Lock, hashFiles: bool
       fs,
     ),
   );
-  return { bindings: config.bindings, results, lock };
+  return { declarations: config.declarations, results, lock };
 }
 
 // SPEC §12.2
@@ -89,13 +89,13 @@ function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evalua
       return { entries: new Map() };
     }
   };
-  const { bindings, results, lock } = evaluateBindings(root, readLockFor, true);
-  return { results, lock, global: orphans(bindings, lock) };
+  const { declarations, results, lock } = evaluateDeclarations(root, readLockFor, true);
+  return { results, lock, global: orphans(declarations, lock) };
 }
 
 // SPEC §13.7
 function listAll(root: string): Result[] {
-  return evaluateBindings(root, () => ({ entries: new Map() }), false).results;
+  return evaluateDeclarations(root, () => ({ entries: new Map() }), false).results;
 }
 
 // SPEC §12.3
@@ -186,7 +186,7 @@ function reverseEntries(
         diagnostics: [diag('E_USAGE', { subject: key, message })],
       };
     }
-    const dependents = dependentsOf(key, config.bindings, universe, attached);
+    const dependents = dependentsOf(key, config.declarations, universe, attached);
     return { file: key, dependents, diagnostics: [] };
   });
   return { entries, attached };

@@ -10,7 +10,7 @@ import type { Config } from '../../src/core/types.ts';
 const config = (over: Partial<Config> = {}): Config => ({
   ignore: [],
   useGitignore: true,
-  bindings: [],
+  declarations: [],
   ...over,
 });
 

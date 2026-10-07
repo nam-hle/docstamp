@@ -117,7 +117,7 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 - To retry a failed publish, run the Publish workflow from `main` with the release tag as input.
   It refuses a tag that is not on `main` or whose version differs from `package.json`. Nothing
   else publishes.
-- Version bumps edit `package.json`, so the docs deliberately do not cover it: a release must
+- Version bumps edit `package.json`, so the docs deliberately do not depend on it: a release must
   not make the docs check fail.
 
 ## Docs

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import { isRepoPath } from '../core/repo-path.ts';
-import type { Binding, Config, Diagnostic } from '../core/types.ts';
+import type { Declaration, Config, Diagnostic } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { loadScript } from './script.ts';
 import { CONFIG_NAMES, isMap, isStrings, type Value } from './value.ts';
@@ -70,12 +70,12 @@ function readValue(root: string): Value {
   return name === 'docstamp.yaml' ? readYaml(path) : loadScript(path);
 }
 
-function collectBinding(
+function collectDeclaration(
   key: string,
   value: Value | undefined,
   fatal: Diagnostic[],
   attached: Diagnostic[],
-  out: Binding[],
+  out: Declaration[],
 ): void {
   if (!isRepoPath(key)) {
     fatal.push(diag('E_CONFIG', { subject: key }));
@@ -123,22 +123,22 @@ export function readConfig(root: string): { config: Config; attached: Diagnostic
     fatal.push(diag('E_CONFIG', { subject: 'ignore' }));
   }
 
-  const bindings: Binding[] = [];
+  const declarations: Declaration[] = [];
   const files = top.get('files');
   if (!isMap(files)) {
     fatal.push(diag('E_CONFIG', { subject: 'files' }));
   } else {
     for (const [key, value] of files) {
-      collectBinding(key, value, fatal, attached, bindings);
+      collectDeclaration(key, value, fatal, attached, declarations);
     }
   }
   if (fatal.length > 0) throw new Raised(fatal);
-  bindings.sort((a, b) => comparePaths(a.dependent, b.dependent));
+  declarations.sort((a, b) => comparePaths(a.dependent, b.dependent));
   return {
     config: {
       ignore: isStrings(ignore) ? ignore : [],
       useGitignore: gitignore !== false,
-      bindings,
+      declarations,
     },
     attached,
   };

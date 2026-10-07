@@ -6,7 +6,7 @@ import { dependencyHashFrom, fileHash, normalizedContent } from '../../src/hash/
 
 afterEach(cleanupTrees);
 
-const cfg = { ignore: [], useGitignore: true, bindings: [] };
+const cfg = { ignore: [], useGitignore: true, declarations: [] };
 const setup = (spec: Parameters<typeof makeTree>[0]) => {
   const root = makeTree(spec);
   return { root, u: computeUniverse(root, cfg) };

@@ -9,7 +9,7 @@ export type Code =
   | 'E_PATTERN'
   | 'E_DEPENDENT_MISSING'
   | 'E_EMPTY_PATTERN'
-  | 'E_EMPTY_COVERS'
+  | 'E_EMPTY_DEPENDENCIES'
   | 'E_UNREADABLE'
   | 'E_PATH_ENCODING'
   | 'E_PATH_COLLISION'
@@ -26,7 +26,7 @@ export interface Diagnostic {
   readonly message: string;
 }
 
-export interface Binding {
+export interface Declaration {
   readonly dependent: string;
   readonly dependencies: readonly string[];
 }
@@ -34,7 +34,7 @@ export interface Binding {
 export interface Config {
   readonly ignore: readonly string[];
   readonly useGitignore: boolean;
-  readonly bindings: readonly Binding[];
+  readonly declarations: readonly Declaration[];
 }
 
 export interface Lock {
@@ -60,13 +60,13 @@ export interface Result {
   readonly changes?: readonly Change[] | null;
 }
 
-export interface Dependent {
+export interface ReverseDependent {
   readonly file: string;
   readonly via: readonly string[];
 }
 
 export interface ReverseEntry {
   readonly file: string;
-  readonly dependents: readonly Dependent[];
+  readonly dependents: readonly ReverseDependent[];
   readonly diagnostics: readonly Diagnostic[];
 }

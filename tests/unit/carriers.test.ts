@@ -37,7 +37,7 @@ describe('§9.1 Carriers', () => {
     expect(attached).toEqual([]);
     expect(config.ignore).toEqual(['dist']);
     expect(config.useGitignore).toBe(true);
-    expect(config.bindings).toEqual([
+    expect(config.declarations).toEqual([
       { dependent: 'a.md', dependencies: ['x'] },
       { dependent: 'b.md', dependencies: ['src/**'] },
     ]);
@@ -82,7 +82,7 @@ describe('§9.5 script carriers', () => {
     const { config } = readConfig(
       makeTree({ 'docstamp.config.js': `exports.default = ${VALID}; exports.other = 1;\n` }),
     );
-    expect(config.bindings).toEqual([]);
+    expect(config.declarations).toEqual([]);
   });
   it('the module itself is used without a default export', () => {
     expect(script(`export const version = 2;\nexport const files = {};\n`)).toEqual([
@@ -110,7 +110,7 @@ describe('§9.5 script carriers', () => {
         'docstamp.config.mjs': `export default { version: 2, files: { 'z': { dependencies: ['a'] }, '1': { dependencies: ['a'] } } };`,
       }),
     );
-    expect(config.bindings.map((b) => b.dependent)).toEqual(['1', 'z']);
+    expect(config.declarations.map((b) => b.dependent)).toEqual(['1', 'z']);
   });
   it.each([
     ['a throwing module', 'throw new Error("boom");'],

@@ -98,13 +98,14 @@ parse back to *s*. It is the only escaping used in output and in the Lockfile.
 or trailing `/`, no empty segment, no segment `.` or `..`, no U+0000, and is in Unicode
 Normalization Form C (NFC).
 
-**Binding**: the declaration in the Configuration file that a Dependent rests on the files its
-patterns select.
+**Declaration**: the entry of `files` in the Configuration file that gives a file its dependencies,
+as a List of patterns.
 
-**Dependent**: a file that has a Binding, and so rests on other files, its dependencies.
+**Dependent**: a file that has a Declaration, and so rests on other files, its dependencies.
+`docstamp list-dependents <file>` lists the Dependents of *file*. The Configuration file, the
+Lockfile and the JSON output call a Dependent `file`.
 
-**Dependency**: a file selected by a Dependent's Binding (§8.5); in the Configuration file the
-Binding is the `dependencies` list of an entry under `files`.
+**Dependency**: a file selected by a Dependent's Declaration (§8.5).
 
 **Review**: the act, outside docstamp, of checking a Dependent against its dependencies.
 
@@ -121,7 +122,7 @@ Written by people.
 
 ## 5 Records
 
-### 5.1 Binding
+### 5.1 Declaration
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -134,7 +135,7 @@ Written by people.
 |---|---|---|
 | `[[Ignore]]` | List of String (ignore rule lines, §7.3) | « » |
 | `[[UseGitignore]]` | Boolean | true |
-| `[[Bindings]]` | List of Binding, in path order of `[[Dependent]]` | (required) |
+| `[[Declarations]]` | List of Declaration, in path order of `[[Dependent]]` | (required) |
 
 NOTE: A Config is built from the normalized value of the Configuration file (§9.3), whatever its
 Carrier.
@@ -157,7 +158,7 @@ identical needs no Review (Principle 4).
 | Field | Type | Meaning |
 |---|---|---|
 | `[[Dependent]]` | RepoPath | |
-| `[[Dependencies]]` | List of String | the Binding's `[[Dependencies]]` |
+| `[[Dependencies]]` | List of String | the Declaration's `[[Dependencies]]` |
 | `[[State]]` | `ok`, `stale` or `invalid` | §12.1 |
 | `[[Reasons]]` | List of Reason | non-empty iff `[[State]]` is `stale` |
 | `[[Resolved]]` | List of RepoPath, path order | empty iff `[[State]]` is `invalid` |
@@ -169,7 +170,7 @@ A *Reason* is `unrecorded` or `content-changed`; exactly one applies to a `stale
 
 A *Change* is { `[[Status]]`: `modified`, `added` or `deleted`, `[[Path]]`: RepoPath }.
 
-NOTE: The Lockfile keeps one Hash per Dependent, so a Binding over thousands of files costs one
+NOTE: The Lockfile keeps one Hash per Dependent, so a Declaration over thousands of files costs one
 entry and the verdict cannot say which dependencies changed. `[[Changes]]` is a best-effort report
 computed from the repository history (§12.3); it is *unknown* whenever that history cannot answer.
 
@@ -373,15 +374,15 @@ a file under a directory an earlier negation removed.
 
 ### 8.5 Resolution
 
-`ResolveDependencies(binding, universe)`:
+`ResolveDependencies(declaration, universe)`:
 
 1. Let *problems* be an empty List.
-2. Let *candidates* be *universe* without `binding.[[Dependent]]`.
-3. For each *pattern* of `binding.[[Dependencies]]`: if no *path* of *candidates* satisfies
+2. Let *candidates* be *universe* without `declaration.[[Dependent]]`.
+3. For each *pattern* of `declaration.[[Dependencies]]`: if no *path* of *candidates* satisfies
    `PatternMatches(pattern, path)`, collect `E_EMPTY_PATTERN` into *problems*, with
    `[[Subject]]` *pattern*.
-4. Let *resolved* be `Select(binding.[[Dependencies]], candidates)`.
-5. If *resolved* is empty, collect `E_EMPTY_COVERS` into *problems*.
+4. Let *resolved* be `Select(declaration.[[Dependencies]], candidates)`.
+5. If *resolved* is empty, collect `E_EMPTY_DEPENDENCIES` into *problems*.
 6. If *problems* is not empty, raise *problems*. Otherwise return *resolved*.
 
 NOTE: A Dependent is never one of its own dependencies (step 2), so editing a Dependent never
@@ -482,16 +483,16 @@ version 2.
       `[[Dependent]]` *key*, `[[Subject]]` that key.
    4. For each string *s* of `dependencies` that is not a valid Pattern (§8.1), collect
       `E_PATTERN` into *attached*, `[[Dependent]]` *key*, `[[Subject]]` *s*.
-   5. Produce the Binding { `[[Dependent]]`: *key*, `[[Dependencies]]`: the strings of
+   5. Produce the Declaration { `[[Dependent]]`: *key*, `[[Dependencies]]`: the strings of
       `dependencies` }.
 9. If *fatal* is not empty, raise *fatal*.
-10. Return the Config, with defaults (§5.2) for absent keys and the Bindings in path order, and
+10. Return the Config, with defaults (§5.2) for absent keys and the Declarations in path order, and
     *attached*.
 
 NOTE: A bad pattern makes only its Dependent `invalid`; every other Dependent is still evaluated.
 A structural error stops evaluation.
 
-NOTE: Steps 5 to 10 never see the Carrier. Key order in a Map is not significant: the Bindings are
+NOTE: Steps 5 to 10 never see the Carrier. Key order in a Map is not significant: the Declarations are
 in path order (step 10).
 
 ### 9.4 Dependent Files
@@ -663,22 +664,22 @@ declare `docstamp-lock.yaml text eol=lf` in `.gitattributes`.
 
 ### 12.1 Evaluate
 
-`Evaluate(binding, universe, lock, attached)`, where *attached* is the List of Diagnostics from
-§9.3 attached to `binding.[[Dependent]]`:
+`Evaluate(declaration, universe, lock, attached)`, where *attached* is the List of Diagnostics
+from §9.3 attached to `declaration.[[Dependent]]`:
 
-1. Let *r* be a Result with `[[Dependent]]` and `[[Dependencies]]` from *binding*, empty
+1. Let *r* be a Result with `[[Dependent]]` and `[[Dependencies]]` from *declaration*, empty
    `[[Reasons]]`, `[[Resolved]]` and `[[Diagnostics]]`, and empty `[[Current]]`.
 2. Let *problems* be a copy of *attached*.
-3. If `binding.[[Dependent]]` does not satisfy §9.4, collect `E_DEPENDENT_MISSING` into
+3. If `declaration.[[Dependent]]` does not satisfy §9.4, collect `E_DEPENDENT_MISSING` into
    *problems*.
-4. If *attached* is empty, let *resolved* be `ResolveDependencies(binding, universe)`; if it raises, add
-   its Diagnostics to *problems*.
+4. If *attached* is empty, let *resolved* be `ResolveDependencies(declaration, universe)`; if it
+   raises, add its Diagnostics to *problems*.
 5. If *problems* is empty, let *current* be `DependencyHash(resolved)`; if it raises, add its
    Diagnostics to *problems*.
 6. If *problems* is not empty, set *r*.`[[State]]` to `invalid` and *r*.`[[Diagnostics]]` to
-   *problems*, each with `[[Dependent]]` set to `binding.[[Dependent]]`, and return *r*.
+   *problems*, each with `[[Dependent]]` set to `declaration.[[Dependent]]`, and return *r*.
 7. Set *r*.`[[Resolved]]` to *resolved* and *r*.`[[Current]]` to *current*.
-8. Let *entry* be the LockEntry of `binding.[[Dependent]]` in *lock*, or *none*.
+8. Let *entry* be the LockEntry of `declaration.[[Dependent]]` in *lock*, or *none*.
 9. If *entry* is *none*, append `unrecorded`. Otherwise, if *entry* is not equal to *current*,
    append `content-changed`.
 10. Set *r*.`[[State]]` to `stale` if *r*.`[[Reasons]]` is non-empty, else `ok`. Return *r*.
@@ -697,9 +698,9 @@ raises:
 2. Let *universe* be `? ComputeUniverse(root, config)`.
 3. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
    entries. Otherwise let *lock* be `? ReadLock(root)`.
-4. Let *results* be `Evaluate(b, universe, lock, attached of b)` for each Binding *b* of
-   `config.[[Bindings]]`, in path order.
-5. Let *global* be a List holding, for each Dependent of *lock* with no Binding, a `W_ORPHAN` with
+4. Let *results* be `Evaluate(b, universe, lock, attached of b)` for each Declaration *b* of
+   `config.[[Declarations]]`, in path order.
+5. Let *global* be a List holding, for each Dependent of *lock* with no Declaration, a `W_ORPHAN` with
    `[[Subject]]` that Dependent.
 6. Return *results*, *lock* and *global*.
 
@@ -733,7 +734,7 @@ contain `content-changed`, and whose Dependent has a LockEntry *entry*; for ever
 3. Build the changes: git status `M` or `T` gives `modified`; `A` gives `added`; `D` gives
    `deleted`; any other status returns *unknown*. Every path of *untracked* is `added`. A path that
    is both `deleted` and `added` is `modified`.
-4. Keep a Change only if its path is selected by the Binding's patterns: for `added` and
+4. Keep a Change only if its path is selected by the Declaration's patterns: for `added` and
    `modified`, the path is in `result.[[Resolved]]`; for `deleted`, the path is not
    `result.[[Dependent]]` and `Select(result.[[Dependencies]], « path »)` selects it, since a deleted
    file is no longer a dependency.
@@ -850,7 +851,7 @@ reviewer compares them with the state at the last Write using its own tools.
    as a check would (§14), write nothing, and exit 2.
 6. For each *t* of *targets*, set the LockEntry of *t*.`[[Dependent]]` in *lock* to
    *t*.`[[Current]]`.
-7. Let *removed* be the Dependents of *lock* that have no Binding, in path order. Remove their
+7. Let *removed* be the Dependents of *lock* that have no Declaration, in path order. Remove their
    entries.
 8. `WriteLock(root, lock)`.
 9. Output the written Dependents and *removed* (§14). Exit 0.
@@ -873,8 +874,8 @@ unreadable Lockfile), so no file is marked reviewed by accident.
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
 2. Let (*config*, *attached*) be `? ReadConfig(root)` and *universe* be
    `? ComputeUniverse(root, config)`.
-3. Let *results* be `Evaluate(b, universe, « », attached of b)` for each Binding *b* of
-   `config.[[Bindings]]`, in path order, except that no dependency is read or hashed (§10.4 is
+3. Let *results* be `Evaluate(b, universe, « », attached of b)` for each Declaration *b* of
+   `config.[[Declarations]]`, in path order, except that no dependency is read or hashed (§10.4 is
    skipped), so a Result is never `invalid` for `E_UNREADABLE`.
 4. Let (*selected*, *argErrors*) be `SelectResults(args, cwd, root, results)`.
 5. Output *selected* and *argErrors* (§14).
@@ -899,7 +900,7 @@ Dependents that depend on them. At least one file argument is required (§13.2).
    1. Let *path* be `ToRepoPath(arg, cwd, root)`. If that fails, add the entry { `[[File]]`:
       *arg*, `[[Dependents]]`: « », `[[Diagnostics]]`: « `E_USAGE` with `[[Subject]]` *arg* » }
       and continue. *path* need not exist.
-   2. Let *found* be an empty List. For each Binding *b* of `config.[[Bindings]]` in path order
+   2. Let *found* be an empty List. For each Declaration *b* of `config.[[Declarations]]` in path order
       whose Dependent has no `E_PATTERN` in *attached*: if *path* is in *universe*, *path* is not
       `b.[[Dependent]]` and `Select(b.[[Dependencies]], « path »)` selects it, append { `[[File]]`:
       `b.[[Dependent]]`, `[[Via]]`: the patterns of `b.[[Dependencies]]` that have no Negation and
@@ -1111,7 +1112,7 @@ Diagnostics as in §14.3.
 | `E_PATTERN` | error | §9.3 | correct the pattern (§8.1) |
 | `E_DEPENDENT_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern |
-| `E_EMPTY_COVERS` | error | §8.5 | correct the patterns in `dependencies` |
+| `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
 | `E_UNREADABLE` | error | §7.2, §10.2 | fix permissions |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |

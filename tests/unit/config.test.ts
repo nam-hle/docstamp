@@ -41,9 +41,9 @@ describe('§9.2 YAML profile', () => {
 describe('§9.3 readConfig', () => {
   const good =
     'version: 2\nfiles:\n  b.md:\n    dependencies: [src/**]\n  a.md:\n    dependencies: ["x"]\n';
-  it('reads bindings in path order with defaults', () => {
+  it('reads declarations in path order with defaults', () => {
     const { config, attached } = read(good);
-    expect(config.bindings.map((b) => b.dependent)).toEqual(['a.md', 'b.md']);
+    expect(config.declarations.map((b) => b.dependent)).toEqual(['a.md', 'b.md']);
     expect(config.useGitignore).toBe(true);
     expect(attached).toEqual([]);
   });

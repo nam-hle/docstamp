@@ -12,7 +12,7 @@ Requires Node.js 24 or newer.
 
 ## Configure
 
-Bind each Dependent to the files it depends on in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). Start with `docstamp.yaml`:
+Declare the dependencies of each Dependent in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). Start with `docstamp.yaml`:
 
 ```yaml
 version: 2
