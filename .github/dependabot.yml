@@ -22,6 +22,11 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore"
+    ignore:
+      # engines.node is >=24; types for a newer Node would accept APIs it lacks.
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
     groups:
       npm:
         update-types:
