@@ -54,7 +54,7 @@ $ docstamp
 1 ok, 0 stale, 0 invalid
 ```
 
-Run `docstamp` in CI. After `src/main.ts` changes:
+Run `docstamp` in CI. After `src/main.ts` changes (shown outside a git work tree; inside one, the lines under `STALE` list the changed dependencies as `modified`, `added` or `deleted`):
 
 ```console
 $ docstamp
@@ -157,13 +157,16 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - run: npx docstamp
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec docstamp
 ```
 
-Pin the actions to commit SHAs if your policy requires it.
+`pnpm/action-setup` installs the pnpm version named by `packageManager` in your `package.json`. The job fails when `docstamp` exits 1 (a stale file) or 2 (an error). With npm, drop the `pnpm/action-setup` step and `cache: pnpm`, then run `npm ci` and `npx docstamp`. Pin the actions to commit SHAs if your policy requires it.
 
 ## Workflow
 
