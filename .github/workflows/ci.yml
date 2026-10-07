@@ -29,5 +29,5 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Check the package can be published
-        run: npm publish --dry-run
+      - name: Check the package can be packed
+        run: npm pack --dry-run

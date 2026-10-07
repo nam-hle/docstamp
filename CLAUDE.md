@@ -104,10 +104,11 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 
 ## CI and releases
 
-- The npm package, the command and the config files are named `docstamp`; the repository directory
-  and the GitHub repository are still named `docsync`.
-- `.github/workflows/ci.yml` runs `pnpm test` on every pull request and push to `main`, then dry-runs
-  `npm publish` to prove the package can be published.
+- The npm package, the command, the config files, the GitHub repository and the repository directory
+  are all named `docstamp`.
+- `.github/workflows/ci.yml` runs `pnpm test` on every pull request and push to `main`, then runs
+  `npm pack --dry-run` to prove the tarball builds. It does not dry-run `npm publish`: that fails
+  once the version in `package.json` is already on npm, which is true after every release.
 - `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
   the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
 - Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
