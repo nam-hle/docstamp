@@ -7,34 +7,34 @@ export type Code =
   | 'E_CONFIG_VERSION'
   | 'E_UNKNOWN_KEY'
   | 'E_PATTERN'
-  | 'E_DEPENDENT_MISSING'
+  | 'E_FILE_MISSING'
   | 'E_EMPTY_PATTERN'
-  | 'E_EMPTY_COVERS'
+  | 'E_EMPTY_DEPENDENCIES'
   | 'E_UNREADABLE'
   | 'E_PATH_ENCODING'
   | 'E_PATH_COLLISION'
   | 'E_LOCK'
   | 'E_LOCK_VERSION'
-  | 'E_UNKNOWN_DEPENDENT'
+  | 'E_UNKNOWN_FILE'
   | 'W_ORPHAN';
 
 export interface Diagnostic {
   readonly code: Code;
   readonly severity: 'error' | 'warning';
-  readonly dependent: string;
+  readonly file: string;
   readonly subject: string;
   readonly message: string;
 }
 
-export interface Binding {
-  readonly dependent: string;
-  readonly covers: readonly string[];
+export interface Declaration {
+  readonly file: string;
+  readonly dependencies: readonly string[];
 }
 
 export interface Config {
   readonly ignore: readonly string[];
   readonly useGitignore: boolean;
-  readonly bindings: readonly Binding[];
+  readonly declarations: readonly Declaration[];
 }
 
 export interface Lock {
@@ -50,12 +50,23 @@ export interface Change {
 }
 
 export interface Result {
-  readonly dependent: string;
-  readonly covers: readonly string[];
+  readonly file: string;
+  readonly dependencies: readonly string[];
   readonly state: State;
   readonly reasons: readonly Reason[];
-  readonly covered: readonly string[];
+  readonly resolved: readonly string[];
   readonly current: string;
   readonly diagnostics: readonly Diagnostic[];
   readonly changes?: readonly Change[] | null;
+}
+
+export interface ReverseDependent {
+  readonly file: string;
+  readonly via: readonly string[];
+}
+
+export interface ReverseEntry {
+  readonly file: string;
+  readonly dependents: readonly ReverseDependent[];
+  readonly diagnostics: readonly Diagnostic[];
 }

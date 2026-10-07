@@ -28,8 +28,8 @@ describe('§13.2 parseArgs', () => {
   });
   it('the first argument selects the command', () => {
     expect(parseArgs(['update', '--all'])).toMatchObject({ mode: 'update', all: true });
-    expect(parseArgs(['list-dependents', 'a.md'])).toEqual({
-      mode: 'list-dependents',
+    expect(parseArgs(['list-dependencies', 'a.md'])).toEqual({
+      mode: 'list-dependencies',
       json: false,
       paths: ['a.md'],
     });
@@ -46,7 +46,9 @@ describe('§13.2 parseArgs', () => {
       all: true,
       root: 'd',
     });
-    expect(parseArgs(['--root=d', 'list-dependents'])).toMatchObject({ mode: 'list-dependents' });
+    expect(parseArgs(['--root=d', 'list-dependencies'])).toMatchObject({
+      mode: 'list-dependencies',
+    });
   });
   it('a command word after a file or after -- is a file argument', () => {
     expect(parseArgs(['x', 'check'])).toMatchObject({ mode: 'check', paths: ['x', 'check'] });
@@ -93,7 +95,7 @@ describe('§13.2 parseArgs', () => {
   it('--root forms and --', () => {
     expect(parseArgs(['--root=x', '--', '--json'])).toMatchObject({ root: 'x', paths: ['--json'] });
     expect(parseArgs(['--root', 'x'])).toMatchObject({ root: 'x' });
-    expect(parseArgs(['list-dependents', '--root=x'])).toMatchObject({ root: 'x' });
+    expect(parseArgs(['list-dependencies', '--root=x'])).toMatchObject({ root: 'x' });
   });
   it('update needs exactly one of --all or files', () => {
     expect(parseArgs(['update', 'a'])).toEqual({
@@ -113,11 +115,14 @@ describe('§13.2 parseArgs', () => {
     [['--root'], '--root'],
     [['--root='], '--root'],
     [['--root', 'a', '--root=b'], '--root'],
-    [['list-dependents', '--json', '--json'], '--json'],
+    [['list-dependencies', '--json', '--json'], '--json'],
     [['--all'], '--all'],
     [['--root', 'd', 'update'], 'update'],
     [['check', '--all'], '--all'],
-    [['list-dependents', '--all'], '--all'],
+    [['list-dependencies', '--all'], '--all'],
+    [['list-dependents'], 'list-dependents'],
+    [['list-dependents', '--json'], 'list-dependents'],
+    [['list-dependents', '--all', 'a'], '--all'],
     [['-x'], '-x'],
     [['update', '-x', 'a'], '-x'],
   ])('rejects %j', (argv, subject) => expect(usage(argv)).toBe(subject));
@@ -134,7 +139,7 @@ describe('§13.2 parseArgs', () => {
   it('--files is removed and names its replacement', () => {
     for (const argv of [['--files'], ['--files', 'a'], ['update', '--files', 'a']]) {
       expect(usage(argv)).toBe('--files');
-      expect(failure(argv)?.message).toContain('docstamp list-dependents');
+      expect(failure(argv)?.message).toContain('docstamp list-dependencies');
     }
   });
   it('a removed option after -- is a file argument', () => {
@@ -150,12 +155,23 @@ describe('§13.2 parseArgs', () => {
     expect(parseArgs(['version'])).toEqual({ mode: 'version' });
   });
   it('HELP lists every command and is LF text with a final newline', () => {
-    for (const name of ['check', 'update', 'list-dependents', 'help', 'version']) {
+    for (const name of ['check', 'update', 'list-dependencies', 'help', 'version']) {
       expect(HELP).toContain(`docstamp ${name}`);
     }
     expect(HELP.endsWith('\n')).toBe(true);
     expect(HELP).not.toContain('\r');
     const codes = Array.from({ length: HELP.length }, (_, i) => HELP.charCodeAt(i));
     expect(codes.every((code) => code === 10 || (code >= 32 && code <= 126))).toBe(true);
+  });
+});
+
+describe('§13.2 list-dependents', () => {
+  it('takes file arguments and the common options', () => {
+    expect(parseArgs(['list-dependents', '--json', 'a', 'b'])).toEqual({
+      mode: 'list-dependents',
+      json: true,
+      paths: ['a', 'b'],
+    });
+    expect(parseArgs(['list-dependents', '--', 'check'])).toMatchObject({ paths: ['check'] });
   });
 });

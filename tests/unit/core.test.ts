@@ -37,14 +37,14 @@ describe('§4 RepoPath', () => {
 });
 
 describe('§5.5 diagnostic order', () => {
-  it('sorts by dependent (empty first), code, subject and dedupes', () => {
+  it('sorts by file (empty first), code, subject and dedupes', () => {
     const ds = [
-      diag('E_PATTERN', { dependent: 'b', subject: 'x' }),
+      diag('E_PATTERN', { file: 'b', subject: 'x' }),
       diag('E_USAGE', { subject: 'z' }),
-      diag('E_EMPTY_PATTERN', { dependent: 'a', subject: 'y' }),
-      diag('E_PATTERN', { dependent: 'b', subject: 'x' }),
+      diag('E_EMPTY_PATTERN', { file: 'a', subject: 'y' }),
+      diag('E_PATTERN', { file: 'b', subject: 'x' }),
     ];
-    expect(sortDiagnostics(ds).map((d) => [d.dependent, d.code, d.subject])).toEqual([
+    expect(sortDiagnostics(ds).map((d) => [d.file, d.code, d.subject])).toEqual([
       ['', 'E_USAGE', 'z'],
       ['a', 'E_EMPTY_PATTERN', 'y'],
       ['b', 'E_PATTERN', 'x'],

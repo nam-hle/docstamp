@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { memoizeHash, run, type Io } from '../../src/cli/run.ts';
@@ -27,7 +27,7 @@ describe('per-run hash cache', () => {
   });
 });
 
-const CONFIG = 'version: 1\ndependents:\n  doc.md:\n    covers:\n      - src/**\n';
+const CONFIG = 'version: 2\nfiles:\n  doc.md:\n    dependencies:\n      - src/**\n';
 
 function exec(cwd: string, ...argv: string[]): { code: number; out: string; err: string } {
   let out = '';
@@ -47,7 +47,7 @@ describe('§13.5 check', () => {
   it('unrecorded is stale, exit 1, next line on stdout', () => {
     const r = exec(tree(), '--root', '.');
     expect(r.code).toBe(1);
-    expect(r.out).toContain('STALE    doc.md  (unrecorded)\n  covers  src/**\n');
+    expect(r.out).toContain('STALE    doc.md  (unrecorded)\n  depends   src/**\n');
     expect(r.out).toContain('docstamp update doc.md --root .\n');
     expect(r.err).toBe('');
   });
@@ -59,7 +59,7 @@ describe('§13.5 check', () => {
     const r = exec(root, 'check');
     expect(r.code).toBe(1);
     expect(r.out).toContain('(content-changed)');
-    expect(r.out).not.toContain('  file ');
+    expect(r.out).not.toContain('  resolved ');
   });
   it('removed --write and --files exit 2 naming the replacement', () => {
     const write = exec(tree(), '--write', 'doc.md');
@@ -68,13 +68,13 @@ describe('§13.5 check', () => {
     expect(write.err).toContain('docstamp update');
     const files = exec(tree(), '--files');
     expect(files.code).toBe(2);
-    expect(files.err).toContain('docstamp list-dependents');
+    expect(files.err).toContain('docstamp list-dependencies');
     expect(files.out).toBe('');
   });
-  it('unknown dependent is exit 2 on stderr', () => {
+  it('unknown file is exit 2 on stderr', () => {
     const r = exec(tree(), 'nope.md');
     expect(r.code).toBe(2);
-    expect(r.err).toContain('error: E_UNKNOWN_DEPENDENT: nope.md: ');
+    expect(r.err).toContain('error: E_UNKNOWN_FILE: nope.md: ');
     expect(r.out).toBe('0 ok, 0 stale, 0 invalid\n');
   });
   it('missing config raises: text summary still printed', () => {
@@ -87,9 +87,9 @@ describe('§13.5 check', () => {
     const r = exec(tree(), '--json', 'nope.md');
     expect(r.code).toBe(2);
     expect(r.err).toBe('');
-    expect(JSON.parse(r.out).diagnostics[0].code).toBe('E_UNKNOWN_DEPENDENT');
+    expect(JSON.parse(r.out).diagnostics[0].code).toBe('E_UNKNOWN_FILE');
   });
-  it('a symlinked Dependent is invalid', () => {
+  it('a symlinked file is invalid', () => {
     const root = makeTree({
       'docstamp.yaml': CONFIG,
       'real.md': 'x',
@@ -99,7 +99,7 @@ describe('§13.5 check', () => {
     const r = exec(root);
     expect(r.code).toBe(2);
     expect(r.out).toContain('INVALID  doc.md\n');
-    expect(r.err).toContain('E_DEPENDENT_MISSING');
+    expect(r.err).toContain('E_FILE_MISSING');
   });
 });
 
@@ -113,7 +113,7 @@ describe('§13.6 update', () => {
   it('json write has written and removed', () => {
     const doc = JSON.parse(exec(tree(), 'update', '--json', 'doc.md').out);
     expect(doc.mode).toBe('update');
-    expect(doc.dependents[0].written).toBe(true);
+    expect(doc.files[0].written).toBe(true);
     expect(doc.removed).toEqual([]);
   });
   it('strict write fails on a broken lock; --all recovers', () => {
@@ -123,6 +123,22 @@ describe('§13.6 update', () => {
     expect(strict.code).toBe(2);
     expect(strict.err).toContain('E_LOCK');
     expect(exec(root, 'update', '--all').out).toBe('written  doc.md\n');
+    expect(exec(root).code).toBe(0);
+  });
+  it('a version 2 lock names the migration; --all rewrites it as version 3', () => {
+    const root = tree();
+    exec(root, 'update', 'doc.md');
+    const v3 = readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8');
+    writeFileSync(
+      join(root, 'docstamp-lock.yaml'),
+      v3.replace('version: 3\nfiles:', 'version: 2\ndependents:'),
+    );
+    const check = exec(root);
+    expect(check.code).toBe(2);
+    expect(check.err).toContain('E_LOCK_VERSION');
+    expect(check.err).toContain('to rewrite it as version 3 (hashes are unchanged)');
+    expect(exec(root, 'update', '--all').out).toBe('written  doc.md\n');
+    expect(readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8')).toBe(v3);
     expect(exec(root).code).toBe(0);
   });
   it('a lock that is a directory is E_LOCK on check', () => {
@@ -145,7 +161,7 @@ describe('§13.6 update', () => {
     exec(root, 'update', 'doc.md');
     writeFileSync(
       join(root, 'docstamp.yaml'),
-      'version: 1\ndependents:\n  other.md:\n    covers: [src/**]\n',
+      'version: 2\nfiles:\n  other.md:\n    dependencies: [src/**]\n',
     );
     writeFileSync(join(root, 'other.md'), 'o');
     const check = exec(root);
@@ -155,15 +171,19 @@ describe('§13.6 update', () => {
   });
 });
 
-describe('§13.7 list-dependents', () => {
-  const list = 'list-dependents';
-  it('lists patterns and covered files per Dependent, exit 0, without a lock', () => {
+describe('§13.7 list-dependencies', () => {
+  const list = 'list-dependencies';
+  it('lists patterns and dependencies per file, exit 0, without a lock', () => {
     const r = exec(tree(), list);
-    expect(r).toEqual({ code: 0, out: 'doc.md\n  covers  src/**\n  file    src/a.ts\n', err: '' });
+    expect(r).toEqual({
+      code: 0,
+      out: 'doc.md\n  depends   src/**\n  resolved  src/a.ts\n',
+      err: '',
+    });
   });
-  it('lists only the named Dependents', () => {
+  it('lists only the named files', () => {
     const root = makeTree({
-      'docstamp.yaml': `${CONFIG}  b.md:\n    covers: [src/**]\n`,
+      'docstamp.yaml': `${CONFIG}  b.md:\n    dependencies: [src/**]\n`,
       'doc.md': 'x',
       'b.md': 'y',
       'src/a.ts': 'a',
@@ -181,36 +201,36 @@ describe('§13.7 list-dependents', () => {
     expect(r.code).toBe(0);
     expect(r.err).toBe('');
   });
-  it('an invalid Dependent prints its header and diagnostics, exit 2', () => {
+  it('an invalid file prints its header and diagnostics, exit 2', () => {
     const root = makeTree({ 'docstamp.yaml': CONFIG, 'src/a.ts': 'a' });
     const r = exec(root, list);
     expect(r.code).toBe(2);
     expect(r.out).toBe('doc.md\n');
-    expect(r.err).toContain('E_DEPENDENT_MISSING: doc.md');
+    expect(r.err).toContain('E_FILE_MISSING: doc.md');
   });
-  it('an unknown Dependent is exit 2', () => {
+  it('an unknown file is exit 2', () => {
     const r = exec(tree(), list, 'nope.md');
     expect(r.code).toBe(2);
-    expect(r.err).toContain('E_UNKNOWN_DEPENDENT: nope.md');
+    expect(r.err).toContain('E_UNKNOWN_FILE: nope.md');
   });
-  it('--json has the list-dependents shape and nothing on stderr', () => {
+  it('--json has the list-dependencies shape and nothing on stderr', () => {
     const r = exec(tree(), list, '--json');
     expect(r.err).toBe('');
     expect(JSON.parse(r.out)).toEqual({
-      version: 1,
-      mode: 'list-dependents',
+      version: 2,
+      mode: 'list-dependencies',
       exitCode: 0,
-      dependents: [
-        { dependent: 'doc.md', covers: ['src/**'], files: ['src/a.ts'], diagnostics: [] },
+      files: [
+        { file: 'doc.md', dependencies: ['src/**'], resolvedFiles: ['src/a.ts'], diagnostics: [] },
       ],
       diagnostics: [],
     });
   });
-  it('--json on a raised error has empty dependents', () => {
+  it('--json on a raised error has empty files', () => {
     const r = exec(makeTree({}), list, '--json', '--root', '.');
     const doc = JSON.parse(r.out);
     expect(r.code).toBe(2);
-    expect(doc.dependents).toEqual([]);
+    expect(doc.files).toEqual([]);
     expect(doc.diagnostics[0].code).toBe('E_CONFIG_MISSING');
   });
   it('--all is a usage error', () => {

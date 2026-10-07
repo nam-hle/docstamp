@@ -1,6 +1,6 @@
 # docstamp
 
-A deterministic snapshot gate between files and the files that depend on them, built first for docs and the code they describe. Each doc declares the code it covers; `docstamp` fails CI when that code changed since the doc was last reviewed, with no LLM call. The verdict never depends on git. See [docs/VISION.md](docs/VISION.md) for the motivation.
+A deterministic snapshot gate between files and the files that depend on them, built first for docs and the code they describe. Each doc declares the code it depends on; `docstamp` fails CI when that code changed since the doc was last reviewed, with no LLM call. The verdict never depends on git. See [docs/VISION.md](docs/VISION.md) for the motivation.
 
 ## Install
 
@@ -12,18 +12,18 @@ Requires Node.js 24 or newer.
 
 ## Configure
 
-Bind each Dependent to the files it covers in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). Start with `docstamp.yaml`:
+Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). Start with `docstamp.yaml`:
 
 ```yaml
-version: 1
-dependents:
+version: 2
+files:
   CLAUDE.md:
-    covers:
+    dependencies:
       - src/**
       - "!src/**/*.test.ts"
       - package.json
   tests/fixtures/user.json:
-    covers:
+    dependencies:
       - schemas/user.schema.json
 ```
 
@@ -41,9 +41,9 @@ The same configuration can be a script instead: `docstamp.config.ts`, `.mts`, `.
 import { defineConfig } from 'docstamp';
 
 export default defineConfig({
-  version: 1,
-  dependents: {
-    'CLAUDE.md': { covers: ['src/**', '!src/**/*.test.ts', 'package.json'] },
+  version: 2,
+  files: {
+    'CLAUDE.md': { dependencies: ['src/**', '!src/**/*.test.ts', 'package.json'] },
   },
 });
 ```
@@ -56,39 +56,42 @@ Pattern syntax is in [SPEC §8](docs/SPEC.md#8-patterns).
 
 The three steps are defined in [SPEC §1](docs/SPEC.md#1-scope):
 
-1. CI runs `pnpm exec docstamp`. It exits 1 when a Dependent's covered files changed since its last review.
-2. A person or an agent reviews each stale Dependent against its covered files and edits it if needed.
+1. CI runs `pnpm exec docstamp`. It exits 1 when a file's dependencies changed since its last review.
+2. A person or an agent reviews each stale file against its dependencies and edits it if needed.
 3. Run `pnpm exec docstamp update <file>` to record the review in `docstamp-lock.yaml`, and commit the lock.
 
 The first run has no lock; `pnpm exec docstamp update --all` records the initial state once the docs have been reviewed.
 
-Upgrading from a version 1 lock (`docsync.lock`): delete it, review every Dependent, then run `pnpm exec docstamp update --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
+Upgrading from a version 1 lock (`docsync.lock`): delete it, review every file, then run `pnpm exec docstamp update --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
+
+Upgrading from a version 1 configuration (`dependents` and `covers`): rename `dependents` to `files` and `covers` to `dependencies`, and set `version: 2`. Then run `pnpm exec docstamp update --all` to rewrite the version 2 lock as version 3; the hashes do not change, so first review the files with the previous docstamp version or `git diff`, because the version 2 lock stops `docstamp check` (E_LOCK_VERSION) and it reports nothing stale.
 
 ## Reviewing a stale doc
 
-A stale doc lists the covered files that changed since its last review, as `modified`, `added` or `deleted` ([SPEC §12.3](docs/SPEC.md#123-changedsince)). `--json` carries the same list as `changes`. The list comes from read-only `git` calls and never affects the verdict or exit code.
+A stale doc lists the dependencies that changed since its last review, as `modified`, `added` or `deleted` ([SPEC §12.3](docs/SPEC.md#123-changedsince)). `--json` carries the same list as `changes`. The list comes from read-only `git` calls and never affects the verdict or exit code.
 
-When git history cannot answer (no git, not a work tree, a shallow clone, or an `update` not yet committed), docstamp prints the `covers` patterns and `changes` is `null`. Then list the covered files and diff them yourself:
+When git history cannot answer (no git, not a work tree, a shallow clone, or an `update` not yet committed), docstamp prints the dependency patterns (`depends` lines) and `changes` is `null`. Then list the dependencies and diff them yourself:
 
 ```sh
-pnpm exec docstamp list-dependents <file>
+pnpm exec docstamp list-dependencies <file>
 git diff <base> -- <files>
 ```
 
 ## Commands
 
-- `docstamp [check]`: the verdict; exit 0 when every Dependent is ok, 1 when one is stale, 2 on an error. A bare `docstamp` is `check`.
+- `docstamp [check]`: the verdict; exit 0 when every file is ok, 1 when one is stale, 2 on an error. A bare `docstamp` is `check`.
 - `docstamp update (--all | <file>...)`: record that you reviewed the named files.
-- `docstamp list-dependents [<file>...]`: each Dependent with its patterns and covered files. It does not read the lock.
+- `docstamp list-dependencies [<file>...]`: each file with its dependency patterns and the files they select. It does not read the lock.
+- `docstamp list-dependents <file>...`: the reverse query. For each named file (any file in the repository), the dependents (files that depend on it) and the patterns that select it. Direct only, no lock.
 - `docstamp help` and `docstamp version`.
 
-Every command except `help` and `version` takes `--json` and `--root <dir>`. The options `--write` and `--files` were replaced by `update` and `list-dependents`.
+Every command except `help` and `version` takes `--json` and `--root <dir>`. The options `--write` and `--files` were replaced by `update` and `list-dependencies`.
 
 Command line and exit codes: [SPEC §13](docs/SPEC.md#13-command-line) and [SPEC §16](docs/SPEC.md#16-exit-codes).
 
 ## Lock conflicts
 
-Two branches that write the same Dependent conflict on its `hash` line. Resolution is in [SPEC §11.2](docs/SPEC.md#112-canonical-form).
+Two branches that write the same file conflict on its `hash` line. Resolution is in [SPEC §11.2](docs/SPEC.md#112-canonical-form).
 
 ## Specification
 

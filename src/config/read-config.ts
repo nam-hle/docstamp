@@ -3,13 +3,15 @@ import { join } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import { isRepoPath } from '../core/repo-path.ts';
-import type { Binding, Config, Diagnostic } from '../core/types.ts';
+import type { Declaration, Config, Diagnostic } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { loadScript } from './script.ts';
 import { CONFIG_NAMES, isMap, isStrings, type Value } from './value.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from './yaml-profile.ts';
 
-const TOP_KEYS = ['version', 'gitignore', 'ignore', 'dependents'];
+const TOP_KEYS = ['version', 'gitignore', 'ignore', 'files'];
+
+const optional = (message: string | undefined) => (message === undefined ? {} : { message });
 
 const hasEntry = (path: string): boolean => {
   try {
@@ -51,7 +53,7 @@ function readYaml(path: string): Value {
   const value = doc ? fromYaml(doc.value) : null;
   if (!doc || !isMap(value)) throw new Raised([diag('E_CONFIG')]);
   const version = isYamlMap(doc.value) ? doc.value.entries.get('version') : undefined;
-  if (version) value.set('version', version.plainSource === '1' ? 1 : null);
+  if (version) value.set('version', version.plainSource === '2' ? 2 : null);
   return value;
 }
 
@@ -68,43 +70,49 @@ function readValue(root: string): Value {
   return name === 'docstamp.yaml' ? readYaml(path) : loadScript(path);
 }
 
-function collectBinding(
+function collectDeclaration(
   key: string,
   value: Value | undefined,
   fatal: Diagnostic[],
   attached: Diagnostic[],
-  out: Binding[],
+  out: Declaration[],
 ): void {
   if (!isRepoPath(key)) {
     fatal.push(diag('E_CONFIG', { subject: key }));
     return;
   }
-  const covers = isMap(value) ? value.get('covers') : undefined;
-  if (!isMap(value) || !isStrings(covers) || covers.length === 0) {
-    fatal.push(diag('E_CONFIG', { dependent: key }));
+  const dependencies = isMap(value) ? value.get('dependencies') : undefined;
+  if (!isMap(value) || !isStrings(dependencies) || dependencies.length === 0) {
+    fatal.push(diag('E_CONFIG', { file: key }));
     return;
   }
   for (const k of value.keys()) {
-    if (k !== 'covers') fatal.push(diag('E_UNKNOWN_KEY', { dependent: key, subject: k }));
-  }
-  for (const pattern of covers) {
-    if (!parsePattern(pattern)) {
-      attached.push(diag('E_PATTERN', { dependent: key, subject: pattern }));
+    if (k !== 'dependencies') {
+      const message = k === 'covers' ? 'Rename "covers" to "dependencies".' : undefined;
+      fatal.push(diag('E_UNKNOWN_KEY', { file: key, subject: k, ...optional(message) }));
     }
   }
-  out.push({ dependent: key, covers });
+  for (const pattern of dependencies) {
+    if (!parsePattern(pattern)) {
+      attached.push(diag('E_PATTERN', { file: key, subject: pattern }));
+    }
+  }
+  out.push({ file: key, dependencies });
 }
 
 // SPEC §9.3
 export function readConfig(root: string): { config: Config; attached: Diagnostic[] } {
   const top = readValue(root);
   if (!isMap(top)) throw new Raised([diag('E_CONFIG')]);
-  if (top.get('version') !== 1) throw new Raised([diag('E_CONFIG_VERSION')]);
+  if (top.get('version') !== 2) throw new Raised([diag('E_CONFIG_VERSION')]);
 
   const fatal: Diagnostic[] = [];
   const attached: Diagnostic[] = [];
   for (const key of top.keys()) {
-    if (!TOP_KEYS.includes(key)) fatal.push(diag('E_UNKNOWN_KEY', { subject: key }));
+    if (!TOP_KEYS.includes(key)) {
+      const message = key === 'dependents' ? 'Rename "dependents" to "files".' : undefined;
+      fatal.push(diag('E_UNKNOWN_KEY', { subject: key, ...optional(message) }));
+    }
   }
   const gitignore = top.get('gitignore');
   if (gitignore !== undefined && typeof gitignore !== 'boolean') {
@@ -115,22 +123,22 @@ export function readConfig(root: string): { config: Config; attached: Diagnostic
     fatal.push(diag('E_CONFIG', { subject: 'ignore' }));
   }
 
-  const bindings: Binding[] = [];
-  const dependents = top.get('dependents');
-  if (!isMap(dependents)) {
-    fatal.push(diag('E_CONFIG', { subject: 'dependents' }));
+  const declarations: Declaration[] = [];
+  const files = top.get('files');
+  if (!isMap(files)) {
+    fatal.push(diag('E_CONFIG', { subject: 'files' }));
   } else {
-    for (const [key, value] of dependents) {
-      collectBinding(key, value, fatal, attached, bindings);
+    for (const [key, value] of files) {
+      collectDeclaration(key, value, fatal, attached, declarations);
     }
   }
   if (fatal.length > 0) throw new Raised(fatal);
-  bindings.sort((a, b) => comparePaths(a.dependent, b.dependent));
+  declarations.sort((a, b) => comparePaths(a.file, b.file));
   return {
     config: {
       ignore: isStrings(ignore) ? ignore : [],
       useGitignore: gitignore !== false,
-      bindings,
+      declarations,
     },
     attached,
   };

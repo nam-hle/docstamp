@@ -32,15 +32,15 @@ describe('§13.4 toRepoPath', () => {
 });
 
 describe('§13.3 selectResults', () => {
-  const r = (dependent: string) => ({ dependent }) as Result;
+  const r = (file: string) => ({ file }) as Result;
   const results = [r('a.md'), r('b.md')];
   it('all when no args', () => {
     expect(selectResults([], '/r', '/r', results).selected).toHaveLength(2);
   });
   it('dedupes, path order, unknown is an error', () => {
     const out = selectResults(['b.md', 'a.md', 'b.md', 'A.md'], '/r', '/r', results);
-    expect(out.selected.map((x) => x.dependent)).toEqual(['a.md', 'b.md']);
-    expect(out.errors.map((d) => [d.code, d.subject])).toEqual([['E_UNKNOWN_DEPENDENT', 'A.md']]);
+    expect(out.selected.map((x) => x.file)).toEqual(['a.md', 'b.md']);
+    expect(out.errors.map((d) => [d.code, d.subject])).toEqual([['E_UNKNOWN_FILE', 'A.md']]);
   });
   it('outside-root arg is unknown with original subject', () => {
     const out = selectResults(['../x.md'], '/r', '/r', results);

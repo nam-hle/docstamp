@@ -11,7 +11,7 @@ export interface RawChange {
 }
 
 export interface Keep {
-  readonly covered: ReadonlySet<string>;
+  readonly resolved: ReadonlySet<string>;
   readonly selectsDeleted: (path: string) => boolean;
 }
 
@@ -57,7 +57,7 @@ export function buildChanges(
   }
   return [...merged]
     .filter(([path, status]) =>
-      status === 'deleted' ? keep.selectsDeleted(path) : keep.covered.has(path),
+      status === 'deleted' ? keep.selectsDeleted(path) : keep.resolved.has(path),
     )
     .map(([path, status]) => ({ status, path }))
     .sort((a, b) => comparePaths(a.path, b.path));
@@ -79,23 +79,23 @@ const git = (root: string, args: readonly string[]): string =>
     maxBuffer: 256 * 1024 * 1024,
   });
 
-function recordedHash(root: string, rev: string, dependent: string): string | undefined {
+function recordedHash(root: string, rev: string, file: string): string | undefined {
   let text: string;
   try {
     text = git(root, ['show', `${rev}:./docstamp-lock.yaml`]);
-    return parseLock(Buffer.from(text)).entries.get(dependent);
+    return parseLock(Buffer.from(text)).entries.get(file);
   } catch {
     return undefined;
   }
 }
 
 // SPEC §12.3 step 1
-function reviewCommit(root: string, dependent: string, hash: string): string | null {
+function reviewCommit(root: string, file: string, hash: string): string | null {
   const log = git(root, ['log', '--format=%H', `-S${hash}`, '--', 'docstamp-lock.yaml']);
   for (const commit of log.split('\n').filter((line) => line !== '')) {
     if (
-      recordedHash(root, commit, dependent) === hash &&
-      recordedHash(root, `${commit}^`, dependent) !== hash
+      recordedHash(root, commit, file) === hash &&
+      recordedHash(root, `${commit}^`, file) !== hash
     ) {
       return commit;
     }
@@ -111,7 +111,7 @@ export function changedSince(
 ): readonly Change[] | null {
   try {
     if (git(root, ['rev-parse', '--is-shallow-repository']).trim() !== 'false') return null;
-    const id = reviewCommit(root, result.dependent, entry);
+    const id = reviewCommit(root, result.file, entry);
     if (id === null) return null;
     const diff = parseNameStatus(
       git(root, ['diff', '--name-status', '--no-renames', '-z', '--relative', id, '--']),
@@ -120,12 +120,12 @@ export function changedSince(
     const untracked = parseNameList(
       git(root, ['ls-files', '--others', '--exclude-standard', '-z']),
     );
-    const patterns = result.covers.map((c) => parsePattern(c));
+    const patterns = result.dependencies.map((c) => parsePattern(c));
     if (patterns.some((p) => p === null)) return null;
     const changes = buildChanges(diff, untracked, {
-      covered: new Set(result.covered),
+      resolved: new Set(result.resolved),
       selectsDeleted: (path) =>
-        path !== result.dependent && select(patterns as ParsedPattern[], [path]).length === 1,
+        path !== result.file && select(patterns as ParsedPattern[], [path]).length === 1,
     });
     return changes === null || changes.length === 0 ? null : changes;
   } catch {

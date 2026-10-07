@@ -1,7 +1,7 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import { needsQuoting, quote } from '../core/quote.ts';
-import type { Diagnostic, Result } from '../core/types.ts';
+import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
 
 // SPEC §14.2
 function shown(s: string): string {
@@ -15,21 +15,21 @@ export function checkText(selected: readonly Result[], rootArg?: string): string
   let out = '';
   for (const r of selected) {
     if (r.state === 'ok') continue;
-    out += `${LABEL[r.state].padEnd(9)}${shown(r.dependent)}`;
+    out += `${LABEL[r.state].padEnd(9)}${shown(r.file)}`;
     out += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
     if (r.state === 'stale') {
       if (r.changes && r.changes.length > 0) {
         for (const c of r.changes) out += `  ${c.status.padEnd(8)}  ${shown(c.path)}\n`;
-      } else for (const c of r.covers) out += `  covers  ${shown(c)}\n`;
+      } else for (const c of r.dependencies) out += `  depends   ${shown(c)}\n`;
     }
   }
   const count = (s: Result['state']) => selected.filter((r) => r.state === s).length;
   out += `${count('ok')} ok, ${count('stale')} stale, ${count('invalid')} invalid\n`;
-  const stale = selected.filter((r) => r.state === 'stale').map((r) => shown(r.dependent));
+  const stale = selected.filter((r) => r.state === 'stale').map((r) => shown(r.file));
   if (stale.length > 0) {
     const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
     out +=
-      'next: review each stale file against its covered files, then run: ' +
+      'next: review each stale file against its dependencies, then run: ' +
       `docstamp update ${stale.join(' ')}${root}\n`;
   }
   return out;
@@ -39,10 +39,10 @@ export function checkText(selected: readonly Result[], rootArg?: string): string
 export function listText(selected: readonly Result[]): string {
   let out = '';
   for (const r of selected) {
-    out += `${shown(r.dependent)}\n`;
+    out += `${shown(r.file)}\n`;
     if (r.state === 'invalid') continue;
-    for (const c of r.covers) out += `  covers  ${shown(c)}\n`;
-    for (const f of r.covered) out += `  file    ${shown(f)}\n`;
+    for (const c of r.dependencies) out += `  depends   ${shown(c)}\n`;
+    for (const f of r.resolved) out += `  resolved  ${shown(f)}\n`;
   }
   return out;
 }
@@ -64,9 +64,24 @@ export function diagnosticsText(ds: readonly Diagnostic[]): string {
   return sortDiagnostics(ds)
     .map((d) => {
       const parts: string[] = [d.severity, d.code];
-      if (d.dependent !== '') parts.push(shown(d.dependent));
+      if (d.file !== '') parts.push(shown(d.file));
       if (d.subject !== '') parts.push(shown(d.subject));
       return `${parts.join(': ')}: ${d.message}\n`;
     })
     .join('');
+}
+
+// SPEC §14.7
+export function reverseText(entries: readonly ReverseEntry[]): string {
+  let out = '';
+  for (const entry of entries) {
+    out += `${shown(entry.file)}\n`;
+    if (entry.dependents.length === 0) out += '  (no dependents)\n';
+    const names = entry.dependents.map((d) => shown(d.file));
+    const width = Math.max(0, ...names.map((n) => n.length));
+    entry.dependents.forEach((d, i) => {
+      out += `  ${names[i]!.padEnd(width)}   via ${d.via.map(shown).join(', ')}\n`;
+    });
+  }
+  return out;
 }

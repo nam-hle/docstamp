@@ -8,12 +8,12 @@ import { cleanupTrees, makeTree, type TreeSpec } from '../helpers/fixture.ts';
 afterEach(cleanupTrees);
 
 const YAML =
-  'version: 1\nignore: [dist]\ndependents:\n  b.md:\n    covers: [src/**]\n  a.md:\n    covers: [x]\n';
+  'version: 2\nignore: [dist]\nfiles:\n  b.md:\n    dependencies: [src/**]\n  a.md:\n    dependencies: [x]\n';
 const BODY =
-  "{ version: 1, ignore: ['dist'], dependents: { 'b.md': { covers: ['src/**'] }, 'a.md': { covers: ['x'] } } }";
+  "{ version: 2, ignore: ['dist'], files: { 'b.md': { dependencies: ['src/**'] }, 'a.md': { dependencies: ['x'] } } }";
 const SOURCES: Record<(typeof CONFIG_NAMES)[number], string> = {
   'docstamp.yaml': YAML,
-  'docstamp.config.ts': `const c: { version: 1 } & Record<string, unknown> = ${BODY} as never;\nexport default c;\n`,
+  'docstamp.config.ts': `const c: { version: 2 } & Record<string, unknown> = ${BODY} as never;\nexport default c;\n`,
   'docstamp.config.mts': `export default ${BODY} satisfies object;\n`,
   'docstamp.config.js': `module.exports = ${BODY};\n`,
   'docstamp.config.mjs': `export default ${BODY};\n`,
@@ -29,7 +29,7 @@ const failure = (spec: TreeSpec) => {
   return [];
 };
 const script = (body: string) => failure({ 'docstamp.config.mjs': body });
-const VALID = '{ version: 1, dependents: {} }';
+const VALID = '{ version: 2, files: {} }';
 
 describe('§9.1 Carriers', () => {
   it.each(CONFIG_NAMES)('%s normalizes to the same Config', (name) => {
@@ -37,9 +37,9 @@ describe('§9.1 Carriers', () => {
     expect(attached).toEqual([]);
     expect(config.ignore).toEqual(['dist']);
     expect(config.useGitignore).toBe(true);
-    expect(config.bindings).toEqual([
-      { dependent: 'a.md', covers: ['x'] },
-      { dependent: 'b.md', covers: ['src/**'] },
+    expect(config.declarations).toEqual([
+      { file: 'a.md', dependencies: ['x'] },
+      { file: 'b.md', dependencies: ['src/**'] },
     ]);
   });
   it('discovery order is the documented one', () => {
@@ -82,43 +82,43 @@ describe('§9.5 script carriers', () => {
     const { config } = readConfig(
       makeTree({ 'docstamp.config.js': `exports.default = ${VALID}; exports.other = 1;\n` }),
     );
-    expect(config.bindings).toEqual([]);
+    expect(config.declarations).toEqual([]);
   });
   it('the module itself is used without a default export', () => {
-    expect(script(`export const version = 1;\nexport const dependents = {};\n`)).toEqual([
+    expect(script(`export const version = 2;\nexport const files = {};\n`)).toEqual([
       ['E_CONFIG', ''],
     ]);
     expect(failure({ 'docstamp.config.js': `module.exports = ${VALID};\n` })).toEqual([]);
   });
-  it('version is the Number 1', () => {
-    expect(script('export default { version: "1", dependents: {} };')).toEqual([
+  it('version is the Number 2', () => {
+    expect(script('export default { version: "2", files: {} };')).toEqual([
       ['E_CONFIG_VERSION', ''],
     ]);
-    expect(script('export default { dependents: {} };')).toEqual([['E_CONFIG_VERSION', '']]);
+    expect(script('export default { files: {} };')).toEqual([['E_CONFIG_VERSION', '']]);
   });
   it('validation of the normalized value still runs', () => {
-    expect(script('export default { version: 1, nope: 1, dependents: {} };')).toEqual([
+    expect(script('export default { version: 2, nope: 1, files: {} };')).toEqual([
       ['E_UNKNOWN_KEY', 'nope'],
     ]);
     expect(
-      script(`export default { version: 1, dependents: { '../x': { covers: ['a'] } } };`),
+      script(`export default { version: 2, files: { '../x': { dependencies: ['a'] } } };`),
     ).toEqual([['E_CONFIG', '../x']]);
   });
-  it('key order of dependents is irrelevant', () => {
+  it('key order of files is irrelevant', () => {
     const { config } = readConfig(
       makeTree({
-        'docstamp.config.mjs': `export default { version: 1, dependents: { 'z': { covers: ['a'] }, '1': { covers: ['a'] } } };`,
+        'docstamp.config.mjs': `export default { version: 2, files: { 'z': { dependencies: ['a'] }, '1': { dependencies: ['a'] } } };`,
       }),
     );
-    expect(config.bindings.map((b) => b.dependent)).toEqual(['1', 'z']);
+    expect(config.declarations.map((b) => b.file)).toEqual(['1', 'z']);
   });
   it.each([
     ['a throwing module', 'throw new Error("boom");'],
     ['a syntax error', 'export default {'],
-    ['top-level await', 'await Promise.resolve(); export default { version: 1, dependents: {} };'],
-    ['a missing import', 'import "./missing.mjs"; export default { version: 1, dependents: {} };'],
+    ['top-level await', 'await Promise.resolve(); export default { version: 2, files: {} };'],
+    ['a missing import', 'import "./missing.mjs"; export default { version: 2, files: {} };'],
     ['no export', ''],
-    ['a function export', 'export default () => ({ version: 1, dependents: {} });'],
+    ['a function export', 'export default () => ({ version: 2, files: {} });'],
     ['an array export', 'export default [];'],
     ['a string export', 'export default "x";'],
     ['a null export', 'export default null;'],
@@ -142,67 +142,67 @@ describe('§9.5 script carriers', () => {
     ['a nested class instance', 'x: { y: [{ z: new (class B {})() }] }', 'x'],
     ['a nested undefined', 'x: { y: undefined }', 'x'],
   ])('%s is E_CONFIG naming the top-level key', (_name, member, subject) => {
-    expect(script(`export default { version: 1, dependents: {}, ${member} };`)).toEqual([
+    expect(script(`export default { version: 2, files: {}, ${member} };`)).toEqual([
       ['E_CONFIG', subject],
     ]);
   });
   it('a non-enumerable property is E_CONFIG', () => {
     expect(
       script(
-        'const c = { version: 1 }; Object.defineProperty(c, "dependents", { value: {} });\nexport default c;',
+        'const c = { version: 2 }; Object.defineProperty(c, "files", { value: {} });\nexport default c;',
       ),
-    ).toEqual([['E_CONFIG', 'dependents']]);
+    ).toEqual([['E_CONFIG', 'files']]);
   });
   it('an array with an extra property is E_CONFIG', () => {
     expect(
       script(
-        'const l = ["a"]; l.extra = 1;\nexport default { version: 1, dependents: { "a.md": { covers: l } } };',
+        'const l = ["a"]; l.extra = 1;\nexport default { version: 2, files: { "a.md": { dependencies: l } } };',
       ),
-    ).toEqual([['E_CONFIG', 'dependents']]);
+    ).toEqual([['E_CONFIG', 'files']]);
   });
   it('a cycle is E_CONFIG', () => {
-    expect(
-      script('const d = {}; d.self = d;\nexport default { version: 1, dependents: d };'),
-    ).toEqual([['E_CONFIG', 'dependents']]);
+    expect(script('const d = {}; d.self = d;\nexport default { version: 2, files: d };')).toEqual([
+      ['E_CONFIG', 'files'],
+    ]);
   });
   it('a shared reference without a cycle is allowed', () => {
     expect(
       failure({
-        'docstamp.config.mjs': `const covers = ['a'];\nexport default { version: 1, dependents: { 'a.md': { covers }, 'b.md': { covers } } };`,
+        'docstamp.config.mjs': `const dependencies = ['a'];\nexport default { version: 2, files: { 'a.md': { dependencies }, 'b.md': { dependencies } } };`,
       }),
     ).toEqual([]);
   });
   it('a null-prototype object is plain', () => {
     expect(
       failure({
-        'docstamp.config.mjs': `export default Object.assign(Object.create(null), { version: 1, dependents: {} });`,
+        'docstamp.config.mjs': `export default Object.assign(Object.create(null), { version: 2, files: {} });`,
       }),
     ).toEqual([]);
   });
   it('a __proto__ own key is data, not a prototype', () => {
     expect(
-      script(`export default JSON.parse('{"version":1,"dependents":{},"__proto__":{"x":1}}');`),
+      script(`export default JSON.parse('{"version":2,"files":{},"__proto__":{"x":1}}');`),
     ).toEqual([['E_UNKNOWN_KEY', '__proto__']]);
   });
   it('§9.5 step 3: a Proxy object is E_CONFIG', () => {
-    expect(script('export default { version: 1, dependents: {}, x: new Proxy({}, {}) };')).toEqual([
+    expect(script('export default { version: 2, files: {}, x: new Proxy({}, {}) };')).toEqual([
       ['E_CONFIG', 'x'],
     ]);
-    expect(script('export default new Proxy({ version: 1, dependents: {} }, {});')).toEqual([
+    expect(script('export default new Proxy({ version: 2, files: {} }, {});')).toEqual([
       ['E_CONFIG', ''],
     ]);
   });
   it('§9.5 step 3: a Proxy array is E_CONFIG', () => {
     expect(
       script(
-        'export default { version: 1, dependents: { "a.md": { covers: new Proxy(["a"], {}) } } };',
+        'export default { version: 2, files: { "a.md": { dependencies: new Proxy(["a"], {}) } } };',
       ),
-    ).toEqual([['E_CONFIG', 'dependents']]);
+    ).toEqual([['E_CONFIG', 'files']]);
   });
   it('§9.5 NOTE: a deeply nested value is E_CONFIG, not a crash', () => {
     expect(
       script(
-        'let v = []; for (let i = 0; i < 100000; i++) v = [v];\nexport default { version: 1, dependents: {}, x: v };',
+        'let v = []; for (let i = 0; i < 100000; i++) v = [v];\nexport default { version: 2, files: {}, x: v };',
       ),
     ).toEqual([['E_CONFIG', '']]);
   });
@@ -210,9 +210,11 @@ describe('§9.5 script carriers', () => {
 
 describe('§9.5 defineConfig', () => {
   it('is the identity', () => {
-    const config = { version: 1, dependents: { 'a.md': { covers: ['x'] } } } as const;
-    expect(defineConfig({ version: 1, dependents: { 'a.md': { covers: ['x'] } } })).toEqual(config);
-    const same = { version: 1 as const, dependents: {} };
+    const config = { version: 2, files: { 'a.md': { dependencies: ['x'] } } } as const;
+    expect(defineConfig({ version: 2, files: { 'a.md': { dependencies: ['x'] } } })).toEqual(
+      config,
+    );
+    const same = { version: 2 as const, files: {} };
     expect(defineConfig(same)).toBe(same);
   });
 });

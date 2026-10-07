@@ -34,7 +34,7 @@ const commit = (cwd: string, message: string) => {
   git(cwd, 'commit', '-m', message);
 };
 
-const CONFIG = 'version: 1\ndependents:\n  CLAUDE.md:\n    covers: [src/**]\n';
+const CONFIG = 'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies: [src/**]\n';
 const FILES = {
   'docstamp.yaml': CONFIG,
   'CLAUDE.md': '# doc\n',
@@ -77,21 +77,21 @@ describe('§12.3 ChangedSince', () => {
     const r = docstamp(root);
     expect(r.code).toBe(1);
     expect(r.out.startsWith(EXPECTED_TEXT)).toBe(true);
-    expect(r.out).not.toContain('covers');
+    expect(r.out).not.toContain('depends');
   });
 
   it('reports changes in JSON, without a files member', () => {
     const root = reviewedRepo();
     changeEverything(root);
     const doc = JSON.parse(docstamp(root, '--json').out);
-    expect(doc.dependents[0].changes).toEqual([
+    expect(doc.files[0].changes).toEqual([
       { status: 'modified', path: 'src/a.ts' },
       { status: 'deleted', path: 'src/c.ts' },
       { status: 'modified', path: 'src/d.ts' },
       { status: 'added', path: 'src/new.ts' },
       { status: 'added', path: 'src/untracked.ts' },
     ]);
-    expect('files' in doc.dependents[0]).toBe(false);
+    expect('resolvedFiles' in doc.files[0]).toBe(false);
   });
 
   it('survives a rewrite of the review commit', () => {
@@ -131,14 +131,14 @@ describe('§12.3 ChangedSince', () => {
     expect(docstamp(root).code).toBe(docstamp(plain).code);
   });
 
-  it('falls back to covers lines outside a git work tree', () => {
+  it('falls back to depends lines outside a git work tree', () => {
     const root = makeTree(FILES);
     docstamp(root, 'update', 'CLAUDE.md');
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstamp(root);
     expect(r.code).toBe(1);
-    expect(r.out).toContain('  covers  src/**\n');
-    expect(JSON.parse(docstamp(root, '--json').out).dependents[0].changes).toBeNull();
+    expect(r.out).toContain('  depends   src/**\n');
+    expect(JSON.parse(docstamp(root, '--json').out).files[0].changes).toBeNull();
   });
 
   it('is unknown when the written lock was never committed', () => {
@@ -148,19 +148,19 @@ describe('§12.3 ChangedSince', () => {
     docstamp(root, 'update', 'CLAUDE.md');
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstamp(root);
-    expect(r.out).toContain('  covers  src/**\n');
-    expect(JSON.parse(docstamp(root, '--json').out).dependents[0].changes).toBeNull();
+    expect(r.out).toContain('  depends   src/**\n');
+    expect(JSON.parse(docstamp(root, '--json').out).files[0].changes).toBeNull();
   });
 
   it('is null for ok dependents', () => {
     const root = reviewedRepo();
-    expect(JSON.parse(docstamp(root, '--json').out).dependents[0].changes).toBeNull();
+    expect(JSON.parse(docstamp(root, '--json').out).files[0].changes).toBeNull();
   });
 
-  it('ignores a sibling Dependent that removed the same Hash later', () => {
+  it('ignores a sibling file that removed the same Hash later', () => {
     const root = makeTree({
       ...FILES,
-      'docstamp.yaml': `${CONFIG}  B.md:\n    covers: [src/**]\n`,
+      'docstamp.yaml': `${CONFIG}  B.md:\n    dependencies: [src/**]\n`,
       'B.md': '# b\n',
       'src/x.ts': 'x\n',
       'src/y.ts': 'y\n',
@@ -176,7 +176,7 @@ describe('§12.3 ChangedSince', () => {
     commit(root, 'review b');
     put(root, 'src/z.ts', 'z\n');
     const doc = JSON.parse(docstamp(root, '--json').out);
-    const a = doc.dependents.find((d: { dependent: string }) => d.dependent === 'CLAUDE.md');
+    const a = doc.files.find((d: { file: string }) => d.file === 'CLAUDE.md');
     expect(a.changes.map((c: { path: string }) => c.path)).toEqual([
       'src/x.ts',
       'src/y.ts',
@@ -191,7 +191,7 @@ describe('§12.3 ChangedSince', () => {
     appendFileSync(join(clone, 'src/a.ts'), 'more\n');
     const r = docstamp(clone, '--json');
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.out).dependents[0].changes).toBeNull();
+    expect(JSON.parse(r.out).files[0].changes).toBeNull();
   });
 
   it('ignores an inherited GIT_DIR', () => {
@@ -199,9 +199,7 @@ describe('§12.3 ChangedSince', () => {
     const foreign = reviewedRepo();
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstampEnv(root, { GIT_DIR: join(foreign, '.git') }, '--json');
-    expect(JSON.parse(r.out).dependents[0].changes).toEqual([
-      { status: 'modified', path: 'src/a.ts' },
-    ]);
+    expect(JSON.parse(r.out).files[0].changes).toEqual([{ status: 'modified', path: 'src/a.ts' }]);
   });
 
   it('survives a real rebase of the review commit', () => {
@@ -222,19 +220,19 @@ describe('§12.3 ChangedSince', () => {
     expect(docstamp(root).out).toContain('  modified  src/a.ts\n');
   });
 
-  it('treats a version 1 lock in history as absent, never an error', () => {
+  it('treats a version 1 or 2 lock in history as absent, never an error', () => {
     const root = makeTree(FILES);
     git(root, 'init', '-q');
     commit(root, 'initial');
     docstamp(root, 'update', 'CLAUDE.md');
-    const v2 = readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8');
+    const v3 = readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8');
     const v1 = `version: 1\ndependents:\n  CLAUDE.md:\n    covers: [src/**]\n    hash: ${'b'.repeat(64)}\n`;
     put(root, 'docstamp-lock.yaml', v1);
     put(root, 'docsync.lock', v1);
     commit(root, 'v1');
     rmSync(join(root, 'docsync.lock'));
-    put(root, 'docstamp-lock.yaml', v2);
-    commit(root, 'v2');
+    put(root, 'docstamp-lock.yaml', v3);
+    commit(root, 'v3');
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstamp(root);
     expect(r.code).toBe(1);
@@ -256,7 +254,7 @@ describe('§12.3 ChangedSince', () => {
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstamp(root);
     expect(r.code).toBe(1);
-    expect(r.out).toContain('  covers  src/**\n');
+    expect(r.out).toContain('  depends   src/**\n');
     expect(r.err).toBe('');
   });
 

@@ -1,7 +1,7 @@
-version: 1
-dependents:
+version: 2
+files:
   CLAUDE.md:
-    covers:
+    dependencies:
       - src
       - tsup.config.ts
       - vitest.config.ts
@@ -11,9 +11,9 @@ dependents:
       - .github
       - release-please-config.json
   README.md:
-    covers:
+    dependencies:
       - src/cli
       - docs/SPEC.md
   docs/SPEC.md:
-    covers:
+    dependencies:
       - src

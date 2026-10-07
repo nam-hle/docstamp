@@ -1,18 +1,19 @@
 import { lstatSync, readdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { readConfig } from '../config/read-config.ts';
-import { Raised } from '../core/diagnostics.ts';
+import { Raised, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
-import type { Diagnostic, Lock, Result } from '../core/types.ts';
+import type { Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
+import { dependentsOf } from '../engine/reverse.ts';
 import { fileHash } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
 import { readLock, writeLock } from '../lock/lock.ts';
-import { jsonText, listJsonText } from '../report/json.ts';
-import { checkText, diagnosticsText, listText, updateText } from '../report/text.ts';
+import { jsonText, listJsonText, reverseJsonText } from '../report/json.ts';
+import { checkText, diagnosticsText, listText, reverseText, updateText } from '../report/text.ts';
 import { computeUniverse, determineRoot } from '../universe/walk.ts';
 import { HELP, parseArgs } from './args.ts';
-import { selectResults } from './paths.ts';
+import { selectResults, toRepoPath } from './paths.ts';
 
 export interface Io {
   stdout(s: string): void;
@@ -24,7 +25,7 @@ export interface Io {
 declare const VERSION: string | undefined;
 
 // SPEC §9.4: exact-name match in the parent's listing, and a file, not a link
-function isDependentFile(root: string, path: string): boolean {
+function isStampedFile(root: string, path: string): boolean {
   const dir = dirname(join(root, path));
   try {
     const name = readdirSync(dir).find((n) => n.normalize('NFC') === basename(path));
@@ -58,24 +59,24 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
   };
 }
 
-function evaluateBindings(root: string, readLockFor: () => Lock, hashFiles: boolean) {
+function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: boolean) {
   const { config, attached } = readConfig(root);
   const universe = computeUniverse(root, config);
   const lock = readLockFor();
   const fs: EngineFs = {
-    isDependentFile: (p) => isDependentFile(root, p),
+    isStampedFile: (p) => isStampedFile(root, p),
     fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
   };
-  const results = config.bindings.map((b) =>
+  const results = config.declarations.map((b) =>
     evaluate(
       b,
       universe.paths,
       lock,
-      attached.filter((d) => d.dependent === b.dependent),
+      attached.filter((d) => d.file === b.file),
       fs,
     ),
   );
-  return { bindings: config.bindings, results, lock };
+  return { declarations: config.declarations, results, lock };
 }
 
 // SPEC §12.2
@@ -88,18 +89,18 @@ function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evalua
       return { entries: new Map() };
     }
   };
-  const { bindings, results, lock } = evaluateBindings(root, readLockFor, true);
-  return { results, lock, global: orphans(bindings, lock) };
+  const { declarations, results, lock } = evaluateDeclarations(root, readLockFor, true);
+  return { results, lock, global: orphans(declarations, lock) };
 }
 
 // SPEC §13.7
 function listAll(root: string): Result[] {
-  return evaluateBindings(root, () => ({ entries: new Map() }), false).results;
+  return evaluateDeclarations(root, () => ({ entries: new Map() }), false).results;
 }
 
 // SPEC §12.3
 function withChanges(root: string, result: Result, lock: Lock): Result {
-  const entry = lock.entries.get(result.dependent);
+  const entry = lock.entries.get(result.file);
   if (result.state !== 'stale' || !result.reasons.includes('content-changed') || !entry) {
     return result;
   }
@@ -166,7 +167,60 @@ function runList(
   return exitCode;
 }
 
-// SPEC §13.5, §13.6, §13.7
+// SPEC §13.8
+function reverseEntries(
+  root: string,
+  cwd: string,
+  paths: readonly string[],
+): { entries: ReverseEntry[]; attached: Diagnostic[] } {
+  const { config, attached } = readConfig(root);
+  const universe = new Set(computeUniverse(root, config).paths);
+  const keyed = new Map<string, string | null>();
+  for (const arg of paths) keyed.set(toRepoPath(arg, cwd, root) ?? arg, toRepoPath(arg, cwd, root));
+  const entries = sortPaths([...keyed.keys()]).map((key): ReverseEntry => {
+    if (keyed.get(key) === null) {
+      const message = 'Name a file inside the root.';
+      return {
+        file: key,
+        dependents: [],
+        diagnostics: [diag('E_USAGE', { subject: key, message })],
+      };
+    }
+    const dependents = dependentsOf(key, config.declarations, universe, attached);
+    return { file: key, dependents, diagnostics: [] };
+  });
+  return { entries, attached };
+}
+
+// SPEC §13.8
+function runReverse(
+  args: { json: boolean; root?: string; paths: string[] },
+  cwd: string,
+  io: Io,
+): number {
+  let entries: ReverseEntry[] = [];
+  let global: Diagnostic[] = [];
+  let exitCode = 2;
+  try {
+    const root = determineRoot(cwd, args.root);
+    const found = reverseEntries(root, cwd, args.paths);
+    entries = found.entries;
+    global = found.attached;
+    exitCode = hasError(global) || entries.some((e) => hasError(e.diagnostics)) ? 2 : 0;
+  } catch (e) {
+    if (!(e instanceof Raised)) throw e;
+    global = e.diagnostics;
+  }
+  if (args.json) {
+    io.stdout(reverseJsonText({ exitCode, entries, diagnostics: global }));
+  } else {
+    io.stdout(reverseText(entries));
+    io.stderr(diagnosticsText([...global, ...entries.flatMap((e) => e.diagnostics)]));
+  }
+  return exitCode;
+}
+
+// SPEC §13.5, §13.6, §13.7, §13.8
 export function run(argv: readonly string[], cwd: string, io: Io): number {
   let args: ReturnType<typeof parseArgs>;
   try {
@@ -184,7 +238,8 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     io.stdout(`${typeof VERSION === 'string' ? VERSION : '0.0.0'}\n`);
     return 0;
   }
-  if (args.mode === 'list-dependents') return runList(args, cwd, io);
+  if (args.mode === 'list-dependencies') return runList(args, cwd, io);
+  if (args.mode === 'list-dependents') return runReverse(args, cwd, io);
   const { mode, json } = args;
   const empty: Output = {
     json,
@@ -220,12 +275,12 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       return emit(io, { ...empty, selected, global, text });
     }
     const entries = new Map(evaluated.lock.entries);
-    for (const t of selected) entries.set(t.dependent, t.current);
-    const bound = new Set(evaluated.results.map((r) => r.dependent));
+    for (const t of selected) entries.set(t.file, t.current);
+    const bound = new Set(evaluated.results.map((r) => r.file));
     const removed = sortPaths([...entries.keys()].filter((d) => !bound.has(d)));
     for (const d of removed) entries.delete(d);
     writeLock(root, { entries });
-    const written = selected.map((r) => r.dependent);
+    const written = selected.map((r) => r.file);
     const text = updateText(written, removed);
     return emit(io, {
       ...empty,

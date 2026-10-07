@@ -18,7 +18,7 @@ const docstamp = (cwd: string, ...args: string[]) => {
   const r = spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: 'utf8' });
   return { code: r.status, out: r.stdout, err: r.stderr };
 };
-const CONFIG = 'version: 1\ndependents:\n  CLAUDE.md:\n    covers: [src/**]\n';
+const CONFIG = 'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies: [src/**]\n';
 const repo = () => makeTree({ 'docstamp.yaml': CONFIG, 'CLAUDE.md': '# doc\n', 'src/a.ts': 'a\n' });
 
 describe('§13 workflow', () => {
@@ -38,14 +38,14 @@ describe('§13 workflow', () => {
     expect(docstamp(root).code).toBe(0);
   });
 
-  it('rename of a covered file is stale', () => {
+  it('rename of a dependency is stale', () => {
     const root = repo();
     docstamp(root, 'update', '--all');
     renameSync(join(root, 'src/a.ts'), join(root, 'src/b.ts'));
     expect(docstamp(root).code).toBe(1);
   });
 
-  it('editing the dependent itself does not make it stale', () => {
+  it('editing the file itself does not make it stale', () => {
     const root = repo();
     docstamp(root, 'update', '--all');
     appendFileSync(join(root, 'CLAUDE.md'), 'more\n');
@@ -57,16 +57,16 @@ describe('§13 workflow', () => {
     expect(docstamp(join(root, 'src'), 'update', '../CLAUDE.md').code).toBe(0);
   });
 
-  it('missing dependent is exit 2, others still evaluated', () => {
+  it('missing file is exit 2, others still evaluated', () => {
     const root = makeTree({
-      'docstamp.yaml': `${CONFIG}  GONE.md:\n    covers: [src/**]\n`,
+      'docstamp.yaml': `${CONFIG}  GONE.md:\n    dependencies: [src/**]\n`,
       'CLAUDE.md': '',
       'src/a.ts': '',
     });
     const r = docstamp(root, '--json');
     expect(r.code).toBe(2);
     const doc = JSON.parse(r.out);
-    expect(doc.dependents.map((d: { state: string }) => d.state)).toEqual(['stale', 'invalid']);
+    expect(doc.files.map((d: { state: string }) => d.state)).toEqual(['stale', 'invalid']);
   });
 
   it('write refuses on lock conflict markers and writes nothing', () => {
@@ -99,44 +99,54 @@ describe('§13 workflow', () => {
     const root = repo();
     writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
     expect(docstamp(root, 'update', '--all').code).toBe(0);
-    expect(readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8')).toMatch(/^version: 2\n/u);
+    expect(readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8')).toMatch(/^version: 3\n/u);
     expect(existsSync(join(root, 'docsync.lock'))).toBe(true);
     expect(docstamp(root).code).toBe(2);
     rmSync(join(root, 'docsync.lock'));
     expect(docstamp(root).code).toBe(0);
   });
 
-  it('§13.7 list-dependents works while a legacy docsync.lock is present', () => {
+  it('§13.7 list-dependencies works while a legacy docsync.lock is present', () => {
     const root = repo();
     writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
     expect(docstamp(root).code).toBe(2);
-    expect(docstamp(root, 'list-dependents')).toEqual({
+    expect(docstamp(root, 'list-dependencies')).toEqual({
       code: 0,
-      out: 'CLAUDE.md\n  covers  src/**\n  file    src/a.ts\n',
+      out: 'CLAUDE.md\n  depends   src/**\n  resolved  src/a.ts\n',
       err: '',
     });
-    const json = JSON.parse(docstamp(root, 'list-dependents', '--json').out);
-    expect(json.dependents[0].files).toEqual(['src/a.ts']);
+    const json = JSON.parse(docstamp(root, 'list-dependencies', '--json').out);
+    expect(json.files[0].resolvedFiles).toEqual(['src/a.ts']);
   });
 
-  it('§13.7 list-dependents exits 2 for an invalid Dependent', () => {
+  it('§13.8 list-dependents answers the reverse question without a lock', () => {
+    const root = repo();
+    expect(docstamp(root, 'list-dependents', 'src/a.ts')).toEqual({
+      code: 0,
+      out: 'src/a.ts\n  CLAUDE.md   via src/**\n',
+      err: '',
+    });
+    expect(docstamp(root, 'list-dependents').code).toBe(2);
+  });
+
+  it('§13.7 list-dependencies exits 2 for an invalid file', () => {
     const root = makeTree({ 'docstamp.yaml': CONFIG, 'src/a.ts': 'a\n' });
-    const r = docstamp(root, 'list-dependents');
+    const r = docstamp(root, 'list-dependencies');
     expect(r.code).toBe(2);
     expect(r.out).toBe('CLAUDE.md\n');
-    expect(r.err).toContain('E_DEPENDENT_MISSING');
+    expect(r.err).toContain('E_FILE_MISSING');
   });
 
   it('§13.2 explicit check equals bare check; a file named check is reachable', () => {
     const root = repo();
     expect(docstamp(root, 'check')).toEqual(docstamp(root));
-    expect(docstamp(root, 'check', '--', 'check').err).toContain('E_UNKNOWN_DEPENDENT: check');
+    expect(docstamp(root, 'check', '--', 'check').err).toContain('E_UNKNOWN_FILE: check');
   });
 
   it('§13.2 removed options exit 2 naming the replacement', () => {
     const root = repo();
     expect(docstamp(root, '--write', 'CLAUDE.md').err).toContain('docstamp update');
-    expect(docstamp(root, '--files').err).toContain('docstamp list-dependents');
+    expect(docstamp(root, '--files').err).toContain('docstamp list-dependencies');
     expect(docstamp(root, 'update').code).toBe(2);
   });
 
@@ -152,10 +162,10 @@ describe('§13 workflow', () => {
 
   it('§9.5 a docstamp.config.ts carrier drives the whole workflow', () => {
     const root = makeTree({
-      'docstamp.config.ts': `interface C { version: 1 }
+      'docstamp.config.ts': `interface C { version: 2 }
 const config: C & object = {
-  version: 1,
-  dependents: { 'CLAUDE.md': { covers: ['src/**'] } },
+  version: 2,
+  files: { 'CLAUDE.md': { dependencies: ['src/**'] } },
 };
 export default config;
 `,

@@ -10,6 +10,9 @@ import type { Lock } from '../core/types.ts';
 const LOCK = 'docstamp-lock.yaml';
 // Historical name from before the rename to docstamp; kept on purpose (§11.1).
 const LEGACY_LOCK = 'docsync.lock';
+const V2_LOCK_MESSAGE =
+  'The version 2 Lockfile is no longer read; run "docstamp update --all" to rewrite it as ' +
+  'version 3 (hashes are unchanged).';
 const fail = (code: 'E_LOCK' | 'E_LOCK_VERSION') => new Raised([diag(code)]);
 const isMap = (v: YamlValue | undefined): v is YamlMap =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -34,7 +37,7 @@ function rejectLegacyLock(root: string): void {
       subject: LEGACY_LOCK,
       message:
         'The version 1 Lockfile docsync.lock is no longer read; delete docsync.lock, ' +
-        'review every Dependent, then run "docstamp update --all".',
+        'review every file, then run "docstamp update --all".',
     }),
   ]);
 }
@@ -58,26 +61,30 @@ export function parseLock(bytes: Buffer): Lock {
   const doc = parseStrictYaml(decode(bytes));
   if (!doc || !isMap(doc.value)) throw fail('E_LOCK');
   const top = doc.value;
-  if (top.entries.get('version')?.plainSource !== '2') throw fail('E_LOCK_VERSION');
-  const dependents = top.entries.get('dependents')?.value;
-  if (!hasKeys(top, ['dependents', 'version']) || !isMap(dependents)) throw fail('E_LOCK');
+  const version = top.entries.get('version')?.plainSource;
+  if (version === '2') {
+    throw new Raised([diag('E_LOCK_VERSION', { message: V2_LOCK_MESSAGE })]);
+  }
+  if (version !== '3') throw fail('E_LOCK_VERSION');
+  const files = top.entries.get('files')?.value;
+  if (!hasKeys(top, ['files', 'version']) || !isMap(files)) throw fail('E_LOCK');
   const entries = new Map<string, string>();
-  for (const [dependent, node] of dependents.entries) {
+  for (const [file, node] of files.entries) {
     const hash = node.plainSource ?? node.value;
-    if (!isRepoPath(dependent) || typeof hash !== 'string' || !/^[0-9a-f]{64}$/u.test(hash)) {
+    if (!isRepoPath(file) || typeof hash !== 'string' || !/^[0-9a-f]{64}$/u.test(hash)) {
       throw fail('E_LOCK');
     }
-    entries.set(dependent, hash);
+    entries.set(file, hash);
   }
   return { entries };
 }
 
 // SPEC §11.2
 export function lockText(lock: Lock): string {
-  if (lock.entries.size === 0) return 'version: 2\ndependents: {}\n';
-  let out = 'version: 2\ndependents:\n';
-  for (const dependent of sortPaths([...lock.entries.keys()])) {
-    out += `  ${quote(dependent)}: ${lock.entries.get(dependent)}\n`;
+  if (lock.entries.size === 0) return 'version: 3\nfiles: {}\n';
+  let out = 'version: 3\nfiles:\n';
+  for (const file of sortPaths([...lock.entries.keys()])) {
+    out += `  ${quote(file)}: ${lock.entries.get(file)}\n`;
   }
   return out;
 }

@@ -5,11 +5,11 @@
   "additionalProperties": false,
   "required": [
     "version",
-    "dependents"
+    "files"
   ],
   "properties": {
     "version": {
-      "const": 1
+      "const": 2
     },
     "gitignore": {
       "type": "boolean",
@@ -22,16 +22,16 @@
       },
       "default": []
     },
-    "dependents": {
+    "files": {
       "type": "object",
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "covers"
+          "dependencies"
         ],
         "properties": {
-          "covers": {
+          "dependencies": {
             "type": "array",
             "minItems": 1,
             "items": {

@@ -1,20 +1,20 @@
 # docstamp Specification
 
-Version 1 (draft; Lockfile format version 2). This document defines the observable behavior of docstamp. It does not define
-implementation structure. Code and tests cite its clause numbers (for example `§8.3`).
+Version 1 (draft; Configuration version 2, Lockfile version 3, JSON output version 2). This
+document defines the observable behavior of docstamp. It does not define implementation structure. Code and tests cite its clause numbers (for example `§8.3`).
 
 ## 1 Scope
 
-docstamp tracks hidden dependencies between files: a file (the *Dependent*) whose correctness
-rests on the content of other files (its *covered files*). The primary case is documentation that
-describes code, but any file may be a Dependent and any file in the Universe may be covered: a
+docstamp tracks hidden dependencies between files: a file whose correctness
+rests on the content of other files (its *dependencies*). The primary case is documentation that
+describes code, but any file may have dependencies and any file in the Universe may be one: a
 fixture and the schema it mirrors, generated types and their source, a translation and its
 original.
 
 The workflow it serves:
 
-1. CI runs `docstamp`. It exits 1 when a Dependent's covered files changed since its last Review.
-2. A person or an agent reviews each stale Dependent against its covered files and edits it if
+1. CI runs `docstamp`. It exits 1 when a file's dependencies changed since its last Review.
+2. A person or an agent reviews each stale file against its dependencies and edits it if
    needed.
 3. They run `docstamp update <file>` to record the Review in the Lockfile. CI passes.
 
@@ -98,16 +98,21 @@ parse back to *s*. It is the only escaping used in output and in the Lockfile.
 or trailing `/`, no empty segment, no segment `.` or `..`, no U+0000, and is in Unicode
 Normalization Form C (NFC).
 
-**Binding**: the declaration in the Configuration file that a Dependent rests on the files its
-patterns select.
+**Declaration**: the entry of `files` in the Configuration file that gives a file its dependencies,
+as a List of patterns.
 
-**Dependent**: a file that has a Binding.
+**File** (stamped file): a file that has a Declaration, and so rests on other files, its
+dependencies. The Configuration file, the Lockfile and the JSON output name it `file`, and the
+Configuration file's key for all of them `files`.
 
-**Covered file**: a file selected by a Dependent's Binding (§8.5).
+**Dependency**: a file selected by a file's Declaration (§8.5).
 
-**Review**: the act, outside docstamp, of checking a Dependent against its covered files.
+**Dependent** (of *X*): a file that has *X* among its dependencies. `docstamp list-dependents <X>`
+lists the dependents of *X*. The term is only used in this reverse direction.
 
-**Write**: recording a Dependent's current Cover Hash in the Lockfile with `docstamp update`,
+**Review**: the act, outside docstamp, of checking a file against its dependencies.
+
+**Write**: recording a file's current Dependency Hash in the Lockfile with `docstamp update`,
 asserting that a Review happened.
 
 **Configuration file**: the one file at Root, among the names of §9.1, that holds the Config.
@@ -120,12 +125,12 @@ Written by people.
 
 ## 5 Records
 
-### 5.1 Binding
+### 5.1 Declaration
 
 | Field | Type | Meaning |
 |---|---|---|
-| `[[Dependent]]` | RepoPath | |
-| `[[Covers]]` | List of String | the patterns, verbatim, in declaration order |
+| `[[File]]` | RepoPath | |
+| `[[Dependencies]]` | List of String | the patterns, verbatim, in declaration order |
 
 ### 5.2 Config
 
@@ -133,7 +138,7 @@ Written by people.
 |---|---|---|
 | `[[Ignore]]` | List of String (ignore rule lines, §7.3) | « » |
 | `[[UseGitignore]]` | Boolean | true |
-| `[[Bindings]]` | List of Binding, in path order of `[[Dependent]]` | (required) |
+| `[[Declarations]]` | List of Declaration, in path order of `[[File]]` | (required) |
 
 NOTE: A Config is built from the normalized value of the Configuration file (§9.3), whatever its
 Carrier.
@@ -142,24 +147,24 @@ Carrier.
 
 | Field | Type |
 |---|---|
-| `[[Entries]]` | Map from RepoPath (a Dependent) to LockEntry |
+| `[[Entries]]` | Map from RepoPath (a file) to LockEntry |
 
-A *LockEntry* is a Hash: the Dependent's Cover Hash (§10.4) at the last Write.
+A *LockEntry* is a Hash: the file's Dependency Hash (§10.4) at the last Write.
 
-NOTE: The Lockfile does not record the patterns. The Cover Hash includes every covered path, so a
-pattern change that changes the covered set changes the Cover Hash and the Dependent is `stale`
-with `content-changed`. A pattern change that leaves the covered set identical needs no Review
-(Principle 4).
+NOTE: The Lockfile does not record the patterns. The Dependency Hash includes every dependency
+path, so a pattern change that changes the set of dependencies changes the Dependency Hash and the
+file is `stale` with `content-changed`. A pattern change that leaves the set of dependencies
+identical needs no Review (Principle 4).
 
 ### 5.4 Result
 
 | Field | Type | Meaning |
 |---|---|---|
-| `[[Dependent]]` | RepoPath | |
-| `[[Covers]]` | List of String | the Binding's `[[Covers]]` |
+| `[[File]]` | RepoPath | |
+| `[[Dependencies]]` | List of String | the Declaration's `[[Dependencies]]` |
 | `[[State]]` | `ok`, `stale` or `invalid` | §12.1 |
 | `[[Reasons]]` | List of Reason | non-empty iff `[[State]]` is `stale` |
-| `[[Covered]]` | List of RepoPath, path order | empty iff `[[State]]` is `invalid` |
+| `[[Resolved]]` | List of RepoPath, path order | empty iff `[[State]]` is `invalid` |
 | `[[Current]]` | Hash or empty | empty iff `[[State]]` is `invalid` |
 | `[[Diagnostics]]` | List of Diagnostic, §5.5 order | non-empty iff `[[State]]` is `invalid` |
 | `[[Changes]]` | List of Change in path order, or *unknown* | known only as defined in §12.3 |
@@ -168,8 +173,8 @@ A *Reason* is `unrecorded` or `content-changed`; exactly one applies to a `stale
 
 A *Change* is { `[[Status]]`: `modified`, `added` or `deleted`, `[[Path]]`: RepoPath }.
 
-NOTE: The Lockfile keeps one Hash per Dependent, so a Binding over thousands of files costs one
-entry and the verdict cannot say which covered files changed. `[[Changes]]` is a best-effort report
+NOTE: The Lockfile keeps one Hash per file, so a Declaration over thousands of files costs one
+entry and the verdict cannot say which dependencies changed. `[[Changes]]` is a best-effort report
 computed from the repository history (§12.3); it is *unknown* whenever that history cannot answer.
 
 ### 5.5 Diagnostic
@@ -178,14 +183,14 @@ computed from the repository history (§12.3); it is *unknown* whenever that his
 |---|---|---|
 | `[[Code]]` | String | a code of §15 |
 | `[[Severity]]` | `error` or `warning` | fixed per code (§15) |
-| `[[Dependent]]` | RepoPath or empty | the Dependent it concerns |
+| `[[File]]` | RepoPath or empty | the file it concerns |
 | `[[Subject]]` | String or empty | the pattern, path, key or argument it concerns |
 | `[[Message]]` | String | informative; see below |
 
-A Diagnostic with a non-empty `[[Dependent]]` is *attached* to that Dependent; any other is
+A Diagnostic with a non-empty `[[File]]` is *attached* to that file; any other is
 *global*.
 
-*Diagnostic order*: by `[[Dependent]]` in path order (empty first), then `[[Code]]` in path order,
+*Diagnostic order*: by `[[File]]` in path order (empty first), then `[[Code]]` in path order,
 then `[[Subject]]` in path order. Every List of Diagnostics that is output is in this order, with
 duplicates (all fields equal) removed.
 
@@ -210,7 +215,7 @@ error text, parser error text, or absolute paths; it MAY contain an error code n
 
 ## 7 Universe
 
-The *Universe* is the List, in path order, of RepoPaths of the files that may be covered.
+The *Universe* is the List, in path order, of RepoPaths of the files that may be dependencies.
 
 ### 7.1 Entries
 
@@ -244,7 +249,7 @@ Symbolic links are never followed: a link is an entry of kind *link*, whatever i
 4. Apply §7.4 and §7.5, collecting their Diagnostics.
 5. If *errors* is not empty, raise it. Otherwise return the Universe in path order.
 
-NOTE: Step 3 means a Write can never make any Dependent stale.
+NOTE: Step 3 means a Write can never make any file stale.
 
 NOTE: Files tracked by git but matched by an ignore rule are not in the Universe. `core.excludesFile`
 and `.git/info/exclude` are never read; they are per-machine and would break §2. A file git ignores
@@ -372,18 +377,18 @@ a file under a directory an earlier negation removed.
 
 ### 8.5 Resolution
 
-`ResolveCovers(binding, universe)`:
+`ResolveDependencies(declaration, universe)`:
 
 1. Let *problems* be an empty List.
-2. Let *candidates* be *universe* without `binding.[[Dependent]]`.
-3. For each *pattern* of `binding.[[Covers]]`: if no *path* of *candidates* satisfies
+2. Let *candidates* be *universe* without `declaration.[[File]]`.
+3. For each *pattern* of `declaration.[[Dependencies]]`: if no *path* of *candidates* satisfies
    `PatternMatches(pattern, path)`, collect `E_EMPTY_PATTERN` into *problems*, with
    `[[Subject]]` *pattern*.
-4. Let *covered* be `Select(binding.[[Covers]], candidates)`.
-5. If *covered* is empty, collect `E_EMPTY_COVERS` into *problems*.
-6. If *problems* is not empty, raise *problems*. Otherwise return *covered*.
+4. Let *resolved* be `Select(declaration.[[Dependencies]], candidates)`.
+5. If *resolved* is empty, collect `E_EMPTY_DEPENDENCIES` into *problems*.
+6. If *problems* is not empty, raise *problems*. Otherwise return *resolved*.
 
-NOTE: A Dependent is never one of its own covered files (step 2), so editing a Dependent never
+NOTE: A file is never one of its own dependencies (step 2), so editing a file never
 makes it stale. Every pattern, negated or not, must match something (Principle 6): a negation
 that removes nothing is a stale or mistyped rule.
 
@@ -406,15 +411,15 @@ Lockfile is always YAML.
 The same configuration in the YAML Carrier:
 
 ```yaml
-version: 1
-dependents:
+version: 2
+files:
   CLAUDE.md:
-    covers:
+    dependencies:
       - src/**
       - "!src/**/*.test.ts"
       - package.json
   tests/fixtures/user.json:
-    covers:
+    dependencies:
       - schemas/user.schema.json
 ```
 
@@ -426,10 +431,10 @@ In the script Carrier (§9.5) the file exports the same value:
 import { defineConfig } from 'docstamp';
 
 export default defineConfig({
-  version: 1,
-  dependents: {
-    'CLAUDE.md': { covers: ['src/**', '!src/**/*.test.ts', 'package.json'] },
-    'tests/fixtures/user.json': { covers: ['schemas/user.schema.json'] },
+  version: 2,
+  files: {
+    'CLAUDE.md': { dependencies: ['src/**', '!src/**/*.test.ts', 'package.json'] },
+    'tests/fixtures/user.json': { dependencies: ['schemas/user.schema.json'] },
   },
 });
 ```
@@ -448,9 +453,9 @@ schema, restricted as follows. A violation raises `E_CONFIG` (Configuration file
 
 The *normalized value* of a YAML document is the Value it denotes: a mapping is a Map, a sequence
 is a List, and a scalar is the Null, Boolean, Number or String it resolves to. The one exception
-is the value of the top-level key `version`: it is the Number 1 if it is the plain scalar `1`
-exactly, and Null for any other scalar, so that `1.0`, `0x1`, `+1`, `01` and `"1"` are not
-version 1.
+is the value of the top-level key `version`: it is the Number 2 if it is the plain scalar `2`
+exactly, and Null for any other scalar, so that `2.0`, `0x2`, `+2`, `02` and `"2"` are not
+version 2.
 
 ### 9.3 Reading
 
@@ -464,42 +469,44 @@ version 1.
       « `E_CONFIG_MISSING` ».
 3. Let *value* be the normalized value of that file: under §9.2 for `docstamp.yaml`, under §9.5
    for any other name. On failure, or if *value* is not a Map, raise « `E_CONFIG` ».
-4. If the key `version` is absent, or its value is not the Number 1, raise « `E_CONFIG_VERSION` ».
-5. For each key of *value* other than `version`, `gitignore`, `ignore` and `dependents`,
+4. If the key `version` is absent, or its value is not the Number 2, raise « `E_CONFIG_VERSION` »,
+   whose message names the migration from version 1.
+5. For each key of *value* other than `version`, `gitignore`, `ignore` and `files`,
    collect `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` the key.
 6. If `gitignore` is present and not a Boolean, or `ignore` is present and not a List of
    Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` the key.
-7. If `dependents` is absent, or not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]`
-   `dependents`.
-8. Otherwise, for each (*key*, *value*) of `dependents`:
+7. If `files` is absent, or not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]`
+   `files`.
+8. Otherwise, for each (*key*, *value*) of `files`:
    1. If *key* is not a RepoPath, collect `E_CONFIG` into *fatal*, `[[Subject]]` *key*, and
       continue.
-   2. If *value* is not a Map, or has no key `covers`, or `covers` is not a non-empty List
-      of Strings, collect `E_CONFIG` into *fatal*, `[[Dependent]]` *key*, and continue.
-   3. For each key of *value* other than `covers`, collect `E_UNKNOWN_KEY` into *fatal*,
-      `[[Dependent]]` *key*, `[[Subject]]` that key.
-   4. For each string *s* of `covers` that is not a valid Pattern (§8.1), collect `E_PATTERN` into
-      *attached*, `[[Dependent]]` *key*, `[[Subject]]` *s*.
-   5. Produce the Binding { `[[Dependent]]`: *key*, `[[Covers]]`: the strings of `covers` }.
+   2. If *value* is not a Map, or has no key `dependencies`, or `dependencies` is not a non-empty
+      List of Strings, collect `E_CONFIG` into *fatal*, `[[File]]` *key*, and continue.
+   3. For each key of *value* other than `dependencies`, collect `E_UNKNOWN_KEY` into *fatal*,
+      `[[File]]` *key*, `[[Subject]]` that key.
+   4. For each string *s* of `dependencies` that is not a valid Pattern (§8.1), collect
+      `E_PATTERN` into *attached*, `[[File]]` *key*, `[[Subject]]` *s*.
+   5. Produce the Declaration { `[[File]]`: *key*, `[[Dependencies]]`: the strings of
+      `dependencies` }.
 9. If *fatal* is not empty, raise *fatal*.
-10. Return the Config, with defaults (§5.2) for absent keys and the Bindings in path order, and
+10. Return the Config, with defaults (§5.2) for absent keys and the Declarations in path order, and
     *attached*.
 
-NOTE: A bad pattern makes only its Dependent `invalid`; every other Dependent is still evaluated.
+NOTE: A bad pattern makes only its file `invalid`; every other file is still evaluated.
 A structural error stops evaluation.
 
-NOTE: Steps 5 to 10 never see the Carrier. Key order in a Map is not significant: the Bindings are
+NOTE: Steps 5 to 10 never see the Carrier. Key order in a Map is not significant: the Declarations are
 in path order (step 10).
 
-### 9.4 Dependent Files
+### 9.4 Stamped Files
 
-A Dependent MUST be an entry of kind *file* whose name, in the listing of its parent directory,
-is equal to the last segment of the Dependent's RepoPath after §7.4. A Dependent need not be in
+A file MUST be an entry of kind *file* whose name, in the listing of its parent directory,
+is equal to the last segment of the file's RepoPath after §7.4. A file need not be in
 the Universe; it may be an ignored file.
 
 NOTE: The check uses the directory listing, not a lookup by path, so `claude.md` does not resolve
-to `CLAUDE.md` on a case-insensitive file system. Renaming a Dependent without renaming its key
-raises `E_DEPENDENT_MISSING`.
+to `CLAUDE.md` on a case-insensitive file system. Renaming a file without renaming its key
+raises `E_FILE_MISSING`.
 
 ### 9.5 Script Carriers
 
@@ -546,7 +553,7 @@ NOTE: TypeScript files are evaluated by the host runtime's type stripping, so on
 TypeScript syntax is supported: no `enum`, no `namespace` with values, no parameter properties.
 
 NOTE: Evaluating a Configuration file runs its code, and the code may import other files. Those
-files are not Covered files, not hashed and not part of the Universe, so a change in them changes
+files are not dependencies, not hashed and not part of the Universe, so a change in them changes
 no verdict. A script Carrier SHOULD import only `docstamp`, and its value SHOULD NOT depend on the
 environment, the clock or the network (§2).
 
@@ -576,17 +583,17 @@ to a file outside Root hashes the same on every host.
 A *Hash* is the lowercase hexadecimal encoding of a SHA-256 digest: exactly 64 characters in
 `[0-9a-f]`. `FileHash(path)` is the Hash of `? NormalizedContent(path)`.
 
-### 10.4 Cover Hash
+### 10.4 Dependency Hash
 
-`CoverHash(covered)`, where *covered* is a List of RepoPaths in path order:
+`DependencyHash(resolved)`, where *resolved* is a List of RepoPaths in path order:
 
 1. Let *problems* be an empty List and *input* the empty byte sequence.
-2. For each *path* of *covered*: if `FileHash(path)` raises, add its Diagnostics to *problems*;
+2. For each *path* of *resolved*: if `FileHash(path)` raises, add its Diagnostics to *problems*;
    otherwise append the UTF-8 encoding of *path*, the byte 0x00, the 64 ASCII bytes of the Hash,
    and the byte 0x0A.
 3. If *problems* is not empty, raise *problems*. Otherwise return the Hash of *input*.
 
-NOTE: The path is part of the input, so renaming or moving a covered file changes the Cover Hash
+NOTE: The path is part of the input, so renaming or moving a dependency changes the Dependency Hash
 even when its content does not. An empty file contributes the Hash of the bytes `file`, 0x00.
 
 NOTE: The result for files modified while docstamp runs is undefined.
@@ -599,19 +606,25 @@ NOTE: The result for files modified while docstamp runs is undefined.
 
 1. If an entry named `docsync.lock` exists at Root, whatever its content, raise
    « `E_LOCK_VERSION` » with `[[Subject]]` `docsync.lock`. Its message names the fix: delete
-   `docsync.lock`, review every Dependent, then run `docstamp update --all`.
+   `docsync.lock`, review every file, then run `docstamp update --all`.
 2. If `docstamp-lock.yaml` does not exist at Root, return a Lock with no entries.
 3. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_LOCK` ».
-4. If the key `version` is absent, or its value is not the plain scalar `2`, raise
-   « `E_LOCK_VERSION` ».
+4. If the key `version` is absent, or its value is not the plain scalar `3`, raise
+   « `E_LOCK_VERSION` ». For a version 2 Lockfile its message names the migration: run
+   `docstamp update --all` to rewrite it as version 3; the hashes are unchanged.
+
 5. Raise « `E_LOCK` » unless all of these hold:
-   1. The document's keys are exactly `version` and `dependents`.
-   2. `dependents` is a mapping whose keys are RepoPaths and whose values are each a String of 64
+   1. The document's keys are exactly `version` and `files`.
+   2. `files` is a mapping whose keys are RepoPaths and whose values are each a String of 64
       characters in `[0-9a-f]`.
 6. Return the Lock.
 
 NOTE: Unresolved merge conflict markers fail step 3. The message for `E_LOCK` names the fix:
 resolve the conflict by taking either side, then run `docstamp`.
+
+NOTE: The version 3 Lockfile differs from version 2 only in the name of its top-level key, `files`
+instead of `dependents`; the Dependency Hash (§10.4) is computed identically, so every entry of a
+version 2 Lockfile is still correct. `update --all` rewrites it without a Review (§13.6).
 
 NOTE: `docsync.lock` is the name of the version 1 Lockfile, written before the tool was renamed
 docstamp; the old name is kept on purpose. It also recorded the patterns.
@@ -623,17 +636,17 @@ automatically (§13.6): the error persists until the file is deleted.
 `LockText(lock)` is this text, with LF line endings and a final LF:
 
 ```
-version: 2
-dependents:
-  <Quote(dependent)>: <hash>
+version: 3
+files:
+  <Quote(file)>: <hash>
 ```
 
-- Keys always appear in this order: `version`, `dependents`.
-- One line per entry, in path order of the Dependent. With no entries, the second line is
-  `dependents: {}`.
+- Keys always appear in this order: `version`, `files`.
+- One line per entry, in path order of the file. With no entries, the second line is
+  `files: {}`.
 - Indentation is two spaces.
 
-NOTE: Two branches that write the same Dependent conflict on its `hash` line, as two branches that
+NOTE: Two branches that write the same file conflict on its `hash` line, as two branches that
 change one dependency conflict in a package-manager lockfile. Resolution: take either side, run
 `docstamp`, review what it reports stale, and write again.
 
@@ -654,29 +667,30 @@ declare `docstamp-lock.yaml text eol=lf` in `.gitattributes`.
 
 ### 12.1 Evaluate
 
-`Evaluate(binding, universe, lock, attached)`, where *attached* is the List of Diagnostics from
-§9.3 attached to `binding.[[Dependent]]`:
+`Evaluate(declaration, universe, lock, attached)`, where *attached* is the List of Diagnostics
+from §9.3 attached to `declaration.[[File]]`:
 
-1. Let *r* be a Result with `[[Dependent]]` and `[[Covers]]` from *binding*, empty
-   `[[Reasons]]`, `[[Covered]]` and `[[Diagnostics]]`, and empty `[[Current]]`.
+1. Let *r* be a Result with `[[File]]` and `[[Dependencies]]` from *declaration*, empty
+   `[[Reasons]]`, `[[Resolved]]` and `[[Diagnostics]]`, and empty `[[Current]]`.
 2. Let *problems* be a copy of *attached*.
-3. If `binding.[[Dependent]]` does not satisfy §9.4, collect `E_DEPENDENT_MISSING` into
+3. If `declaration.[[File]]` does not satisfy §9.4, collect `E_FILE_MISSING` into
    *problems*.
-4. If *attached* is empty, let *covered* be `ResolveCovers(binding, universe)`; if it raises, add
-   its Diagnostics to *problems*.
-5. If *problems* is empty, let *current* be `CoverHash(covered)`; if it raises, add its
+4. If *attached* is empty, let *resolved* be `ResolveDependencies(declaration, universe)`; if it
+   raises, add its Diagnostics to *problems*.
+5. If *problems* is empty, let *current* be `DependencyHash(resolved)`; if it raises, add its
    Diagnostics to *problems*.
 6. If *problems* is not empty, set *r*.`[[State]]` to `invalid` and *r*.`[[Diagnostics]]` to
-   *problems*, each with `[[Dependent]]` set to `binding.[[Dependent]]`, and return *r*.
-7. Set *r*.`[[Covered]]` to *covered* and *r*.`[[Current]]` to *current*.
-8. Let *entry* be the LockEntry of `binding.[[Dependent]]` in *lock*, or *none*.
+   *problems*, each with `[[File]]` set to `declaration.[[File]]`, and return *r*.
+7. Set *r*.`[[Resolved]]` to *resolved* and *r*.`[[Current]]` to *current*.
+8. Let *entry* be the LockEntry of `declaration.[[File]]` in *lock*, or *none*.
 9. If *entry* is *none*, append `unrecorded`. Otherwise, if *entry* is not equal to *current*,
    append `content-changed`.
 10. Set *r*.`[[State]]` to `stale` if *r*.`[[Reasons]]` is non-empty, else `ok`. Return *r*.
 
-NOTE: `content-changed` covers every change to the covered set: an edited file, a new file the
-patterns select, a deleted file, a renamed or moved file, and so a pattern change that changes
-the covered set. A pattern change that leaves the covered set identical leaves the Dependent `ok`.
+NOTE: `content-changed` is raised for every change to the set of dependencies: an edited file, a
+new file the patterns select, a deleted file, a renamed or moved file, and so a pattern change that
+changes the set of dependencies. A pattern change that leaves the set of dependencies identical
+leaves the file `ok`.
 
 ### 12.2 EvaluateAll
 
@@ -687,13 +701,13 @@ raises:
 2. Let *universe* be `? ComputeUniverse(root, config)`.
 3. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
    entries. Otherwise let *lock* be `? ReadLock(root)`.
-4. Let *results* be `Evaluate(b, universe, lock, attached of b)` for each Binding *b* of
-   `config.[[Bindings]]`, in path order.
-5. Let *global* be a List holding, for each Dependent of *lock* with no Binding, a `W_ORPHAN` with
-   `[[Subject]]` that Dependent.
+4. Let *results* be `Evaluate(b, universe, lock, attached of b)` for each Declaration *b* of
+   `config.[[Declarations]]`, in path order.
+5. Let *global* be a List holding, for each file of *lock* with no Declaration, a `W_ORPHAN` with
+   `[[Subject]]` that file.
 6. Return *results*, *lock* and *global*.
 
-NOTE: There is no propagation between Dependents. If C covers B and B covers code, a change in
+NOTE: There is no propagation between files. If C depends on B and B depends on code, a change in
 the code makes B stale and leaves C ok. Writing B changes only the Lockfile, which is never in the
 Universe (§7.2 step 3), so C stays ok. C becomes stale only when B's content changes.
 
@@ -701,7 +715,7 @@ Universe (§7.2 step 3), so C stays ok. C becomes stale only when B's content ch
 
 `ChangedSince(root, result, entry)` returns a List of Change or *unknown*. It is
 run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
-contain `content-changed`, and whose Dependent has a LockEntry *entry*; for every other Result
+contain `content-changed`, and whose file has a LockEntry *entry*; for every other Result
 `[[Changes]]` is *unknown*.
 
 1. Run `git` in Root with every environment variable starting with `GIT_` removed and
@@ -712,8 +726,8 @@ contain `content-changed`, and whose Dependent has a LockEntry *entry*; for ever
    1. List the commits of `git log --format=%H -S<entry> -- docstamp-lock.yaml`, newest first.
    2. For each, parse `docstamp-lock.yaml` as of that commit and as of its first parent by §11.1
       steps 3 to 5. The file is *none* for a root commit, when it is absent there, or when it does
-      not parse (for example a version 1 file); that is never an error.
-   3. Let *C* be the first commit in which the Dependent's LockEntry equals *entry* and its
+      not parse (for example a version 1 or 2 file); that is never an error.
+   3. Let *C* be the first commit in which the file's LockEntry equals *entry* and its
       parent's does not. If there is none, return *unknown*.
 2. Let *diff* be the output of `git diff --name-status --no-renames -z
    --relative <C> --` run in Root (the work tree against *C*, so staged and unstaged edits are
@@ -723,17 +737,17 @@ contain `content-changed`, and whose Dependent has a LockEntry *entry*; for ever
 3. Build the changes: git status `M` or `T` gives `modified`; `A` gives `added`; `D` gives
    `deleted`; any other status returns *unknown*. Every path of *untracked* is `added`. A path that
    is both `deleted` and `added` is `modified`.
-4. Keep a Change only if its path is selected by the Binding's patterns: for `added` and
-   `modified`, the path is in `result.[[Covered]]`; for `deleted`, the path is not
-   `result.[[Dependent]]` and `Select(result.[[Covers]], « path »)` selects it, since a deleted
-   file is no longer covered.
+4. Keep a Change only if its path is selected by the Declaration's patterns: for `added` and
+   `modified`, the path is in `result.[[Resolved]]`; for `deleted`, the path is not
+   `result.[[File]]` and `Select(result.[[Dependencies]], « path »)` selects it, since a deleted
+   file is no longer a dependency.
 5. If the Changes are empty, return *unknown*. Otherwise return them in path order.
 
 Any error at any step returns *unknown*. `ChangedSince` never raises a Diagnostic and never affects
 the exit code.
 
 NOTE: *entry* is searched as text; no commit ID is stored. A rebase, squash or amend of
-the review commit therefore keeps working. Step 1.3 ignores commits where another Dependent with
+the review commit therefore keeps working. Step 1.3 ignores commits where another file with
 the same Hash removed it. A shallow clone, or a Write that is not yet committed, yields *unknown*;
 so does an empty result, since a stale `content-changed` Result must have changed something.
 
@@ -744,15 +758,16 @@ so does an empty result, since a stale `content-changed` Result must have change
 ```
 docstamp [check] [--json] [--root <dir>] [<file>...]
 docstamp update [--json] [--root <dir>] (--all | <file>...)
-docstamp list-dependents [--json] [--root <dir>] [<file>...]
+docstamp list-dependencies [--json] [--root <dir>] [<file>...]
+docstamp list-dependents [--json] [--root <dir>] <file>...
 docstamp help
 docstamp version
 docstamp --help
 docstamp --version
 ```
 
-The commands are `check` (§13.5), `update` (§13.6), `list-dependents` (§13.7), `help` and
-`version`. `--help` is the same command as `help`, and `--version` the same as `version`.
+The commands are `check` (§13.5), `update` (§13.6), `list-dependencies` (§13.7),
+`list-dependents` (§13.8), `help` and `version`. `--help` is the same command as `help`, and `--version` the same as `version`.
 
 ### 13.2 Parsing
 
@@ -762,7 +777,7 @@ The command line is parsed before anything else.
    Before any `--`, an argument starting with `-` other than a lone `-` is an option; `--root`
    consumes the next argument as its value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
-   `list-dependents`, `help` or `version`; it is then not a file argument. Otherwise, and when there
+   `list-dependencies`, `list-dependents`, `help` or `version`; it is then not a file argument. Otherwise, and when there
    is none, the command is `check` and that argument stays a file argument. A command word in any
    later position, or after `--`, is a file argument. Options and file arguments may appear in
    any order.
@@ -775,9 +790,10 @@ Each message states the problem:
 
 - an unknown option, a missing value for `--root`, or an option given twice;
 - `--write` or `--files`, which were removed: the message names the replacement, `docstamp update`
-  for `--write` and `docstamp list-dependents` for `--files`;
+  for `--write` and `docstamp list-dependencies` for `--files`;
 - `--all` with any command but `update`;
-- `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both.
+- `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both;
+- `list-dependents` with no file argument (`[[Subject]]` is `list-dependents`).
 
 `help` prints usage and `version` prints the version; both exit 0 (§14.1). A file named like a
 command is reached as `docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`.
@@ -789,8 +805,8 @@ Diagnostics:
 
 1. If *args* is empty, return *results* and « ».
 2. For each *arg*: let *path* be `ToRepoPath(arg, cwd, root)`. If that fails, or no Result has
-   `[[Dependent]]` equal to *path*, collect `E_UNKNOWN_DEPENDENT` with `[[Subject]]` *arg*.
-3. Return the Results whose `[[Dependent]]` was named, in path order without duplicates, and the
+   `[[File]]` equal to *path*, collect `E_UNKNOWN_FILE` with `[[Subject]]` *arg*.
+3. Return the Results whose `[[File]]` was named, in path order without duplicates, and the
    collected Diagnostics.
 
 ### 13.4 Path Resolution
@@ -804,7 +820,7 @@ happens.
 3. If the result is not *root* followed by `/` and at least one segment, fail.
 4. Return the remainder after *root* and `/`, converted to NFC. Fail if it is not a RepoPath.
 
-No case folding is applied: the argument must equal the Dependent key.
+No case folding is applied: the argument must equal the key under `files`.
 
 ### 13.5 Check
 
@@ -822,9 +838,9 @@ If a step raises, output the raised Diagnostics as global and exit 2.
 
 Step 4 evaluates Results as §12.1 and then sets `[[Changes]]` of each selected Result as §12.3.
 
-NOTE: Reviewer's recipe for a stale Dependent. The text output (§14.3) and `changes` in JSON
-(§14.5) name the covered files that changed since the last Write when the repository history
-allows (§12.3). Otherwise `docstamp list-dependents <file>` lists the covered files and the
+NOTE: Reviewer's recipe for a stale file. The text output (§14.3) and `changes` in JSON
+(§14.5) name the dependencies that changed since the last Write when the repository history
+allows (§12.3). Otherwise `docstamp list-dependencies <file>` lists the dependencies and the
 reviewer compares them with the state at the last Write using its own tools.
 
 ### 13.6 Update
@@ -836,14 +852,17 @@ reviewer compares them with the state at the last Write using its own tools.
    `SelectResults(args, cwd, root, results)` and append *argErrors* to *global*.
 5. If *global* contains an error or any of *targets* is `invalid`: output *targets* and *global*
    as a check would (§14), write nothing, and exit 2.
-6. For each *t* of *targets*, set the LockEntry of *t*.`[[Dependent]]` in *lock* to
+6. For each *t* of *targets*, set the LockEntry of *t*.`[[File]]` in *lock* to
    *t*.`[[Current]]`.
-7. Let *removed* be the Dependents of *lock* that have no Binding, in path order. Remove their
+7. Let *removed* be the files of *lock* that have no Declaration, in path order. Remove their
    entries.
 8. `WriteLock(root, lock)`.
-9. Output the written Dependents and *removed* (§14). Exit 0.
+9. Output the written files and *removed* (§14). Exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
+
+NOTE: `update --all` also migrates a version 2 Lockfile (§11.1): it discards the unreadable
+Lockfile and records every current Dependency Hash, with no Review.
 
 NOTE: `update --all` recovers from the legacy `docsync.lock` (§11.1 step 1) by writing
 `docstamp-lock.yaml`, but does not delete `docsync.lock`: deletions stay explicit, and every
@@ -853,13 +872,13 @@ NOTE: A Write asserts that a Review happened; docstamp cannot check that, and tr
 `update` requires naming the files, or `--all` on purpose (first adoption, or recovery from an
 unreadable Lockfile), so no file is marked reviewed by accident.
 
-### 13.7 ListDependents
+### 13.7 ListDependencies
 
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
 2. Let (*config*, *attached*) be `? ReadConfig(root)` and *universe* be
    `? ComputeUniverse(root, config)`.
-3. Let *results* be `Evaluate(b, universe, « », attached of b)` for each Binding *b* of
-   `config.[[Bindings]]`, in path order, except that no covered file is read or hashed (§10.4 is
+3. Let *results* be `Evaluate(b, universe, « », attached of b)` for each Declaration *b* of
+   `config.[[Declarations]]`, in path order, except that no dependency is read or hashed (§10.4 is
    skipped), so a Result is never `invalid` for `E_UNREADABLE`.
 4. Let (*selected*, *argErrors*) be `SelectResults(args, cwd, root, results)`.
 5. Output *selected* and *argErrors* (§14).
@@ -867,9 +886,39 @@ unreadable Lockfile), so no file is marked reviewed by accident.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
-NOTE: `list-dependents` reads neither `docstamp-lock.yaml` nor `docsync.lock`, so it does not
+NOTE: `list-dependencies` reads neither `docstamp-lock.yaml` nor `docsync.lock`, so it does not
 evaluate staleness, raises no `E_LOCK` or `E_LOCK_VERSION`, and emits no `W_ORPHAN`. It works before
 the first `update` and while a legacy `docsync.lock` is still present.
+
+### 13.8 ListDependents
+
+The reverse query of §13.7: the arguments are any files, not only stamped files, and the answer is the
+dependents of each: the stamped files that depend on it. At least one file argument is required (§13.2).
+
+1. Let *root* be `? DetermineRoot(cwd, --root)`.
+2. Let (*config*, *attached*) be `? ReadConfig(root)` and *universe* be
+   `? ComputeUniverse(root, config)`.
+3. Let *entries* be an empty List. For each distinct *arg* of the file arguments, in path order of
+   its *path* (an *arg* whose *path* cannot be computed sorts by its text):
+   1. Let *path* be `ToRepoPath(arg, cwd, root)`. If that fails, add the entry { `[[File]]`:
+      *arg*, `[[Dependents]]`: « », `[[Diagnostics]]`: « `E_USAGE` with `[[Subject]]` *arg* » }
+      and continue. *path* need not exist.
+   2. Let *found* be an empty List. For each Declaration *b* of `config.[[Declarations]]` in path order
+      whose file has no `E_PATTERN` in *attached*: if *path* is in *universe*, *path* is not
+      `b.[[File]]` and `Select(b.[[Dependencies]], « path »)` selects it, append { `[[File]]`:
+      `b.[[File]]`, `[[Via]]`: the patterns of `b.[[Dependencies]]` that have no Negation and
+      satisfy `PatternMatches(pattern, path)`, in declaration order } to *found*.
+   3. Add the entry { `[[File]]`: *path*, `[[Dependents]]`: *found*, `[[Diagnostics]]`: « » }.
+4. Output *entries* and *attached* (§14).
+5. Exit 2 if *attached* or any entry holds an error; else 0.
+
+If a step raises, output the raised Diagnostics as global and exit 2.
+
+NOTE: Only direct dependency is reported; there is no transitive closure, so C that depends on B
+that depends on code is not a dependent of the code. The Lockfile is not read (§13.7 NOTE), so
+there is no `stale` information and the exit code is never 1. A file whose pattern is invalid
+cannot be matched: it is skipped and its `E_PATTERN` is output. A file that is not in the Universe
+(ignored, absent, or the Lockfile) has no dependents. A stamped file may itself be an argument.
 
 ## 14 Output
 
@@ -894,25 +943,25 @@ In text mode, a RepoPath or pattern *s* is written as *s* if it contains no code
 One block per selected Result that is not `ok`, in path order.
 
 ```
-STALE    <dependent>  (<reason>, <reason>)
-  covers  <pattern>
+STALE    <file>  (<reason>, <reason>)
+  depends   <pattern>
 ```
 
 or, for a stale Result with a non-empty `[[Changes]]`:
 
 ```
-STALE    <dependent>  (<reason>, <reason>)
+STALE    <file>  (<reason>, <reason>)
   modified  <path>
   added     <path>
   deleted   <path>
 ```
 
 - The first line is `STALE` or `INVALID`, padded with spaces to 9 characters, then the
-  Dependent; for `stale`, two spaces and the Reasons in parentheses, separated by `, `.
+  file; for `stale`, two spaces and the Reasons in parentheses, separated by `, `.
 - For `stale` with a non-empty `[[Changes]]`: one line per Change, in path order, instead of the
-  `covers` lines: two spaces, the status padded with spaces to 8 characters, two spaces, and the
+  `depends` lines: two spaces, the status padded with spaces to 8 characters, two spaces, and the
   path as in §14.2 (`  modified  <path>`, `  added     <path>`, `  deleted   <path>`).
-- For any other `stale`: one `covers` line per pattern, in declaration order.
+- For any other `stale`: one `depends` line per pattern, in declaration order.
 
 Then one summary line:
 
@@ -923,23 +972,23 @@ Then one summary line:
 counting the selected Results. Then, if any selected Result is `stale`:
 
 ```
-next: review each stale file against its covered files, then run: docstamp update <file> <file>
+next: review each stale file against its dependencies, then run: docstamp update <file> <file>
 ```
 
-with the stale Dependents in path order, each written as in §14.2, followed by ` --root ` and
+with the stale files in path order, each written as in §14.2, followed by ` --root ` and
 the `--root` value as given, if one was given.
 
 Each Diagnostic, global and attached, in Diagnostic order, is written to standard error as:
 
 ```
-<severity>: <code>[: <dependent>][: <subject>]: <message>
+<severity>: <code>[: <file>][: <subject>]: <message>
 ```
 
 omitting the bracketed parts when empty.
 
 ### 14.4 Update, Text Mode
 
-One line `written  <dependent>` per target, then one line `removed  <dependent>` per removed
+One line `written  <file>` per target, then one line `removed  <file>` per removed
 entry, each group in path order. Diagnostics as in §14.3.
 
 ### 14.5 JSON Mode
@@ -949,16 +998,16 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "mode": "check",
   "exitCode": 1,
   "summary": { "ok": 12, "stale": 1, "invalid": 0 },
-  "dependents": [
+  "files": [
     {
-      "dependent": "CLAUDE.md",
+      "file": "CLAUDE.md",
       "state": "stale",
       "reasons": ["content-changed"],
-      "covers": ["src/**", "!src/**/*.test.ts", "package.json"],
+      "dependencies": ["src/**", "!src/**/*.test.ts", "package.json"],
       "changes": [{ "status": "modified", "path": "src/cli/run.ts" }],
       "diagnostics": []
     }
@@ -967,26 +1016,26 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 }
 ```
 
-- `mode` is `check`, `update` or `list-dependents`.
-- `dependents` holds every selected Result (check) or every target (update), in path order,
+- `mode` is `check`, `update`, `list-dependencies` or `list-dependents`.
+- `files` holds every selected Result (check) or every target (update), in path order,
   including `ok` ones.
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path" }` in this order, or
   `null` when it is *unknown* or not applicable (§12.3), including in update mode.
-- With `update`, each element of `dependents` adds `"written": true|false` after
+- With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (false only when step 5 of §13.6 refused), and the top level adds `"removed"`, a
-  List of Dependents, after `diagnostics`.
-- With `list-dependents` the document is instead (§13.7):
+  List of files, after `diagnostics`.
+- With `list-dependencies` the document is instead (§13.7):
 
   ```json
   {
-    "version": 1,
-    "mode": "list-dependents",
+    "version": 2,
+    "mode": "list-dependencies",
     "exitCode": 0,
-    "dependents": [
+    "files": [
       {
-        "dependent": "CLAUDE.md",
-        "covers": ["src/**", "package.json"],
-        "files": ["package.json", "src/cli/run.ts"],
+        "file": "CLAUDE.md",
+        "dependencies": ["src/**", "package.json"],
+        "resolvedFiles": ["package.json", "src/cli/run.ts"],
         "diagnostics": []
       }
     ],
@@ -994,58 +1043,94 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   }
   ```
 
-  It has no `summary`, `state`, `reasons` or `changes`. `files` is the Result's `[[Covered]]` in
-  path order, and `[]` for an `invalid` Result.
-- A Diagnostic is `{ "code", "severity", "dependent", "subject", "message" }`, with `null` for an
-  empty `dependent` or `subject`. Diagnostic Lists are in Diagnostic order.
-- When a step raises before Results exist, `summary` (not for `list-dependents`) counts zeros and
-  `dependents` is empty.
-- Consumers MUST ignore unknown members. Within version 1, later revisions only add members.
+  It has no `summary`, `state`, `reasons` or `changes`. In an entry, `file` is the Result's
+  `[[File]]` and `resolvedFiles` is its `[[Resolved]]` in path order,
+  and `[]` for an `invalid` Result.
+- With `list-dependents` the document is instead (§13.8):
 
-### 14.6 List-Dependents, Text Mode
+  ```json
+  {
+    "version": 2,
+    "mode": "list-dependents",
+    "exitCode": 0,
+    "files": [
+      {
+        "file": "src/cli/run.ts",
+        "dependents": [{ "file": "CLAUDE.md", "via": ["src/**"] }],
+        "diagnostics": []
+      }
+    ],
+    "diagnostics": []
+  }
+  ```
+
+  Each entry is { `[[File]]`, `[[files]]`, `[[Diagnostics]]` } of §13.8 step 3, `dependents`
+  a List of { `"file"`, `"via"` } in path order, empty when nothing depends on `file`. The top-level
+  `diagnostics` hold the attached `E_PATTERN` Diagnostics.
+- A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
+  empty `[[File]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
+- When a step raises before Results exist, `summary` (not for `list-dependencies` or
+  `list-dependents`) counts zeros and `files` is empty.
+- Consumers MUST ignore unknown members. Within version 2, later revisions only add members.
+
+### 14.6 List-Dependencies, Text Mode
 
 One block per selected Result, in path order:
 
 ```
-<dependent>
-  covers  <pattern>
-  file    <covered file>
+<file>
+  depends   <pattern>
+  resolved  <dependency>
 ```
 
-with one `covers` line per pattern in declaration order, then one `file` line per covered file in
+with one `depends` line per pattern in declaration order, then one `resolved` line per dependency in
 path order, each written as in §14.2. An `invalid` Result prints its first line only. There is no
 summary line. Diagnostics as in §14.3.
+
+### 14.7 List-Dependents, Text Mode
+
+One block per entry, in the order of §13.8:
+
+```
+<file>
+  <dependent>   via <pattern>, <pattern>
+```
+
+with one row per dependent, in path order: two spaces, the dependent padded with spaces to the
+width of the longest dependent of the block, three spaces, `via `, and the patterns joined with
+`, `, each written as in §14.2. An entry with no dependents has the single row `  (no dependents)`.
+Diagnostics as in §14.3.
 
 ## 15 Diagnostics
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2 | correct the command line; for a removed option, use the command it names |
+| `E_USAGE` | error | §13.2, §13.8 | correct the command line; for a removed option, use the command it names |
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3 | create a Configuration file (§9.1) |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
 | `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key |
-| `E_CONFIG_VERSION` | error | §9.3 | set `version: 1` |
-| `E_UNKNOWN_KEY` | error | §9.3 | remove or correct the key |
+| `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
+| `E_UNKNOWN_KEY` | error | §9.3 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies` |
 | `E_PATTERN` | error | §9.3 | correct the pattern (§8.1) |
-| `E_DEPENDENT_MISSING` | error | §12.1 | rename the key or restore the file |
+| `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern |
-| `E_EMPTY_COVERS` | error | §8.5 | correct the patterns |
+| `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
 | `E_UNREADABLE` | error | §7.2, §10.2 | fix permissions |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
-| `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every Dependent |
-| `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every Dependent, then `docstamp update --all`; otherwise as `E_LOCK` |
-| `E_UNKNOWN_DEPENDENT` | error | §13.3 | name a Dependent from the Configuration file |
-| `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any Dependent to remove it |
+| `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |
+| `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 Lockfile, `docstamp update --all` rewrites it as version 3 (hashes are unchanged); otherwise as `E_LOCK` |
+| `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file |
+| `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 
 ## 16 Exit Codes
 
 | Code | Meaning |
 |---|---|
-| 0 | check: every selected Dependent is `ok`; update: the Lockfile was written or already current; list-dependents: the Dependents were listed; help, version |
-| 1 | check only: a selected Dependent is `stale`, none is `invalid`, no global error |
-| 2 | an error Diagnostic, an `invalid` Dependent, or a usage error |
+| 0 | check: every selected file is `ok`; update: the Lockfile was written or already current; list-dependencies, list-dependents: the answer was listed; help, version |
+| 1 | check only: a selected file is `stale`, none is `invalid`, no global error |
+| 2 | an error Diagnostic, an `invalid` file, or a usage error |
 | 70 | an unexpected internal failure, reported on standard error |
 
 Warnings never affect the exit code.

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildChanges, parseNameList, parseNameStatus } from '../../src/history/changes.ts';
 
-const keep = (covered: string[], deletable: string[] = []) => ({
-  covered: new Set(covered),
+const keep = (resolved: string[], deletable: string[] = []) => ({
+  resolved: new Set(resolved),
   selectsDeleted: (path: string) => deletable.includes(path),
 });
 
@@ -54,7 +54,7 @@ describe('§12.3 ChangedSince: status mapping and filtering', () => {
       { status: 'modified', path: 'src/t.ts' },
     ]);
   });
-  it('drops added and modified paths outside the covered set', () => {
+  it('drops added and modified paths outside the resolved set', () => {
     expect(buildChanges([{ status: 'M', path: 'x.ts' }], ['y.ts'], keep(['src/a.ts']))).toEqual([]);
   });
   it('drops deleted paths the patterns do not select', () => {

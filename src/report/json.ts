@@ -1,6 +1,6 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { quote } from '../core/quote.ts';
-import type { Diagnostic, Result } from '../core/types.ts';
+import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
 
 export interface JsonDoc {
   mode: 'check' | 'update';
@@ -37,7 +37,7 @@ const diagJson = (d: Diagnostic): JsonObject =>
   obj([
     ['code', d.code],
     ['severity', d.severity],
-    ['dependent', d.dependent === '' ? null : d.dependent],
+    ['file', d.file === '' ? null : d.file],
     ['subject', d.subject === '' ? null : d.subject],
     ['message', d.message],
   ]);
@@ -47,10 +47,10 @@ export function jsonText(doc: JsonDoc): string {
   const count = (s: Result['state']) => doc.selected.filter((r) => r.state === s).length;
   const dependents = doc.selected.map((r) => {
     const members: Array<[string, Json]> = [
-      ['dependent', r.dependent],
+      ['file', r.file],
       ['state', r.state],
       ['reasons', [...r.reasons]],
-      ['covers', [...r.covers]],
+      ['dependencies', [...r.dependencies]],
       [
         'changes',
         r.changes
@@ -64,11 +64,11 @@ export function jsonText(doc: JsonDoc): string {
       ],
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ];
-    if (doc.mode === 'update') members.push(['written', doc.written?.has(r.dependent) ?? false]);
+    if (doc.mode === 'update') members.push(['written', doc.written?.has(r.file) ?? false]);
     return obj(members);
   });
   const top: Array<[string, Json]> = [
-    ['version', 1],
+    ['version', 2],
     ['mode', doc.mode],
     ['exitCode', doc.exitCode],
     [
@@ -79,7 +79,7 @@ export function jsonText(doc: JsonDoc): string {
         ['invalid', count('invalid')],
       ]),
     ],
-    ['dependents', dependents],
+    ['files', dependents],
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
   ];
   if (doc.mode === 'update') top.push(['removed', [...(doc.removed ?? [])]]);
@@ -96,17 +96,50 @@ export interface ListJsonDoc {
 export function listJsonText(doc: ListJsonDoc): string {
   const dependents = doc.selected.map((r) =>
     obj([
-      ['dependent', r.dependent],
-      ['covers', [...r.covers]],
-      ['files', [...r.covered]],
+      ['file', r.file],
+      ['dependencies', [...r.dependencies]],
+      ['resolvedFiles', [...r.resolved]],
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ]),
   );
   const top: Array<[string, Json]> = [
-    ['version', 1],
+    ['version', 2],
+    ['mode', 'list-dependencies'],
+    ['exitCode', doc.exitCode],
+    ['files', dependents],
+    ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
+  ];
+  return `${render(obj(top), '')}\n`;
+}
+
+export interface ReverseJsonDoc {
+  exitCode: number;
+  entries: readonly ReverseEntry[];
+  diagnostics: readonly Diagnostic[];
+}
+
+// SPEC §14.5
+export function reverseJsonText(doc: ReverseJsonDoc): string {
+  const files = doc.entries.map((e) =>
+    obj([
+      ['file', e.file],
+      [
+        'dependents',
+        e.dependents.map((d) =>
+          obj([
+            ['file', d.file],
+            ['via', [...d.via]],
+          ]),
+        ),
+      ],
+      ['diagnostics', sortDiagnostics(e.diagnostics).map(diagJson)],
+    ]),
+  );
+  const top: Array<[string, Json]> = [
+    ['version', 2],
     ['mode', 'list-dependents'],
     ['exitCode', doc.exitCode],
-    ['dependents', dependents],
+    ['files', files],
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
   ];
   return `${render(obj(top), '')}\n`;

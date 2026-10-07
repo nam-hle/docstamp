@@ -1,9 +1,9 @@
 # docstamp
 
-A deterministic snapshot gate for hidden links between files. Each Dependent (usually a doc, but
-any file) declares the files it covers; `docstamp` fails when they changed since the Dependent
-was last reviewed, and `docstamp update <file>` records the review. Terms are defined in
-[SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
+A deterministic snapshot gate for hidden links between files. Each file (usually a doc, but
+any file) declares the files it depends on (its dependencies); `docstamp` fails when they changed
+since the file was last reviewed, and `docstamp update <file>` records the review. Terms are
+defined in [SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
 
 Why it is built this way is imported below and binds every change. Read both before anything
 else, and check the work against them.
@@ -62,9 +62,9 @@ docstamp/
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
 │   ├── pattern/          # grammar, matching, selection (§8)
-│   ├── hash/             # normalization, file and cover hash (§10)
+│   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
-│   ├── engine/           # evaluation; pure, no I/O (§12)
+│   ├── engine/           # evaluation, reverse lookup; pure, no I/O (§12, §13.8)
 │   ├── history/          # changed-file report from git, read-only (§12.3)
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json
@@ -104,10 +104,11 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 
 ## CI and releases
 
-- The npm package, the command and the config files are named `docstamp`; the repository directory
-  and the GitHub repository are still named `docsync`.
-- `.github/workflows/ci.yml` runs `pnpm test` on every pull request and push to `main`, then dry-runs
-  `npm publish` to prove the package can be published.
+- The npm package, the command, the config files, the GitHub repository and the repository directory
+  are all named `docstamp`.
+- `.github/workflows/ci.yml` runs `pnpm test` on every pull request and push to `main`, then runs
+  `npm pack --dry-run` to prove the tarball builds. It does not dry-run `npm publish`: that fails
+  once the version in `package.json` is already on npm, which is true after every release.
 - `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
   the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
 - Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
@@ -116,7 +117,7 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 - To retry a failed publish, run the Publish workflow from `main` with the release tag as input.
   It refuses a tag that is not on `main` or whose version differs from `package.json`. Nothing
   else publishes.
-- Version bumps edit `package.json`, so the docs deliberately do not cover it: a release must
+- Version bumps edit `package.json`, so the docs deliberately do not depend on it: a release must
   not make the docs check fail.
 
 ## Docs
@@ -124,7 +125,7 @@ CLI, the Lockfile or the JSON output. Commit types drive releases, so get them r
 Once `docstamp` runs, this repo uses it on itself: `docstamp.yaml` binds `CLAUDE.md` and the docs
 to the code they describe, and `pnpm test` runs `docstamp`. When it fails:
 
-1. Run `docstamp list-dependents <file>`, then `git diff origin/main -- <those files>`, and
+1. Run `docstamp list-dependencies <file>`, then `git diff origin/main -- <those files>`, and
    re-check the doc's claims against the change.
 2. Fix what is no longer true.
 3. Only then run `docstamp update <file>`.

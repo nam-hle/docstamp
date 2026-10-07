@@ -43,7 +43,7 @@ export function fileHash(root: string, u: Universe, path: string): string {
 }
 
 // SPEC §10.4 (pure part: input already hashed)
-export function coverHashFrom(entries: ReadonlyArray<[string, string]>): string {
+export function dependencyHashFrom(entries: ReadonlyArray<[string, string]>): string {
   const parts = entries.map(([path, hash]) => `${path}\u0000${hash}\n`);
   return sha256Hex(Buffer.from(parts.join(''), 'utf8'));
 }
