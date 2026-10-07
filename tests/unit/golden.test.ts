@@ -225,7 +225,7 @@ describe('§17.7 golden inline files', () => {
     'crlf.md': '0b96181a7fae2381f131a3d01662ab90f482886f4d5f7e38fdc9d78a6a196e15',
     'deps.md': '2ee7bbf4136754b105b7d64b05df89f11f3a2143323b4df8e7b9c73d01c91983',
     'bom.md': 'f442e46a1d48a7b5dd6c9fc313df86570cf65643ac9db9946533c7be0c302dcb',
-    'outside.txt': '99f56b5f35435cbba23cc2d9c7bd79375046d17fa86dfb3a2824371eeff15190',
+    'outside.txt': '3edd4d19f2bf4d8a3ab5c9c1fc37c1d5f76aa4e897f00bd716d95614ef0438ca',
     'plain.md': '8095494ef76326cc53ca864551f2851d6bc2464ca7200c4a75d2e75e2a12a817',
   };
 

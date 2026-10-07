@@ -49,7 +49,7 @@ describe('§5.6 ScanFrontmatter', () => {
   });
   it('hash lines are the keyIndent lines starting with hash:', () => {
     const scan = scanOf(
-      `---\ndocstamp:\n  dependencies:\n    - a\n  hash: v1:${H}\n    hash: nested\n---\n`,
+      `---\ndocstamp:\n  dependencies:\n    - a\n  hash: ${H}\n    hash: nested\n---\n`,
     );
     expect(scan.hashLines).toEqual([4]);
   });
@@ -60,7 +60,7 @@ describe('§5.6 ScanFrontmatter', () => {
 
 describe('§9.6.2 ParseBlock', () => {
   it('reads dependencies and a recorded hash', () => {
-    const text = doc(`${BLOCK}\n  hash: v1:${H}`);
+    const text = doc(`${BLOCK}\n  hash: ${H}`);
     const { declaration, problems: found } = parseBlock('d.md', scanOf(text));
     expect(found).toEqual([]);
     expect(declaration).toEqual({
@@ -69,11 +69,15 @@ describe('§9.6.2 ParseBlock', () => {
       inline: { recorded: H },
     });
   });
+  it('a hash of digits only is still a string (plain source, not a number)', () => {
+    const text = doc(`${BLOCK}\n  hash: ${'1'.repeat(64)}`);
+    expect(problems(text)).toEqual([]);
+  });
   it('a block with no hash is unrecorded', () => {
     expect(parseBlock('d.md', scanOf(doc(BLOCK))).declaration.inline).toEqual({ recorded: null });
   });
   it('accepts a block sequence, comments and a comment after the hash', () => {
-    const text = `---\ndocstamp: # why\n  # note\n  dependencies:\n    - src\n    - "!src/x"\n  hash: v1:${H} # ok\n---\n`;
+    const text = `---\ndocstamp: # why\n  # note\n  dependencies:\n    - src\n    - "!src/x"\n  hash: ${H} # ok\n---\n`;
     expect(problems(text)).toEqual([]);
   });
   it.each([
@@ -84,11 +88,7 @@ describe('§9.6.2 ParseBlock', () => {
     ['a duplicate key', `---\n${BLOCK}\n${BLOCK}\n---\n`, [['E_BLOCK', 'frontmatter']]],
     ['an anchor', `---\nx: &a 1\n${BLOCK}\n---\n`, [['E_BLOCK', 'frontmatter']]],
     ['a tab indent', '---\ndocstamp:\n\tdependencies: [a]\n---\n', [['E_BLOCK', 'frontmatter']]],
-    [
-      'no dependencies',
-      '---\ndocstamp:\n  hash: v1:' + H + '\n---\n',
-      [['E_BLOCK', 'dependencies']],
-    ],
+    ['no dependencies', '---\ndocstamp:\n  hash: ' + H + '\n---\n', [['E_BLOCK', 'dependencies']]],
     [
       'empty dependencies',
       '---\ndocstamp:\n  dependencies: []\n---\n',
@@ -110,25 +110,21 @@ describe('§9.6.2 ParseBlock', () => {
       '---\ndocstamp:\n  dependencies: ["/abs"]\n---\n',
       [['E_PATTERN', '/abs']],
     ],
-    ['a hash without the prefix', `---\n${BLOCK}\n  hash: ${H}\n---\n`, [['E_BLOCK', 'hash']]],
+    ['a v1: prefix', `---\n${BLOCK}\n  hash: v1:${H}\n---\n`, [['E_BLOCK', 'hash']]],
     ['a v2 hash', `---\n${BLOCK}\n  hash: v2:${H}\n---\n`, [['E_BLOCK', 'hash']]],
     [
       'an upper case hash',
-      `---\n${BLOCK}\n  hash: v1:${H.toUpperCase()}\n---\n`,
+      `---\n${BLOCK}\n  hash: ${H.toUpperCase()}\n---\n`,
       [['E_BLOCK', 'hash']],
     ],
-    ['a short hash', `---\n${BLOCK}\n  hash: v1:abc\n---\n`, [['E_BLOCK', 'hash']]],
-    ['a quoted hash', `---\n${BLOCK}\n  hash: "v1:${H}"\n---\n`, [['E_BLOCK', 'hash']]],
-    ['a quoted hash key', `---\n${BLOCK}\n  "hash": v1:${H}\n---\n`, [['E_BLOCK', 'hash']]],
-    [
-      'a hash on the next line',
-      `---\n${BLOCK}\n  hash:\n    v1:${H}\n---\n`,
-      [['E_BLOCK', 'hash']],
-    ],
+    ['a short hash', `---\n${BLOCK}\n  hash: abc\n---\n`, [['E_BLOCK', 'hash']]],
+    ['a quoted hash', `---\n${BLOCK}\n  hash: "${H}"\n---\n`, [['E_BLOCK', 'hash']]],
+    ['a quoted hash key', `---\n${BLOCK}\n  "hash": ${H}\n---\n`, [['E_BLOCK', 'hash']]],
+    ['a hash on the next line', `---\n${BLOCK}\n  hash:\n    ${H}\n---\n`, [['E_BLOCK', 'hash']]],
     ['a null hash', `---\n${BLOCK}\n  hash:\n---\n`, [['E_BLOCK', 'hash']]],
     [
       'a duplicate hash',
-      `---\n${BLOCK}\n  hash: v1:${H}\n  hash: v1:${H}\n---\n`,
+      `---\n${BLOCK}\n  hash: ${H}\n  hash: ${H}\n---\n`,
       [['E_BLOCK', 'frontmatter']],
     ],
   ])('%s', (_name, text, expected) => {
@@ -155,34 +151,34 @@ describe('§9.6.2 ParseBlock', () => {
 describe('§9.6.4 Stamp', () => {
   const stamp = (text: string) => stampText(scanOf(text), OTHER);
   it('replaces only the value of an existing hash line', () => {
-    const before = `---\ndocstamp:\n  dependencies: [src] # keep\n  hash: v1:${H}   # note\n  tail: 1\n---\nbody\n`;
+    const before = `---\ndocstamp:\n  dependencies: [src] # keep\n  hash: ${H}   # note\n  tail: 1\n---\nbody\n`;
     expect(stamp(before)).toBe(before.replace(H, OTHER));
   });
   it('appends the hash as the last key, with the block indentation', () => {
     expect(stamp('---\ndocstamp:\n    dependencies: [src]\n---\nbody\n')).toBe(
-      `---\ndocstamp:\n    dependencies: [src]\n    hash: v1:${OTHER}\n---\nbody\n`,
+      `---\ndocstamp:\n    dependencies: [src]\n    hash: ${OTHER}\n---\nbody\n`,
     );
   });
   it('appends after the last non blank line of a block that is not last in the frontmatter', () => {
     const before =
       '---\ndocstamp:\n  dependencies:\n    - a # c\n\n  # trailing\n\nafter: 1\n---\n';
     expect(stamp(before)).toBe(
-      `---\ndocstamp:\n  dependencies:\n    - a # c\n\n  # trailing\n  hash: v1:${OTHER}\n\nafter: 1\n---\n`,
+      `---\ndocstamp:\n  dependencies:\n    - a # c\n\n  # trailing\n  hash: ${OTHER}\n\nafter: 1\n---\n`,
     );
   });
   it('keeps CR LF line endings and the byte order mark', () => {
     const before = '﻿---\r\ndocstamp:\r\n  dependencies: [a]\r\n---\r\nbody\r\n';
     expect(stamp(before)).toBe(
-      `﻿---\r\ndocstamp:\r\n  dependencies: [a]\r\n  hash: v1:${OTHER}\r\n---\r\nbody\r\n`,
+      `﻿---\r\ndocstamp:\r\n  dependencies: [a]\r\n  hash: ${OTHER}\r\n---\r\nbody\r\n`,
     );
   });
   it('a CR LF file with a hash line keeps every other byte', () => {
-    const before = `---\r\ndocstamp:\r\n  dependencies: [a]\r\n  hash: v1:${H}\r\n---\r\nbody\r\n`;
+    const before = `---\r\ndocstamp:\r\n  dependencies: [a]\r\n  hash: ${H}\r\n---\r\nbody\r\n`;
     expect(stamp(before)).toBe(before.replace(H, OTHER));
   });
   it('a closing delimiter without a final newline survives', () => {
     expect(stamp('---\ndocstamp:\n  dependencies: [a]\n---')).toBe(
-      `---\ndocstamp:\n  dependencies: [a]\n  hash: v1:${OTHER}\n---`,
+      `---\ndocstamp:\n  dependencies: [a]\n  hash: ${OTHER}\n---`,
     );
   });
   it('stamping twice with the same hash changes nothing the second time', () => {
@@ -199,7 +195,7 @@ describe('§9.6.4 Stamp', () => {
     const universe = { paths: ['d.md'], kinds: new Map(), onDisk: new Map() };
     stampFile(root, universe, 'd.md', H);
     expect(readFileSync(join(root, 'd.md'), 'utf8')).toBe(
-      `---\ndocstamp:\n  dependencies: [src]\n  hash: v1:${H}\n---\nbody\n`,
+      `---\ndocstamp:\n  dependencies: [src]\n  hash: ${H}\n---\nbody\n`,
     );
     expect(() => stampFile(root, universe, 'gone.md', H)).toThrow(Raised);
   });
@@ -217,8 +213,8 @@ describe('§10.2 hash input rule for inline files', () => {
   it('a block with and without a hash line hash identically', () => {
     const hash = hashes({
       'a.md': withBlock('[src]'),
-      'b.md': withBlock('[src]', `  hash: v1:${H}\n`),
-      'c.md': withBlock('[src]', `  hash: v1:${OTHER}\n`),
+      'b.md': withBlock('[src]', `  hash: ${H}\n`),
+      'c.md': withBlock('[src]', `  hash: ${OTHER}\n`),
     });
     expect(hash('b.md')).toBe(hash('a.md'));
     expect(hash('c.md')).toBe(hash('a.md'));
@@ -234,17 +230,17 @@ describe('§10.2 hash input rule for inline files', () => {
     for (const name of ['deps.md', 'prose.md', 'meta.md']) expect(hash(name)).not.toBe(base);
   });
   it('a CR LF file hashes like its LF twin', () => {
-    const lf = withBlock('[src]', `  hash: v1:${H}\n`);
+    const lf = withBlock('[src]', `  hash: ${H}\n`);
     const hash = hashes({ 'lf.md': lf, 'crlf.md': lf.replaceAll('\n', '\r\n') });
     expect(hash('crlf.md')).toBe(hash('lf.md'));
   });
   it('a byte order mark counts', () => {
-    const text = withBlock('[src]', `  hash: v1:${H}\n`);
+    const text = withBlock('[src]', `  hash: ${H}\n`);
     const hash = hashes({ 'a.md': text, 'bom.md': `﻿${text}` });
     expect(hash('bom.md')).not.toBe(hash('a.md'));
   });
   it('only a file that include selects loses its hash line', () => {
-    const text = withBlock('[src]', `  hash: v1:${H}\n`);
+    const text = withBlock('[src]', `  hash: ${H}\n`);
     const plain = withBlock('[src]');
     const hash = hashes({ 'docs/a.md': text, 'docs/b.md': plain, 'a.txt': text, 'b.txt': plain });
     expect(hash('docs/a.md')).toBe(hash('docs/b.md'));
@@ -253,7 +249,7 @@ describe('§10.2 hash input rule for inline files', () => {
   it('a file with no block hashes with every line of its text', () => {
     const hash = hashes({
       'docstamp.yaml': 'version: 2\nfiles: {}\n',
-      'a.md': '---\nt: 1\nhash: v1:' + H + '\n---\nbody\n',
+      'a.md': '---\nt: 1\nhash: ' + H + '\n---\nbody\n',
       'b.md': '---\nt: 1\n---\nbody\n',
     });
     expect(hash('a.md')).not.toBe(hash('b.md'));
@@ -352,7 +348,7 @@ describe('§12.2 loadWorkspace', () => {
   });
   it('the marked files hold their hash lines for the hash rule', () => {
     const root = makeTree({
-      'a.md': `---\ndocstamp:\n  dependencies: [src]\n  hash: v1:${H}\n---\n`,
+      'a.md': `---\ndocstamp:\n  dependencies: [src]\n  hash: ${H}\n---\n`,
       'src/a.ts': 'a\n',
     });
     expect(loadWorkspace(root).universe.marked?.get('a.md')).toEqual([3]);

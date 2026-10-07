@@ -53,12 +53,12 @@ export function scanFrontmatter(text: string): Scan | null {
   return { bom, lines, close, marker, last, keyIndent, hashLines };
 }
 
-const HASH_VALUE = /^(hash:[ \t]+)(v1:[0-9a-f]{64})([ \t]*(?:#.*)?\r?\n?)$/u;
+const HASH_VALUE = /^(hash:[ \t]+)([0-9a-f]{64})([ \t]*(?:#.*)?\r?\n?)$/u;
 
-// SPEC §9.6.2 step 7: the recorded value when the line is `hash: v1:<64 hex>`, else null
+// SPEC §9.6.2 step 7: the recorded value when the line is `hash: <64 hex>`, else null
 export function hashOnLine(line: string, keyIndent: string): string | null {
   const match = HASH_VALUE.exec(line.slice(keyIndent.length));
-  return match ? match[2]!.slice(3) : null;
+  return match ? match[2]! : null;
 }
 
 // SPEC §12.3: the recorded Hash of a text, null when it has none or none that is well formed
@@ -75,10 +75,10 @@ export function stampText(scan: Scan, hash: string): string {
   if (only !== undefined) {
     const line = lines[only]!;
     const match = HASH_VALUE.exec(line.slice(scan.keyIndent!.length))!;
-    lines[only] = `${scan.keyIndent}${match[1]}v1:${hash}${match[3]}`;
+    lines[only] = `${scan.keyIndent}${match[1]}${hash}${match[3]}`;
   } else {
     const eol = lines[scan.last]!.endsWith('\r\n') ? '\r\n' : '\n';
-    lines.splice(scan.last + 1, 0, `${scan.keyIndent}hash: v1:${hash}${eol}`);
+    lines.splice(scan.last + 1, 0, `${scan.keyIndent}hash: ${hash}${eol}`);
   }
   return scan.bom + lines.join('');
 }

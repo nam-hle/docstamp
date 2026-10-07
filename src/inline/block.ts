@@ -5,7 +5,7 @@ import { parsePattern } from '../pattern/parse.ts';
 import { hashOnLine, type Scan } from './frontmatter.ts';
 
 const MARKER_REST = /^[ \t]*(?:#.*)?\r?\n?$/u;
-const HASH = /^v1:[0-9a-f]{64}$/u;
+const HASH = /^[0-9a-f]{64}$/u;
 const isMap = (v: YamlValue | undefined): v is YamlMap =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -64,15 +64,16 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
     }
   }
 
-  const value = keys.get('hash')?.value;
+  const hashNode = keys.get('hash');
+  const value = hashNode?.plainSource ?? hashNode?.value;
   const line = scan.hashLines.length === 1 ? scan.lines[scan.hashLines[0]!]! : null;
   const wellFormed =
     typeof value === 'string' &&
     HASH.test(value) &&
     line !== null &&
-    hashOnLine(line, scan.keyIndent!) === value.slice(3);
+    hashOnLine(line, scan.keyIndent!) === value;
   if (value !== undefined && !wellFormed) {
-    block('hash', 'Write the hash as "hash: v1:" and 64 lowercase hex digits on one line.');
+    block('hash', 'Write the hash as "hash:" and 64 lowercase hex digits on one line.');
   }
-  return done(dependencies ?? [], wellFormed ? (value as string).slice(3) : null);
+  return done(dependencies ?? [], wellFormed ? (value as string) : null);
 }

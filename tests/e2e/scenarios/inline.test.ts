@@ -2,7 +2,7 @@ import { expect } from 'vitest';
 import { config, scenario, type Repo } from '../harness/index.ts';
 
 const fixture = 'inline-docs';
-const HASH_LINE = /^ {2}hash: v1:[0-9a-f]{64}\r?$/u;
+const HASH_LINE = /^ {2}hash: [0-9a-f]{64}\r?$/u;
 
 const withoutHashLines = (text: string): string[] =>
   text.split('\n').filter((line) => !HASH_LINE.test(line));
@@ -160,11 +160,9 @@ scenario(
         .filter((l) => !HASH_LINE.test(l)),
     ).toEqual(readme.split('\n'));
     expect(repo.read('README.md')).toMatch(
-      /^---\ntitle: Project README\ndocstamp:\n {2}dependencies: \[src\/cli, docs\/GUIDE\.md\]\n {2}hash: v1:[0-9a-f]{64}\n---\n/u,
+      /^---\ntitle: Project README\ndocstamp:\n {2}dependencies: \[src\/cli, docs\/GUIDE\.md\]\n {2}hash: [0-9a-f]{64}\n---\n/u,
     );
-    expect(repo.read('docs/GUIDE.md')).toMatch(
-      /\n {4}- src\/core\n {2}hash: v1:[0-9a-f]{64}\n---\n/u,
-    );
+    expect(repo.read('docs/GUIDE.md')).toMatch(/\n {4}- src\/core\n {2}hash: [0-9a-f]{64}\n---\n/u);
     expect(withoutHashLines(repo.read('docs/GUIDE.md'))).toEqual(guide.split('\n'));
 
     const stamped = repo.read('README.md');
@@ -173,10 +171,10 @@ scenario(
     expect(repo.read('README.md')).toBe(stamped);
 
     repo.append('src/cli/run.ts', 'export const more = 1;\n');
-    const hashBefore = /v1:[0-9a-f]{64}/u.exec(stamped)![0];
+    const hashBefore = /[0-9a-f]{64}/u.exec(stamped)![0];
     await repo.run(['update', 'README.md'], { expectExit: 0 });
     const restamped = repo.read('README.md');
-    expect(restamped).toBe(stamped.replace(hashBefore, /v1:[0-9a-f]{64}/u.exec(restamped)![0]));
+    expect(restamped).toBe(stamped.replace(hashBefore, /[0-9a-f]{64}/u.exec(restamped)![0]));
     expect(restamped).not.toBe(stamped);
     expect(repo.list()).toEqual(['README.md', 'docs', 'src']);
     expect(repo.list('docs')).toEqual(['GUIDE.md', 'NOTES.md']);
@@ -193,7 +191,7 @@ scenario(
     );
     repo.write(
       'docs/BOM.md',
-      '﻿---\ntitle: Bom\ndocstamp:\n  dependencies: [src/core] # core\n  hash: v1:' +
+      '﻿---\ntitle: Bom\ndocstamp:\n  dependencies: [src/core] # core\n  hash: ' +
         '0'.repeat(64) +
         '   # old\nafter: kept\n---\nBody\n',
     );
@@ -211,21 +209,21 @@ scenario(
 
     const win = repo.read('docs/WIN.md');
     expect(win).toMatch(
-      /^---\r\ntitle: Win\r\ndocstamp:\r\n {2}# why: reviewed by hand\r\n {2}dependencies: \[src\/core\]\r\n {2}hash: v1:[0-9a-f]{64}\r\n---\r\nBody\r\n$/u,
+      /^---\r\ntitle: Win\r\ndocstamp:\r\n {2}# why: reviewed by hand\r\n {2}dependencies: \[src\/core\]\r\n {2}hash: [0-9a-f]{64}\r\n---\r\nBody\r\n$/u,
     );
     expect(win.replaceAll('\r\n', '')).not.toContain('\n');
 
     const bom = repo.read('docs/BOM.md');
     expect(bom.startsWith('﻿---\n')).toBe(true);
-    expect(bom).toMatch(/\n {2}hash: v1:[0-9a-f]{64} {3}# old\nafter: kept\n---\nBody\n$/u);
+    expect(bom).toMatch(/\n {2}hash: [0-9a-f]{64} {3}# old\nafter: kept\n---\nBody\n$/u);
     expect(bom).not.toContain('0'.repeat(64));
-    expect(bom.replace(/v1:[0-9a-f]{64}/u, 'v1:' + '0'.repeat(64))).toBe(originals['docs/BOM.md']);
+    expect(bom.replace(/[0-9a-f]{64}/u, '' + '0'.repeat(64))).toBe(originals['docs/BOM.md']);
 
     const mid = repo.read('docs/MID.md');
     expect(mid).toBe(
       originals['docs/MID.md']!.replace(
         '    # trailing note\n',
-        `    # trailing note\n    hash: ${/v1:[0-9a-f]{64}/u.exec(mid)![0]}\n`,
+        `    # trailing note\n    hash: ${/[0-9a-f]{64}/u.exec(mid)![0]}\n`,
       ),
     );
     const ok = await repo.run(['docs/WIN.md', 'docs/BOM.md', 'docs/MID.md']);
@@ -339,15 +337,15 @@ scenario(
       'duplicate.md':
         '---\ndocstamp:\n  dependencies: [src/core]\ndocstamp:\n  dependencies: [src/cli]\n---\n',
       'anchor.md': '---\nbase: &b 1\ndocstamp:\n  dependencies: [src/core]\n  other: *b\n---\n',
-      'no-deps.md': '---\ndocstamp:\n  hash: v1:' + '0'.repeat(64) + '\n---\n',
+      'no-deps.md': '---\ndocstamp:\n  hash: ' + '0'.repeat(64) + '\n---\n',
       'empty-deps.md': '---\ndocstamp:\n  dependencies: []\n---\n',
       'string-deps.md': '---\ndocstamp:\n  dependencies: src/core\n---\n',
       'unknown-key.md': '---\ndocstamp:\n  dependencies: [src/core]\n  covers: [src]\n---\n',
       'bad-pattern.md': '---\ndocstamp:\n  dependencies: ["/src/core"]\n---\n',
       'no-match.md': '---\ndocstamp:\n  dependencies: [nothing/here]\n---\n',
-      'short-hash.md': '---\ndocstamp:\n  dependencies: [src/core]\n  hash: v1:abc\n---\n',
+      'short-hash.md': '---\ndocstamp:\n  dependencies: [src/core]\n  hash: abc\n---\n',
       'wrong-prefix.md': `---\ndocstamp:\n  dependencies: [src/core]\n  hash: v2:${'0'.repeat(64)}\n---\n`,
-      'quoted-hash.md': `---\ndocstamp:\n  dependencies: [src/core]\n  hash: "v1:${'0'.repeat(64)}"\n---\n`,
+      'quoted-hash.md': `---\ndocstamp:\n  dependencies: [src/core]\n  hash: "${'0'.repeat(64)}"\n---\n`,
     };
     for (const [name, text] of Object.entries(bad)) repo.write(`bad/${name}`, text);
     const check = await repo.run([]);
@@ -520,7 +518,7 @@ scenario(
         'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
     );
 
-    const quoted = reflowed.replace(/hash: (v1:[0-9a-f]{64})/u, 'hash: "$1"');
+    const quoted = reflowed.replace(/hash: ([0-9a-f]{64})/u, 'hash: "$1"');
     repo.write('docs/GUIDE.md', quoted);
     const invalid = await repo.run([], { show: ['docs/GUIDE.md'] });
     expect(invalid.exit).toBe(2);

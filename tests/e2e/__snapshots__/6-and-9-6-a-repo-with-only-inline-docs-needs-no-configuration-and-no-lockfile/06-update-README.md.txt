@@ -8,7 +8,7 @@ written  README.md
 title: Project README
 docstamp:
   dependencies: [src/cli, docs/GUIDE.md]
-  hash: v1:473ac1e1db25eb06363705842eb579cde11530cc5ea700cab8058e9f945b0b03
+  hash: 473ac1e1db25eb06363705842eb579cde11530cc5ea700cab8058e9f945b0b03
 ---
 
 # Project

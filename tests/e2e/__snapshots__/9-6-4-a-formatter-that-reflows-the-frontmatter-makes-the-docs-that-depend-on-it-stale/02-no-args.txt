@@ -12,7 +12,7 @@ title: Guide
 docstamp:
   dependencies:
     - "src/core"
-  hash: v1:b324d17d193a5930eb18545d1f21d246b253788ea45b6a89f908becbb4b27cce
+  hash: b324d17d193a5930eb18545d1f21d246b253788ea45b6a89f908becbb4b27cce
 ---
 
 # Guide

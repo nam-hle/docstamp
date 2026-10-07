@@ -33,8 +33,8 @@ export const GOLDEN_TREE: TreeSpec = {
 
 export const GOLDEN_IGNORE = ['vendor/'];
 
-const HASH_A = `v1:${'0123456789abcdef'.repeat(4)}`;
-const HASH_B = `v1:${'fedcba9876543210'.repeat(4)}`;
+const HASH_A = `${'0123456789abcdef'.repeat(4)}`;
+const HASH_B = `${'fedcba9876543210'.repeat(4)}`;
 const block = (dependencies: string, hash: string, eol = '\n') =>
   `---${eol}title: t${eol}docstamp:${eol}  dependencies: ${dependencies}${eol}${hash}---${eol}body${eol}`;
 

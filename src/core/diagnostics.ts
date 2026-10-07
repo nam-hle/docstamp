@@ -16,7 +16,7 @@ const FIX: Record<Code, string> = {
   E_PATTERN: 'Correct the pattern; patterns use "/" and "\\" escapes.',
   E_BLOCK:
     'Write the docstamp block as a block mapping with "dependencies" and, optionally, ' +
-    '"hash: v1:<64 hex>" on one line.',
+    '"hash: <64 hex>" on one line.',
   E_DUPLICATE_DECLARATION:
     'Declare the file once: remove its entry under "files" or its docstamp block.',
   E_FILE_MISSING: 'Rename the key under "files" in the configuration file or restore the file.',
