@@ -1,0 +1,8 @@
+$ docstamp stats --since 7f82781be6a6c8bd36b06058f281d5a88c8c1997 --max-fire-ratio 1
+exit: 0
+--- stdout ---
+file    patterns  files  commits  days   ratio   sweep
+DOC.md         2      1        1     1  1.0000  0.0000
+window: 1 commits since 7f82781be6a6c8bd36b06058f281d5a88c8c1997 (revision), 0 fire nothing
+--- stderr ---
+warning: W_EMPTY_EXCLUSION: DOC.md: !src/**/*.spec.ts: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.

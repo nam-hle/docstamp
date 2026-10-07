@@ -1,0 +1,9 @@
+$ docstamp stats '--since=2026-01-02 23:59:59'
+exit: 0
+--- stdout ---
+file       patterns  files  commits  days   ratio   sweep
+BROAD.md          1      7        3     3  0.6000  0.0000
+MID.md            2      2        2     2  0.4000  0.0000
+NARROW.md         1      1        1     1  0.2000  0.0000
+window: 5 commits since "2026-01-02 23:59:59" (date), 2 fire nothing
+--- stderr ---

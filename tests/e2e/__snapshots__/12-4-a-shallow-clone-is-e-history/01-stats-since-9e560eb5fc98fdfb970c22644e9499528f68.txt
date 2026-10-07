@@ -1,0 +1,5 @@
+$ docstamp stats --since 9e560eb5fc98fdfb970c22644e9499528f682c97
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_HISTORY: The repository is shallow; fetch its full history.

@@ -5,14 +5,29 @@ import { sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
 import { dependentsOf } from '../engine/reverse.ts';
+import { exceeds, statistics, type FileStats } from '../engine/stats.ts';
 import { fileHash } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
+import { replay } from '../history/replay.ts';
 import { stampFile } from '../inline/read-inline.ts';
 import { lockExists, readLock, writeLock } from '../lock/lock.ts';
-import { jsonText, listJsonText, reverseJsonText } from '../report/json.ts';
-import { checkText, diagnosticsText, listText, reverseText, updateText } from '../report/text.ts';
+import {
+  jsonText,
+  listJsonText,
+  reverseJsonText,
+  statsJsonText,
+  type StatsWindow,
+} from '../report/json.ts';
+import {
+  checkText,
+  diagnosticsText,
+  listText,
+  reverseText,
+  statsText,
+  updateText,
+} from '../report/text.ts';
 import { determineRoot, isIgnoredPath, type Universe } from '../universe/walk.ts';
-import { HELP, parseArgs } from './args.ts';
+import { HELP, parseArgs, type Args } from './args.ts';
 import { selectResults, toRepoPath } from './paths.ts';
 import { loadWorkspace } from './workspace.ts';
 
@@ -222,7 +237,66 @@ function runReverse(
   return exitCode;
 }
 
-// SPEC §13.5, §13.6, §13.7, §13.8
+// SPEC §13.9
+function runStats(args: Extract<Args, { mode: 'stats' }>, cwd: string, io: Io): number {
+  let exitCode = 2;
+  let global: Diagnostic[] = [];
+  let window: StatsWindow | null = null;
+  let files: readonly FileStats[] = [];
+  let exceeding: string[] = [];
+  try {
+    const root = determineRoot(cwd, args.root);
+    const selected = selectResults(args.paths, cwd, root, listAll(root));
+    const invalid = selected.filter((r) => r.state === 'invalid');
+    if (invalid.length > 0) throw new Raised(invalid.flatMap((r) => [...r.diagnostics]));
+    const replayed = replay(root, args.since);
+    const computed = statistics(
+      selected.map((r) => ({
+        file: r.file,
+        patterns: r.dependencies.length,
+        resolved: r.resolved,
+        diagnostics: r.diagnostics,
+      })),
+      replayed.commits,
+      args.sweepThreshold,
+    );
+    const limit = args.maxFireRatio;
+    files = computed.files;
+    exceeding =
+      limit === undefined ? [] : files.filter((f) => exceeds(f.ratio, limit)).map((f) => f.file);
+    window = {
+      since: args.since,
+      kind: replayed.kind,
+      commits: replayed.commits.length,
+      firingNothing: computed.firingNothing,
+    };
+    exitCode = exceeding.length > 0 ? 1 : 0;
+  } catch (e) {
+    if (!(e instanceof Raised)) throw e;
+    global = e.diagnostics;
+  }
+  if (args.json) {
+    io.stdout(
+      statsJsonText({
+        exitCode,
+        window,
+        sweepThreshold: args.sweepThreshold,
+        maxFireRatio: args.maxFireRatio,
+        exceeding,
+        files,
+        diagnostics: global,
+      }),
+    );
+  } else {
+    const gate =
+      args.maxFireRatio === undefined ? undefined : { given: args.maxFireRatio, exceeding };
+    if (window !== null) io.stdout(statsText(files, window, gate));
+    io.stderr(diagnosticsText([...global, ...files.flatMap((f) => f.diagnostics)]));
+  }
+  return exitCode;
+}
+
+// SPEC §13.5, §13.6, §13.7, §13.8, §13.9
 export function run(argv: readonly string[], cwd: string, io: Io): number {
   let args: ReturnType<typeof parseArgs>;
   try {
@@ -242,6 +316,7 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
   }
   if (args.mode === 'list-dependencies') return runList(args, cwd, io);
   if (args.mode === 'list-dependents') return runReverse(args, cwd, io);
+  if (args.mode === 'stats') return runStats(args, cwd, io);
   const { mode, json } = args;
   const empty: Output = {
     json,

@@ -1,0 +1,9 @@
+$ docstamp stats --since 2026-01-04T00:00:00Z
+exit: 0
+--- stdout ---
+file       patterns  files  commits  days   ratio   sweep
+BROAD.md          1      7        2     2  0.6667  0.0000
+MID.md            2      2        1     1  0.3333  0.0000
+NARROW.md         1      1        1     1  0.3333  0.0000
+window: 3 commits since 2026-01-04T00:00:00Z (date), 1 fire nothing
+--- stderr ---

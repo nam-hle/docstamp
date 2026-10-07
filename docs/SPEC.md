@@ -1028,7 +1028,8 @@ which the command runs.
 NOTE: The Window excludes merge commits, so a change that exists only in the resolution of a
 merge conflict is not seen. A commit that changed nothing under Root, or nothing at all, is in the
 Window with no Paths. Because renames are not detected, a rename is a deletion of the old path
-and an addition of the new one, and the commit touches both. A *date* range is git's own
+and an addition of the new one, and the commit touches both; at `HEAD` only the new path can be a
+dependency (§12.5), and both count towards the size of the commit. A *date* range is git's own
 committer-date limit. The same history and the same *since* give the same Window, except that a
 duration is relative to the wall-clock time and so moves with it; a revision and a date are fixed.
 

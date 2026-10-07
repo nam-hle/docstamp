@@ -18,6 +18,7 @@ export type Code =
   | 'E_LOCK'
   | 'E_LOCK_VERSION'
   | 'E_UNKNOWN_FILE'
+  | 'E_HISTORY'
   | 'W_ORPHAN'
   | 'W_EMPTY_EXCLUSION';
 

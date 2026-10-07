@@ -1,0 +1,7 @@
+# git is not on the PATH
+$ docstamp stats
+env: PATH=/nonexistent
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_HISTORY: Run docstamp stats with git installed, in a work tree that has at least one commit.

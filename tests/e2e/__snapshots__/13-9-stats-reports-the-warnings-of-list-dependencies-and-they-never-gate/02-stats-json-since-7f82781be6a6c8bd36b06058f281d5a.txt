@@ -1,0 +1,40 @@
+$ docstamp stats --json --since 7f82781be6a6c8bd36b06058f281d5a88c8c1997
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 0,
+  "window": {
+    "since": "7f82781be6a6c8bd36b06058f281d5a88c8c1997",
+    "kind": "revision",
+    "commits": 1,
+    "firingNothing": 0
+  },
+  "sweepThreshold": 200,
+  "maxFireRatio": null,
+  "exceeding": [],
+  "files": [
+    {
+      "file": "DOC.md",
+      "patterns": 2,
+      "resolvedCount": 1,
+      "commits": 1,
+      "days": 1,
+      "ratio": 1,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": [
+        {
+          "code": "W_EMPTY_EXCLUSION",
+          "severity": "warning",
+          "file": "DOC.md",
+          "subject": "!src/**/*.spec.ts",
+          "message": "The exclusion matches no file, so it excludes nothing; remove it, or keep it for later."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

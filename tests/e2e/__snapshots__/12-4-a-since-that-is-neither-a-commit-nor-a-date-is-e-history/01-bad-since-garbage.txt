@@ -1,0 +1,6 @@
+# bad since garbage
+$ docstamp stats --since garbage
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_HISTORY: garbage: --since names no commit and is not a date such as 2024-01-01 or a duration such as 90.days.

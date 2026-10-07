@@ -2,6 +2,8 @@ import { sortDiagnostics } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import { needsQuoting, quote } from '../core/quote.ts';
 import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
+import type { FileStats } from '../engine/stats.ts';
+import type { StatsWindow } from './json.ts';
 
 // SPEC §14.2
 function shown(s: string): string {
@@ -89,6 +91,48 @@ export function reverseText(entries: readonly ReverseEntry[]): string {
     entry.dependents.forEach((d, i) => {
       out += `  ${names[i]!.padEnd(width)}   via ${d.via.map(shown).join(', ')}\n`;
     });
+  }
+  return out;
+}
+
+const fixed4 = (tenThousandths: number): string =>
+  `${Math.floor(tenThousandths / 10000)}.${String(tenThousandths % 10000).padStart(4, '0')}`;
+
+// SPEC §14.8
+export function statsText(
+  files: readonly FileStats[],
+  window: StatsWindow,
+  gate?: { readonly given: string; readonly exceeding: readonly string[] },
+): string {
+  const rows = files.map((f) => [
+    shown(f.file),
+    String(f.patterns),
+    String(f.resolvedCount),
+    String(f.commits),
+    String(f.days),
+    fixed4(f.ratio),
+    fixed4(f.sweepShare),
+  ]);
+  const table =
+    files.length === 0
+      ? []
+      : [['file', 'patterns', 'files', 'commits', 'days', 'ratio', 'sweep'], ...rows];
+  const widths = [0, 1, 2, 3, 4, 5, 6].map((c) =>
+    Math.max(0, ...table.map((row) => row[c]!.length)),
+  );
+  let out = table
+    .map((row) =>
+      row
+        .map((cell, c) => (c === 0 ? cell.padEnd(widths[c]!) : cell.padStart(widths[c]!)))
+        .join('  ')
+        .trimEnd(),
+    )
+    .map((line) => `${line}\n`)
+    .join('');
+  out += `window: ${window.commits} commits since ${shown(window.since)} (${window.kind}), `;
+  out += `${window.firingNothing} fire nothing\n`;
+  if (gate && gate.exceeding.length > 0) {
+    out += `over --max-fire-ratio ${gate.given}: ${gate.exceeding.map(shown).join(' ')}\n`;
   }
   return out;
 }

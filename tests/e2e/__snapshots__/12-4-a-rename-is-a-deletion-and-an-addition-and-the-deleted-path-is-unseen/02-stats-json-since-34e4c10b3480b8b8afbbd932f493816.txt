@@ -1,0 +1,54 @@
+$ docstamp stats --json --since 34e4c10b3480b8b8afbbd932f493816023509621 --sweep-threshold 2
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 0,
+  "window": {
+    "since": "34e4c10b3480b8b8afbbd932f493816023509621",
+    "kind": "revision",
+    "commits": 1,
+    "firingNothing": 0
+  },
+  "sweepThreshold": 2,
+  "maxFireRatio": null,
+  "exceeding": [],
+  "files": [
+    {
+      "file": "TO.md",
+      "patterns": 1,
+      "resolvedCount": 2,
+      "commits": 1,
+      "days": 1,
+      "ratio": 1,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    },
+    {
+      "file": "ELSE.md",
+      "patterns": 1,
+      "resolvedCount": 1,
+      "commits": 0,
+      "days": 0,
+      "ratio": 0,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    },
+    {
+      "file": "FROM.md",
+      "patterns": 1,
+      "resolvedCount": 1,
+      "commits": 0,
+      "days": 0,
+      "ratio": 0,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

@@ -1,0 +1,6 @@
+# stats --max-fire-ratio 2
+$ docstamp stats --max-fire-ratio 2
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --max-fire-ratio: --max-fire-ratio needs a decimal number from 0 to 1.

@@ -1,0 +1,30 @@
+$ docstamp stats --json --since a822bf884eb54203ee7045710234d91dc9fd571b
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 2,
+  "window": null,
+  "sweepThreshold": 200,
+  "maxFireRatio": null,
+  "exceeding": [],
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_EMPTY_DEPENDENCIES",
+      "severity": "error",
+      "file": "BAD.md",
+      "subject": null,
+      "message": "Correct the patterns in \"dependencies\"; together they select no file."
+    },
+    {
+      "code": "E_EMPTY_PATTERN",
+      "severity": "error",
+      "file": "BAD.md",
+      "subject": "src/missing.ts",
+      "message": "Correct or remove the pattern; it matches no file."
+    }
+  ]
+}
+--- stderr ---
