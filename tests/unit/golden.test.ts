@@ -23,7 +23,7 @@ const config = { ignore: GOLDEN_IGNORE, useGitignore: true, declarations: [] };
 interface Golden {
   root: string;
   universe: Universe;
-  dependencyHash(dependencies: string[]): string;
+  dependencyHash: (dependencies: string[]) => string;
 }
 
 function golden(): Golden {
