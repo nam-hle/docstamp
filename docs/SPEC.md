@@ -43,12 +43,14 @@ permitted variations are:
   Unicode version of the implementation's runtime;
 - the changed-file report (`[[Changes]]`, §5.4), which depends on the repository history available
   on the host, for example a shallow clone against a full clone;
-- the output and exit code of `stats` (§13.9), which depend on the repository history and, for a
-  duration or a date given to `--since`, on the wall-clock time.
+- the output of `stats` (§13.9), which depends on the repository history and, for `--since`, on the
+  wall-clock time.
 
 A conforming implementation MUST NOT perform network access. It MAY invoke `git`, read-only, only
 to compute the changed-file report (§12.3) and the replay of `stats` (§12.4). The verdict (states
-and reasons), the Lockfile and the exit code of every command but `stats` MUST NOT depend on `git`.
+and reasons), the Lockfile and the exit code of every command MUST NOT depend on `git`, except that
+`stats` fails with exit 2 when the history it needs is missing (§12.4). `stats` is the only place
+that reads the wall-clock time, and only for `--since`.
 
 ## 3 Notational Conventions
 
@@ -126,8 +128,8 @@ lists the dependents of *X*. The term is only used in this reverse direction.
 **Write**: recording a file's current Dependency Hash in the Lockfile with `docstamp update`,
 asserting that a Review happened.
 
-**Window**: the commits of the repository history that `stats` replays (§12.4). A commit *fires*
-a file when it touched at least one of the file's dependencies (§12.5).
+**Window**: the commits of the repository history that `stats` replays (§12.4). A commit makes a
+file *stale* in the window when it touched at least one of the file's dependencies (§12.5).
 
 **Configuration file**: the one file at Root, among the names of §9.1, that holds the Config.
 Written by people.
@@ -986,18 +988,22 @@ list the dependencies (§13.7) and review them in full.
 
 ### 12.4 Replay
 
-`Replay(root, since)` returns a Window or raises « `E_HISTORY` ». A *Window* is { `[[Kind]]`:
-`revision` or `date`, `[[Commits]]`: a List of Commit }. A *Commit* is { `[[Day]]`: a String
-`YYYY-MM-DD`, `[[Paths]]`: a List of RepoPath }.
+`Replay(root, window, now)` returns a Window or raises « `E_HISTORY` ». The argument *window* is
+`days N` (*N* from 1 to 3650) or `from R` (*R* a String), and *now* the wall-clock time in whole
+seconds since the epoch. A *Window* is { `[[Kind]]`: `days` or `revision`, `[[Commits]]`: a List of
+Commit }. A *Commit* is { `[[Day]]`: a String `YYYY-MM-DD`, `[[Paths]]`: a List of RepoPath }.
 
-1. Run `git` in Root as §12.3 step 1 does (every `GIT_` variable removed, `GIT_OPTIONAL_LOCKS=0`),
-   and with `TZ=UTC`. If `git` is unavailable, Root is not inside a git work tree, `HEAD` does not
-   name a commit, or the repository is shallow (`git rev-parse --is-shallow-repository` prints
-   anything but `false`), raise `E_HISTORY` with an empty `[[Subject]]`.
-2. Let *id* be the output of `git rev-parse --verify --quiet <since>^{commit}`. If that succeeds,
-   the *kind* is `revision` and the *range* is `<id>..HEAD`.
-3. Otherwise let *limit* be `ParseSince(since)`; if it is *none*, raise `E_HISTORY` with
-   `[[Subject]]` *since*. The *kind* is `date` and the *range* is `--since=<limit>` and `HEAD`.
+1. Run `git` in Root as §12.3 step 1 does (every `GIT_` variable removed, `GIT_OPTIONAL_LOCKS=0`).
+   If `git` is unavailable, Root is not inside a git work tree, `HEAD` does not name a commit, or
+   the repository is shallow (`git rev-parse --is-shallow-repository` prints anything but
+   `false`), raise `E_HISTORY` with an empty `[[Subject]]`.
+2. For `from R`: let *id* be the output of `git rev-parse --verify --quiet R^{commit}`. If that
+   fails, raise `E_HISTORY` with `[[Subject]]` *R*. The *kind* is `revision` and the *range* is
+   `<id>..HEAD`.
+3. For `days N`: let *limit* be *now* − *N* × 86400. The *kind* is `days` and the *range* is
+   `--max-age=<limit>` and `HEAD`, where *limit* is written in decimal digits: git compares the
+   committer time of each commit with that number of seconds and keeps the commit when it is not
+   smaller, and parses no date.
 4. Run `git log --no-merges --no-renames --no-show-signature --relative --name-only -z` with a
    format that prints, for each commit, its Id and its committer time in seconds since the epoch,
    and with the *range*: one invocation, newest commit first. If it fails, raise `E_HISTORY` with
@@ -1006,64 +1012,51 @@ list the dependencies (§13.7) and review them in full.
    calendar date in UTC of the committer time, and `[[Paths]]` the paths the commit changed,
    relative to Root, in NFC, in the order git prints them.
 
-`ParseSince(value)` returns the String to pass to git, or *none*:
-
-1. If *value* is a count, a unit and optionally `ago`, return *value*. The count is one or more
-   digits; the unit is `second`, `minute`, `hour`, `day`, `week`, `month` or `year`, with or
-   without a final `s`; the parts are separated by `.` or by one U+0020 each (`90.days`,
-   `2 weeks ago`, `1.year.ago`).
-2. If *value* is `YYYY-MM-DD` and a date of the calendar, return *value* followed by `T00:00:00Z`.
-3. If *value* is such a date, then `T` or one U+0020, then `hh:mm` or `hh:mm:ss` (hours 00 to 23,
-   minutes and seconds 00 to 59), and optionally `Z`, `±hh:mm` or `±hhmm`, return *value*. A time
-   with no zone is in UTC, because step 1 sets `TZ`.
-4. Otherwise return *none*.
-
-NOTE: A *since* that names a commit is always a revision, even when it also reads as a date or a
-duration: a branch or tag named `2024-01-01` wins. To force the date, write it with a time
-(`2024-01-01T00:00:00Z`), which is not a reference name. A *since* that is neither a commit nor
-in the grammar above fails with `E_HISTORY`, because git reads almost any text as a date and would
-silently answer for the wrong Window. A date alone means 00:00:00 UTC, never the time of day at
-which the command runs.
+NOTE: *last N days* means the commits whose committer time is not older than *N* × 86400 seconds
+before *now*: a sliding window, not calendar days. It depends on the clock of the run, so the same
+history gives another Window tomorrow; `from R` does not, and a test uses it. A `from R` that names
+no commit is repository state, so it is `E_HISTORY`, where a malformed option value is `E_USAGE`
+(§13.2).
 
 NOTE: The Window excludes merge commits, so a change that exists only in the resolution of a
 merge conflict is not seen. A commit that changed nothing under Root, or nothing at all, is in the
 Window with no Paths. Because renames are not detected, a rename is a deletion of the old path
 and an addition of the new one, and the commit touches both; at `HEAD` only the new path can be a
-dependency (§12.5), and both count towards the size of the commit. A *date* range is git's own
-committer-date limit. The same history and the same *since* give the same Window, except that a
-duration is relative to the wall-clock time and so moves with it; a revision and a date are fixed.
+dependency (§12.5), and both count towards the size of the commit.
 
 NOTE: The Window answers for the repository, not for Root: when Root is below the top level of
-the work tree, the commits that changed nothing under Root are in the Window and fire nothing.
+the work tree, the commits that changed nothing under Root are in the Window and make no file stale.
 
 ### 12.5 Statistics
 
-`Statistics(results, window, threshold)` returns, for the Results (none `invalid`), a List of
-FileStats and the Number *firingNothing*, where *threshold* is a non-negative integer.
+`Statistics(results, window)` returns, for the Results (none `invalid`), a List of FileStats and the
+Number *untouched*. The *sweep size* is the constant 200.
 
-A Commit *fires* a Result when a path of its `[[Paths]]` is in the Result's `[[Resolved]]`. For each
-Result *r*, let *firing* be the Commits of the Window that fire *r*:
+A Commit *touches* a Result when a path of its `[[Paths]]` is in the Result's `[[Resolved]]`: it
+is a commit that would make the file stale. For each Result *r*, let *touching* be the Commits of
+the Window that touch *r*:
 
 - `[[Patterns]]`: the number of strings in `r.[[Dependencies]]`;
 - `[[ResolvedCount]]`: the number of `r.[[Resolved]]`;
-- `[[Commits]]`: the number of *firing*;
-- `[[Days]]`: the number of distinct `[[Day]]` among *firing*;
-- `[[SweepCommits]]`: the number of Commits of *firing* whose `[[Paths]]` hold more than *threshold*
-  distinct paths;
-- `[[Ratio]]`: `Ratio(Commits, N)`, where *N* is the number of Commits of the Window, and
-  `[[SweepShare]]`: `Ratio(SweepCommits, Commits)`.
+- `[[StaleCommits]]`: the number of *touching*;
+- `[[Days]]`: the number of distinct `[[Day]]` among *touching*;
+- `[[SweepCommits]]`: the number of Commits of *touching* whose `[[Paths]]` hold more than the
+  sweep size of distinct paths;
+- `[[StaleRate]]`: `Ratio(StaleCommits, N)`, where *N* is the number of Commits of the Window, and
+  `[[SweepShare]]`: `Ratio(SweepCommits, StaleCommits)`.
 
 `Ratio(n, d)` is 0 if *d* is 0; otherwise *n* ∕ *d* rounded half up to 4 decimal places, computed in
 integers as `floor((20000 n + d) / (2 d))` ten-thousandths, so that the value never depends on
 floating point. It is reported as the Number of that many ten-thousandths divided by 10000.
 
-*firingNothing* is the number of Commits of the Window that fire no Result.
+*untouched* is the number of Commits of the Window that touch no Result.
 
-The FileStats are in descending order of `[[Ratio]]`, then ascending path order of the file.
+The FileStats are in descending order of `[[StaleRate]]` as reported, then ascending path order of
+the file.
 
 NOTE: Dependencies are the ones resolved now, at `HEAD` (§12.1), not the ones of each commit: a
 file deleted or renamed inside the Window is not a dependency any more and is not seen. A Window
-that crosses a reorganization therefore understates how often a list would have fired.
+that crosses a reorganization therefore understates how often a list would have been stale.
 
 ## 13 Command Line
 
@@ -1074,8 +1067,7 @@ docstamp [check] [--json] [--root <dir>] [<file>...]
 docstamp update [--json] [--root <dir>] (--all | <file>...)
 docstamp list-dependencies [--json] [--root <dir>] [<file>...]
 docstamp list-dependents [--json] [--root <dir>] <file>...
-docstamp stats [--json] [--root <dir>] [--since <value>] [--sweep-threshold <n>]
-               [--max-fire-ratio <r>] [<file>...]
+docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
 docstamp help
 docstamp version
 docstamp --help
@@ -1090,8 +1082,7 @@ The commands are `check` (§13.5), `update` (§13.6), `list-dependencies` (§13.
 The command line is parsed before anything else.
 
 1. The options are `--json`, `--all`, `--help`, `--version`, and the options with a value, each
-   written `--name <value>` or `--name=<value>`: `--root`, `--since`, `--sweep-threshold` and
-   `--max-fire-ratio`. Before any `--`, an argument starting with `-` other than a lone `-` is an
+   written `--name <value>` or `--name=<value>`: `--root`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
@@ -1113,11 +1104,12 @@ Each message states the problem:
 - `--all` with any command but `update`;
 - `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both;
 - `list-dependents` with no file argument (`[[Subject]]` is `list-dependents`);
-- `--since`, `--sweep-threshold` or `--max-fire-ratio` with any command but `stats`;
-- a value that is not valid: a `--since` that starts with `-`; a `--sweep-threshold` that is not a
-  non-negative integer in decimal digits without a sign, up to 9007199254740991; a
-  `--max-fire-ratio` that is not `0`, `1`, `0.` and one or more digits, or `1.` and one or more
-  `0`.
+- `--since` or `--from` with any command but `stats`; `--since` and `--from` together (`[[Subject]]`
+  `--since`, the message names both);
+- a `--since` that is not a positive integer without leading zeros followed by `d` (`30d`), or is
+  above `3650d`; the message shows the form. `30`, `30.days`, `0d`, `2 weeks ago` and dates are
+  refused;
+- a `--from` that starts with `-`.
 
 `help` prints usage and `version` prints the version; both exit 0 (§14.1). A file named like a
 command is reached as `docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`.
@@ -1262,20 +1254,21 @@ an attached Diagnostic, such as an inline file with an `E_BLOCK`. A file that is
 
 ### 13.9 Stats
 
-Measures how often the dependencies of each file would have made it stale over the recent history,
-so that a list can be judged before it is committed to. `--since` defaults to `90.days`,
-`--sweep-threshold` to 200. Nothing is written and no Lockfile is read.
+Reports how often the dependencies of each file would have made it stale over the recent history,
+so that a list can be judged before it is committed to. The window is `--since <n>d`, the last *n*
+days, or `--from <rev>`, the commits of `<rev>..HEAD`; without either it is `--since 30d`. The
+command only reports: it exits 0 whatever the numbers are. Nothing is written and no Lockfile is
+read.
 
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
 2. Let *results* be the Results of steps 2 and 3 of §13.7, and *selected* be
    `? SelectResults(args, cwd, root, results)`.
 3. If any of *selected* is `invalid`, raise their Diagnostics, so that the history is not read.
    Otherwise the warnings of *selected* (§8.5) are kept with their file.
-4. Let *window* be `? Replay(root, --since)` (§12.4).
-5. Let *stats* be `Statistics(selected, window, --sweep-threshold)` (§12.5).
-6. Output *stats*, the Window's size, its *kind* and *firingNothing* (§14).
-7. Exit 1 if `--max-fire-ratio` is given and some FileStats `[[Ratio]]` is greater than it, compared
-   as exact decimal numbers; else 0.
+4. Let *window* be `? Replay(root, w, now)` (§12.4), where *w* is `from R` for `--from R`, else
+   `days N` for `--since Nd` or for the default 30, and *now* is the wall-clock time.
+5. Let *stats* be `Statistics(selected, window)` (§12.5).
+6. Output *stats*, the Window's size, its *kind* and *untouched* (§14), and exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
@@ -1283,12 +1276,10 @@ NOTE: `stats` resolves dependencies as §13.7 does, so it reports the same warni
 `W_EMPTY_EXCLUSION`, on the same files: in text mode on standard error as §14.3 does, in `--json` as
 the `diagnostics` of the file. Warnings never change the exit code.
 
-NOTE: The gate of step 7 compares the ratio as reported, rounded to 4 decimals, so that the table
-and the exit code never disagree. A Window with no commits has every ratio 0.
-
-NOTE: `stats` shows how the lists of today would have behaved. It is advisory: it never changes
-the verdict of `check`, and reading git history is its purpose. The caveat of §12.5 applies: the
-dependencies are those of `HEAD`. A file named `stats` is reached as `docstamp -- stats` (§13.2).
+NOTE: There is deliberately no option that turns the numbers into an exit code; a gate is future
+work. `stats` shows how the lists of today would have behaved and never changes the verdict of
+`check`. The caveat of §12.5 applies: the dependencies are those of `HEAD`. A file named `stats` is
+reached as `docstamp -- stats` (§13.2).
 
 ## 14 Output
 
@@ -1454,19 +1445,16 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   {
     "version": 2,
     "mode": "stats",
-    "exitCode": 1,
-    "window": { "since": "90.days", "kind": "date", "commits": 326, "firingNothing": 91 },
-    "sweepThreshold": 200,
-    "maxFireRatio": 0.2,
-    "exceeding": ["CLAUDE.md"],
+    "exitCode": 0,
+    "window": { "kind": "days", "value": "30d", "commits": 326, "untouched": 91 },
     "files": [
       {
         "file": "CLAUDE.md",
         "patterns": 8,
         "resolvedCount": 53,
-        "commits": 129,
+        "staleCommits": 129,
         "days": 36,
-        "ratio": 0.3957,
+        "staleRate": 0.3957,
         "sweepCommits": 4,
         "sweepShare": 0.031,
         "diagnostics": []
@@ -1476,15 +1464,14 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   }
   ```
 
-  It has no `summary`, `state`, `reasons` or `changes`. `window` is { `since`: the value of
-  `--since` as given, or `90.days`; `kind`: the Window's `[[Kind]]`; `commits`: the number of its
-  Commits; `firingNothing` } of §12.5, and `null` when a step raised. `sweepThreshold` is the
-  Number of `--sweep-threshold`, `maxFireRatio` that of `--max-fire-ratio`, or `null` when not
-  given, and `exceeding` the files whose `ratio` is greater than it, in the order of `files`, `[]`
-  when it is not given. `files` is the FileStats of §12.5 in their order, with `resolvedCount` for
-  `[[ResolvedCount]]`, and `[]` when a step raised; the `diagnostics` of a file are the warnings of its Result; the top-level `diagnostics` hold the raised
-  Diagnostics. `ratio` and `sweepShare` are JSON numbers: the ten-thousandths of §12.5 divided by
-  10000, written as ECMAScript writes a Number (`0.3957`, `0.5`, `1`, `0`).
+  It has no `summary`, `state`, `reasons` or `changes`. `window` is { `kind`: the Window's `[[Kind]]`;
+  `value`: the value of `--since` (`30d` by default) or of `--from`, as given; `commits`: the number
+  of its Commits; `untouched` } of §12.5, and `null` when a step raised. `files` is the FileStats of
+  §12.5 in their order, with `resolvedCount` for `[[ResolvedCount]]`, `staleCommits` for
+  `[[StaleCommits]]`, `staleRate` and `sweepShare`, and `[]` when a step raised. The `diagnostics` of a
+  file are the warnings of its Result; the top-level `diagnostics` hold the raised Diagnostics.
+  `staleRate` and `sweepShare` are JSON numbers: the ten-thousandths of §12.5 divided by 10000,
+  written as ECMAScript writes a Number (`0.3957`, `0.5`, `1`, `0`).
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
   empty `[[File]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
 - When a step raises before Results exist, `summary` is omitted (as it always is for
@@ -1523,25 +1510,25 @@ Diagnostics as in §14.3.
 ### 14.8 Stats, Text Mode
 
 ```
-file       patterns  files  commits  days   ratio   sweep
+file       patterns  files  commits  days   stale   sweep
 CLAUDE.md         8     53      129    36  0.3957  0.0310
 README.md         1      4        9     6  0.0276  0.0000
-window: 326 commits since 90.days (date), 91 fire nothing
-over --max-fire-ratio 0.2: CLAUDE.md
+window: 326 commits in the last 30 days, 91 make no file stale
 ```
 
 A header row, then one row per FileStats in the order of §12.5, when there is at least one. The
-columns are `file`, `patterns`, `files` (`[[ResolvedCount]]`), `commits`, `days`, `ratio` and
-`sweep` (`[[SweepShare]]`), separated by two spaces. The `file` column is the file as in §14.2,
-padded with spaces on the right; every other column is padded on the left; each to the width of its
-longest cell, header included. `ratio` and `sweep` are written with exactly four decimals, from
-the ten-thousandths of §12.5 (`0.0276`, `1.0000`). A row has no trailing space.
+columns are `file`, `patterns`, `files` (`[[ResolvedCount]]`), `commits` (`[[StaleCommits]]`), `days`,
+`stale` (`[[StaleRate]]`) and `sweep` (`[[SweepShare]]`), separated by two spaces. The `file` column
+is the file as in §14.2, padded with spaces on the right; every other column is padded on the left;
+each to the width of its longest cell, header included. `stale` and `sweep` are written with
+exactly four decimals, from the ten-thousandths of §12.5 (`0.0276`, `1.0000`). A row has no
+trailing space.
 
-Then the line `window: <n> commits since <since> (<kind>), <k> fire nothing`, with *since* as in
-§14.2, always written (also with no row). Then, only if some ratio is greater than a given
-`--max-fire-ratio`, the line `over --max-fire-ratio <r>: ` and the files that exceed it, in the
-order of the rows, as in §14.2, separated by a space, with *r* as given. When the command raised
-or a file was `invalid`, nothing is output on standard output. Diagnostics as in §14.3.
+Then the line `window: <n> commits <where>, <k> make no file stale`, always written (also with no
+row), where *n* is the number of Commits, *k* is *untouched*, and *where* is `in the last <N> days`
+for `--since` and `in <rev>..HEAD` for `--from`, with *rev* as given and written as in §14.2. When
+the command raised or a file was `invalid`, nothing is output on standard output. Diagnostics as in
+§14.3.
 
 ## 15 Diagnostics
 
@@ -1566,7 +1553,7 @@ or a file was `invalid`, nothing is output on standard output. Diagnostics as in
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |
 | `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 Lockfile, `docstamp update --all` rewrites it as version 3 (hashes are unchanged); otherwise as `E_LOCK` |
 | `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block |
-| `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; pass `--since` a commit, a date such as `2024-01-01` or a duration such as `90.days` |
+| `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; for `--from`, name a commit |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 | `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
 
@@ -1574,8 +1561,8 @@ or a file was `invalid`, nothing is output on standard output. Diagnostics as in
 
 | Code | Meaning |
 |---|---|
-| 0 | check: every selected file is `ok`; update: the Lockfile was written or already current; list-dependencies, list-dependents: the answer was listed; stats: the statistics were listed and no ratio exceeds `--max-fire-ratio`; help, version |
-| 1 | check: a selected file is `stale`, none is `invalid`, no global error; stats: `--max-fire-ratio` is given and a file's ratio is greater than it |
+| 0 | check: every selected file is `ok`; update: the Lockfile was written or already current; list-dependencies, list-dependents: the answer was listed; stats: the statistics were listed; help, version |
+| 1 | check only: a selected file is `stale`, none is `invalid`, no global error |
 | 2 | an error Diagnostic, an `invalid` file, or a usage error |
 | 70 | an uncaught internal fault of the runtime, reported on standard error as `internal error: ` and the stack; for example a failed write to standard output. No input produces it: every failure caused by the command line, the Root or the file system is a Diagnostic and exit 2 |
 
@@ -1628,7 +1615,8 @@ The following are not breaking:
   and then the snapshot is updated with the change;
 - a new Diagnostic with severity `warning`, which never affects the exit code (§16);
 - a new command, or a new option that no existing command line uses: `stats` (§13.9), its options
-  and the Diagnostic code `E_HISTORY`, which only it raises. A bare argument `stats` used to be a
+  and the Diagnostic code `E_HISTORY`, which only it raises. The command has no option that sets an
+  exit code. A bare argument `stats` used to be a
   file argument of `check`; it is now the command, and a file literally named `stats` is reached
   with `--` (§13.2), as for every other command word;
 - a new member of the JSON output (§14.5: consumers ignore unknown members);
