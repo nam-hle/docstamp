@@ -32,14 +32,14 @@ export function selectResults(
   if (args.length === 0) return { selected: [...results], errors: [] };
   const named = new Set<string>();
   const errors: Diagnostic[] = [];
-  const known = new Set(results.map((result) => result.dependent));
+  const known = new Set(results.map((result) => result.file));
   for (const arg of args) {
     const path = toRepoPath(arg, cwd, root);
     if (path === null || !known.has(path)) {
-      errors.push(diag('E_UNKNOWN_DEPENDENT', { subject: arg }));
+      errors.push(diag('E_UNKNOWN_FILE', { subject: arg }));
     } else {
       named.add(path);
     }
   }
-  return { selected: results.filter((result) => named.has(result.dependent)), errors };
+  return { selected: results.filter((result) => named.has(result.file)), errors };
 }

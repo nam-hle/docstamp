@@ -12,7 +12,7 @@ Requires Node.js 24 or newer.
 
 ## Configure
 
-Declare the dependencies of each Dependent in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). Start with `docstamp.yaml`:
+Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). Start with `docstamp.yaml`:
 
 ```yaml
 version: 2
@@ -56,13 +56,13 @@ Pattern syntax is in [SPEC §8](docs/SPEC.md#8-patterns).
 
 The three steps are defined in [SPEC §1](docs/SPEC.md#1-scope):
 
-1. CI runs `pnpm exec docstamp`. It exits 1 when a Dependent's dependencies changed since its last review.
-2. A person or an agent reviews each stale Dependent against its dependencies and edits it if needed.
+1. CI runs `pnpm exec docstamp`. It exits 1 when a file's dependencies changed since its last review.
+2. A person or an agent reviews each stale file against its dependencies and edits it if needed.
 3. Run `pnpm exec docstamp update <file>` to record the review in `docstamp-lock.yaml`, and commit the lock.
 
 The first run has no lock; `pnpm exec docstamp update --all` records the initial state once the docs have been reviewed.
 
-Upgrading from a version 1 lock (`docsync.lock`): delete it, review every Dependent, then run `pnpm exec docstamp update --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
+Upgrading from a version 1 lock (`docsync.lock`): delete it, review every file, then run `pnpm exec docstamp update --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
 
 Upgrading from a version 1 configuration (`dependents` and `covers`): rename `dependents` to `files` and `covers` to `dependencies`, and set `version: 2`. Then run `pnpm exec docstamp update --all` to rewrite the version 2 lock as version 3; the hashes do not change, so first review the files with the previous docstamp version or `git diff`, because the version 2 lock stops `docstamp check` (E_LOCK_VERSION) and it reports nothing stale.
 
@@ -79,10 +79,10 @@ git diff <base> -- <files>
 
 ## Commands
 
-- `docstamp [check]`: the verdict; exit 0 when every Dependent is ok, 1 when one is stale, 2 on an error. A bare `docstamp` is `check`.
+- `docstamp [check]`: the verdict; exit 0 when every file is ok, 1 when one is stale, 2 on an error. A bare `docstamp` is `check`.
 - `docstamp update (--all | <file>...)`: record that you reviewed the named files.
-- `docstamp list-dependencies [<file>...]`: each Dependent with its dependency patterns and the files they select. It does not read the lock.
-- `docstamp list-dependents <file>...`: the reverse query. For each named file (any file in the repository), the Dependents that depend on it and the patterns that select it. Direct only, no lock.
+- `docstamp list-dependencies [<file>...]`: each file with its dependency patterns and the files they select. It does not read the lock.
+- `docstamp list-dependents <file>...`: the reverse query. For each named file (any file in the repository), the dependents (files that depend on it) and the patterns that select it. Direct only, no lock.
 - `docstamp help` and `docstamp version`.
 
 Every command except `help` and `version` takes `--json` and `--root <dir>`. The options `--write` and `--files` were replaced by `update` and `list-dependencies`.
@@ -91,7 +91,7 @@ Command line and exit codes: [SPEC §13](docs/SPEC.md#13-command-line) and [SPEC
 
 ## Lock conflicts
 
-Two branches that write the same Dependent conflict on its `hash` line. Resolution is in [SPEC §11.2](docs/SPEC.md#112-canonical-form).
+Two branches that write the same file conflict on its `hash` line. Resolution is in [SPEC §11.2](docs/SPEC.md#112-canonical-form).
 
 ## Specification
 

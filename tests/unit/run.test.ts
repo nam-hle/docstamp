@@ -71,10 +71,10 @@ describe('§13.5 check', () => {
     expect(files.err).toContain('docstamp list-dependencies');
     expect(files.out).toBe('');
   });
-  it('unknown dependent is exit 2 on stderr', () => {
+  it('unknown file is exit 2 on stderr', () => {
     const r = exec(tree(), 'nope.md');
     expect(r.code).toBe(2);
-    expect(r.err).toContain('error: E_UNKNOWN_DEPENDENT: nope.md: ');
+    expect(r.err).toContain('error: E_UNKNOWN_FILE: nope.md: ');
     expect(r.out).toBe('0 ok, 0 stale, 0 invalid\n');
   });
   it('missing config raises: text summary still printed', () => {
@@ -87,9 +87,9 @@ describe('§13.5 check', () => {
     const r = exec(tree(), '--json', 'nope.md');
     expect(r.code).toBe(2);
     expect(r.err).toBe('');
-    expect(JSON.parse(r.out).diagnostics[0].code).toBe('E_UNKNOWN_DEPENDENT');
+    expect(JSON.parse(r.out).diagnostics[0].code).toBe('E_UNKNOWN_FILE');
   });
-  it('a symlinked Dependent is invalid', () => {
+  it('a symlinked file is invalid', () => {
     const root = makeTree({
       'docstamp.yaml': CONFIG,
       'real.md': 'x',
@@ -99,7 +99,7 @@ describe('§13.5 check', () => {
     const r = exec(root);
     expect(r.code).toBe(2);
     expect(r.out).toContain('INVALID  doc.md\n');
-    expect(r.err).toContain('E_DEPENDENT_MISSING');
+    expect(r.err).toContain('E_FILE_MISSING');
   });
 });
 
@@ -173,7 +173,7 @@ describe('§13.6 update', () => {
 
 describe('§13.7 list-dependencies', () => {
   const list = 'list-dependencies';
-  it('lists patterns and dependencies per Dependent, exit 0, without a lock', () => {
+  it('lists patterns and dependencies per file, exit 0, without a lock', () => {
     const r = exec(tree(), list);
     expect(r).toEqual({
       code: 0,
@@ -181,7 +181,7 @@ describe('§13.7 list-dependencies', () => {
       err: '',
     });
   });
-  it('lists only the named Dependents', () => {
+  it('lists only the named files', () => {
     const root = makeTree({
       'docstamp.yaml': `${CONFIG}  b.md:\n    dependencies: [src/**]\n`,
       'doc.md': 'x',
@@ -201,17 +201,17 @@ describe('§13.7 list-dependencies', () => {
     expect(r.code).toBe(0);
     expect(r.err).toBe('');
   });
-  it('an invalid Dependent prints its header and diagnostics, exit 2', () => {
+  it('an invalid file prints its header and diagnostics, exit 2', () => {
     const root = makeTree({ 'docstamp.yaml': CONFIG, 'src/a.ts': 'a' });
     const r = exec(root, list);
     expect(r.code).toBe(2);
     expect(r.out).toBe('doc.md\n');
-    expect(r.err).toContain('E_DEPENDENT_MISSING: doc.md');
+    expect(r.err).toContain('E_FILE_MISSING: doc.md');
   });
-  it('an unknown Dependent is exit 2', () => {
+  it('an unknown file is exit 2', () => {
     const r = exec(tree(), list, 'nope.md');
     expect(r.code).toBe(2);
-    expect(r.err).toContain('E_UNKNOWN_DEPENDENT: nope.md');
+    expect(r.err).toContain('E_UNKNOWN_FILE: nope.md');
   });
   it('--json has the list-dependencies shape and nothing on stderr', () => {
     const r = exec(tree(), list, '--json');

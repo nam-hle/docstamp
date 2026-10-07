@@ -63,7 +63,7 @@ describe('§13.8 list-dependents', () => {
     expect(exec(root, cmd, 'nope/missing.ts').code).toBe(0);
   });
 
-  it('a stamped file may be the argument, but never its own dependent', () => {
+  it('a stamped file may be the argument, but never its own file', () => {
     const root = tree({ 'a.md': ['b.md', 'a.md'], 'b.md': ['src/**'] });
     expect(exec(root, cmd, 'b.md').out).toBe('b.md\n  a.md   via b.md\n');
     expect(exec(root, cmd, 'a.md').out).toBe('a.md\n  (no dependents)\n');

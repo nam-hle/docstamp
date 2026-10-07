@@ -1,10 +1,9 @@
 # docstamp
 
-A deterministic snapshot gate for hidden links between files. Each Dependent (usually a doc, but
+A deterministic snapshot gate for hidden links between files. Each file (usually a doc, but
 any file) declares the files it depends on (its dependencies); `docstamp` fails when they changed
-since the Dependent was last reviewed, and `docstamp update <file>` records the review. Terms are
-defined in
-[SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
+since the file was last reviewed, and `docstamp update <file>` records the review. Terms are
+defined in [SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
 
 Why it is built this way is imported below and binds every change. Read both before anything
 else, and check the work against them.

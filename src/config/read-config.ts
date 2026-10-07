@@ -83,21 +83,21 @@ function collectDeclaration(
   }
   const dependencies = isMap(value) ? value.get('dependencies') : undefined;
   if (!isMap(value) || !isStrings(dependencies) || dependencies.length === 0) {
-    fatal.push(diag('E_CONFIG', { dependent: key }));
+    fatal.push(diag('E_CONFIG', { file: key }));
     return;
   }
   for (const k of value.keys()) {
     if (k !== 'dependencies') {
       const message = k === 'covers' ? 'Rename "covers" to "dependencies".' : undefined;
-      fatal.push(diag('E_UNKNOWN_KEY', { dependent: key, subject: k, ...optional(message) }));
+      fatal.push(diag('E_UNKNOWN_KEY', { file: key, subject: k, ...optional(message) }));
     }
   }
   for (const pattern of dependencies) {
     if (!parsePattern(pattern)) {
-      attached.push(diag('E_PATTERN', { dependent: key, subject: pattern }));
+      attached.push(diag('E_PATTERN', { file: key, subject: pattern }));
     }
   }
-  out.push({ dependent: key, dependencies });
+  out.push({ file: key, dependencies });
 }
 
 // SPEC §9.3
@@ -133,7 +133,7 @@ export function readConfig(root: string): { config: Config; attached: Diagnostic
     }
   }
   if (fatal.length > 0) throw new Raised(fatal);
-  declarations.sort((a, b) => comparePaths(a.dependent, b.dependent));
+  declarations.sort((a, b) => comparePaths(a.file, b.file));
   return {
     config: {
       ignore: isStrings(ignore) ? ignore : [],

@@ -12,9 +12,8 @@ export function dependentsOf(
   if (!universe.has(path)) return [];
   const found: ReverseDependent[] = [];
   for (const declaration of declarations) {
-    if (declaration.dependent === path) continue;
-    if (attached.some((d) => d.dependent === declaration.dependent && d.code === 'E_PATTERN'))
-      continue;
+    if (declaration.file === path) continue;
+    if (attached.some((d) => d.file === declaration.file && d.code === 'E_PATTERN')) continue;
     const patterns = declaration.dependencies.map(
       (source) => parsePattern(source) as ParsedPattern,
     );
@@ -22,7 +21,7 @@ export function dependentsOf(
     const via = declaration.dependencies.filter(
       (_, i) => !patterns[i]!.negated && patternMatches(patterns[i]!, path),
     );
-    found.push({ file: declaration.dependent, via });
+    found.push({ file: declaration.file, via });
   }
   return found;
 }

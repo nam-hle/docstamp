@@ -15,7 +15,7 @@ export function checkText(selected: readonly Result[], rootArg?: string): string
   let out = '';
   for (const r of selected) {
     if (r.state === 'ok') continue;
-    out += `${LABEL[r.state].padEnd(9)}${shown(r.dependent)}`;
+    out += `${LABEL[r.state].padEnd(9)}${shown(r.file)}`;
     out += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
     if (r.state === 'stale') {
       if (r.changes && r.changes.length > 0) {
@@ -25,7 +25,7 @@ export function checkText(selected: readonly Result[], rootArg?: string): string
   }
   const count = (s: Result['state']) => selected.filter((r) => r.state === s).length;
   out += `${count('ok')} ok, ${count('stale')} stale, ${count('invalid')} invalid\n`;
-  const stale = selected.filter((r) => r.state === 'stale').map((r) => shown(r.dependent));
+  const stale = selected.filter((r) => r.state === 'stale').map((r) => shown(r.file));
   if (stale.length > 0) {
     const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
     out +=
@@ -39,7 +39,7 @@ export function checkText(selected: readonly Result[], rootArg?: string): string
 export function listText(selected: readonly Result[]): string {
   let out = '';
   for (const r of selected) {
-    out += `${shown(r.dependent)}\n`;
+    out += `${shown(r.file)}\n`;
     if (r.state === 'invalid') continue;
     for (const c of r.dependencies) out += `  depends   ${shown(c)}\n`;
     for (const f of r.resolved) out += `  resolved  ${shown(f)}\n`;
@@ -64,7 +64,7 @@ export function diagnosticsText(ds: readonly Diagnostic[]): string {
   return sortDiagnostics(ds)
     .map((d) => {
       const parts: string[] = [d.severity, d.code];
-      if (d.dependent !== '') parts.push(shown(d.dependent));
+      if (d.file !== '') parts.push(shown(d.file));
       if (d.subject !== '') parts.push(shown(d.subject));
       return `${parts.join(': ')}: ${d.message}\n`;
     })

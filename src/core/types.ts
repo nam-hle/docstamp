@@ -7,7 +7,7 @@ export type Code =
   | 'E_CONFIG_VERSION'
   | 'E_UNKNOWN_KEY'
   | 'E_PATTERN'
-  | 'E_DEPENDENT_MISSING'
+  | 'E_FILE_MISSING'
   | 'E_EMPTY_PATTERN'
   | 'E_EMPTY_DEPENDENCIES'
   | 'E_UNREADABLE'
@@ -15,19 +15,19 @@ export type Code =
   | 'E_PATH_COLLISION'
   | 'E_LOCK'
   | 'E_LOCK_VERSION'
-  | 'E_UNKNOWN_DEPENDENT'
+  | 'E_UNKNOWN_FILE'
   | 'W_ORPHAN';
 
 export interface Diagnostic {
   readonly code: Code;
   readonly severity: 'error' | 'warning';
-  readonly dependent: string;
+  readonly file: string;
   readonly subject: string;
   readonly message: string;
 }
 
 export interface Declaration {
-  readonly dependent: string;
+  readonly file: string;
   readonly dependencies: readonly string[];
 }
 
@@ -50,7 +50,7 @@ export interface Change {
 }
 
 export interface Result {
-  readonly dependent: string;
+  readonly file: string;
   readonly dependencies: readonly string[];
   readonly state: State;
   readonly reasons: readonly Reason[];

@@ -6,7 +6,7 @@ import { patternMatches, select } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 
 export interface EngineFs {
-  isDependentFile(path: string): boolean;
+  isStampedFile(path: string): boolean;
   fileHash(path: string): string;
 }
 
@@ -15,23 +15,18 @@ export function resolveDependencies(b: Declaration, universe: readonly string[])
   const parsed = b.dependencies.map((source) => parsePattern(source));
   const invalid = b.dependencies.filter((_, i) => parsed[i] === null);
   if (invalid.length > 0) {
-    throw new Raised(
-      invalid.map((subject) => diag('E_PATTERN', { dependent: b.dependent, subject })),
-    );
+    throw new Raised(invalid.map((subject) => diag('E_PATTERN', { file: b.file, subject })));
   }
   const patterns = parsed as ParsedPattern[];
-  const candidates = universe.filter((path) => path !== b.dependent);
+  const candidates = universe.filter((path) => path !== b.file);
   const problems: Diagnostic[] = [];
   patterns.forEach((pattern, i) => {
     if (!candidates.some((path) => patternMatches(pattern, path))) {
-      problems.push(
-        diag('E_EMPTY_PATTERN', { dependent: b.dependent, subject: b.dependencies[i] }),
-      );
+      problems.push(diag('E_EMPTY_PATTERN', { file: b.file, subject: b.dependencies[i] }));
     }
   });
   const resolved = select(patterns, candidates);
-  if (resolved.length === 0)
-    problems.push(diag('E_EMPTY_DEPENDENCIES', { dependent: b.dependent }));
+  if (resolved.length === 0) problems.push(diag('E_EMPTY_DEPENDENCIES', { file: b.file }));
   if (problems.length > 0) throw new Raised(problems);
   return resolved;
 }
@@ -60,7 +55,7 @@ export function evaluate(
   attached: readonly Diagnostic[],
   fs: EngineFs,
 ): Result {
-  const base = { dependent: b.dependent, dependencies: b.dependencies };
+  const base = { file: b.file, dependencies: b.dependencies };
   const problems: Diagnostic[] = [...attached];
   const collect = (fn: () => void) => {
     try {
@@ -70,19 +65,19 @@ export function evaluate(
       problems.push(...e.diagnostics);
     }
   };
-  if (!fs.isDependentFile(b.dependent)) {
-    problems.push(diag('E_DEPENDENT_MISSING', { dependent: b.dependent }));
+  if (!fs.isStampedFile(b.file)) {
+    problems.push(diag('E_FILE_MISSING', { file: b.file }));
   }
   let resolved: string[] = [];
   if (attached.length === 0) collect(() => (resolved = resolveDependencies(b, universe)));
   let current = '';
   if (problems.length === 0) collect(() => (current = dependencyHash(resolved, fs)));
   if (problems.length > 0) {
-    const diagnostics = sortDiagnostics(problems.map((d) => ({ ...d, dependent: b.dependent })));
+    const diagnostics = sortDiagnostics(problems.map((d) => ({ ...d, file: b.file })));
     return { ...base, state: 'invalid', reasons: [], resolved: [], current: '', diagnostics };
   }
   const reasons: Reason[] = [];
-  const entry = lock.entries.get(b.dependent);
+  const entry = lock.entries.get(b.file);
   if (entry === undefined) reasons.push('unrecorded');
   else if (entry !== current) reasons.push('content-changed');
   const state = reasons.length > 0 ? 'stale' : 'ok';
@@ -91,8 +86,8 @@ export function evaluate(
 
 // SPEC §12.2
 export function orphans(declarations: readonly Declaration[], lock: Lock): Diagnostic[] {
-  const bound = new Set(declarations.map((b) => b.dependent));
+  const bound = new Set(declarations.map((b) => b.file));
   return sortPaths([...lock.entries.keys()])
-    .filter((dependent) => !bound.has(dependent))
-    .map((dependent) => diag('W_ORPHAN', { subject: dependent }));
+    .filter((file) => !bound.has(file))
+    .map((file) => diag('W_ORPHAN', { subject: file }));
 }

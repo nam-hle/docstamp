@@ -25,7 +25,7 @@ export interface Io {
 declare const VERSION: string | undefined;
 
 // SPEC §9.4: exact-name match in the parent's listing, and a file, not a link
-function isDependentFile(root: string, path: string): boolean {
+function isStampedFile(root: string, path: string): boolean {
   const dir = dirname(join(root, path));
   try {
     const name = readdirSync(dir).find((n) => n.normalize('NFC') === basename(path));
@@ -64,7 +64,7 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
   const universe = computeUniverse(root, config);
   const lock = readLockFor();
   const fs: EngineFs = {
-    isDependentFile: (p) => isDependentFile(root, p),
+    isStampedFile: (p) => isStampedFile(root, p),
     fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
   };
   const results = config.declarations.map((b) =>
@@ -72,7 +72,7 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
       b,
       universe.paths,
       lock,
-      attached.filter((d) => d.dependent === b.dependent),
+      attached.filter((d) => d.file === b.file),
       fs,
     ),
   );
@@ -100,7 +100,7 @@ function listAll(root: string): Result[] {
 
 // SPEC §12.3
 function withChanges(root: string, result: Result, lock: Lock): Result {
-  const entry = lock.entries.get(result.dependent);
+  const entry = lock.entries.get(result.file);
   if (result.state !== 'stale' || !result.reasons.includes('content-changed') || !entry) {
     return result;
   }
@@ -275,12 +275,12 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       return emit(io, { ...empty, selected, global, text });
     }
     const entries = new Map(evaluated.lock.entries);
-    for (const t of selected) entries.set(t.dependent, t.current);
-    const bound = new Set(evaluated.results.map((r) => r.dependent));
+    for (const t of selected) entries.set(t.file, t.current);
+    const bound = new Set(evaluated.results.map((r) => r.file));
     const removed = sortPaths([...entries.keys()].filter((d) => !bound.has(d)));
     for (const d of removed) entries.delete(d);
     writeLock(root, { entries });
-    const written = selected.map((r) => r.dependent);
+    const written = selected.map((r) => r.file);
     const text = updateText(written, removed);
     return emit(io, {
       ...empty,

@@ -157,7 +157,7 @@ describe('§12.3 ChangedSince', () => {
     expect(JSON.parse(docstamp(root, '--json').out).files[0].changes).toBeNull();
   });
 
-  it('ignores a sibling Dependent that removed the same Hash later', () => {
+  it('ignores a sibling file that removed the same Hash later', () => {
     const root = makeTree({
       ...FILES,
       'docstamp.yaml': `${CONFIG}  B.md:\n    dependencies: [src/**]\n`,

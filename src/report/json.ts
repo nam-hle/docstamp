@@ -37,7 +37,7 @@ const diagJson = (d: Diagnostic): JsonObject =>
   obj([
     ['code', d.code],
     ['severity', d.severity],
-    ['file', d.dependent === '' ? null : d.dependent],
+    ['file', d.file === '' ? null : d.file],
     ['subject', d.subject === '' ? null : d.subject],
     ['message', d.message],
   ]);
@@ -47,7 +47,7 @@ export function jsonText(doc: JsonDoc): string {
   const count = (s: Result['state']) => doc.selected.filter((r) => r.state === s).length;
   const dependents = doc.selected.map((r) => {
     const members: Array<[string, Json]> = [
-      ['file', r.dependent],
+      ['file', r.file],
       ['state', r.state],
       ['reasons', [...r.reasons]],
       ['dependencies', [...r.dependencies]],
@@ -64,7 +64,7 @@ export function jsonText(doc: JsonDoc): string {
       ],
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ];
-    if (doc.mode === 'update') members.push(['written', doc.written?.has(r.dependent) ?? false]);
+    if (doc.mode === 'update') members.push(['written', doc.written?.has(r.file) ?? false]);
     return obj(members);
   });
   const top: Array<[string, Json]> = [
@@ -96,7 +96,7 @@ export interface ListJsonDoc {
 export function listJsonText(doc: ListJsonDoc): string {
   const dependents = doc.selected.map((r) =>
     obj([
-      ['file', r.dependent],
+      ['file', r.file],
       ['dependencies', [...r.dependencies]],
       ['resolvedFiles', [...r.resolved]],
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],

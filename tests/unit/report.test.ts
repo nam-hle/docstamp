@@ -4,8 +4,8 @@ import { jsonText, listJsonText } from '../../src/report/json.ts';
 import { diag } from '../../src/core/diagnostics.ts';
 import type { Result } from '../../src/core/types.ts';
 
-const res = (dependent: string, state: Result['state'], extra: Partial<Result> = {}): Result => ({
-  dependent,
+const res = (file: string, state: Result['state'], extra: Partial<Result> = {}): Result => ({
+  file,
   state,
   dependencies: ['src/**'],
   reasons: state === 'stale' ? ['content-changed'] : [],
@@ -58,7 +58,7 @@ describe('§14.3 check text', () => {
 describe('§14.3 diagnostics text', () => {
   it('formats with optional parts', () => {
     expect(
-      diagnosticsText([diag('E_PATTERN', { dependent: 'a.md', subject: '/x', message: 'm.' })]),
+      diagnosticsText([diag('E_PATTERN', { file: 'a.md', subject: '/x', message: 'm.' })]),
     ).toBe('error: E_PATTERN: a.md: /x: m.\n');
   });
   it('omits empty parts', () => {
@@ -169,7 +169,7 @@ describe('§14.5 JSON', () => {
     expect(doc.summary).toEqual({ ok: 0, stale: 0, invalid: 0 });
     expect(doc.files).toEqual([]);
   });
-  it('null for empty dependent/subject', () => {
+  it('null for empty file/subject', () => {
     const doc = JSON.parse(
       jsonText({ mode: 'check', exitCode: 2, selected: [], diagnostics: [diag('E_ROOT')] }),
     );

@@ -33,7 +33,7 @@ Docs are the main case, not the only one. The same problem appears wherever one 
 depends on another and nothing links them: a test fixture and the schema it mirrors, a
 translation and its source text, a hand-written type and the API it describes, a runbook and the
 deploy script. docstamp treats any file in the repository (the same scope git sees) as a possible
-*Dependent* and any file as something it may depend on. Every link is declared in one place,
+file with dependencies, and any file as a dependency. Every link is declared in one place,
 the configuration file (`docstamp.yaml` or a `docstamp.config.*` script); the files themselves
 carry no markers.
 

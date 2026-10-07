@@ -37,7 +37,7 @@ function rejectLegacyLock(root: string): void {
       subject: LEGACY_LOCK,
       message:
         'The version 1 Lockfile docsync.lock is no longer read; delete docsync.lock, ' +
-        'review every Dependent, then run "docstamp update --all".',
+        'review every file, then run "docstamp update --all".',
     }),
   ]);
 }
@@ -69,12 +69,12 @@ export function parseLock(bytes: Buffer): Lock {
   const files = top.entries.get('files')?.value;
   if (!hasKeys(top, ['files', 'version']) || !isMap(files)) throw fail('E_LOCK');
   const entries = new Map<string, string>();
-  for (const [dependent, node] of files.entries) {
+  for (const [file, node] of files.entries) {
     const hash = node.plainSource ?? node.value;
-    if (!isRepoPath(dependent) || typeof hash !== 'string' || !/^[0-9a-f]{64}$/u.test(hash)) {
+    if (!isRepoPath(file) || typeof hash !== 'string' || !/^[0-9a-f]{64}$/u.test(hash)) {
       throw fail('E_LOCK');
     }
-    entries.set(dependent, hash);
+    entries.set(file, hash);
   }
   return { entries };
 }
@@ -83,8 +83,8 @@ export function parseLock(bytes: Buffer): Lock {
 export function lockText(lock: Lock): string {
   if (lock.entries.size === 0) return 'version: 3\nfiles: {}\n';
   let out = 'version: 3\nfiles:\n';
-  for (const dependent of sortPaths([...lock.entries.keys()])) {
-    out += `  ${quote(dependent)}: ${lock.entries.get(dependent)}\n`;
+  for (const file of sortPaths([...lock.entries.keys()])) {
+    out += `  ${quote(file)}: ${lock.entries.get(file)}\n`;
   }
   return out;
 }

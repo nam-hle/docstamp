@@ -38,8 +38,8 @@ describe('§9.1 Carriers', () => {
     expect(config.ignore).toEqual(['dist']);
     expect(config.useGitignore).toBe(true);
     expect(config.declarations).toEqual([
-      { dependent: 'a.md', dependencies: ['x'] },
-      { dependent: 'b.md', dependencies: ['src/**'] },
+      { file: 'a.md', dependencies: ['x'] },
+      { file: 'b.md', dependencies: ['src/**'] },
     ]);
   });
   it('discovery order is the documented one', () => {
@@ -110,7 +110,7 @@ describe('§9.5 script carriers', () => {
         'docstamp.config.mjs': `export default { version: 2, files: { 'z': { dependencies: ['a'] }, '1': { dependencies: ['a'] } } };`,
       }),
     );
-    expect(config.declarations.map((b) => b.dependent)).toEqual(['1', 'z']);
+    expect(config.declarations.map((b) => b.file)).toEqual(['1', 'z']);
   });
   it.each([
     ['a throwing module', 'throw new Error("boom");'],

@@ -90,7 +90,7 @@ export function parseArgs(argv: readonly string[]): Args {
     if (all && paths.length > 0) fail('--all', 'Pass either files or --all, not both.');
   } else if (all) fail('--all', '--all is only valid with "docstamp update".');
   if (mode === 'list-dependents' && paths.length === 0) {
-    fail('list-dependents', 'Name the files whose Dependents you want to list.');
+    fail('list-dependents', 'Name the files whose dependents you want to list.');
   }
   if (failure) throw failure;
   const json = seen.has('--json');

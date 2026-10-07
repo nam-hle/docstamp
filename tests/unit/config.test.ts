@@ -43,7 +43,7 @@ describe('§9.3 readConfig', () => {
     'version: 2\nfiles:\n  b.md:\n    dependencies: [src/**]\n  a.md:\n    dependencies: ["x"]\n';
   it('reads declarations in path order with defaults', () => {
     const { config, attached } = read(good);
-    expect(config.declarations.map((b) => b.dependent)).toEqual(['a.md', 'b.md']);
+    expect(config.declarations.map((b) => b.file)).toEqual(['a.md', 'b.md']);
     expect(config.useGitignore).toBe(true);
     expect(attached).toEqual([]);
   });
@@ -94,7 +94,7 @@ describe('§9.3 readConfig', () => {
   });
   it('bad pattern is attached, not fatal', () => {
     const { attached } = read('version: 2\nfiles:\n  a.md:\n    dependencies: ["/abs"]\n');
-    expect(attached.map((d) => [d.code, d.dependent, d.subject])).toEqual([
+    expect(attached.map((d) => [d.code, d.file, d.subject])).toEqual([
       ['E_PATTERN', 'a.md', '/abs'],
     ]);
   });

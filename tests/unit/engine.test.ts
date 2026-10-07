@@ -12,7 +12,7 @@ import type { Declaration, Lock } from '../../src/core/types.ts';
 const H = (c: string) => c.repeat(64);
 const files: Record<string, string> = { 'src/a.ts': H('1'), 'src/b.ts': H('2'), 'B.md': H('3') };
 const fs: EngineFs = {
-  isDependentFile: (p) => p in files || p === 'C.md',
+  isStampedFile: (p) => p in files || p === 'C.md',
   fileHash: (p) => {
     const h = files[p];
     if (!h) throw new Raised([diag('E_UNREADABLE', { subject: p })]);
@@ -20,8 +20,8 @@ const fs: EngineFs = {
   },
 };
 const universe = Object.keys(files).sort();
-const declare = (dependent: string, dependencies: string[]): Declaration => ({
-  dependent,
+const declare = (file: string, dependencies: string[]): Declaration => ({
+  file,
   dependencies,
 });
 const lockOf = (e: Record<string, string>): Lock => ({
@@ -30,7 +30,7 @@ const lockOf = (e: Record<string, string>): Lock => ({
 const hashOf = (paths: string[]) => dependencyHashFrom(paths.map((p) => [p, files[p]!]));
 
 describe('§8.5 resolveDependencies', () => {
-  it('excludes the dependent itself', () => {
+  it('excludes the file itself', () => {
     expect(resolveDependencies(declare('src/a.ts', ['src/**']), universe)).toEqual(['src/b.ts']);
   });
   it('every pattern, negated or not, must match', () => {
@@ -78,18 +78,18 @@ describe('§12.1 evaluate', () => {
     const r = evaluate(narrower, universe, lockOf({ 'B.md': current }), [], fs);
     expect(r.reasons).toEqual(['content-changed']);
   });
-  it('missing dependent is invalid but still reports pattern problems', () => {
+  it('missing file is invalid but still reports pattern problems', () => {
     const r = evaluate(declare('gone.md', ['nope']), universe, lockOf({}), [], fs);
     expect(r.state).toBe('invalid');
     expect(r.diagnostics.map((d) => d.code)).toEqual([
-      'E_DEPENDENT_MISSING',
       'E_EMPTY_DEPENDENCIES',
       'E_EMPTY_PATTERN',
+      'E_FILE_MISSING',
     ]);
-    expect(r.diagnostics.every((d) => d.dependent === 'gone.md')).toBe(true);
+    expect(r.diagnostics.every((d) => d.file === 'gone.md')).toBe(true);
   });
   it('attached E_PATTERN skips resolution', () => {
-    const att = [diag('E_PATTERN', { dependent: 'B.md', subject: '/x' })];
+    const att = [diag('E_PATTERN', { file: 'B.md', subject: '/x' })];
     const r = evaluate(declare('B.md', ['/x']), universe, lockOf({}), att, fs);
     expect(r.diagnostics.map((d) => d.code)).toEqual(['E_PATTERN']);
   });

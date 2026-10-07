@@ -45,7 +45,7 @@ describe('§13 workflow', () => {
     expect(docstamp(root).code).toBe(1);
   });
 
-  it('editing the dependent itself does not make it stale', () => {
+  it('editing the file itself does not make it stale', () => {
     const root = repo();
     docstamp(root, 'update', '--all');
     appendFileSync(join(root, 'CLAUDE.md'), 'more\n');
@@ -57,7 +57,7 @@ describe('§13 workflow', () => {
     expect(docstamp(join(root, 'src'), 'update', '../CLAUDE.md').code).toBe(0);
   });
 
-  it('missing dependent is exit 2, others still evaluated', () => {
+  it('missing file is exit 2, others still evaluated', () => {
     const root = makeTree({
       'docstamp.yaml': `${CONFIG}  GONE.md:\n    dependencies: [src/**]\n`,
       'CLAUDE.md': '',
@@ -129,18 +129,18 @@ describe('§13 workflow', () => {
     expect(docstamp(root, 'list-dependents').code).toBe(2);
   });
 
-  it('§13.7 list-dependencies exits 2 for an invalid Dependent', () => {
+  it('§13.7 list-dependencies exits 2 for an invalid file', () => {
     const root = makeTree({ 'docstamp.yaml': CONFIG, 'src/a.ts': 'a\n' });
     const r = docstamp(root, 'list-dependencies');
     expect(r.code).toBe(2);
     expect(r.out).toBe('CLAUDE.md\n');
-    expect(r.err).toContain('E_DEPENDENT_MISSING');
+    expect(r.err).toContain('E_FILE_MISSING');
   });
 
   it('§13.2 explicit check equals bare check; a file named check is reachable', () => {
     const root = repo();
     expect(docstamp(root, 'check')).toEqual(docstamp(root));
-    expect(docstamp(root, 'check', '--', 'check').err).toContain('E_UNKNOWN_DEPENDENT: check');
+    expect(docstamp(root, 'check', '--', 'check').err).toContain('E_UNKNOWN_FILE: check');
   });
 
   it('§13.2 removed options exit 2 naming the replacement', () => {
