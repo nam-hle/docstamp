@@ -47,7 +47,7 @@ function dependencyHash(resolved: readonly string[], fs: EngineFs): string {
   return dependencyHashFrom(entries);
 }
 
-// SPEC §12.1
+// SPEC §12.1 (the recorded Hash of an inline Declaration is in its file, §5.6)
 export function evaluate(
   b: Declaration,
   universe: readonly string[],
@@ -77,16 +77,16 @@ export function evaluate(
     return { ...base, state: 'invalid', reasons: [], resolved: [], current: '', diagnostics };
   }
   const reasons: Reason[] = [];
-  const entry = lock.entries.get(b.file);
-  if (entry === undefined) reasons.push('unrecorded');
+  const entry = b.inline ? b.inline.recorded : lock.entries.get(b.file);
+  if (entry === undefined || entry === null) reasons.push('unrecorded');
   else if (entry !== current) reasons.push('content-changed');
   const state = reasons.length > 0 ? 'stale' : 'ok';
   return { ...base, state, reasons, resolved, current, diagnostics: [] };
 }
 
-// SPEC §12.2
+// SPEC §12.2 step 8: only a configured Declaration binds a LockEntry
 export function orphans(declarations: readonly Declaration[], lock: Lock): Diagnostic[] {
-  const bound = new Set(declarations.map((b) => b.file));
+  const bound = new Set(declarations.filter((b) => !b.inline).map((b) => b.file));
   return sortPaths([...lock.entries.keys()])
     .filter((file) => !bound.has(file))
     .map((file) => diag('W_ORPHAN', { subject: file }));

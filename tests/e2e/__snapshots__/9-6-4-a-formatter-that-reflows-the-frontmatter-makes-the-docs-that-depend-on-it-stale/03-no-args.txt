@@ -1,0 +1,22 @@
+$ docstamp
+exit: 2
+--- stdout ---
+STALE    README.md  (content-changed)
+  modified  docs/GUIDE.md
+INVALID  docs/GUIDE.md
+0 ok, 1 stale, 1 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md
+--- stderr ---
+error: E_BLOCK: docs/GUIDE.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.
+--- setup: docs/GUIDE.md ---
+---
+title: Guide
+docstamp:
+  dependencies:
+    - "src/core"
+  hash: "b324d17d193a5930eb18545d1f21d246b253788ea45b6a89f908becbb4b27cce"
+---
+
+# Guide
+
+The core hashes files and compares the result with what was recorded.

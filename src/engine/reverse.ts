@@ -13,7 +13,7 @@ export function dependentsOf(
   const found: ReverseDependent[] = [];
   for (const declaration of declarations) {
     if (declaration.file === path) continue;
-    if (attached.some((d) => d.file === declaration.file && d.code === 'E_PATTERN')) continue;
+    if (attached.some((d) => d.file === declaration.file)) continue;
     const patterns = declaration.dependencies.map(
       (source) => parsePattern(source) as ParsedPattern,
     );

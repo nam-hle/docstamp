@@ -1,0 +1,7 @@
+$ docstamp list-dependencies docs/GUIDE.md
+exit: 0
+--- stdout ---
+docs/GUIDE.md
+  depends   src/core
+  resolved  src/core/hash.ts
+--- stderr ---

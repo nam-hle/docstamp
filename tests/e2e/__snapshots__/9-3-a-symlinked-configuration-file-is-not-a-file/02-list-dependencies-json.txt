@@ -12,7 +12,7 @@ exit: 2
       "severity": "error",
       "file": null,
       "subject": null,
-      "message": "Create docstamp.yaml with \"version: 2\" and a \"files\" mapping, or docstamp.config.ts exporting the same value."
+      "message": "Create docstamp.yaml with \"version: 2\" and a \"files\" mapping, or docstamp.config.ts exporting the same value, or add a docstamp block to the frontmatter of a Markdown file."
     }
   ]
 }

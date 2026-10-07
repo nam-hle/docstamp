@@ -6,13 +6,19 @@ const FIX: Record<Code, string> = {
   E_ROOT: 'Pass an existing directory to --root.',
   E_CONFIG_MISSING:
     'Create docstamp.yaml with "version: 2" and a "files" mapping, ' +
-    'or docstamp.config.ts exporting the same value.',
+    'or docstamp.config.ts exporting the same value, ' +
+    'or add a docstamp block to the frontmatter of a Markdown file.',
   E_CONFIG_AMBIGUOUS: 'Keep one configuration file.',
   E_CONFIG: 'Fix the configuration file; the key named, if any, is the problem.',
   E_CONFIG_VERSION:
     'Rename "dependents" to "files" and "covers" to "dependencies", set "version: 2".',
   E_UNKNOWN_KEY: 'Remove or correct the key.',
   E_PATTERN: 'Correct the pattern; patterns use "/" and "\\" escapes.',
+  E_BLOCK:
+    'Write the docstamp block as a block mapping with "dependencies" and, optionally, ' +
+    '"hash: <64 hex>" on one line.',
+  E_DUPLICATE_DECLARATION:
+    'Declare the file once: remove its entry under "files" or its docstamp block.',
   E_FILE_MISSING: 'Rename the key under "files" in the configuration file or restore the file.',
   E_EMPTY_PATTERN: 'Correct or remove the pattern; it matches no file.',
   E_EMPTY_DEPENDENCIES: 'Correct the patterns in "dependencies"; together they select no file.',
@@ -24,7 +30,8 @@ const FIX: Record<Code, string> = {
     'run "docstamp update --all" after reviewing every file.',
   E_LOCK_VERSION: 'Run "docstamp update --all" after reviewing every file.',
   // Lockfile version 2 uses a dedicated message (lock.ts).
-  E_UNKNOWN_FILE: 'Name a file listed under "files" in the configuration file.',
+  E_UNKNOWN_FILE:
+    'Name a file listed under "files" in the configuration file, or one with a docstamp block.',
   W_ORPHAN: 'Run "docstamp update" on any file to remove the entry.',
 };
 

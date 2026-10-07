@@ -1,0 +1,40 @@
+$ docstamp
+exit: 2
+--- stdout ---
+STALE    README.md  (unrecorded)
+  depends   src/cli
+  depends   docs/GUIDE.md
+INVALID  bad/anchor.md
+INVALID  bad/bad-pattern.md
+INVALID  bad/duplicate.md
+INVALID  bad/empty-deps.md
+INVALID  bad/empty.md
+INVALID  bad/flow.md
+INVALID  bad/no-deps.md
+INVALID  bad/no-match.md
+INVALID  bad/quoted-hash.md
+INVALID  bad/scalar.md
+INVALID  bad/short-hash.md
+INVALID  bad/string-deps.md
+INVALID  bad/unknown-key.md
+INVALID  bad/wrong-prefix.md
+STALE    docs/GUIDE.md  (unrecorded)
+  depends   src/core
+0 ok, 2 stale, 14 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md docs/GUIDE.md
+--- stderr ---
+error: E_BLOCK: bad/anchor.md: frontmatter: The frontmatter of a file with a docstamp block must be strict YAML with one docstamp key.
+error: E_PATTERN: bad/bad-pattern.md: /src/core: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_BLOCK: bad/duplicate.md: frontmatter: The frontmatter of a file with a docstamp block must be strict YAML with one docstamp key.
+error: E_BLOCK: bad/empty-deps.md: dependencies: The dependencies key must hold a non-empty list of patterns.
+error: E_BLOCK: bad/empty.md: docstamp: The docstamp key must hold a mapping with "dependencies" and "hash".
+error: E_BLOCK: bad/flow.md: docstamp: Write the docstamp block as a block mapping, one key per line.
+error: E_BLOCK: bad/no-deps.md: dependencies: The dependencies key must hold a non-empty list of patterns.
+error: E_EMPTY_DEPENDENCIES: bad/no-match.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: bad/no-match.md: nothing/here: Correct or remove the pattern; it matches no file.
+error: E_BLOCK: bad/quoted-hash.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.
+error: E_BLOCK: bad/scalar.md: docstamp: Write the docstamp block as a block mapping, one key per line.
+error: E_BLOCK: bad/short-hash.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.
+error: E_BLOCK: bad/string-deps.md: dependencies: The dependencies key must hold a non-empty list of patterns.
+error: E_UNKNOWN_KEY: bad/unknown-key.md: covers: Remove or correct the key.
+error: E_BLOCK: bad/wrong-prefix.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.

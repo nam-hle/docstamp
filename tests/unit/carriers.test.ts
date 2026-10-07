@@ -64,8 +64,15 @@ describe('§9.3 discovery', () => {
       ['E_CONFIG_AMBIGUOUS', 'docstamp.yaml, docstamp.config.js'],
     ]);
   });
-  it('none is E_CONFIG_MISSING', () => {
-    expect(failure({ 'other.txt': '' })).toEqual([['E_CONFIG_MISSING', '']]);
+  it('none is the defaults, not present (§9.3 step 2)', () => {
+    const { config, attached, present } = readConfig(makeTree({ 'other.txt': '' }));
+    expect({ present, attached }).toEqual({ present: false, attached: [] });
+    expect(config).toEqual({
+      ignore: [],
+      useGitignore: true,
+      include: ['**/*.md'],
+      declarations: [],
+    });
   });
   it.each(CONFIG_NAMES.slice(1))('symlinked %s is E_CONFIG_MISSING', (name) => {
     expect(failure({ 'real.txt': SOURCES[name], [name]: { link: 'real.txt' } })).toEqual([

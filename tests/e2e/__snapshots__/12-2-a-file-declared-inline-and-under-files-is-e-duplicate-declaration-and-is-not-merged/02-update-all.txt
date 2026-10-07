@@ -1,0 +1,9 @@
+$ docstamp update --all
+exit: 2
+--- stdout ---
+INVALID  README.md
+STALE    docs/GUIDE.md  (unrecorded)
+  depends   src/core
+0 ok, 1 stale, 1 invalid
+--- stderr ---
+error: E_DUPLICATE_DECLARATION: README.md: Declare the file once: remove its entry under "files" or its docstamp block.

@@ -8,8 +8,18 @@ import type { Universe } from '../universe/walk.ts';
 const sha256Hex = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
 
 // SPEC §10.1
-function isBinary(bytes: Buffer): boolean {
+export function isBinary(bytes: Buffer): boolean {
   return bytes.subarray(0, 8192).includes(0);
+}
+
+// SPEC §10.2 step 4: bytes map one to one to latin1 code points, so lines survive the round trip
+function withoutLines(body: Buffer, indexes: readonly number[]): Buffer {
+  const dropped = new Set(indexes);
+  const kept = body
+    .toString('latin1')
+    .split(/(?<=\n)/u)
+    .filter((_, index) => !dropped.has(index));
+  return Buffer.from(kept.join(''), 'latin1');
 }
 
 function crlfToLf(bytes: Buffer): Buffer {
@@ -22,7 +32,7 @@ function crlfToLf(bytes: Buffer): Buffer {
   return out.subarray(0, length);
 }
 
-// SPEC §10.2
+// SPEC §10.2, §9.6.3
 export function normalizedContent(root: string, u: Universe, path: string): Buffer {
   const abs = join(root, u.onDisk.get(path) ?? path);
   try {
@@ -31,7 +41,11 @@ export function normalizedContent(root: string, u: Universe, path: string): Buff
       return Buffer.concat([Buffer.from('link\u0000'), Buffer.from(target, 'utf8')]);
     }
     const bytes = readFileSync(abs);
-    return Buffer.concat([Buffer.from('file\u0000'), isBinary(bytes) ? bytes : crlfToLf(bytes)]);
+    if (isBinary(bytes)) return Buffer.concat([Buffer.from('file\u0000'), bytes]);
+    const body = crlfToLf(bytes);
+    const hashLines = u.marked?.get(path);
+    const kept = hashLines === undefined ? body : withoutLines(body, hashLines);
+    return Buffer.concat([Buffer.from('file\u0000'), kept]);
   } catch {
     throw new Raised([diag('E_UNREADABLE', { subject: path })]);
   }

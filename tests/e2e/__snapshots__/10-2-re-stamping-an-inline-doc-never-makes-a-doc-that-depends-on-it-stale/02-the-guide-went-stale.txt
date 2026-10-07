@@ -1,0 +1,9 @@
+# the guide went stale
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    docs/GUIDE.md  (content-changed)
+  modified  src/core/hash.ts
+1 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md
+--- stderr ---

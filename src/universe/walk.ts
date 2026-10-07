@@ -11,6 +11,8 @@ export interface Universe {
   paths: string[];
   kinds: Map<string, Kind>;
   onDisk: Map<string, string>;
+  // SPEC §9.6.3: inline files and the lines of their hash keys, set once they are read
+  marked?: Map<string, readonly number[]>;
 }
 
 const hasEntry = (dir: string, name: string): boolean => {
@@ -30,27 +32,34 @@ const isDirectory = (dir: string): boolean => {
   }
 };
 
-// SPEC §6
+// SPEC §6: the nearest configuration file, else the nearest .git
 export function determineRoot(cwd: string, rootOption: string | undefined): string {
   if (rootOption !== undefined) {
     const dir = resolve(cwd, rootOption);
     if (!isDirectory(dir)) throw new Raised([diag('E_ROOT')]);
     return dir;
   }
-  let dir = cwd;
-  for (;;) {
-    if (CONFIG_NAMES.some((name) => hasEntry(dir, name))) return dir;
-    const parent = dirname(dir);
-    if (parent === dir) throw new Raised([diag('E_CONFIG_MISSING')]);
-    dir = parent;
-  }
+  const nearest = (found: (dir: string) => boolean): string | null => {
+    for (let dir = cwd; ; dir = dirname(dir)) {
+      if (found(dir)) return dir;
+      if (dirname(dir) === dir) return null;
+    }
+  };
+  const root =
+    nearest((dir) => CONFIG_NAMES.some((name) => hasEntry(dir, name))) ??
+    nearest((dir) => hasEntry(dir, '.git'));
+  if (root === null) throw new Raised([diag('E_CONFIG_MISSING')]);
+  return root;
 }
 
 const joinPath = (prefix: string, name: string) => (prefix === '' ? name : `${prefix}/${name}`);
 const isValidUtf8 = (name: Buffer) => Buffer.from(name.toString('utf8'), 'utf8').equals(name);
 
 // SPEC §7.2, §7.4, §7.5
-export function computeUniverse(root: string, config: Config): Universe {
+export function computeUniverse(
+  root: string,
+  config: Pick<Config, 'ignore' | 'useGitignore'>,
+): Universe {
   const errors: Diagnostic[] = [];
   const found: Array<{ path: string; kind: Kind }> = [];
   const configRules = config.ignore.flatMap((line) => parseIgnoreLines(line, ''));

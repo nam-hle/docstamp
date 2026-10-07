@@ -1,0 +1,51 @@
+$ docstamp --json bad/flow.md bad/unknown-key.md
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "summary": {
+    "ok": 0,
+    "stale": 0,
+    "invalid": 2
+  },
+  "files": [
+    {
+      "file": "bad/flow.md",
+      "state": "invalid",
+      "reasons": [],
+      "dependencies": [],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "E_BLOCK",
+          "severity": "error",
+          "file": "bad/flow.md",
+          "subject": "docstamp",
+          "message": "Write the docstamp block as a block mapping, one key per line."
+        }
+      ]
+    },
+    {
+      "file": "bad/unknown-key.md",
+      "state": "invalid",
+      "reasons": [],
+      "dependencies": [
+        "src/core"
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "E_UNKNOWN_KEY",
+          "severity": "error",
+          "file": "bad/unknown-key.md",
+          "subject": "covers",
+          "message": "Remove or correct the key."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

@@ -7,6 +7,8 @@ export type Code =
   | 'E_CONFIG_VERSION'
   | 'E_UNKNOWN_KEY'
   | 'E_PATTERN'
+  | 'E_BLOCK'
+  | 'E_DUPLICATE_DECLARATION'
   | 'E_FILE_MISSING'
   | 'E_EMPTY_PATTERN'
   | 'E_EMPTY_DEPENDENCIES'
@@ -26,14 +28,18 @@ export interface Diagnostic {
   readonly message: string;
 }
 
+// SPEC §5.1: `inline` is set for an inline Declaration, with its recorded Hash or null
 export interface Declaration {
   readonly file: string;
   readonly dependencies: readonly string[];
+  readonly inline?: { readonly recorded: string | null };
 }
 
+// SPEC §5.2
 export interface Config {
   readonly ignore: readonly string[];
   readonly useGitignore: boolean;
+  readonly include: readonly string[];
   readonly declarations: readonly Declaration[];
 }
 

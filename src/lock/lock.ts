@@ -89,6 +89,8 @@ export function lockText(lock: Lock): string {
   return out;
 }
 
+export const lockExists = (root: string): boolean => existsSync(join(root, LOCK));
+
 // SPEC §11.3
 export function writeLock(root: string, lock: Lock): boolean {
   const path = join(root, LOCK);

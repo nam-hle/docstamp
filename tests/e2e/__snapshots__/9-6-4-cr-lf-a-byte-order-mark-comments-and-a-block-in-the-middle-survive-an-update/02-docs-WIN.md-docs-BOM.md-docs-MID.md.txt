@@ -1,0 +1,5 @@
+$ docstamp docs/WIN.md docs/BOM.md docs/MID.md
+exit: 0
+--- stdout ---
+3 ok, 0 stale, 0 invalid
+--- stderr ---

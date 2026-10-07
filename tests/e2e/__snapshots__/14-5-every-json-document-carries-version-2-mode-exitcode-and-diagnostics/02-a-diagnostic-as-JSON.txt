@@ -13,7 +13,7 @@ exit: 2
       "severity": "error",
       "file": null,
       "subject": "missing.md",
-      "message": "Name a file listed under \"files\" in the configuration file."
+      "message": "Name a file listed under \"files\" in the configuration file, or one with a docstamp block."
     }
   ]
 }

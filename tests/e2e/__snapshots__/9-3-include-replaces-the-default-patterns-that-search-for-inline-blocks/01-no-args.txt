@@ -1,0 +1,15 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    docs/GUIDE.md  (unrecorded)
+  depends   src/core
+STALE    docs/note.txt  (unrecorded)
+  depends   src/core
+0 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md docs/note.txt
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+include:
+  - docs/**
+files: {}

@@ -1,0 +1,27 @@
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  README.md
+STALE    docs/GUIDE.md  (unrecorded)
+  depends   src/core
+0 ok, 1 stale, 1 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md
+--- stderr ---
+error: E_DUPLICATE_DECLARATION: README.md: Declare the file once: remove its entry under "files" or its docstamp block.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "README.md":
+    dependencies:
+      - "src/core"
+--- setup: README.md ---
+---
+title: Project README
+docstamp:
+  dependencies: [src/cli, docs/GUIDE.md]
+---
+
+# Project
+
+Run `tool check` to verify the project. The command line lives in `src/cli`; the guide
+explains the core.

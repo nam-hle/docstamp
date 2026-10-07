@@ -1,0 +1,10 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (content-changed)
+  modified  src/core/hash.ts
+STALE    docs/GUIDE.md  (content-changed)
+  modified  src/core/hash.ts
+1 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md docs/GUIDE.md
+--- stderr ---

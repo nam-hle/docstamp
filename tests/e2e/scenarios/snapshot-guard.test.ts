@@ -12,6 +12,17 @@ const scenarioNames = (): string[] =>
       return [...source.matchAll(/\bscenario\(\s*'((?:[^'\\]|\\.)*)'/gu)].map((m) => m[1]!);
     });
 
+const snapshotFiles = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory() ? snapshotFiles(join(dir, entry.name)) : [join(dir, entry.name)],
+  );
+
+it('no snapshot holds a raw CR: .gitattributes eol=lf would strip it on checkout', () => {
+  const root = join(E2E_DIR, '__snapshots__');
+  const raw = snapshotFiles(root).filter((file) => readFileSync(file, 'utf8').includes('\r'));
+  expect(raw, 'the harness must render CR as ␍ (U+240D) and the BOM as <BOM>').toEqual([]);
+});
+
 it('no snapshot folder or file was left behind by a removed or renamed scenario', () => {
   const known = new Set(scenarioNames().map(slugOf));
   expect(known.size).toBeGreaterThan(50);

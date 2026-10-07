@@ -143,6 +143,31 @@ scenario('§6 and §9.3 E_CONFIG_MISSING and E_CONFIG_AMBIGUOUS', { git: false }
   await run(repo, 'the configuration name is a directory', [], 2, ['E_CONFIG_MISSING'], []);
 });
 
+scenario(
+  '§9.6.2 and §12.2 E_BLOCK, E_UNKNOWN_KEY and E_DUPLICATE_DECLARATION attach to their file',
+  async (repo) => {
+    base(repo);
+    const block = (extra: string) => `---\ndocstamp:\n  dependencies: [src/**]\n${extra}---\n`;
+    repo.write('OK.md', block(''));
+    repo.write('flow.md', '---\ndocstamp: {dependencies: [src/**]}\n---\n');
+    repo.write('unknown.md', block('  nope: 1\n'));
+    repo.write('twice.md', block(''));
+    repo.write('docstamp.yaml', config({ 'twice.md': ['src/**'] }));
+    const result = await run(
+      repo,
+      'malformed and duplicate blocks',
+      [],
+      2,
+      ['E_BLOCK', 'E_UNKNOWN_KEY', 'E_DUPLICATE_DECLARATION'],
+      ['docstamp.yaml', 'flow.md'],
+    );
+    expect(result.stderr).toContain('E_BLOCK: flow.md: docstamp: ');
+    expect(result.stderr).toContain('E_UNKNOWN_KEY: unknown.md: nope: ');
+    expect(result.stderr).toContain('E_DUPLICATE_DECLARATION: twice.md: ');
+    expect(result.stdout).toContain('1 stale, 3 invalid');
+  },
+);
+
 scenario('§9.3 invalid patterns make only their file invalid', async (repo) => {
   base(repo);
   const bad: Record<string, string> = {

@@ -9,7 +9,8 @@ import { loadScript } from './script.ts';
 import { CONFIG_NAMES, isMap, isStrings, type Value } from './value.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from './yaml-profile.ts';
 
-const TOP_KEYS = ['version', 'gitignore', 'ignore', 'files'];
+const TOP_KEYS = ['version', 'gitignore', 'ignore', 'include', 'files'];
+const DEFAULT_INCLUDE: readonly string[] = ['**/*.md'];
 
 const optional = (message: string | undefined) => (message === undefined ? {} : { message });
 
@@ -57,15 +58,14 @@ function readYaml(path: string): Value {
   return value;
 }
 
-// SPEC §9.3 steps 2 and 3
-function readValue(root: string): Value {
+// SPEC §9.3 steps 2 and 3; undefined when there is no configuration file
+function readValue(root: string): Value | undefined {
   const names = CONFIG_NAMES.filter((name) => hasEntry(join(root, name)));
   if (names.length > 1)
     throw new Raised([diag('E_CONFIG_AMBIGUOUS', { subject: names.join(', ') })]);
   const [name] = names;
-  if (name === undefined || !isFile(join(root, name))) {
-    throw new Raised([diag('E_CONFIG_MISSING')]);
-  }
+  if (name === undefined) return undefined;
+  if (!isFile(join(root, name))) throw new Raised([diag('E_CONFIG_MISSING')]);
   const path = join(root, name);
   return name === 'docstamp.yaml' ? readYaml(path) : loadScript(path);
 }
@@ -101,8 +101,16 @@ function collectDeclaration(
 }
 
 // SPEC §9.3
-export function readConfig(root: string): { config: Config; attached: Diagnostic[] } {
+export function readConfig(root: string): {
+  config: Config;
+  attached: Diagnostic[];
+  present: boolean;
+} {
   const top = readValue(root);
+  if (top === undefined) {
+    const config = { ignore: [], useGitignore: true, include: DEFAULT_INCLUDE, declarations: [] };
+    return { config, attached: [], present: false };
+  }
   if (!isMap(top)) throw new Raised([diag('E_CONFIG')]);
   if (top.get('version') !== 2) throw new Raised([diag('E_CONFIG_VERSION')]);
 
@@ -122,6 +130,14 @@ export function readConfig(root: string): { config: Config; attached: Diagnostic
   if (ignore !== undefined && !isStrings(ignore)) {
     fatal.push(diag('E_CONFIG', { subject: 'ignore' }));
   }
+  const include = top.get('include');
+  if (include !== undefined && (!isStrings(include) || include.length === 0)) {
+    fatal.push(diag('E_CONFIG', { subject: 'include' }));
+  } else if (isStrings(include)) {
+    for (const pattern of include) {
+      if (!parsePattern(pattern)) fatal.push(diag('E_PATTERN', { subject: pattern }));
+    }
+  }
 
   const declarations: Declaration[] = [];
   const files = top.get('files');
@@ -138,8 +154,10 @@ export function readConfig(root: string): { config: Config; attached: Diagnostic
     config: {
       ignore: isStrings(ignore) ? ignore : [],
       useGitignore: gitignore !== false,
+      include: isStrings(include) ? include : DEFAULT_INCLUDE,
       declarations,
     },
     attached,
+    present: true,
   };
 }

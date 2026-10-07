@@ -262,7 +262,7 @@ export class Repo {
     session.counter += 1;
     const file = `${String(session.counter).padStart(2, '0')}-${name}.txt`;
     session.produced.add(file);
-    const normalized = this.normalize(text);
+    const normalized = this.normalize(text).replaceAll('\r', '␍').replaceAll('﻿', '<BOM>');
     await session
       .expect(normalized)
       .toMatchFileSnapshot(join(E2E_DIR, '__snapshots__', session.slug, file));

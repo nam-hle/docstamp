@@ -1,0 +1,9 @@
+$ docstamp GUIDE.md
+cwd: docs
+exit: 1
+--- stdout ---
+STALE    docs/GUIDE.md  (unrecorded)
+  depends   src/core
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md
+--- stderr ---

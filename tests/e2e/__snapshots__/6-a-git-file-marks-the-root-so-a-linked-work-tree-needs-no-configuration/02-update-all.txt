@@ -1,0 +1,7 @@
+$ docstamp update --all
+cwd: src/cli
+exit: 0
+--- stdout ---
+written  README.md
+written  docs/GUIDE.md
+--- stderr ---

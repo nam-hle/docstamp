@@ -1,19 +1,20 @@
 import { lstatSync, readdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { readConfig } from '../config/read-config.ts';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
-import type { Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
+import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
 import { dependentsOf } from '../engine/reverse.ts';
 import { fileHash } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
-import { readLock, writeLock } from '../lock/lock.ts';
+import { stampFile } from '../inline/read-inline.ts';
+import { lockExists, readLock, writeLock } from '../lock/lock.ts';
 import { jsonText, listJsonText, reverseJsonText } from '../report/json.ts';
 import { checkText, diagnosticsText, listText, reverseText, updateText } from '../report/text.ts';
-import { computeUniverse, determineRoot } from '../universe/walk.ts';
+import { determineRoot, type Universe } from '../universe/walk.ts';
 import { HELP, parseArgs } from './args.ts';
 import { selectResults, toRepoPath } from './paths.ts';
+import { loadWorkspace } from './workspace.ts';
 
 export interface Io {
   stdout(s: string): void;
@@ -37,6 +38,8 @@ function isStampedFile(root: string, path: string): boolean {
 
 interface Evaluated {
   results: Result[];
+  declarations: Declaration[];
+  universe: Universe;
   lock: Lock;
   global: Diagnostic[];
 }
@@ -60,14 +63,13 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
 }
 
 function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: boolean) {
-  const { config, attached } = readConfig(root);
-  const universe = computeUniverse(root, config);
+  const { universe, declarations, attached } = loadWorkspace(root);
   const lock = readLockFor();
   const fs: EngineFs = {
     isStampedFile: (p) => isStampedFile(root, p),
     fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
   };
-  const results = config.declarations.map((b) =>
+  const results = declarations.map((b) =>
     evaluate(
       b,
       universe.paths,
@@ -76,7 +78,7 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
       fs,
     ),
   );
-  return { declarations: config.declarations, results, lock };
+  return { declarations, universe, results, lock };
 }
 
 // SPEC §12.2
@@ -89,8 +91,8 @@ function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evalua
       return { entries: new Map() };
     }
   };
-  const { declarations, results, lock } = evaluateDeclarations(root, readLockFor, true);
-  return { results, lock, global: orphans(declarations, lock) };
+  const { declarations, universe, results, lock } = evaluateDeclarations(root, readLockFor, true);
+  return { results, declarations, universe, lock, global: orphans(declarations, lock) };
 }
 
 // SPEC §13.7
@@ -99,12 +101,13 @@ function listAll(root: string): Result[] {
 }
 
 // SPEC §12.3
-function withChanges(root: string, result: Result, lock: Lock): Result {
-  const entry = lock.entries.get(result.file);
+function withChanges(root: string, result: Result, evaluated: Evaluated): Result {
+  const inline = evaluated.declarations.find((b) => b.file === result.file)?.inline;
+  const entry = inline ? inline.recorded : evaluated.lock.entries.get(result.file);
   if (result.state !== 'stale' || !result.reasons.includes('content-changed') || !entry) {
     return result;
   }
-  return { ...result, changes: changedSince(root, result, entry) };
+  return { ...result, changes: changedSince(root, result, entry, inline !== undefined) };
 }
 
 const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'error');
@@ -173,8 +176,8 @@ function reverseEntries(
   cwd: string,
   paths: readonly string[],
 ): { entries: ReverseEntry[]; attached: Diagnostic[] } {
-  const { config, attached } = readConfig(root);
-  const universe = new Set(computeUniverse(root, config).paths);
+  const { universe: walked, declarations, attached } = loadWorkspace(root);
+  const universe = new Set(walked.paths);
   const keyed = new Map<string, string | null>();
   for (const arg of paths) keyed.set(toRepoPath(arg, cwd, root) ?? arg, toRepoPath(arg, cwd, root));
   const outside = sortPaths([...keyed.keys()].filter((key) => keyed.get(key) === null));
@@ -184,7 +187,7 @@ function reverseEntries(
   }
   const entries = sortPaths([...keyed.keys()]).map((key): ReverseEntry => ({
     file: key,
-    dependents: dependentsOf(key, config.declarations, universe, attached),
+    dependents: dependentsOf(key, declarations, universe, attached),
     diagnostics: [],
   }));
   return { entries, attached };
@@ -264,7 +267,7 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     if (mode === 'check') {
       const stale = selected.some((r) => r.state === 'stale');
       const exitCode = refused ? 2 : stale ? 1 : 0;
-      const reported = selected.map((r) => withChanges(root, r, evaluated.lock));
+      const reported = selected.map((r) => withChanges(root, r, evaluated));
       const text = checkText(reported, args.root);
       return emit(io, { ...empty, evaluated: true, exitCode, selected: reported, global, text });
     }
@@ -272,15 +275,25 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       const text = checkText(selected, args.root, false);
       return emit(io, { ...empty, evaluated: true, selected, global, text });
     }
+    const inlineFiles = new Map(
+      evaluated.declarations.filter((b) => b.inline).map((b) => [b.file, b.inline!.recorded]),
+    );
     const entries = new Map(evaluated.lock.entries);
-    for (const t of selected) entries.set(t.file, t.current);
-    const bound = new Set(evaluated.results.map((r) => r.file));
+    for (const t of selected) if (!inlineFiles.has(t.file)) entries.set(t.file, t.current);
+    const bound = new Set(evaluated.declarations.filter((b) => !b.inline).map((b) => b.file));
     const removed = sortPaths([...entries.keys()].filter((d) => !bound.has(d)));
     for (const d of removed) entries.delete(d);
-    writeLock(root, { entries });
+    if (bound.size > 0 || lockExists(root)) writeLock(root, { entries });
     const written = selected
-      .filter((r) => evaluated.lock.entries.get(r.file) !== r.current)
+      .filter((r) =>
+        inlineFiles.has(r.file)
+          ? inlineFiles.get(r.file) !== r.current
+          : evaluated.lock.entries.get(r.file) !== r.current,
+      )
       .map((r) => r.file);
+    for (const file of written.filter((f) => inlineFiles.has(f))) {
+      stampFile(root, evaluated.universe, file, selected.find((r) => r.file === file)!.current);
+    }
     const unchanged = selected.map((r) => r.file).filter((file) => !written.includes(file));
     const text = updateText(written, unchanged, removed);
     const afterWrite = selected.map((r): Result => ({ ...r, state: 'ok', reasons: [] }));

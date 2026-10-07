@@ -1,0 +1,13 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (unrecorded)
+  depends   src/**
+STALE    README.md  (unrecorded)
+  depends   src/cli
+  depends   docs/GUIDE.md
+STALE    docs/GUIDE.md  (unrecorded)
+  depends   src/core
+0 ok, 3 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/GUIDE.md
+--- stderr ---

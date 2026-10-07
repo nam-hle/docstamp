@@ -32,3 +32,21 @@ export const GOLDEN_TREE: TreeSpec = {
 };
 
 export const GOLDEN_IGNORE = ['vendor/'];
+
+const HASH_A = `${'0123456789abcdef'.repeat(4)}`;
+const HASH_B = `${'fedcba9876543210'.repeat(4)}`;
+const block = (dependencies: string, hash: string, eol = '\n') =>
+  `---${eol}title: t${eol}docstamp:${eol}  dependencies: ${dependencies}${eol}${hash}---${eol}body${eol}`;
+
+// SPEC §17.7: inline files; never edit without a new Lockfile version and prefix.
+export const INLINE_GOLDEN_TREE: TreeSpec = {
+  'src/a.ts': 'a\n',
+  'without.md': block('[src]', ''),
+  'with.md': block('[src]', `  hash: ${HASH_A}\n`),
+  'with-other.md': block('[src]', `  hash: ${HASH_B}\n`),
+  'deps.md': block('[src, other]', ''),
+  'crlf.md': block('[src]', `  hash: ${HASH_A}\r\n`, '\r\n'),
+  'bom.md': `﻿${block('[src]', `  hash: ${HASH_A}\n`)}`,
+  'outside.txt': block('[src]', `  hash: ${HASH_A}\n`),
+  'plain.md': '---\ntitle: t\n---\nbody\n',
+};

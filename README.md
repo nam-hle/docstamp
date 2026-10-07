@@ -6,7 +6,7 @@
 
 Documentation (`README.md`, `CLAUDE.md`, `AGENTS.md`, `docs/*.md`, ADRs, runbooks) describes code, and it silently goes stale when that code changes. docstamp is a CI gate for that: you declare which files a doc depends on, and the build fails when any of them changed since a person or an AI agent last reviewed the doc. It is deterministic: content hashes, no LLM, no network, and git is only read, for an advisory list of changed files.
 
-1. Declare what each doc depends on, in `docstamp.yaml`.
+1. Declare what each doc depends on, in `docstamp.yaml` or in the doc's own frontmatter ([Inline declarations](#inline-declarations)).
 2. Someone changes the code.
 3. CI runs `docstamp`. It fails, naming the doc and the changed files.
 4. A person or an agent re-reads the doc, fixes it if needed, and runs `docstamp update <doc>`. CI passes.
@@ -14,7 +14,7 @@ Documentation (`README.md`, `CLAUDE.md`, `AGENTS.md`, `docs/*.md`, ADRs, runbook
 ## Why not just ...
 
 - **Timestamps or `git blame`?** A rebase, squash or merge rewrites them. docstamp compares content hashes, so history never changes a verdict.
-- **A header in each doc?** Declarations live in one central file, so they also work for files that cannot carry a header (JSON, generated files, binaries).
+- **A header in each doc?** Declarations can live in one central file, so they also work for files that cannot carry a header (JSON, generated files, binaries). A Markdown doc may also carry its own declaration in its frontmatter ([Inline declarations](#inline-declarations)).
 - **An LLM judge?** It costs tokens on every run, answers differently from run to run, and its false alarms teach people to ignore it. A hash comparison is free and reproducible. The review itself still needs a reader; docstamp only decides when one is due.
 
 ## Quick start
@@ -106,6 +106,61 @@ $ docstamp
 
 Run `docstamp` in CI; see [GitHub Actions](#github-actions).
 
+## Inline declarations
+
+A Markdown doc can declare its own dependencies in its frontmatter, with no configuration file and no lock. The block is the key `docstamp` in column 0; `dependencies` takes the same patterns as the configuration file, and `hash` is written by `docstamp update`:
+
+```md
+---
+title: README
+docstamp:
+  dependencies: [src/cli, docs/architecture.md]
+  hash: 0126db6f752905a5b5a6c6e2c453b1911365df00c703128665aba9dbd56ed98f
+---
+```
+
+In a repository with a `.git` and no configuration file, add a block without `hash` to each doc and run `docstamp`. The root is the nearest directory with a configuration file, else the nearest with a `.git` (a directory or a file, so linked work trees work). `docs/architecture.md` has a block too, with `src/core` and `!src/core/generated`:
+
+```console
+$ docstamp
+STALE    README.md  (unrecorded)
+  depends   src/cli
+  depends   docs/architecture.md
+STALE    docs/architecture.md  (unrecorded)
+  depends   src/core
+  depends   !src/core/generated
+0 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md docs/architecture.md
+$ docstamp update --all
+written  README.md
+written  docs/architecture.md
+$ docstamp
+2 ok, 0 stale, 0 invalid
+```
+
+`update` rewrites only the `hash:` line, or appends `hash: <64 hex>` as the last key of the block when there is none. Every other byte stays: comments, quoting, the byte order mark and the line endings (CR LF files stay CR LF). No `docstamp-lock.yaml` is created. Commit the docs. Later, a dependency changes (and a file under `src/core/generated`, which is excluded):
+
+```console
+$ docstamp
+STALE    docs/architecture.md  (content-changed)
+  modified  src/core/hash.ts
+1 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
+$ docstamp update docs/architecture.md
+written  docs/architecture.md
+$ docstamp
+2 ok, 0 stale, 0 invalid
+```
+
+Things to know:
+
+- **Which files.** Files of the repository that the config key `include` selects (default `**/*.md`) and whose frontmatter has a `docstamp:` line in column 0. Only those frontmatters are parsed, strictly ([SPEC §9.2](docs/SPEC.md#92-yaml-profile)): other frontmatter can use anchors or any other YAML and is never read. A malformed block (a flow mapping, an unknown key, a bad `hash`) makes only that file `invalid`, with `E_BLOCK` or the code of the problem; the other files still run. Ignored files are not searched.
+- **With a configuration file.** Both kinds of file live side by side: `update --all` covers both, and the lock holds only the files of `files`. A file declared both ways is `E_DUPLICATE_DECLARATION`; nothing is merged. Every command, `--json` included, treats an inline doc like any other.
+- **A doc that depends on another inline doc.** When `docs/architecture.md` is re-stamped, `README.md` (which depends on it) stays `ok`: the `hash:` line of a doc is not part of its content when another doc hashes it. Its prose, its other frontmatter and its `dependencies` list still count, so editing any of them makes `README.md` stale ([SPEC §10.2](docs/SPEC.md#102-normalized-content)).
+- **Moving a doc.** Rename or move it freely: its declaration and hash travel with it. Dependencies that point at its old path need the new path.
+- **Formatters.** A formatter that reflows or re-quotes the frontmatter of a doc changes that doc's content, so every doc that depends on it becomes stale; one that rewrites the `hash:` line (quotes or wraps it) makes the doc `invalid`. Exclude the `docstamp` block from formatters, or run `docstamp update` after formatting.
+- **Changed files.** The list of changed dependencies comes from git history of the doc's own `hash:` line, like the lock's history ([SPEC §12.3](docs/SPEC.md#123-changedsince)); a doc that was renamed since the review prints `depends` lines instead.
+
 ## Working with AI agents
 
 An agent is usually the one that reads the failure and does the review. Put this paragraph in your `CLAUDE.md` or `AGENTS.md`:
@@ -161,7 +216,7 @@ git diff <base> -- <files>
 | Command | What it does |
 |---|---|
 | `docstamp [check]` | The verdict. A bare `docstamp` is `check`. |
-| `docstamp update (--all \| <file>...)` | Record that you reviewed the named files. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line. |
+| `docstamp update (--all \| <file>...)` | Record that you reviewed the named files, in the lock or, for an inline doc, in its own `hash:` line. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line. |
 | `docstamp list-dependencies [<file>...]` | Each file with its dependency patterns and the files they select. It does not read the lock. |
 | `docstamp list-dependents <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only, no lock. |
 | `docstamp help` | Usage. |
@@ -182,7 +237,7 @@ Warnings never affect the exit code. Full table: [SPEC §16](docs/SPEC.md#16-exi
 
 ### Configuration
 
-Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`.
+Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
 
 For editor completion and validation in YAML, point the language server at the schema, which the package ships as `schema.json`:
 
@@ -249,6 +304,7 @@ Your committed lock and your CI are what docstamp protects:
 
 - Within a lock version, the hash of a given input never changes. A change to hash inputs or to which files a pattern selects always comes with a new lock version.
 - A release that does not support your lock version refuses it with `E_LOCK_VERSION` and names the migration. It never recomputes or accepts a hash that now means something else. Today a release supports one lock version.
+- An inline `hash:` is the plain hash the lock would hold and has no version of its own. A future change to the hash rules adds an explicit optional key to the block; an older release refuses the unknown key and never reinterprets the hash.
 - Breaking changes (hashes, selection, file formats, verdicts, exit codes, error codes, `--json`, the Node.js floor) raise the minor version before 1.0 and the major version after.
 - Each breaking change carries a migration note, shown as "BREAKING CHANGES" in the [release notes](https://github.com/nam-hle/docstamp/releases).
 

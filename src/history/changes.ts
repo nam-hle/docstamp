@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { comparePaths } from '../core/order.ts';
 import type { Change, Result } from '../core/types.ts';
+import { recordedHash as inlineHash } from '../inline/frontmatter.ts';
 import { parseLock } from '../lock/lock.ts';
 import { select } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
@@ -79,10 +80,15 @@ const git = (root: string, args: readonly string[]): string =>
     maxBuffer: 256 * 1024 * 1024,
   });
 
-function recordedHash(root: string, rev: string, file: string): string | undefined {
-  let text: string;
+function recordedHash(
+  root: string,
+  rev: string,
+  file: string,
+  inline: boolean,
+): string | undefined {
   try {
-    text = git(root, ['show', `${rev}:./docstamp-lock.yaml`]);
+    if (inline) return inlineHash(git(root, ['show', `${rev}:./${file}`])) ?? undefined;
+    const text = git(root, ['show', `${rev}:./docstamp-lock.yaml`]);
     return parseLock(Buffer.from(text)).entries.get(file);
   } catch {
     return undefined;
@@ -90,12 +96,13 @@ function recordedHash(root: string, rev: string, file: string): string | undefin
 }
 
 // SPEC §12.3 step 1
-function reviewCommit(root: string, file: string, hash: string): string | null {
-  const log = git(root, ['log', '--format=%H', `-S${hash}`, '--', 'docstamp-lock.yaml']);
+function reviewCommit(root: string, file: string, hash: string, inline: boolean): string | null {
+  const carrier = inline ? file : 'docstamp-lock.yaml';
+  const log = git(root, ['log', '--format=%H', `-S${hash}`, '--', carrier]);
   for (const commit of log.split('\n').filter((line) => line !== '')) {
     if (
-      recordedHash(root, commit, file) === hash &&
-      recordedHash(root, `${commit}^`, file) !== hash
+      recordedHash(root, commit, file, inline) === hash &&
+      recordedHash(root, `${commit}^`, file, inline) !== hash
     ) {
       return commit;
     }
@@ -103,15 +110,16 @@ function reviewCommit(root: string, file: string, hash: string): string | null {
   return null;
 }
 
-// SPEC §12.3
+// SPEC §12.3; `entry` is the LockEntry, or the recorded Hash of an inline file
 export function changedSince(
   root: string,
   result: Result,
   entry: string,
+  inline = false,
 ): readonly Change[] | null {
   try {
     if (git(root, ['rev-parse', '--is-shallow-repository']).trim() !== 'false') return null;
-    const id = reviewCommit(root, result.file, entry);
+    const id = reviewCommit(root, result.file, entry, inline);
     if (id === null) return null;
     const diff = parseNameStatus(
       git(root, ['diff', '--name-status', '--no-renames', '-z', '--relative', id, '--']),
