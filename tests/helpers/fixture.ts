@@ -11,7 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-export type TreeSpec = Record<string, string | { link: string }>;
+export type TreeSpec = Record<string, string | Buffer | { link: string }>;
 
 const created: string[] = [];
 
@@ -21,7 +21,7 @@ export function makeTree(spec: TreeSpec): string {
   for (const [rel, value] of Object.entries(spec)) {
     const abs = join(root, rel);
     mkdirSync(dirname(abs), { recursive: true });
-    if (typeof value === 'string') writeFileSync(abs, value);
+    if (typeof value === 'string' || Buffer.isBuffer(value)) writeFileSync(abs, value);
     else symlinkSync(value.link, abs);
   }
   return root;
