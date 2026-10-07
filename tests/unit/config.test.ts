@@ -40,44 +40,62 @@ describe('§9.2 YAML profile', () => {
 
 describe('§9.3 readConfig', () => {
   const good =
-    'version: 1\ndependents:\n  b.md:\n    covers: [src/**]\n  a.md:\n    covers: ["x"]\n';
+    'version: 2\nfiles:\n  b.md:\n    dependencies: [src/**]\n  a.md:\n    dependencies: ["x"]\n';
   it('reads bindings in path order with defaults', () => {
     const { config, attached } = read(good);
     expect(config.bindings.map((b) => b.dependent)).toEqual(['a.md', 'b.md']);
     expect(config.useGitignore).toBe(true);
     expect(attached).toEqual([]);
   });
-  it('version must be plain 1', () => {
-    expect(codes('version: 1.0\ndependents: {}\n')).toEqual(['E_CONFIG_VERSION']);
-    expect(codes('version: "1"\ndependents: {}\n')).toEqual(['E_CONFIG_VERSION']);
-    expect(codes('dependents: {}\n')).toEqual(['E_CONFIG_VERSION']);
+  it('version must be plain 2', () => {
+    expect(codes('version: 2.0\nfiles: {}\n')).toEqual(['E_CONFIG_VERSION']);
+    expect(codes('version: "2"\nfiles: {}\n')).toEqual(['E_CONFIG_VERSION']);
+    expect(codes('files: {}\n')).toEqual(['E_CONFIG_VERSION']);
+  });
+  it('a version 1 file raises E_CONFIG_VERSION naming the migration', () => {
+    const v1 = 'version: 1\ndependents:\n  a.md:\n    covers: [x]\n';
+    expect(codes(v1)).toEqual(['E_CONFIG_VERSION']);
+    try {
+      read(v1);
+    } catch (e) {
+      const message = (e as Raised).diagnostics[0]!.message;
+      expect(message).toContain('Rename "dependents" to "files" and "covers" to "dependencies"');
+      expect(message).toContain('set "version: 2"');
+    }
+  });
+  it('the version 1 keys in a version 2 file are E_UNKNOWN_KEY', () => {
+    expect(codes('version: 2\ndependents:\n  a.md:\n    covers: [x]\n')).toEqual([
+      'E_UNKNOWN_KEY',
+      'E_CONFIG',
+    ]);
+    expect(codes('version: 2\nfiles:\n  a.md:\n    covers: [x]\n')).toEqual(['E_CONFIG']);
   });
   it('collects every structural error', () => {
     expect(
-      codes('version: 1\nfoo: 1\ngitignore: yes-ish\ndependents:\n  a.md: {covers: []}\n'),
+      codes('version: 2\nfoo: 1\ngitignore: yes-ish\nfiles:\n  a.md: {dependencies: []}\n'),
     ).toEqual(['E_UNKNOWN_KEY', 'E_CONFIG', 'E_CONFIG']);
   });
   it('bad pattern is attached, not fatal', () => {
-    const { attached } = read('version: 1\ndependents:\n  a.md:\n    covers: ["/abs"]\n');
+    const { attached } = read('version: 2\nfiles:\n  a.md:\n    dependencies: ["/abs"]\n');
     expect(attached.map((d) => [d.code, d.dependent, d.subject])).toEqual([
       ['E_PATTERN', 'a.md', '/abs'],
     ]);
   });
   it('non-RepoPath key is E_CONFIG', () => {
-    expect(codes('version: 1\ndependents:\n  ../x.md: {covers: [a]}\n')).toEqual(['E_CONFIG']);
+    expect(codes('version: 2\nfiles:\n  ../x.md: {dependencies: [a]}\n')).toEqual(['E_CONFIG']);
   });
-  it.each(['0x1', '+1', '01'])('version %s rejected', (v) => {
-    expect(codes(`version: ${v}\ndependents: {}\n`)).toEqual(['E_CONFIG_VERSION']);
+  it.each(['0x2', '+2', '02'])('version %s rejected', (v) => {
+    expect(codes(`version: ${v}\nfiles: {}\n`)).toEqual(['E_CONFIG_VERSION']);
   });
   it('version with trailing comment accepted', () => {
-    expect(codes('version: 1 # comment\ndependents: {}\n')).toEqual([]);
+    expect(codes('version: 2 # comment\nfiles: {}\n')).toEqual([]);
   });
   it('empty file is E_CONFIG', () => {
     expect(codes('')).toEqual(['E_CONFIG']);
   });
   it('symlinked docstamp.yaml is E_CONFIG_MISSING', () => {
     const root = makeTree({
-      'real.yaml': 'version: 1\ndependents: {}\n',
+      'real.yaml': 'version: 2\nfiles: {}\n',
       'docstamp.yaml': { link: 'real.yaml' },
     });
     expect(() => readConfig(root)).toThrow(

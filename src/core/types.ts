@@ -28,7 +28,7 @@ export interface Diagnostic {
 
 export interface Binding {
   readonly dependent: string;
-  readonly covers: readonly string[];
+  readonly dependencies: readonly string[];
 }
 
 export interface Config {
@@ -51,10 +51,10 @@ export interface Change {
 
 export interface Result {
   readonly dependent: string;
-  readonly covers: readonly string[];
+  readonly dependencies: readonly string[];
   readonly state: State;
   readonly reasons: readonly Reason[];
-  readonly covered: readonly string[];
+  readonly resolved: readonly string[];
   readonly current: string;
   readonly diagnostics: readonly Diagnostic[];
   readonly changes?: readonly Change[] | null;

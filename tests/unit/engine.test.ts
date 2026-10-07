@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { evaluate, orphans, resolveCovers, type EngineFs } from '../../src/engine/evaluate.ts';
-import { coverHashFrom } from '../../src/hash/hash.ts';
+import {
+  evaluate,
+  orphans,
+  resolveDependencies,
+  type EngineFs,
+} from '../../src/engine/evaluate.ts';
+import { dependencyHashFrom } from '../../src/hash/hash.ts';
 import { Raised, diag } from '../../src/core/diagnostics.ts';
 import type { Binding, Lock } from '../../src/core/types.ts';
 
@@ -15,19 +20,19 @@ const fs: EngineFs = {
   },
 };
 const universe = Object.keys(files).sort();
-const bind = (dependent: string, covers: string[]): Binding => ({ dependent, covers });
+const bind = (dependent: string, dependencies: string[]): Binding => ({ dependent, dependencies });
 const lockOf = (e: Record<string, string>): Lock => ({
   entries: new Map(Object.entries(e)),
 });
-const hashOf = (paths: string[]) => coverHashFrom(paths.map((p) => [p, files[p]!]));
+const hashOf = (paths: string[]) => dependencyHashFrom(paths.map((p) => [p, files[p]!]));
 
-describe('§8.5 resolveCovers', () => {
+describe('§8.5 resolveDependencies', () => {
   it('excludes the dependent itself', () => {
-    expect(resolveCovers(bind('src/a.ts', ['src/**']), universe)).toEqual(['src/b.ts']);
+    expect(resolveDependencies(bind('src/a.ts', ['src/**']), universe)).toEqual(['src/b.ts']);
   });
   it('every pattern, negated or not, must match', () => {
     try {
-      resolveCovers(bind('B.md', ['src/**', '!nope/**', 'src\\cli']), universe);
+      resolveDependencies(bind('B.md', ['src/**', '!nope/**', 'src\\cli']), universe);
       expect.unreachable();
     } catch (e) {
       expect((e as Raised).diagnostics.map((d) => [d.code, d.subject])).toEqual([
@@ -37,7 +42,9 @@ describe('§8.5 resolveCovers', () => {
     }
   });
   it('empty selection', () => {
-    expect(() => resolveCovers(bind('B.md', ['src/**', '!src/**']), universe)).toThrow(Raised);
+    expect(() => resolveDependencies(bind('B.md', ['src/**', '!src/**']), universe)).toThrow(
+      Raised,
+    );
   });
 });
 
@@ -52,18 +59,18 @@ describe('§12.1 evaluate', () => {
   it('ok when hash matches', () => {
     const lock = lockOf({ 'B.md': current });
     const r = evaluate(b, universe, lock, [], fs);
-    expect([r.state, r.covered, r.current]).toEqual(['ok', ['src/a.ts', 'src/b.ts'], current]);
+    expect([r.state, r.resolved, r.current]).toEqual(['ok', ['src/a.ts', 'src/b.ts'], current]);
   });
   it('content-changed when the hash differs', () => {
     const r = evaluate(b, universe, lockOf({ 'B.md': H('0') }), [], fs);
     expect([r.state, r.reasons]).toEqual(['stale', ['content-changed']]);
   });
-  it('a pattern change that keeps the covered set stays ok', () => {
+  it('a pattern change that keeps the set of dependencies stays ok', () => {
     const same = bind('B.md', ['src/a.ts', 'src/b.ts']);
     const r = evaluate(same, universe, lockOf({ 'B.md': current }), [], fs);
     expect(r.state).toBe('ok');
   });
-  it('a pattern change that alters the covered set is content-changed', () => {
+  it('a pattern change that alters the set of dependencies is content-changed', () => {
     const narrower = bind('B.md', ['src/a.ts']);
     const r = evaluate(narrower, universe, lockOf({ 'B.md': current }), [], fs);
     expect(r.reasons).toEqual(['content-changed']);

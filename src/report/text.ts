@@ -20,7 +20,7 @@ export function checkText(selected: readonly Result[], rootArg?: string): string
     if (r.state === 'stale') {
       if (r.changes && r.changes.length > 0) {
         for (const c of r.changes) out += `  ${c.status.padEnd(8)}  ${shown(c.path)}\n`;
-      } else for (const c of r.covers) out += `  covers  ${shown(c)}\n`;
+      } else for (const c of r.dependencies) out += `  depends  ${shown(c)}\n`;
     }
   }
   const count = (s: Result['state']) => selected.filter((r) => r.state === s).length;
@@ -29,7 +29,7 @@ export function checkText(selected: readonly Result[], rootArg?: string): string
   if (stale.length > 0) {
     const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
     out +=
-      'next: review each stale file against its covered files, then run: ' +
+      'next: review each stale file against its dependencies, then run: ' +
       `docstamp update ${stale.join(' ')}${root}\n`;
   }
   return out;
@@ -41,8 +41,8 @@ export function listText(selected: readonly Result[]): string {
   for (const r of selected) {
     out += `${shown(r.dependent)}\n`;
     if (r.state === 'invalid') continue;
-    for (const c of r.covers) out += `  covers  ${shown(c)}\n`;
-    for (const f of r.covered) out += `  file    ${shown(f)}\n`;
+    for (const c of r.dependencies) out += `  depends  ${shown(c)}\n`;
+    for (const f of r.resolved) out += `  file     ${shown(f)}\n`;
   }
   return out;
 }

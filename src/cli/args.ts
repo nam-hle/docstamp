@@ -8,12 +8,12 @@ export type Args =
 
 export const HELP = `Usage:
   docstamp check [--json] [--root <dir>] [<file>...]
-      Check that each file's covered files are unchanged since its last review.
+      Check that each file's dependencies are unchanged since its last review.
       The default command: a bare docstamp is docstamp check.
   docstamp update [--json] [--root <dir>] (--all | <file>...)
-      Record in docstamp-lock.yaml that you reviewed the named files against their covered files.
+      Record in docstamp-lock.yaml that you reviewed the named files against their dependencies.
   docstamp list-dependents [--json] [--root <dir>] [<file>...]
-      List each file with the patterns it covers and the covered files.
+      List each file with its dependency patterns and the files they select.
   docstamp help
       Print this usage (also --help).
   docstamp version

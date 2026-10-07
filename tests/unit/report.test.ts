@@ -7,9 +7,9 @@ import type { Result } from '../../src/core/types.ts';
 const res = (dependent: string, state: Result['state'], extra: Partial<Result> = {}): Result => ({
   dependent,
   state,
-  covers: ['src/**'],
+  dependencies: ['src/**'],
   reasons: state === 'stale' ? ['content-changed'] : [],
-  covered: state === 'invalid' ? [] : ['src/a.ts'],
+  resolved: state === 'invalid' ? [] : ['src/a.ts'],
   current: '',
   diagnostics: [],
   ...extra,
@@ -18,9 +18,9 @@ const res = (dependent: string, state: Result['state'], extra: Partial<Result> =
 describe('§14.3 check text', () => {
   it('lists only non-ok, summary, next line', () => {
     expect(checkText([res('a.md', 'ok'), res('my doc.md', 'stale')])).toBe(
-      'STALE    "my doc.md"  (content-changed)\n  covers  src/**\n' +
+      'STALE    "my doc.md"  (content-changed)\n  depends  src/**\n' +
         '1 ok, 1 stale, 0 invalid\n' +
-        'next: review each stale file against its covered files, then run: ' +
+        'next: review each stale file against its dependencies, then run: ' +
         'docstamp update "my doc.md"\n',
     );
   });
@@ -28,7 +28,7 @@ describe('§14.3 check text', () => {
     expect(checkText([res('a.md', 'ok')])).toBe('1 ok, 0 stale, 0 invalid\n');
     expect(checkText([res('a.md', 'stale')])).not.toContain('  file ');
   });
-  it('known changes replace the covers lines', () => {
+  it('known changes replace the depends lines', () => {
     const changes = [
       { status: 'modified', path: 'src/a.ts' },
       { status: 'added', path: 'src/my b.ts' },
@@ -39,10 +39,10 @@ describe('§14.3 check text', () => {
         '  modified  src/a.ts\n  added     "src/my b.ts"\n  deleted   src/c.ts\n0 ok',
     );
   });
-  it('unknown or empty changes print covers lines', () => {
-    const covers = 'STALE    a.md  (content-changed)\n  covers  src/**\n';
-    expect(checkText([res('a.md', 'stale', { changes: null })])).toContain(covers);
-    expect(checkText([res('a.md', 'stale', { changes: [] })])).toContain(covers);
+  it('unknown or empty changes print depends lines', () => {
+    const dependencies = 'STALE    a.md  (content-changed)\n  depends  src/**\n';
+    expect(checkText([res('a.md', 'stale', { changes: null })])).toContain(dependencies);
+    expect(checkText([res('a.md', 'stale', { changes: [] })])).toContain(dependencies);
   });
   it('invalid prints a bare line and counts', () => {
     expect(checkText([res('a.md', 'invalid')])).toBe('INVALID  a.md\n0 ok, 0 stale, 1 invalid\n');
@@ -75,11 +75,14 @@ describe('§14.4 update text', () => {
 });
 
 describe('§14.6 list-dependents text', () => {
-  it('one block per Result: covers lines, then file lines', () => {
-    const two = res('a.md', 'ok', { covers: ['src/**', '!src/b.ts'], covered: ['src/a.ts', 'x'] });
-    expect(listText([two, res('my doc.md', 'stale', { covered: ['my file'] })])).toBe(
-      'a.md\n  covers  src/**\n  covers  !src/b.ts\n  file    src/a.ts\n  file    x\n' +
-        '"my doc.md"\n  covers  src/**\n  file    "my file"\n',
+  it('one block per Result: depends lines, then file lines', () => {
+    const two = res('a.md', 'ok', {
+      dependencies: ['src/**', '!src/b.ts'],
+      resolved: ['src/a.ts', 'x'],
+    });
+    expect(listText([two, res('my doc.md', 'stale', { resolved: ['my file'] })])).toBe(
+      'a.md\n  depends  src/**\n  depends  !src/b.ts\n  file     src/a.ts\n  file     x\n' +
+        '"my doc.md"\n  depends  src/**\n  file     "my file"\n',
     );
   });
   it('an invalid Result prints its first line only, and there is no summary', () => {
@@ -111,7 +114,7 @@ describe('§14.5 JSON', () => {
       'dependent',
       'state',
       'reasons',
-      'covers',
+      'dependencies',
       'changes',
       'diagnostics',
     ]);
@@ -177,7 +180,7 @@ describe('§14.5 JSON', () => {
     const out = listJsonText({
       exitCode: 2,
       selected: [
-        res('a.md', 'ok', { covered: ['src/a.ts'] }),
+        res('a.md', 'ok', { resolved: ['src/a.ts'] }),
         res('b.md', 'invalid', { diagnostics: [diag('E_EMPTY_COVERS')] }),
       ],
       diagnostics: [],
@@ -186,7 +189,12 @@ describe('§14.5 JSON', () => {
     const doc = JSON.parse(out);
     expect(Object.keys(doc)).toEqual(['version', 'mode', 'exitCode', 'dependents', 'diagnostics']);
     expect(doc.mode).toBe('list-dependents');
-    expect(Object.keys(doc.dependents[0])).toEqual(['dependent', 'covers', 'files', 'diagnostics']);
+    expect(Object.keys(doc.dependents[0])).toEqual([
+      'dependent',
+      'dependencies',
+      'files',
+      'diagnostics',
+    ]);
     expect(doc.dependents[0].files).toEqual(['src/a.ts']);
     expect(doc.dependents[1].files).toEqual([]);
     expect(doc.dependents[1].diagnostics[0].code).toBe('E_EMPTY_COVERS');

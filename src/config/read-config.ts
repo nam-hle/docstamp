@@ -9,7 +9,7 @@ import { loadScript } from './script.ts';
 import { CONFIG_NAMES, isMap, isStrings, type Value } from './value.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from './yaml-profile.ts';
 
-const TOP_KEYS = ['version', 'gitignore', 'ignore', 'dependents'];
+const TOP_KEYS = ['version', 'gitignore', 'ignore', 'files'];
 
 const hasEntry = (path: string): boolean => {
   try {
@@ -51,7 +51,7 @@ function readYaml(path: string): Value {
   const value = doc ? fromYaml(doc.value) : null;
   if (!doc || !isMap(value)) throw new Raised([diag('E_CONFIG')]);
   const version = isYamlMap(doc.value) ? doc.value.entries.get('version') : undefined;
-  if (version) value.set('version', version.plainSource === '1' ? 1 : null);
+  if (version) value.set('version', version.plainSource === '2' ? 2 : null);
   return value;
 }
 
@@ -79,27 +79,27 @@ function collectBinding(
     fatal.push(diag('E_CONFIG', { subject: key }));
     return;
   }
-  const covers = isMap(value) ? value.get('covers') : undefined;
-  if (!isMap(value) || !isStrings(covers) || covers.length === 0) {
+  const dependencies = isMap(value) ? value.get('dependencies') : undefined;
+  if (!isMap(value) || !isStrings(dependencies) || dependencies.length === 0) {
     fatal.push(diag('E_CONFIG', { dependent: key }));
     return;
   }
   for (const k of value.keys()) {
-    if (k !== 'covers') fatal.push(diag('E_UNKNOWN_KEY', { dependent: key, subject: k }));
+    if (k !== 'dependencies') fatal.push(diag('E_UNKNOWN_KEY', { dependent: key, subject: k }));
   }
-  for (const pattern of covers) {
+  for (const pattern of dependencies) {
     if (!parsePattern(pattern)) {
       attached.push(diag('E_PATTERN', { dependent: key, subject: pattern }));
     }
   }
-  out.push({ dependent: key, covers });
+  out.push({ dependent: key, dependencies });
 }
 
 // SPEC §9.3
 export function readConfig(root: string): { config: Config; attached: Diagnostic[] } {
   const top = readValue(root);
   if (!isMap(top)) throw new Raised([diag('E_CONFIG')]);
-  if (top.get('version') !== 1) throw new Raised([diag('E_CONFIG_VERSION')]);
+  if (top.get('version') !== 2) throw new Raised([diag('E_CONFIG_VERSION')]);
 
   const fatal: Diagnostic[] = [];
   const attached: Diagnostic[] = [];
@@ -116,11 +116,11 @@ export function readConfig(root: string): { config: Config; attached: Diagnostic
   }
 
   const bindings: Binding[] = [];
-  const dependents = top.get('dependents');
-  if (!isMap(dependents)) {
-    fatal.push(diag('E_CONFIG', { subject: 'dependents' }));
+  const files = top.get('files');
+  if (!isMap(files)) {
+    fatal.push(diag('E_CONFIG', { subject: 'files' }));
   } else {
-    for (const [key, value] of dependents) {
+    for (const [key, value] of files) {
       collectBinding(key, value, fatal, attached, bindings);
     }
   }

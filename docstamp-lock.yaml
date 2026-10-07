@@ -1,5 +1,5 @@
-version: 2
-dependents:
-  "CLAUDE.md": b7ddf8e9daf92196bda998d9678f54951062c9808d888fa38b79efeafd9b0932
-  "README.md": a3fb17692de8c8cacef2ab32753e15cf5bbbe771d60cf96f1f270d2ee809e32d
-  "docs/SPEC.md": f8a1b5cc86e2f16d4e96eed034547c1354c40f10fee5edb72427e989a4307cb2
+version: 3
+files:
+  "CLAUDE.md": b2d6ade9fcc7ade1f2bd9261d18efec75db41b486fa50ba72a48d7a6c6bd5db2
+  "README.md": de6e920144dc6b68d5e466abd3f0eee1a1426d9e4a92bcf03b80a089568c904a
+  "docs/SPEC.md": e238ef457f0aad7f5e20c78a170fcc2ea591eab25b7101f822b78c360c17f2d3

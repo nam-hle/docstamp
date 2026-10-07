@@ -11,7 +11,7 @@ export interface RawChange {
 }
 
 export interface Keep {
-  readonly covered: ReadonlySet<string>;
+  readonly resolved: ReadonlySet<string>;
   readonly selectsDeleted: (path: string) => boolean;
 }
 
@@ -57,7 +57,7 @@ export function buildChanges(
   }
   return [...merged]
     .filter(([path, status]) =>
-      status === 'deleted' ? keep.selectsDeleted(path) : keep.covered.has(path),
+      status === 'deleted' ? keep.selectsDeleted(path) : keep.resolved.has(path),
     )
     .map(([path, status]) => ({ status, path }))
     .sort((a, b) => comparePaths(a.path, b.path));
@@ -120,10 +120,10 @@ export function changedSince(
     const untracked = parseNameList(
       git(root, ['ls-files', '--others', '--exclude-standard', '-z']),
     );
-    const patterns = result.covers.map((c) => parsePattern(c));
+    const patterns = result.dependencies.map((c) => parsePattern(c));
     if (patterns.some((p) => p === null)) return null;
     const changes = buildChanges(diff, untracked, {
-      covered: new Set(result.covered),
+      resolved: new Set(result.resolved),
       selectsDeleted: (path) =>
         path !== result.dependent && select(patterns as ParsedPattern[], [path]).length === 1,
     });

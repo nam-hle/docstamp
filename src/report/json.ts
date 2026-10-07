@@ -50,7 +50,7 @@ export function jsonText(doc: JsonDoc): string {
       ['dependent', r.dependent],
       ['state', r.state],
       ['reasons', [...r.reasons]],
-      ['covers', [...r.covers]],
+      ['dependencies', [...r.dependencies]],
       [
         'changes',
         r.changes
@@ -68,7 +68,7 @@ export function jsonText(doc: JsonDoc): string {
     return obj(members);
   });
   const top: Array<[string, Json]> = [
-    ['version', 1],
+    ['version', 2],
     ['mode', doc.mode],
     ['exitCode', doc.exitCode],
     [
@@ -97,13 +97,13 @@ export function listJsonText(doc: ListJsonDoc): string {
   const dependents = doc.selected.map((r) =>
     obj([
       ['dependent', r.dependent],
-      ['covers', [...r.covers]],
-      ['files', [...r.covered]],
+      ['dependencies', [...r.dependencies]],
+      ['files', [...r.resolved]],
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ]),
   );
   const top: Array<[string, Json]> = [
-    ['version', 1],
+    ['version', 2],
     ['mode', 'list-dependents'],
     ['exitCode', doc.exitCode],
     ['dependents', dependents],

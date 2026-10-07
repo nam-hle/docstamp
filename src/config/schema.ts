@@ -4,19 +4,19 @@ const configSchema = {
   title: 'docstamp configuration',
   type: 'object',
   additionalProperties: false,
-  required: ['version', 'dependents'],
+  required: ['version', 'files'],
   properties: {
-    version: { const: 1 },
+    version: { const: 2 },
     gitignore: { type: 'boolean', default: true },
     ignore: { type: 'array', items: { type: 'string' }, default: [] },
-    dependents: {
+    files: {
       type: 'object',
       additionalProperties: {
         type: 'object',
         additionalProperties: false,
-        required: ['covers'],
+        required: ['dependencies'],
         properties: {
-          covers: { type: 'array', minItems: 1, items: { type: 'string' } },
+          dependencies: { type: 'array', minItems: 1, items: { type: 'string' } },
         },
       },
     },

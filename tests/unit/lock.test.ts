@@ -15,7 +15,7 @@ const lock: Lock = {
     ['a "q".md', H],
   ]),
 };
-const expected = `version: 2\ndependents:\n  "a \\"q\\".md": ${H}\n  "b.md": ${H}\n`;
+const expected = `version: 3\nfiles:\n  "a \\"q\\".md": ${H}\n  "b.md": ${H}\n`;
 const LOCK = 'docstamp-lock.yaml';
 
 const rejection = (root: string): Raised | undefined => {
@@ -32,7 +32,7 @@ describe('§11.2 canonical form', () => {
     expect(lockText(lock)).toBe(expected);
   });
   it('empty lock', () => {
-    expect(lockText({ entries: new Map() })).toBe('version: 2\ndependents: {}\n');
+    expect(lockText({ entries: new Map() })).toBe('version: 3\nfiles: {}\n');
   });
 });
 
@@ -51,7 +51,7 @@ describe('§11.1 / §11.3 read and write', () => {
     expect(readFileSync(join(root, LOCK), 'utf8')).toContain('\r\n');
   });
   it('writes when content differs and leaves no temp file', () => {
-    const root = makeTree({ [LOCK]: 'version: 2\ndependents: {}\n' });
+    const root = makeTree({ [LOCK]: 'version: 3\nfiles: {}\n' });
     expect(writeLock(root, lock)).toBe(true);
     expect(readFileSync(join(root, LOCK), 'utf8')).toBe(expected);
     expect(readdirSync(root).filter((name) => name.includes('.tmp-'))).toEqual([]);
@@ -74,21 +74,33 @@ describe('§11.1 / §11.3 read and write', () => {
     expect(() => readLock(root)).toThrow(Raised);
   });
   it.each([
-    ['<<<<<<< HEAD\nversion: 2\n', 'E_LOCK'],
+    ['<<<<<<< HEAD\nversion: 3\n', 'E_LOCK'],
     ['version: 1\ndependents: {}\n', 'E_LOCK_VERSION'],
-    ['version: 3\ndependents: {}\n', 'E_LOCK_VERSION'],
-    ['version: "2"\ndependents: {}\n', 'E_LOCK_VERSION'],
-    ['dependents: {}\n', 'E_LOCK_VERSION'],
-    [`version: 2\ndependents:\n  a: ${'A'.repeat(64)}\n`, 'E_LOCK'],
-    [`version: 2\ndependents:\n  a: ${'a'.repeat(63)}\n`, 'E_LOCK'],
-    [`version: 2\ndependents:\n  a: {covers: [x], hash: ${H}}\n`, 'E_LOCK'],
-    [`version: 2\ndependents:\n  /a: ${H}\n`, 'E_LOCK'],
-    [`version: 2\nextra: 1\ndependents: {}\n`, 'E_LOCK'],
-    ['version: 2\ndependents: []\n', 'E_LOCK'],
+    ['version: 2\ndependents: {}\n', 'E_LOCK_VERSION'],
+    ['version: 4\nfiles: {}\n', 'E_LOCK_VERSION'],
+    ['version: "3"\nfiles: {}\n', 'E_LOCK_VERSION'],
+    ['files: {}\n', 'E_LOCK_VERSION'],
+    ['version: 3\ndependents: {}\n', 'E_LOCK'],
+    [`version: 3\nfiles:\n  a: ${'A'.repeat(64)}\n`, 'E_LOCK'],
+    [`version: 3\nfiles:\n  a: ${'a'.repeat(63)}\n`, 'E_LOCK'],
+    [`version: 3\nfiles:\n  a: {dependencies: [x], hash: ${H}}\n`, 'E_LOCK'],
+    [`version: 3\nfiles:\n  /a: ${H}\n`, 'E_LOCK'],
+    [`version: 3\nextra: 1\nfiles: {}\n`, 'E_LOCK'],
+    ['version: 3\nfiles: []\n', 'E_LOCK'],
   ])('rejects %j with %s', (text, code) => {
     const root = makeTree({});
     writeFileSync(join(root, LOCK), text);
     expect(rejection(root)?.diagnostics.map((d) => d.code)).toEqual([code]);
+  });
+});
+
+describe('§11.1 step 4 version 2 Lockfile', () => {
+  it('names the migration and keeps hash values valid', () => {
+    const root = makeTree({ [LOCK]: `version: 2\ndependents:\n  a.md: ${H}\n` });
+    const [d] = rejection(root)?.diagnostics ?? [];
+    expect(d?.code).toBe('E_LOCK_VERSION');
+    expect(d?.message).toContain('run "docstamp update --all" to rewrite it as version 3');
+    expect(d?.message).toContain('(hashes are unchanged)');
   });
 });
 

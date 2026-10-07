@@ -13,11 +13,6 @@ describe('§9.3 schema.json', () => {
       properties: Record<string, unknown>;
     };
     expect(schema.additionalProperties).toBe(false);
-    expect(Object.keys(schema.properties)).toEqual([
-      'version',
-      'gitignore',
-      'ignore',
-      'dependents',
-    ]);
+    expect(Object.keys(schema.properties)).toEqual(['version', 'gitignore', 'ignore', 'files']);
   });
 });

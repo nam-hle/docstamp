@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 import { computeUniverse } from '../../src/universe/walk.ts';
-import { coverHashFrom, fileHash, normalizedContent } from '../../src/hash/hash.ts';
+import { dependencyHashFrom, fileHash, normalizedContent } from '../../src/hash/hash.ts';
 
 afterEach(cleanupTrees);
 
@@ -33,14 +33,20 @@ describe('§10.2 normalizedContent', () => {
   });
 });
 
-describe('§10.4 coverHashFrom', () => {
+describe('§10.4 dependencyHashFrom', () => {
   it('matches the defined byte layout (test vector)', () => {
     const h = 'a'.repeat(64);
     const expected = createHash('sha256').update(`x.md\u0000${h}\n`).digest('hex');
-    expect(coverHashFrom([['x.md', h]])).toBe(expected);
+    expect(dependencyHashFrom([['x.md', h]])).toBe(expected);
+  });
+  it('is the value the version 1 and 2 algorithm (Cover Hash) produced', () => {
+    const h = 'a'.repeat(64);
+    expect(dependencyHashFrom([['x.md', h]])).toBe(
+      '6796dc35455f654e61dd28835779d684d3d2179981be763c770db1bc91ef4305',
+    );
   });
   it('rename changes the hash', () => {
     const h = 'b'.repeat(64);
-    expect(coverHashFrom([['a', h]])).not.toBe(coverHashFrom([['b', h]]));
+    expect(dependencyHashFrom([['a', h]])).not.toBe(dependencyHashFrom([['b', h]]));
   });
 });
