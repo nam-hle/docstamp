@@ -194,7 +194,7 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
 
 ## Writing good dependencies
 
-- **Bind to the narrowest files that make the doc true.** A doc that depends on all of `src` goes stale on every commit, and people then stop reading the reports. `docs/architecture.md` should depend on `src/core`, not on the repository.
+- **Bind to the narrowest files that make the doc true.** A doc that depends on all of `src` goes stale on every commit, and people then stop reading the reports. `docs/architecture.md` should depend on `src/core`, not on the repository. Measure it with `docstamp stats` ([below](#measuring-how-noisy-a-list-is)).
 - **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns are in [SPEC §8](docs/SPEC.md#8-patterns).
 - **Exclude generated or noisy files with `!`.** The last matching pattern wins, so put exclusions after the pattern they cut from. A pattern without `!` must select at least one file, or it is an error (`E_EMPTY_PATTERN`). An exclusion that matches no file is only a warning (`W_EMPTY_EXCLUSION`), so a standard block such as `!src/core/**/__test__/**` can be copied into every doc before any test folder exists, and survives the deletion of the last test. The warning never changes the exit code or the verdict:
 
@@ -228,6 +228,46 @@ docstamp list-dependencies <doc>
 git diff <base> -- <files>
 ```
 
+## Measuring how noisy a list is
+
+A broad list is the easy one to write and the one people stop reading: it goes stale on most commits. `docstamp stats` tells you before you commit to a list. It takes the files each doc resolves to today, replays the commits of a window against them, and counts the commits that would have made the doc stale. It only reads history: nothing is written, no lock is needed, and `check` is unaffected. This is docstamp's own history since the start of July, with a gate at 0.5:
+
+```console
+$ docstamp stats --since 2026-07-01 --max-fire-ratio 0.5
+file          patterns  files  commits  days   ratio   sweep
+CLAUDE.md            8     49       40     2  0.6667  0.0250
+docs/SPEC.md         1     33       30     2  0.5000  0.0333
+README.md            2      5       24     2  0.4000  0.0417
+window: 60 commits since 2026-07-01 (date), 14 fire nothing
+over --max-fire-ratio 0.5: CLAUDE.md
+$ echo $?
+1
+```
+
+One row per doc, the noisiest first. `patterns` and `files` are the declared patterns and the files they resolve to. `commits` is how many commits of the window touched at least one of those files, `days` on how many distinct days (UTC, by commit date), and `ratio` is `commits` over the commits in the window, to 4 decimals. `sweep` is the share of those commits that touched more than `--sweep-threshold` files (default 200): a share near 1 means the noise is a few repository-wide commits, not the list. The last lines count the commits in the window and the ones that would have made no doc stale. With `--max-fire-ratio`, the command exits 1 when a ratio is greater than the given one and names the docs; use it in CI to keep a list narrow.
+
+- **The window.** `--since` is a commit, a date or a duration, and defaults to `90.days`. A value that names a commit (a tag, a branch, a hash) is the window `<value>..HEAD`; anything else must be a date (`2026-07-01`, midnight UTC, or `2026-07-01T12:00:00Z`) or a duration (`90.days`, `2 weeks ago`) and is given to git as `--since`. A tag named like a date wins; write the time to mean the date. A value of neither kind is `E_HISTORY`, so a typo never silently measures the wrong window. Merge commits are left out, and a rename counts as touching both paths.
+- **Resolved at HEAD.** The dependencies are the ones the lists select today, so a file that was deleted or renamed inside the window is not seen, and a window that crosses a reorganization understates the noise.
+- **Warnings.** Dependencies resolve exactly as in `list-dependencies`, so the same warnings (for example `W_EMPTY_EXCLUSION`) appear on stderr, or in the `diagnostics` of the file in `--json`. They never change the exit code.
+- **Needs full history.** A shallow clone, a directory that is not a git work tree and a repository with no commit are `E_HISTORY` (exit 2): fetch the history first (`fetch-depth: 0` in [GitHub Actions](#github-actions)).
+- **Named docs.** `docstamp stats docs/architecture.md` measures only that doc, and the last line then counts the commits that would have made none of the named docs stale. `--json` has the same numbers (`ratio` and `sweepShare` as numbers):
+
+```json
+{
+  "file": "CLAUDE.md",
+  "patterns": 8,
+  "resolvedCount": 49,
+  "commits": 40,
+  "days": 2,
+  "ratio": 0.6667,
+  "sweepCommits": 1,
+  "sweepShare": 0.025,
+  "diagnostics": []
+}
+```
+
+That is one entry of `files`; the report also has `version`, `mode`, `exitCode`, `window` (`since`, `kind`, `commits`, `firingNothing`), `sweepThreshold`, `maxFireRatio`, `exceeding` and top-level `diagnostics` ([SPEC §14.5](docs/SPEC.md#145-json-mode), [§13.9](docs/SPEC.md#139-stats)).
+
 ## Reference
 
 ### Commands
@@ -238,6 +278,7 @@ git diff <base> -- <files>
 | `docstamp update (--all \| <file>...)` | Record that you reviewed the named files, in the lock or, for an inline doc, in its own `hash:` line. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line. |
 | `docstamp list-dependencies [<file>...]` | Each file with its dependency patterns and the files they select. It does not read the lock. |
 | `docstamp list-dependents <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only, no lock. |
+| `docstamp stats [--since <value>] [--sweep-threshold <n>] [--max-fire-ratio <r>] [<file>...]` | Replay recent history against each file's dependencies: how often the list would have made it stale ([Measuring how noisy a list is](#measuring-how-noisy-a-list-is)). Reads git history, never the lock. |
 | `docstamp help` | Usage. |
 | `docstamp version` | The installed version. |
 
@@ -247,8 +288,8 @@ Every command except `help` and `version` takes `--json` and `--root <dir>`; `--
 
 | Code | Meaning |
 |---|---|
-| 0 | `check`: every selected file is `ok`. `update`, `list-*`, `help`, `version`: success. |
-| 1 | `check` only: a selected file is `stale`. |
+| 0 | `check`: every selected file is `ok`. `update`, `list-*`, `stats`, `help`, `version`: success. |
+| 1 | `check`: a selected file is `stale`. `stats`: a ratio is above `--max-fire-ratio`. |
 | 2 | An error, an `invalid` file, or a usage error. |
 | 70 | An unexpected internal failure. |
 
