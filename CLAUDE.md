@@ -20,8 +20,9 @@ codes. It is the source of truth.
 - Code that implements an algorithm cites its clause (`// §8.4`). Tests are named by clause
   (`describe('§12.1 Evaluate', ...)`).
 - A behavior the spec does not define is a spec gap: fix the spec, do not invent behavior in code.
-- [docs/superpowers/specs/](docs/superpowers/specs/) holds design rationale: why, not what. It is
-  frozen once its plan ships.
+- Design rationale lives in [docs/VISION.md](docs/VISION.md) and
+  [docs/PRINCIPLES.md](docs/PRINCIPLES.md). Working plans and scratch design notes are not
+  committed: `docs/superpowers/` is gitignored.
 
 ## Runtime
 
@@ -75,8 +76,7 @@ docstamp/
 └── docs/
     ├── SPEC.md           # the contract
     ├── PRINCIPLES.md
-    ├── VISION.md
-    └── superpowers/      # design rationale and plans
+    └── VISION.md
 ```
 
 ## Critical Invariants
