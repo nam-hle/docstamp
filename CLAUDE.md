@@ -64,7 +64,7 @@ docstamp/
 │   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
 │   ├── cli/              # args, path resolution, workspace load, run; exit codes (§13, §16)
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
-│   ├── inline/           # inline declarations: frontmatter scan, block parse, stamp (§5.6, §9.6)
+│   ├── inline/           # inline declarations: frontmatter scan, block parse, keys, schema, stamp (§5.6, §9.6)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and dependency hash (§10)
