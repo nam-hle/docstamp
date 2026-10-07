@@ -11,10 +11,9 @@ Usage:
       List each file with its dependency patterns and the files they select.
   docstamp list-dependents [--json] [--root <dir>] <file>...
       List the files that depend on each named file, and the patterns that select it.
-  docstamp stats [--json] [--root <dir>] [--since <value>] [--sweep-threshold <n>]
-                 [--max-fire-ratio <r>] [<file>...]
-      Replay recent history: how often each file's dependencies would have made it stale.
-      --since is a commit, a date or a duration (default 90.days); exit 1 above --max-fire-ratio.
+  docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
+      Report how often each file's dependencies would have made it stale over recent history:
+      the last <n> days (default --since 30d), or the commits of <rev>..HEAD.
   docstamp help
       Print this usage (also --help).
   docstamp version

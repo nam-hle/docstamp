@@ -1,6 +1,0 @@
-# stats --max-fire-ratio
-$ docstamp stats --max-fire-ratio
-exit: 2
---- stdout ---
---- stderr ---
-error: E_USAGE: --max-fire-ratio: --max-fire-ratio needs a ratio from 0 to 1.

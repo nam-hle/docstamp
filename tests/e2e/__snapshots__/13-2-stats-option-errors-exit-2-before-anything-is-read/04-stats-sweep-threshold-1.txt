@@ -1,6 +1,0 @@
-# stats --sweep-threshold -1
-$ docstamp stats --sweep-threshold -1
-exit: 2
---- stdout ---
---- stderr ---
-error: E_USAGE: --sweep-threshold: --sweep-threshold needs a non-negative whole number.

@@ -1,0 +1,40 @@
+$ docstamp stats --json --from 04cf393f3e41d8c6976d4a76d49ba8e2b61b3559
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 0,
+  "window": {
+    "kind": "revision",
+    "value": "04cf393f3e41d8c6976d4a76d49ba8e2b61b3559",
+    "commits": 2,
+    "untouched": 0
+  },
+  "files": [
+    {
+      "file": "docs/big list.md",
+      "patterns": 1,
+      "resolvedCount": 2,
+      "staleCommits": 2,
+      "days": 2,
+      "staleRate": 1,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    },
+    {
+      "file": "README.md",
+      "patterns": 1,
+      "resolvedCount": 1,
+      "staleCommits": 1,
+      "days": 1,
+      "staleRate": 0.5,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

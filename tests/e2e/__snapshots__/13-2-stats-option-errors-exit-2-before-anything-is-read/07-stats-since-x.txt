@@ -1,6 +1,0 @@
-# stats --since=-x
-$ docstamp stats --since=-x
-exit: 2
---- stdout ---
---- stderr ---
-error: E_USAGE: --since: --since must not start with "-".

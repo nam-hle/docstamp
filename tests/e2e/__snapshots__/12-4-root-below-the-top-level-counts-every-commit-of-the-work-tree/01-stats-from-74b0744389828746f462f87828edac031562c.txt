@@ -1,0 +1,8 @@
+$ docstamp stats --from 74b0744389828746f462f87828edac031562c61b
+cwd: pkg
+exit: 0
+--- stdout ---
+file    patterns  files  commits  days   stale   sweep
+DOC.md         1      1        1     1  0.5000  0.0000
+window: 2 commits in 74b0744389828746f462f87828edac031562c61b..HEAD, 1 make no file stale
+--- stderr ---

@@ -1,9 +1,0 @@
-$ docstamp stats --since 9e560eb5fc98fdfb970c22644e9499528f682c97 --max-fire-ratio 0.6667
-exit: 0
---- stdout ---
-file       patterns  files  commits  days   ratio   sweep
-BROAD.md          1      7        4     3  0.6667  0.0000
-MID.md            2      2        3     2  0.5000  0.0000
-NARROW.md         1      1        2     2  0.3333  0.0000
-window: 6 commits since 9e560eb5fc98fdfb970c22644e9499528f682c97 (revision), 2 fire nothing
---- stderr ---

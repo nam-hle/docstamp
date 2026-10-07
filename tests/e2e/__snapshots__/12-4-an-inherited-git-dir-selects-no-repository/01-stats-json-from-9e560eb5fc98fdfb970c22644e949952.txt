@@ -1,0 +1,53 @@
+$ docstamp stats --json --from 9e560eb5fc98fdfb970c22644e9499528f682c97
+env: GIT_DIR=<tmp>/foreign/.git
+env: GIT_WORK_TREE=<tmp>/foreign
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 0,
+  "window": {
+    "kind": "revision",
+    "value": "9e560eb5fc98fdfb970c22644e9499528f682c97",
+    "commits": 6,
+    "untouched": 2
+  },
+  "files": [
+    {
+      "file": "BROAD.md",
+      "patterns": 1,
+      "resolvedCount": 4,
+      "staleCommits": 4,
+      "days": 3,
+      "staleRate": 0.6667,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    },
+    {
+      "file": "MID.md",
+      "patterns": 2,
+      "resolvedCount": 2,
+      "staleCommits": 3,
+      "days": 2,
+      "staleRate": 0.5,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    },
+    {
+      "file": "NARROW.md",
+      "patterns": 1,
+      "resolvedCount": 1,
+      "staleCommits": 2,
+      "days": 2,
+      "staleRate": 0.3333,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

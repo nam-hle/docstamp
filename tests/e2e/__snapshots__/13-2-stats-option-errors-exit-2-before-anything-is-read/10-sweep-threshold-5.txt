@@ -1,6 +1,0 @@
-# --sweep-threshold 5
-$ docstamp --sweep-threshold 5
-exit: 2
---- stdout ---
---- stderr ---
-error: E_USAGE: --sweep-threshold: --sweep-threshold is only valid with "docstamp stats".

@@ -1,8 +1,0 @@
-# with a commit
-$ docstamp stats --since 2026-01-01
-exit: 0
---- stdout ---
-file       patterns  files  commits  days   ratio   sweep
-CLAUDE.md         1      1        1     1  1.0000  0.0000
-window: 1 commits since 2026-01-01 (date), 0 fire nothing
---- stderr ---

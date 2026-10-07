@@ -1,0 +1,5 @@
+$ docstamp stats --from 'HEAD^{tree}'
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_HISTORY: HEAD^{tree}: --from names no commit of this repository; give a branch, tag or hash.

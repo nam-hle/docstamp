@@ -1,6 +1,0 @@
-# bad since 2026-02-30
-$ docstamp stats --since 2026-02-30
-exit: 2
---- stdout ---
---- stderr ---
-error: E_HISTORY: 2026-02-30: --since names no commit and is not a date such as 2024-01-01 or a duration such as 90.days.

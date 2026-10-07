@@ -99,24 +99,20 @@ const fixed4 = (tenThousandths: number): string =>
   `${Math.floor(tenThousandths / 10000)}.${String(tenThousandths % 10000).padStart(4, '0')}`;
 
 // SPEC §14.8
-export function statsText(
-  files: readonly FileStats[],
-  window: StatsWindow,
-  gate?: { readonly given: string; readonly exceeding: readonly string[] },
-): string {
+export function statsText(files: readonly FileStats[], window: StatsWindow): string {
   const rows = files.map((f) => [
     shown(f.file),
     String(f.patterns),
     String(f.resolvedCount),
-    String(f.commits),
+    String(f.staleCommits),
     String(f.days),
-    fixed4(f.ratio),
+    fixed4(f.staleRate),
     fixed4(f.sweepShare),
   ]);
   const table =
     files.length === 0
       ? []
-      : [['file', 'patterns', 'files', 'commits', 'days', 'ratio', 'sweep'], ...rows];
+      : [['file', 'patterns', 'files', 'commits', 'days', 'stale', 'sweep'], ...rows];
   const widths = [0, 1, 2, 3, 4, 5, 6].map((c) =>
     Math.max(0, ...table.map((row) => row[c]!.length)),
   );
@@ -129,10 +125,10 @@ export function statsText(
     )
     .map((line) => `${line}\n`)
     .join('');
-  out += `window: ${window.commits} commits since ${shown(window.since)} (${window.kind}), `;
-  out += `${window.firingNothing} fire nothing\n`;
-  if (gate && gate.exceeding.length > 0) {
-    out += `over --max-fire-ratio ${gate.given}: ${gate.exceeding.map(shown).join(' ')}\n`;
-  }
+  const where =
+    window.kind === 'days'
+      ? `in the last ${window.value.slice(0, -1)} days`
+      : `in ${shown(`${window.value}..HEAD`)}`;
+  out += `window: ${window.commits} commits ${where}, ${window.untouched} make no file stale\n`;
   return out;
 }

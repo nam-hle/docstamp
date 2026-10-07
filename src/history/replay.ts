@@ -3,33 +3,8 @@ import type { CommitRecord } from '../engine/stats.ts';
 import { git } from './git.ts';
 
 export interface Window {
-  readonly kind: 'revision' | 'date';
+  readonly kind: 'days' | 'revision';
   readonly commits: readonly CommitRecord[];
-}
-
-const COUNT = /^[0-9]+[. ](?:second|minute|hour|day|week|month|year)s?(?:[. ]ago)?$/u;
-const DATE = /^(\d{4})-(\d{2})-(\d{2})$/u;
-const DATE_TIME =
-  /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:Z|[+-]\d{2}:?\d{2})?$/u;
-
-function isCalendarDate(year: string, month: string, day: string): boolean {
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-  return (
-    date.getUTCFullYear() === Number(year) &&
-    date.getUTCMonth() === Number(month) - 1 &&
-    date.getUTCDate() === Number(day)
-  );
-}
-
-// SPEC §12.4 ParseSince
-export function parseSince(value: string): string | null {
-  if (COUNT.test(value)) return value;
-  const date = DATE.exec(value);
-  if (date) return isCalendarDate(date[1]!, date[2]!, date[3]!) ? `${value}T00:00:00Z` : null;
-  const time = DATE_TIME.exec(value);
-  if (!time || !isCalendarDate(time[1]!, time[2]!, time[3]!)) return null;
-  const [hour, minute, second] = [time[4]!, time[5]!, time[6] ?? '00'].map(Number);
-  return hour! <= 23 && minute! <= 59 && second! <= 59 ? value : null;
 }
 
 const COMMIT_ID = /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/u;
@@ -66,8 +41,19 @@ const history = (message: string, subject = '') =>
   new Raised([diag('E_HISTORY', { subject, message })]);
 
 // SPEC §12.4
-export function replay(root: string, since: string): Window {
-  const run = (args: string[]) => git(root, args, { TZ: 'UTC' });
+// SPEC §12.4 step 3: seconds, never a date for git to parse
+export const daysRange = (days: number, now: number): string[] => [
+  `--max-age=${now - days * 86400}`,
+  'HEAD',
+];
+
+export type ReplayWindow =
+  | { readonly kind: 'days'; readonly days: number }
+  | { readonly kind: 'from'; readonly value: string };
+
+// SPEC §12.4
+export function replay(root: string, window: ReplayWindow, now: number): Window {
+  const run = (args: string[]) => git(root, args);
   try {
     if (run(['rev-parse', '--is-shallow-repository']).trim() !== 'false') {
       throw history('The repository is shallow; fetch its full history.');
@@ -80,20 +66,18 @@ export function replay(root: string, since: string): Window {
     );
   }
   let range: string[];
-  let kind: Window['kind'];
-  try {
-    range = [`${run(['rev-parse', '--verify', '--quiet', `${since}^{commit}`]).trim()}..HEAD`];
-    kind = 'revision';
-  } catch {
-    const limit = parseSince(since);
-    if (limit === null) {
+  if (window.kind === 'days') range = daysRange(window.days, now);
+  else {
+    try {
+      range = [
+        `${run(['rev-parse', '--verify', '--quiet', `${window.value}^{commit}`]).trim()}..HEAD`,
+      ];
+    } catch {
       throw history(
-        '--since names no commit and is not a date such as 2024-01-01 or a duration such as 90.days.',
-        since,
+        '--from names no commit of this repository; give a branch, tag or hash.',
+        window.value,
       );
     }
-    range = [`--since=${limit}`, 'HEAD'];
-    kind = 'date';
   }
   try {
     const output = run([
@@ -109,7 +93,7 @@ export function replay(root: string, since: string): Window {
     ]);
     const commits = parseLog(output);
     if (commits === null) throw new Error('unparsable log');
-    return { kind, commits };
+    return { kind: window.kind === 'days' ? 'days' : 'revision', commits };
   } catch {
     throw history('git could not list the commits of the window.');
   }

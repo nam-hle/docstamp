@@ -1,0 +1,6 @@
+# bad since 3651d
+$ docstamp stats --since 3651d
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --since: --since needs a number of days written like 30d (1d to 3650d).

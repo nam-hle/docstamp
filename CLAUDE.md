@@ -121,9 +121,10 @@ never the working tree: that is what CI sees.
 
 Only what no test can check stays here.
 
-- **No LLM call, no network, no clock** anywhere in `src/` (SPEC §2). `git` is invoked only in
-  `src/history/`, read-only, through `execFileSync` with an argument array (no shell), and never
-  for the verdict, the Lockfile or the exit code of any command but `stats` (§13.9).
+- **No LLM call, no network, no clock** anywhere in `src/` (SPEC §2), except the one read of the
+  clock in `runStats` for `stats --since`. `git` is invoked only in `src/history/`, read-only,
+  through `execFileSync` with an argument array (no shell), and never for the verdict, the Lockfile
+  or the exit code of `check`, `update` or the list commands. `stats` only reports (§13.9).
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
 - **Nothing writes the Lockfile automatically.** Only `docstamp update` with named files or
   `--all` may write it, or the `hash:` line of an inline doc (§9.6.4); a Write is the record that a

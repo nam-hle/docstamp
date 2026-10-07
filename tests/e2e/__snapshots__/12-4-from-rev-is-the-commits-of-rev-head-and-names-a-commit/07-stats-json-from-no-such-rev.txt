@@ -1,4 +1,4 @@
-$ docstamp stats --json
+$ docstamp stats --json --from no-such-rev
 exit: 2
 --- stdout ---
 {
@@ -12,8 +12,8 @@ exit: 2
       "code": "E_HISTORY",
       "severity": "error",
       "file": null,
-      "subject": null,
-      "message": "The repository is shallow; fetch its full history."
+      "subject": "no-such-rev",
+      "message": "--from names no commit of this repository; give a branch, tag or hash."
     }
   ]
 }

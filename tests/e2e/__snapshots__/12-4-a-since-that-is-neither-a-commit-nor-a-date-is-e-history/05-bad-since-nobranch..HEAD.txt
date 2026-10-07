@@ -1,6 +1,0 @@
-# bad since nobranch..HEAD
-$ docstamp stats --since nobranch..HEAD
-exit: 2
---- stdout ---
---- stderr ---
-error: E_HISTORY: nobranch..HEAD: --since names no commit and is not a date such as 2024-01-01 or a duration such as 90.days.

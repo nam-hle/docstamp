@@ -1,6 +1,0 @@
-# bad since 90days
-$ docstamp stats --since 90days
-exit: 2
---- stdout ---
---- stderr ---
-error: E_HISTORY: 90days: --since names no commit and is not a date such as 2024-01-01 or a duration such as 90.days.

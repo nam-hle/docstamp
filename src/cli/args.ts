@@ -1,5 +1,9 @@
 import { Raised, diag } from '../core/diagnostics.ts';
 
+type StatsWindowArg =
+  | { kind: 'days'; days: number; value: string }
+  | { kind: 'from'; value: string };
+
 export type Args =
   | { mode: 'help' }
   | { mode: 'version' }
@@ -14,9 +18,7 @@ export type Args =
       json: boolean;
       root?: string;
       paths: string[];
-      since: string;
-      sweepThreshold: number;
-      maxFireRatio?: string;
+      window: StatsWindowArg;
     }
   | { mode: 'update'; all: boolean; json: boolean; root?: string; paths: string[] };
 
@@ -30,10 +32,9 @@ export const HELP = `Usage:
       List each file with its dependency patterns and the files they select.
   docstamp list-dependents [--json] [--root <dir>] <file>...
       List the files that depend on each named file, and the patterns that select it.
-  docstamp stats [--json] [--root <dir>] [--since <value>] [--sweep-threshold <n>]
-                 [--max-fire-ratio <r>] [<file>...]
-      Replay recent history: how often each file's dependencies would have made it stale.
-      --since is a commit, a date or a duration (default 90.days); exit 1 above --max-fire-ratio.
+  docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
+      Report how often each file's dependencies would have made it stale over recent history:
+      the last <n> days (default --since 30d), or the commits of <rev>..HEAD.
   docstamp help
       Print this usage (also --help).
   docstamp version
@@ -56,20 +57,17 @@ const REMOVED: Record<string, string> = {
 };
 const VALUED: Record<string, string> = {
   '--root': 'a directory',
-  '--since': 'a commit, a date or a duration',
-  '--sweep-threshold': 'a number',
-  '--max-fire-ratio': 'a ratio from 0 to 1',
+  '--since': 'a number of days such as 30d',
+  '--from': 'a revision',
 };
 const valuedName = (arg: string): string | undefined =>
   Object.keys(VALUED).find((name) => arg === name || arg.startsWith(`${name}=`));
 const isOption = (arg: string) =>
   arg === '--' || valuedName(arg) !== undefined || FLAGS.has(arg) || arg in REMOVED;
-const DEFAULT_SINCE = '90.days';
-const DEFAULT_SWEEP_THRESHOLD = 200;
-const isSafe = (digits: string) => Number.isSafeInteger(Number(digits));
-const STATS_ONLY = ['--since', '--sweep-threshold', '--max-fire-ratio'];
-const DECIMAL_INTEGER = /^(0|[1-9][0-9]*)$/u;
-const RATIO = /^(0|1|0\.[0-9]+|1\.0+)$/u;
+const DEFAULT_SINCE = '30d';
+const STATS_ONLY = ['--since', '--from'];
+const MAX_DAYS = 3650;
+const DAYS = /^([1-9][0-9]{0,3})d$/u;
 const usage = (subject: string, message?: string) =>
   new Raised([diag('E_USAGE', { subject, ...(message === undefined ? {} : { message }) })]);
 
@@ -137,34 +135,34 @@ export function parseArgs(argv: readonly string[]): Args {
     fail('list-dependents', 'Name the files whose dependents you want to list.');
   }
   const since = values.get('--since');
-  const threshold = values.get('--sweep-threshold');
-  const ratio = values.get('--max-fire-ratio');
+  const from = values.get('--from');
   if (mode !== 'stats') {
     for (const option of STATS_ONLY) {
       if (seen.has(option)) fail(option, `${option} is only valid with "docstamp stats".`);
     }
   }
-  if (since?.startsWith('-')) fail('--since', '--since must not start with "-".');
-  if (threshold !== undefined && !(DECIMAL_INTEGER.test(threshold) && isSafe(threshold))) {
-    fail('--sweep-threshold', '--sweep-threshold needs a non-negative whole number.');
+  if (since !== undefined && from !== undefined) {
+    fail('--since', '--since <n>d and --from <rev> cannot be used together; pick one.');
   }
-  if (ratio !== undefined && !RATIO.test(ratio)) {
-    fail('--max-fire-ratio', '--max-fire-ratio needs a decimal number from 0 to 1.');
+  const days = DAYS.exec(since ?? '')?.[1];
+  if (since !== undefined && (days === undefined || Number(days) > MAX_DAYS)) {
+    fail('--since', `--since needs a number of days written like 30d (1d to ${MAX_DAYS}d).`);
   }
+  if (from?.startsWith('-')) fail('--from', '--from needs a revision, not an option.');
   if (failure) throw failure;
   const json = seen.has('--json');
   const root = values.get('--root');
   const rootOpt = root === undefined ? {} : { root };
   if (mode === 'stats') {
-    return {
-      mode,
-      json,
-      ...rootOpt,
-      paths,
-      since: since ?? DEFAULT_SINCE,
-      sweepThreshold: threshold === undefined ? DEFAULT_SWEEP_THRESHOLD : Number(threshold),
-      ...(ratio === undefined ? {} : { maxFireRatio: ratio }),
-    };
+    const window: StatsWindowArg =
+      from === undefined
+        ? {
+            kind: 'days',
+            days: Number(days ?? DEFAULT_SINCE.slice(0, -1)),
+            value: since ?? DEFAULT_SINCE,
+          }
+        : { kind: 'from', value: from };
+    return { mode, json, ...rootOpt, paths, window };
   }
   return mode === 'update'
     ? { mode, all, json, ...rootOpt, paths }

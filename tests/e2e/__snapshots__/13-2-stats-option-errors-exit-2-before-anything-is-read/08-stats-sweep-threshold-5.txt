@@ -1,0 +1,6 @@
+# stats --sweep-threshold=5
+$ docstamp stats --sweep-threshold=5
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --sweep-threshold=5: Unknown option --sweep-threshold=5; see docstamp help.

@@ -5,7 +5,7 @@ import { sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
 import { dependentsOf } from '../engine/reverse.ts';
-import { exceeds, statistics, type FileStats } from '../engine/stats.ts';
+import { statistics, type FileStats } from '../engine/stats.ts';
 import { fileHash } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
 import { replay } from '../history/replay.ts';
@@ -237,19 +237,23 @@ function runReverse(
   return exitCode;
 }
 
-// SPEC §13.9
+// SPEC §13.9; the only read of the clock (§2)
 function runStats(args: Extract<Args, { mode: 'stats' }>, cwd: string, io: Io): number {
   let exitCode = 2;
   let global: Diagnostic[] = [];
   let window: StatsWindow | null = null;
   let files: readonly FileStats[] = [];
-  let exceeding: string[] = [];
   try {
     const root = determineRoot(cwd, args.root);
     const selected = selectResults(args.paths, cwd, root, listAll(root));
     const invalid = selected.filter((r) => r.state === 'invalid');
     if (invalid.length > 0) throw new Raised(invalid.flatMap((r) => [...r.diagnostics]));
-    const replayed = replay(root, args.since);
+    const given = args.window;
+    const replayed = replay(
+      root,
+      given.kind === 'days' ? given : { kind: 'from', value: given.value },
+      Math.floor(Date.now() / 1000),
+    );
     const computed = statistics(
       selected.map((r) => ({
         file: r.file,
@@ -258,39 +262,23 @@ function runStats(args: Extract<Args, { mode: 'stats' }>, cwd: string, io: Io): 
         diagnostics: r.diagnostics,
       })),
       replayed.commits,
-      args.sweepThreshold,
     );
-    const limit = args.maxFireRatio;
     files = computed.files;
-    exceeding =
-      limit === undefined ? [] : files.filter((f) => exceeds(f.ratio, limit)).map((f) => f.file);
     window = {
-      since: args.since,
       kind: replayed.kind,
+      value: given.value,
       commits: replayed.commits.length,
-      firingNothing: computed.firingNothing,
+      untouched: computed.untouched,
     };
-    exitCode = exceeding.length > 0 ? 1 : 0;
+    exitCode = 0;
   } catch (e) {
     if (!(e instanceof Raised)) throw e;
     global = e.diagnostics;
   }
   if (args.json) {
-    io.stdout(
-      statsJsonText({
-        exitCode,
-        window,
-        sweepThreshold: args.sweepThreshold,
-        maxFireRatio: args.maxFireRatio,
-        exceeding,
-        files,
-        diagnostics: global,
-      }),
-    );
+    io.stdout(statsJsonText({ exitCode, window, files, diagnostics: global }));
   } else {
-    const gate =
-      args.maxFireRatio === undefined ? undefined : { given: args.maxFireRatio, exceeding };
-    if (window !== null) io.stdout(statsText(files, window, gate));
+    if (window !== null) io.stdout(statsText(files, window));
     io.stderr(diagnosticsText([...global, ...files.flatMap((f) => f.diagnostics)]));
   }
   return exitCode;

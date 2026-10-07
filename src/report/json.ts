@@ -152,23 +152,20 @@ export function reverseJsonText(doc: ReverseJsonDoc): string {
 }
 
 export interface StatsWindow {
-  readonly since: string;
-  readonly kind: 'revision' | 'date';
+  readonly kind: 'days' | 'revision';
+  readonly value: string;
   readonly commits: number;
-  readonly firingNothing: number;
+  readonly untouched: number;
 }
 
 export interface StatsJsonDoc {
   exitCode: number;
   window: StatsWindow | null;
-  sweepThreshold: number;
-  maxFireRatio: string | undefined;
-  exceeding: readonly string[];
   files: readonly FileStats[];
   diagnostics: readonly Diagnostic[];
 }
 
-// SPEC §14.5: ratios are integers of ten-thousandths in memory, JSON numbers on output
+// SPEC §14.5: rates are integers of ten-thousandths in memory, JSON numbers on output
 export function statsJsonText(doc: StatsJsonDoc): string {
   const { window } = doc;
   const files = doc.files.map((f) =>
@@ -176,9 +173,9 @@ export function statsJsonText(doc: StatsJsonDoc): string {
       ['file', f.file],
       ['patterns', f.patterns],
       ['resolvedCount', f.resolvedCount],
-      ['commits', f.commits],
+      ['staleCommits', f.staleCommits],
       ['days', f.days],
-      ['ratio', f.ratio / 10000],
+      ['staleRate', f.staleRate / 10000],
       ['sweepCommits', f.sweepCommits],
       ['sweepShare', f.sweepShare / 10000],
       ['diagnostics', sortDiagnostics(f.diagnostics).map(diagJson)],
@@ -193,15 +190,12 @@ export function statsJsonText(doc: StatsJsonDoc): string {
       window === null
         ? null
         : obj([
-            ['since', window.since],
             ['kind', window.kind],
+            ['value', window.value],
             ['commits', window.commits],
-            ['firingNothing', window.firingNothing],
+            ['untouched', window.untouched],
           ]),
     ],
-    ['sweepThreshold', doc.sweepThreshold],
-    ['maxFireRatio', doc.maxFireRatio === undefined ? null : Number(doc.maxFireRatio)],
-    ['exceeding', [...doc.exceeding]],
     ['files', files],
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
   ];

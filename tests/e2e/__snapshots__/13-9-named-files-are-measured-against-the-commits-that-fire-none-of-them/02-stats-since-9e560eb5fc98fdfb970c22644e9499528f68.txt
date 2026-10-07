@@ -1,5 +1,0 @@
-$ docstamp stats --since 9e560eb5fc98fdfb970c22644e9499528f682c97 nope.md NARROW.md
-exit: 2
---- stdout ---
---- stderr ---
-error: E_UNKNOWN_FILE: nope.md: Name a file listed under "files" in the configuration file, or one with a docstamp block.
