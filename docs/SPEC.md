@@ -761,6 +761,12 @@ the review commit therefore keeps working. Step 1.3 ignores commits where anothe
 the same Hash removed it. A shallow clone, or a Write that is not yet committed, yields *unknown*;
 so does an empty result, since a stale `content-changed` Result must have changed something.
 
+NOTE: Known limit. The report is the difference between the work tree and the commit *C* that
+introduced the LockEntry, so an edit committed in the same commit as the Write is not in the
+report: the file is `stale` with `content-changed`, but that edit is not listed. This follows from
+storing one Hash and no commit ID. Commit the Lockfile separately from the edits it covers, or
+list the dependencies (§13.7) and review them in full.
+
 ## 13 Command Line
 
 ### 13.1 Synopsis
@@ -848,7 +854,8 @@ No case folding is applied: the argument must equal the key under `files`.
    - else 1 if any of *selected* is `stale`;
    - else 0.
 
-If a step raises, output the raised Diagnostics as global and exit 2.
+If a step raises, output the raised Diagnostics as global and exit 2. No evaluation result
+exists then, so nothing but the Diagnostics is output (§14.3, §14.5).
 
 Step 4 evaluates Results as §12.1 and then sets `[[Changes]]` of each selected Result as §12.3.
 
@@ -864,14 +871,15 @@ reviewer compares them with the state at the last Write using its own tools.
 3. Let (*results*, *lock*, *global*) be `? EvaluateAll(root, policy)`.
 4. If `--all` is given, let *targets* be *results*. Otherwise let *targets* be
    `? SelectResults(args, cwd, root, results)`.
-5. If *global* contains an error or any of *targets* is `invalid`: output *targets* and *global*
-   as a check would (§14), write nothing, and exit 2.
+5. If *global* contains an error or any of *targets* is `invalid`: output *targets* as a check
+   does (§14.3) but without its `next:` line, and *global*, write nothing, and exit 2.
 6. For each *t* of *targets*, set the LockEntry of *t*.`[[File]]` in *lock* to
    *t*.`[[Current]]`.
 7. Let *removed* be the files of *lock* that have no Declaration, in path order. Remove their
    entries.
 8. `WriteLock(root, lock)`.
-9. Output the written files and *removed* (§14), and *global* without its `W_ORPHAN`
+9. Output, for each of *targets*, whether its LockEntry changed in step 6 (*written*) or was
+   already equal to *t*.`[[Current]]` (*unchanged*), and *removed* (§14), and *global* without its `W_ORPHAN`
    Diagnostics, since step 7 removed those entries. Exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
@@ -984,7 +992,8 @@ Then one summary line:
 <n> ok, <m> stale, <k> invalid
 ```
 
-counting the selected Results. Then, if any selected Result is `stale`:
+counting the selected Results. When the command raised before any Result existed (§13.5), none
+of this is output: no block, no summary line and no `next:` line, only the Diagnostics. Then, if any selected Result is `stale`:
 
 ```
 next: review each stale file against its dependencies, then run: docstamp update <file> <file>
@@ -1003,8 +1012,11 @@ omitting the bracketed parts when empty.
 
 ### 14.4 Update, Text Mode
 
-One line `written  <file>` per target, then one line `removed  <file>` per removed
-entry, each group in path order. Diagnostics as in §14.3.
+One line per target in path order: `written  <file>` if its LockEntry changed, else
+`unchanged  <file>`; then one line `removed  <file>` per removed entry in path order.
+Diagnostics as in §14.3. When step 5 of §13.6 refused, the blocks and summary line of §14.3 are
+output for the targets, without the `next:` line, and nothing is written. When the command
+raised before any Result existed, only the Diagnostics are output.
 
 ### 14.5 JSON Mode
 
@@ -1037,10 +1049,11 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path" }` in this order, or
   `null` when it is *unknown* or not applicable (§12.3), including in update mode.
 - With `update`, each element of `files` adds `"written": true|false` after
-  `diagnostics` (false only when step 5 of §13.6 refused), and the top level adds `"removed"`, a
+  `diagnostics` (true only when its LockEntry changed; false when it was unchanged or when step 5 of
+  §13.6 refused), and the top level adds `"removed"`, a
   List of files, after `diagnostics`. An element with `"written": true` reports the state after
-  the Write: `state` is `ok` and `reasons` is empty; `summary` counts those states. An element
-  with `"written": false` reports the state evaluated by §12.1.
+  the Write: `state` is `ok` and `reasons` is empty; `summary` counts those states. An unchanged
+  element also reports `ok`; a refused element reports the state evaluated by §12.1.
 - With `list-dependencies` the document is instead (§13.7):
 
   ```json
@@ -1088,8 +1101,9 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   case `files` is empty.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
   empty `[[File]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
-- When a step raises before Results exist, `summary` (not for `list-dependencies` or
-  `list-dependents`) counts zeros and `files` is empty.
+- When a step raises before Results exist, `summary` is omitted (as it always is for
+  `list-dependencies` and `list-dependents`) and `files` is empty, so a run that evaluated
+  nothing never reports zero counts.
 - Consumers MUST ignore unknown members. Within version 2, later revisions only add members.
 
 ### 14.6 List-Dependencies, Text Mode

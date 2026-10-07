@@ -74,6 +74,8 @@ A file's content is hashed as it is, except that CR LF becomes LF in text files 
 
 A stale doc lists the dependencies that changed since its last review, as `modified`, `added` or `deleted` ([SPEC §12.3](docs/SPEC.md#123-changedsince)). `--json` carries the same list as `changes`. The list comes from read-only `git` calls and never affects the verdict or exit code.
 
+Known limit: the list is the difference from the commit that introduced the lock entry. An edit committed in the same commit as `docstamp update` makes the doc stale but is not listed, because docstamp stores one hash and no commit id ([SPEC §12.3](docs/SPEC.md#123-changedsince)). Commit the lock separately from the edits it covers.
+
 When git history cannot answer (no git, not a work tree, a shallow clone, or an `update` not yet committed), docstamp prints the dependency patterns (`depends` lines) and `changes` is `null`. Then list the dependencies and diff them yourself:
 
 ```sh
@@ -84,12 +86,12 @@ git diff <base> -- <files>
 ## Commands
 
 - `docstamp [check]`: the verdict; exit 0 when every file is ok, 1 when one is stale, 2 on an error. A bare `docstamp` is `check`.
-- `docstamp update (--all | <file>...)`: record that you reviewed the named files. In `--json`, a written file reports `state: "ok"` and `written: true`.
+- `docstamp update (--all | <file>...)`: record that you reviewed the named files. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line.
 - `docstamp list-dependencies [<file>...]`: each file with its dependency patterns and the files they select. It does not read the lock.
 - `docstamp list-dependents <file>...`: the reverse query. For each named file (any file in the repository), the dependents (files that depend on it) and the patterns that select it. Direct only, no lock.
 - `docstamp help` and `docstamp version`.
 
-Every command except `help` and `version` takes `--json` and `--root <dir>`; `--root` needs a directory and never takes another option as its value. A file argument that is unknown or outside the root fails the whole command with only its diagnostics, never a partial report. The options `--write` and `--files` were replaced by `update` and `list-dependencies`.
+Every command except `help` and `version` takes `--json` and `--root <dir>`; `--root` needs a directory and never takes another option as its value. A command that fails before anything is evaluated (bad configuration, lock, root or file argument) prints only its diagnostics: no summary line, and `--json` omits `summary`. A file argument that is unknown or outside the root fails the whole command with only its diagnostics, never a partial report. The options `--write` and `--files` were replaced by `update` and `list-dependencies`.
 
 Command line and exit codes: [SPEC §13](docs/SPEC.md#13-command-line) and [SPEC §16](docs/SPEC.md#16-exit-codes).
 
