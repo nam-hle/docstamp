@@ -1,6 +1,6 @@
 {
   "name": "docstamp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Deterministic snapshot gate for hidden links between files",
   "license": "MIT",
   "author": {
