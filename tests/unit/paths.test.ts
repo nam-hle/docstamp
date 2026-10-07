@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { selectResults, toRepoPath } from '../../src/cli/paths.ts';
+import { resolveArgument, selectResults, toRepoPath } from '../../src/cli/paths.ts';
 import type { Raised } from '../../src/core/diagnostics.ts';
 import type { Result } from '../../src/core/types.ts';
 
@@ -29,6 +29,15 @@ describe('§13.4 toRepoPath', () => {
     expect(toRepoPath('é.md', '/r', '/r')).toBe('é.md');
     expect(toRepoPath('e\u0301.md', '/r', '/r')).toBe('\u00e9.md');
     expect(toRepoPath('A.md', '/r', '/r')).toBe('A.md');
+  });
+});
+
+describe('§13.4 steps 1 and 2 resolveArgument', () => {
+  it('joins to cwd and normalizes lexically, also outside root', () => {
+    expect(resolveArgument('../../x/./y', '/r/a')).toBe('/x/y');
+    expect(resolveArgument('/abs/../z', '/r')).toBe('/z');
+    expect(resolveArgument('.', '/r', false)).toBe('/r');
+    expect(resolveArgument('docs\\a.md', '/r', true)).toBe('/r/docs/a.md');
   });
 });
 

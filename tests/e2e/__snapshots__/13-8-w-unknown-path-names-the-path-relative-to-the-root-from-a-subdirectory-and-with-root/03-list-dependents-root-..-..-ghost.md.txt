@@ -1,0 +1,8 @@
+$ docstamp list-dependents --root .. ../ghost.md
+cwd: docs
+exit: 0
+--- stdout ---
+ghost.md
+  (no dependents)
+--- stderr ---
+warning: W_UNKNOWN_PATH: ghost.md: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory).

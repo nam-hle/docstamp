@@ -1,0 +1,15 @@
+# an unknown path
+$ docstamp list-dependents src/b.ts
+exit: 0
+--- stdout ---
+src/b.ts
+  (no dependents)
+--- stderr ---
+warning: W_UNKNOWN_PATH: src/b.ts: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory).
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"
+      - "src/**"

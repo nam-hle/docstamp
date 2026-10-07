@@ -6,6 +6,17 @@ import type { Diagnostic, Result } from '../core/types.ts';
 const toPosix = (value: string): string => value.replaceAll('\\', '/');
 const isDriveAbsolute = (value: string): boolean => /^[A-Za-z]:\//u.test(value);
 
+// SPEC §13.4 steps 1 and 2
+export function resolveArgument(
+  arg: string,
+  cwd: string,
+  windows: boolean = process.platform === 'win32',
+): string {
+  const [argument, base] = windows ? [arg, cwd].map(toPosix) : [arg, cwd];
+  const absolute = posix.isAbsolute(argument!) || (windows && isDriveAbsolute(argument!));
+  return posix.normalize(absolute ? argument! : `${base}/${argument}`);
+}
+
 // SPEC §13.4
 export function toRepoPath(
   arg: string,
@@ -13,10 +24,9 @@ export function toRepoPath(
   root: string,
   windows: boolean = process.platform === 'win32',
 ): string | null {
-  const [argument, base, rootDir] = windows ? [arg, cwd, root].map(toPosix) : [arg, cwd, root];
-  const absolute = posix.isAbsolute(argument!) || (windows && isDriveAbsolute(argument!));
-  const joined = posix.normalize(absolute ? argument! : `${base}/${argument}`);
-  const prefix = rootDir!.endsWith('/') ? rootDir! : `${rootDir}/`;
+  const joined = resolveArgument(arg, cwd, windows);
+  const rootDir = windows ? toPosix(root) : root;
+  const prefix = rootDir.endsWith('/') ? rootDir : `${rootDir}/`;
   if (!joined.startsWith(prefix)) return null;
   const rest = joined.slice(prefix.length).replace(/\/$/u, '').normalize('NFC');
   return isRepoPath(rest) ? rest : null;

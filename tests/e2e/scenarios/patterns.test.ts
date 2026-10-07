@@ -307,3 +307,70 @@ scenario('§8.5 an inline block gets the same warning', async (repo) => {
   expect([ok.exit, ok.stdout]).toEqual([0, '1 ok, 0 stale, 0 invalid\n']);
   expect(ok.stderr).toContain('W_EMPTY_EXCLUSION');
 });
+
+scenario(
+  '§8.5 a repeated pattern warns W_DUPLICATE_PATTERN once and changes nothing',
+  async (repo) => {
+    repo.write('src/a.ts', 'a\n');
+    repo.write('src/gen/b.ts', 'b\n');
+    repo.write(
+      'docstamp.yaml',
+      config({
+        'CONFIGURED.md': ['src', 'src', '!src/gen', '!src/gen'],
+        'PLAIN.md': ['src', '!src/gen'],
+      }),
+    );
+    repo.write('CONFIGURED.md', '# configured\n');
+    repo.write('PLAIN.md', '# plain\n');
+    repo.write(
+      'INLINE.md',
+      '---\ndocstamp:\n  dependencies: [src, src/a.ts, src]\n---\n# inline\n',
+    );
+
+    const first = await repo.run([], { label: 'unrecorded, with the warnings' });
+    expect(first.exit).toBe(1);
+    expect(first.stderr).toBe(
+      'warning: W_DUPLICATE_PATTERN: CONFIGURED.md: !src/gen: ' +
+        'The pattern is listed more than once; keep one copy, unless the order of the patterns ' +
+        'needs both.\n' +
+        'warning: W_DUPLICATE_PATTERN: CONFIGURED.md: src: ' +
+        'The pattern is listed more than once; keep one copy, unless the order of the patterns ' +
+        'needs both.\n' +
+        'warning: W_DUPLICATE_PATTERN: INLINE.md: src: ' +
+        'The pattern is listed more than once; keep one copy, unless the order of the patterns ' +
+        'needs both.\n',
+    );
+
+    const update = await repo.run(['update', '--all'], { expectExit: 0 });
+    expect(update.stderr.match(/W_DUPLICATE_PATTERN/gu)).toHaveLength(3);
+    const reviewed = await repo.run([], { label: 'reviewed, the warnings stay' });
+    expect([reviewed.exit, reviewed.stdout]).toEqual([0, '3 ok, 0 stale, 0 invalid\n']);
+
+    const json = await repo.run(['list-dependencies', '--json', 'CONFIGURED.md', 'PLAIN.md']);
+    const [configured, plain] = json.json().files;
+    expect(configured.diagnostics.map((d: { code: string }) => d.code)).toEqual([
+      'W_DUPLICATE_PATTERN',
+      'W_DUPLICATE_PATTERN',
+    ]);
+    expect(plain.diagnostics).toEqual([]);
+    expect(configured.resolvedFiles).toEqual(plain.resolvedFiles);
+
+    repo.write(
+      'docstamp.yaml',
+      config({ 'CONFIGURED.md': ['src', '!src/gen'], 'PLAIN.md': ['src', '!src/gen'] }),
+    );
+    const deduplicated = await repo.run([], { label: 'duplicates removed, still ok' });
+    expect(deduplicated.exit).toBe(0);
+    expect(deduplicated.stderr.match(/W_DUPLICATE_PATTERN/gu)).toHaveLength(1);
+    expect(deduplicated.stderr).toContain('W_DUPLICATE_PATTERN: INLINE.md: src');
+  },
+);
+
+scenario('§8.5 a duplicate is reported next to the errors of an invalid file', async (repo) => {
+  repo.write('docstamp.yaml', config({ 'DOC.md': ['gone', 'gone'] }));
+  repo.write('DOC.md', '# doc\n');
+  const result = await repo.run([]);
+  expect(result.exit).toBe(2);
+  expect(result.stderr).toContain('error: E_EMPTY_PATTERN: DOC.md: gone: ');
+  expect(result.stderr).toContain('warning: W_DUPLICATE_PATTERN: DOC.md: gone: ');
+});

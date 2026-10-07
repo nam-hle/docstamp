@@ -1,0 +1,14 @@
+# a repeated pattern
+$ docstamp
+exit: 0
+--- stdout ---
+1 ok, 0 stale, 0 invalid
+--- stderr ---
+warning: W_DUPLICATE_PATTERN: DOC.md: src/**: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"
+      - "src/**"

@@ -12,7 +12,7 @@ exit: 2
       "severity": "error",
       "file": null,
       "subject": "/etc/hosts",
-      "message": "Name a file inside the root."
+      "message": "The argument is resolved against the current directory (<root>) to /etc/hosts, which is outside the root <root>; name a file inside the root."
     }
   ]
 }

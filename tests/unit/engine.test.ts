@@ -131,6 +131,54 @@ describe('§8.5 resolveDependencies', () => {
   });
 });
 
+describe('§8.5 step 4 W_DUPLICATE_PATTERN', () => {
+  it('warns once per distinct repeated pattern and changes nothing else', () => {
+    const plain = evaluate(declare('B.md', ['src/**', '!src/b.ts']), universe, lockOf({}), [], fs);
+    const r = evaluate(
+      declare('B.md', ['src/**', '!src/b.ts', 'src/**', 'src/**', '!src/b.ts']),
+      universe,
+      lockOf({}),
+      [],
+      fs,
+    );
+    expect([r.state, r.resolved, r.current]).toEqual([plain.state, plain.resolved, plain.current]);
+    expect(r.diagnostics.map((d) => [d.code, d.severity, d.file, d.subject])).toEqual([
+      ['W_DUPLICATE_PATTERN', 'warning', 'B.md', '!src/b.ts'],
+      ['W_DUPLICATE_PATTERN', 'warning', 'B.md', 'src/**'],
+    ]);
+    expect(plain.diagnostics).toEqual([]);
+  });
+  it('compares the strings exactly', () => {
+    const r = evaluate(
+      declare('B.md', ['src', 'src/**', 'src/a.ts']),
+      universe,
+      lockOf({}),
+      [],
+      fs,
+    );
+    expect(r.diagnostics).toEqual([]);
+  });
+  it('an ok file keeps the warning and its exit-relevant state', () => {
+    const current = hashOf(['src/a.ts', 'src/b.ts']);
+    const r = evaluate(
+      declare('B.md', ['src/**', 'src/**']),
+      universe,
+      lockOf({ 'B.md': current }),
+      [],
+      fs,
+    );
+    expect([r.state, r.diagnostics.map((d) => d.code)]).toEqual(['ok', ['W_DUPLICATE_PATTERN']]);
+  });
+  it('is reported next to the errors of an invalid file', () => {
+    const r = evaluate(declare('B.md', ['gone', 'gone']), universe, lockOf({}), [], fs);
+    expect(r.diagnostics.map((d) => [d.code, d.subject])).toEqual([
+      ['E_EMPTY_DEPENDENCIES', ''],
+      ['E_EMPTY_PATTERN', 'gone'],
+      ['W_DUPLICATE_PATTERN', 'gone'],
+    ]);
+  });
+});
+
 describe('§8.5 NOTE E_EMPTY_PATTERN names an ignored path', () => {
   const ignoredPaths = new Set(['.npmrc', 'build', 'build/out']);
   const withIgnored: EngineFs = { ...fs, isIgnoredPath: (p) => ignoredPaths.has(p) };

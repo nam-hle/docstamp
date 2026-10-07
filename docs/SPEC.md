@@ -221,7 +221,8 @@ duplicates (all fields equal) removed.
 
 `[[Message]]` is one sentence naming the problem and its fix. It MUST NOT contain operating system
 error text, parser error text, or absolute paths; it MAY contain an error code name such as
-`EACCES`.
+`EACCES`. The one exception is the `E_USAGE` of a file argument outside Root (§13.8 step 3), which
+names the current directory and Root, because that is what explains the failure.
 
 ### 5.6 Inline Block
 
@@ -468,15 +469,24 @@ a file under a directory an earlier negation removed.
    `PatternMatches(pattern, path)`, then, with `[[Subject]]` *pattern*: if *pattern* has no
    Negation, collect `E_EMPTY_PATTERN` into *problems*; otherwise collect `W_EMPTY_EXCLUSION` into
    *warnings*.
-4. Let *resolved* be `Select(declaration.[[Dependencies]], candidates)`.
-5. If *resolved* is empty, collect `E_EMPTY_DEPENDENCIES` into *problems*.
-6. If *problems* is not empty, raise *problems* followed by *warnings*. Otherwise return *resolved*
+4. For each distinct String that appears more than once in `declaration.[[Dependencies]]` (String
+   equality, §3.2), collect `W_DUPLICATE_PATTERN` into *warnings*, `[[Subject]]` that String.
+5. Let *resolved* be `Select(declaration.[[Dependencies]], candidates)`.
+6. If *resolved* is empty, collect `E_EMPTY_DEPENDENCIES` into *problems*.
+7. If *problems* is not empty, raise *problems* followed by *warnings*. Otherwise return *resolved*
    and *warnings*.
 
 NOTE: A file is never one of its own dependencies (step 2), so editing a file never
 makes it stale. A pattern without Negation must match something (Principle 6): a dependency that
 matches nothing is a mistyped or stale rule, and a declaration whose patterns together select
-nothing is a mistake (step 5).
+nothing is a mistake (step 6).
+
+NOTE: A *duplicate* is the same String twice, whatever its Negation, and is warned once however
+many times it repeats. Patterns that differ in any code point, such as `src` and `src/**`, are not
+duplicates even when they select the same files. The warning changes neither `Select` (§8.4), the
+resolved files, the Dependency Hash nor the state of the file. Removing a repeat is not always
+neutral, because the last matching pattern wins: in `src`, `!src/gen`, `src` the second `src`
+selects `src/gen` again, and deleting it changes the selection.
 
 NOTE: An exclusion *matches nothing* when no file of *candidates* satisfies `PatternMatches` for the
 exclusion itself (step 3). The test looks at the exclusion alone: it does not depend on the
@@ -1230,7 +1240,9 @@ dependents of each: the stamped files that depend on it. At least one file argum
    `? ComputeUniverse(root, config)`, and (*declarations*, *attached*, *marked*) be the Declarations
    and attached Diagnostics of steps 3 to 5 of §12.2.
 3. If `ToRepoPath(arg, cwd, root)` fails for any file argument *arg*, raise « `E_USAGE` with
-   `[[Subject]]` *arg* » for each such *arg*; no entry is output. A *path* need not exist.
+   `[[Subject]]` *arg* » for each such *arg*; no entry is output. Its `[[Message]]` says how *arg*
+   was resolved: against the current directory *cwd*, to which absolute path (step 2 of §13.4),
+   and that this is outside *root*. A *path* need not exist.
 4. Let *entries* be an empty List. For each distinct *arg* of the file arguments, in path order of
    its *path*:
    1. Let *path* be `ToRepoPath(arg, cwd, root)`.
@@ -1239,7 +1251,12 @@ dependents of each: the stamped files that depend on it. At least one file argum
       `b.[[File]]` and `Select(b.[[Dependencies]], « path »)` selects it, append { `[[File]]`:
       `b.[[File]]`, `[[Via]]`: the patterns of `b.[[Dependencies]]` that have no Negation and
       satisfy `PatternMatches(pattern, path)`, in declaration order } to *found*.
-   3. Add the entry { `[[File]]`: *path*, `[[Dependents]]`: *found* }.
+   3. Let *diagnostics* be « `W_UNKNOWN_PATH` », `[[Subject]]` *path*, with no `[[File]]`, if
+      *path* is not in *universe* and is not an *existing entry*; else « ». An *existing entry* is
+      an entry of any kind (§7.1, not followed) at *path* under *root*, whose name in the listing of
+      its parent directory, after §7.4, equals the last segment of *path*, as §9.4 requires.
+   4. Add the entry { `[[File]]`: *path*, `[[Dependents]]`: *found*, `[[Diagnostics]]`:
+      *diagnostics* }.
 5. Output *entries* and *attached* (§14).
 6. Exit 2 if *attached* holds an error; else 0.
 
@@ -1251,6 +1268,11 @@ there is no `stale` information and the exit code is never 1. A file whose patte
 cannot be matched: it is skipped and its `E_PATTERN` is output; the same holds for any file with
 an attached Diagnostic, such as an inline file with an `E_BLOCK`. A file that is not in the Universe
 (ignored, absent, or the Lockfile) has no dependents. A stamped file may itself be an argument.
+
+NOTE: `W_UNKNOWN_PATH` makes a typo visible without breaking a script: the entry is still output
+with no dependents and the exit code stays 0 (§16). A path that exists but is ignored, a directory,
+or the Lockfile is not unknown: it has no dependents and no warning. The arguments are still
+resolved against the current directory (§13.4), not against `--root`.
 
 ### 13.9 Stats
 
@@ -1434,7 +1456,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 
   Each entry is { `[[File]]`, `[[Dependents]]` } of §13.8 step 4, `dependents`
   a List of { `"file"`, `"via"` } in path order, empty when nothing depends on `file`. The `diagnostics`
-  of an entry is always `[]`, kept for the shape of the other modes. The top-level
+  of an entry holds its `W_UNKNOWN_PATH` (§13.8 step 4.3), and is `[]` otherwise. The top-level
   `diagnostics` hold the attached `E_PATTERN` Diagnostics, or the raised Diagnostics, in which
   case `files` is empty.
 - The `diagnostics` of a file holds its errors when it is `invalid`, and its warnings (§8.5) in
@@ -1504,8 +1526,8 @@ One block per entry, in the order of §13.8:
 
 with one row per dependent, in path order: two spaces, the dependent padded with spaces to the
 width of the longest dependent of the block, three spaces, `via `, and the patterns joined with
-`, `, each written as in §14.2. An entry with no dependents has the single row `  (no dependents)`.
-Diagnostics as in §14.3.
+`, `, each written as in §14.2. An entry with no dependents has the single row `  (no dependents)`,
+also when it has a `W_UNKNOWN_PATH`. Diagnostics as in §14.3, those of the entries included.
 
 ### 14.8 Stats, Text Mode
 
@@ -1534,7 +1556,7 @@ the command raised or a file was `invalid`, nothing is output on standard output
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2, §13.8 | correct the command line; for a removed option, use the command it names |
+| `E_USAGE` | error | §13.2, §13.8 | correct the command line; for a removed option, use the command it names; for a file argument outside Root, name a path that resolves, against the current directory, inside Root |
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6) |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
@@ -1556,6 +1578,8 @@ the command raised or a file was `invalid`, nothing is output on standard output
 | `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; for `--from`, name a commit |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 | `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
+| `W_DUPLICATE_PATTERN` | warning | §8.5 | keep one copy of the repeated pattern, unless the order of the patterns needs both (§8.4); attached to the file, subject the pattern, once per distinct repeated pattern |
+| `W_UNKNOWN_PATH` | warning | §13.8 | check the spelling: the path is not in the Universe and not on disk, so nothing depends on it; subject the path as a RepoPath, carried by the entry of that path |
 
 ## 16 Exit Codes
 
@@ -1620,7 +1644,13 @@ The following are not breaking:
   file argument of `check`; it is now the command, and a file literally named `stats` is reached
   with `--` (§13.2), as for every other command word;
 - a new member of the JSON output (§14.5: consumers ignore unknown members);
-- a change to the output of `--help`, `--version` or the changed-file report (§2);
+- a change to the output of `--help`, `--version` or the changed-file report (§2); this includes
+  the description of `update` in `--help`, reworded to hold for inline files too;
+- the warnings `W_DUPLICATE_PATTERN` (§8.5) and `W_UNKNOWN_PATH` (§13.8): new, warning severity,
+  no change to a verdict, a Hash, a selection or an exit code; `list-dependents` still exits 0
+  for a path it does not know;
+- the `[[Message]]` of the `E_USAGE` of §13.8 step 3 now names the directory and Root it was
+  resolved against; the code, the exit code and the resolution of §13.4 are unchanged;
 - a bug fix whose previous behavior contradicted this specification, unless it changes a Dependency
   Hash or the selection of dependencies (§17.4): a Lockfile records the value the previous release
   computed, so such a fix is breaking.

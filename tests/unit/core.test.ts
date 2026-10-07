@@ -53,6 +53,8 @@ describe('§5.5 diagnostic order', () => {
   it('W_ codes are warnings, others errors', () => {
     expect(diag('W_ORPHAN').severity).toBe('warning');
     expect(diag('W_EMPTY_EXCLUSION').severity).toBe('warning');
+    expect(diag('W_DUPLICATE_PATTERN').severity).toBe('warning');
+    expect(diag('W_UNKNOWN_PATH').severity).toBe('warning');
     expect(diag('E_LOCK').severity).toBe('error');
   });
 });

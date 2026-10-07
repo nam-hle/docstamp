@@ -49,6 +49,10 @@ function resolveWithWarnings(
       }),
     );
   });
+  const repeated = new Set(b.dependencies.filter((s, i) => b.dependencies.indexOf(s) !== i));
+  for (const subject of repeated) {
+    warnings.push(diag('W_DUPLICATE_PATTERN', { file: b.file, subject }));
+  }
   const resolved = select(patterns, candidates);
   if (resolved.length === 0) problems.push(diag('E_EMPTY_DEPENDENCIES', { file: b.file }));
   if (problems.length > 0) throw new Raised([...problems, ...warnings]);

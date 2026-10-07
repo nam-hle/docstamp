@@ -1,0 +1,30 @@
+$ docstamp list-dependents --json src/utl.ts README.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependents",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "README.md",
+      "dependents": [],
+      "diagnostics": []
+    },
+    {
+      "file": "src/utl.ts",
+      "dependents": [],
+      "diagnostics": [
+        {
+          "code": "W_UNKNOWN_PATH",
+          "severity": "warning",
+          "file": null,
+          "subject": "src/utl.ts",
+          "message": "The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory)."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

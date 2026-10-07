@@ -20,7 +20,9 @@ export type Code =
   | 'E_UNKNOWN_FILE'
   | 'E_HISTORY'
   | 'W_ORPHAN'
-  | 'W_EMPTY_EXCLUSION';
+  | 'W_EMPTY_EXCLUSION'
+  | 'W_DUPLICATE_PATTERN'
+  | 'W_UNKNOWN_PATH';
 
 export interface Diagnostic {
   readonly code: Code;

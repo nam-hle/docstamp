@@ -26,9 +26,9 @@ import {
   statsText,
   updateText,
 } from '../report/text.ts';
-import { determineRoot, isIgnoredPath, type Universe } from '../universe/walk.ts';
+import { determineRoot, existsUnderRoot, isIgnoredPath, type Universe } from '../universe/walk.ts';
 import { HELP, parseArgs, type Args } from './args.ts';
-import { selectResults, toRepoPath } from './paths.ts';
+import { resolveArgument, selectResults, toRepoPath } from './paths.ts';
 import { loadWorkspace } from './workspace.ts';
 
 export interface Io {
@@ -198,13 +198,27 @@ function reverseEntries(
   for (const arg of paths) keyed.set(toRepoPath(arg, cwd, root) ?? arg, toRepoPath(arg, cwd, root));
   const outside = sortPaths([...keyed.keys()].filter((key) => keyed.get(key) === null));
   if (outside.length > 0) {
-    const message = 'Name a file inside the root.';
-    throw new Raised(outside.map((subject) => diag('E_USAGE', { subject, message })));
+    throw new Raised(
+      outside.map((subject) => {
+        const resolved = resolveArgument(subject, cwd);
+        const problem =
+          resolved === root || resolved.startsWith(`${root}/`)
+            ? `which does not name a file inside the root ${root}`
+            : `which is outside the root ${root}`;
+        const message =
+          `The argument is resolved against the current directory (${cwd}) to ${resolved}, ` +
+          `${problem}; name a file inside the root.`;
+        return diag('E_USAGE', { subject, message });
+      }),
+    );
   }
   const entries = sortPaths([...keyed.keys()]).map((key): ReverseEntry => ({
     file: key,
     dependents: dependentsOf(key, declarations, universe, attached),
-    diagnostics: [],
+    diagnostics:
+      universe.has(key) || existsUnderRoot(root, key)
+        ? []
+        : [diag('W_UNKNOWN_PATH', { subject: key })],
   }));
   return { entries, attached };
 }

@@ -1,3 +1,4 @@
+import { dirname } from 'node:path';
 import { expect } from 'vitest';
 import { config, scenario } from '../harness/index.ts';
 
@@ -164,7 +165,11 @@ scenario(
     const result = await repo.run(['list-dependents', '../outside.txt', 'src/util.ts']);
     expect(result.exit).toBe(2);
     expect(result.stdout).toBe('');
-    expect(result.stderr).toBe('error: E_USAGE: ../outside.txt: Name a file inside the root.\n');
+    expect(result.stderr).toBe(
+      'error: E_USAGE: ../outside.txt: The argument is resolved against the current directory ' +
+        `(${repo.root}) to ${dirname(repo.root)}/outside.txt, which is outside the root ` +
+        `${repo.root}; name a file inside the root.\n`,
+    );
 
     const json = await repo.run(['list-dependents', '--json', '/etc/hosts']);
     expect(json.exit).toBe(2);
@@ -196,5 +201,88 @@ scenario(
     expect(result.exit).toBe(2);
     expect(result.stdout).toBe('src/index.ts\n  CLAUDE.md   via src/**\n');
     expect(result.stderr).toContain('error: E_PATTERN: README.md: src//index.ts');
+  },
+);
+
+scenario(
+  '§13.8 list-dependents: an unknown path warns W_UNKNOWN_PATH and still exits 0',
+  { fixture: 'docs-site' },
+  async (repo) => {
+    repo.write('.gitignore', 'secret.txt\n');
+    repo.write('secret.txt', 'ignored\n');
+
+    const typo = await repo.run(['list-dependents', 'src/utl.ts', 'src/util.ts']);
+    expect(typo.exit).toBe(0);
+    expect(typo.stdout).toBe(
+      'src/util.ts\n  CLAUDE.md   via src/**\nsrc/utl.ts\n  (no dependents)\n',
+    );
+    expect(typo.stderr).toMatch(/^warning: W_UNKNOWN_PATH: src\/utl\.ts: /u);
+    expect(typo.stderr.match(/W_UNKNOWN_PATH/gu)).toHaveLength(1);
+
+    const json = await repo.run(['list-dependents', '--json', 'src/utl.ts', 'README.md']);
+    expect(json.exit).toBe(0);
+    expect(json.stderr).toBe('');
+    const [known, unknown] = json.json().files;
+    expect(unknown.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'W_UNKNOWN_PATH',
+        severity: 'warning',
+        file: null,
+        subject: 'src/utl.ts',
+      }),
+    ]);
+    expect([known.file, known.diagnostics]).toEqual(['README.md', []]);
+
+    const exists = await repo.run(['list-dependents', 'secret.txt', 'src', 'README.md']);
+    expect(exists.stderr).toBe('');
+    expect(exists.stdout).toBe(
+      'README.md\n  (no dependents)\nsecret.txt\n  (no dependents)\nsrc\n  (no dependents)\n',
+    );
+  },
+);
+
+scenario(
+  '§13.8 W_UNKNOWN_PATH names the path relative to the root, from a subdirectory and with --root',
+  { fixture: 'docs-site' },
+  async (repo) => {
+    const fromDocs = await repo.run(['list-dependents', '../src/utl.ts', '../src/util.ts'], {
+      cwd: 'docs',
+    });
+    expect(fromDocs.exit).toBe(0);
+    expect(fromDocs.stderr).toMatch(/^warning: W_UNKNOWN_PATH: src\/utl\.ts: /u);
+    expect(fromDocs.stdout).toContain('src/utl.ts\n  (no dependents)\n');
+
+    const rooted = await repo.run(['list-dependents', '--root', '..', 'ghost.md'], {
+      cwd: 'docs',
+    });
+    expect(rooted.exit).toBe(0);
+    expect(rooted.stderr).toMatch(/^warning: W_UNKNOWN_PATH: docs\/ghost\.md: /u);
+
+    const named = await repo.run(['list-dependents', '--root', '..', '../ghost.md'], {
+      cwd: 'docs',
+    });
+    expect(named.exit).toBe(0);
+    expect(named.stderr).toMatch(/^warning: W_UNKNOWN_PATH: ghost\.md: /u);
+  },
+);
+
+scenario(
+  '§13.8 the E_USAGE for an argument outside the root says how it was resolved',
+  { fixture: 'docs-site' },
+  async (repo) => {
+    const outside = await repo.run(['list-dependents', '../../outside.txt'], { cwd: 'docs' });
+    expect(outside.exit).toBe(2);
+    expect(outside.stdout).toBe('');
+    expect(outside.stderr).toBe(
+      'error: E_USAGE: ../../outside.txt: The argument is resolved against the current ' +
+        `directory (${repo.root}/docs) to ${dirname(repo.root)}/outside.txt, which is outside ` +
+        `the root ${repo.root}; name a file inside the root.\n`,
+    );
+
+    const rootItself = await repo.run(['list-dependents', '.']);
+    expect(rootItself.exit).toBe(2);
+    expect(rootItself.stderr).toContain(
+      `to ${repo.root}, which does not name a file inside the root ${repo.root};`,
+    );
   },
 );
