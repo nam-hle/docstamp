@@ -45,11 +45,8 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
     return done([], null);
   }
   const keys = entry.value.entries;
-  for (const key of keys.keys()) {
-    if (key !== 'dependencies' && key !== 'hash') {
-      problems.push(diag('E_UNKNOWN_KEY', { file, subject: key }));
-    }
-  }
+  const unknown = [...keys.keys()].filter((key) => key !== 'dependencies' && key !== 'hash');
+  for (const key of unknown) problems.push(diag('E_UNKNOWN_KEY', { file, subject: key }));
 
   const listed = keys.get('dependencies')?.value;
   const dependencies =
@@ -57,7 +54,9 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
       ? (listed as string[])
       : null;
   if (dependencies === null) {
-    block('dependencies', 'The dependencies key must hold a non-empty list of patterns.');
+    if (listed !== undefined || unknown.length === 0) {
+      block('dependencies', 'The dependencies key must hold a non-empty list of patterns.');
+    }
   } else {
     for (const pattern of dependencies) {
       if (!parsePattern(pattern)) problems.push(diag('E_PATTERN', { file, subject: pattern }));

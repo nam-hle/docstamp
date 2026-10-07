@@ -341,6 +341,7 @@ scenario(
       'empty-deps.md': '---\ndocstamp:\n  dependencies: []\n---\n',
       'string-deps.md': '---\ndocstamp:\n  dependencies: src/core\n---\n',
       'unknown-key.md': '---\ndocstamp:\n  dependencies: [src/core]\n  covers: [src]\n---\n',
+      'typo.md': '---\ndocstamp:\n  dependancies: [src/core]\n---\n',
       'bad-pattern.md': '---\ndocstamp:\n  dependencies: ["/src/core"]\n---\n',
       'no-match.md': '---\ndocstamp:\n  dependencies: [nothing/here]\n---\n',
       'short-hash.md': '---\ndocstamp:\n  dependencies: [src/core]\n  hash: abc\n---\n',
@@ -351,7 +352,7 @@ scenario(
     const check = await repo.run([]);
     expect(check.exit).toBe(2);
     expect(check.stdout).toContain('STALE    README.md  (unrecorded)\n');
-    expect(check.stdout).toContain('0 ok, 2 stale, 14 invalid\n');
+    expect(check.stdout).toContain('0 ok, 2 stale, 15 invalid\n');
     for (const name of Object.keys(bad)) expect(check.stdout).toContain(`INVALID  bad/${name}\n`);
     expect(check.stdout).not.toContain('NOTES.md');
     const codes = [...check.stderr.matchAll(/^error: (E_[A-Z_]+): bad\/([^:]+):/gmu)].map(
@@ -371,12 +372,13 @@ scenario(
       'scalar.md: E_BLOCK',
       'short-hash.md: E_BLOCK',
       'string-deps.md: E_BLOCK',
+      'typo.md: E_UNKNOWN_KEY',
       'unknown-key.md: E_UNKNOWN_KEY',
       'wrong-prefix.md: E_BLOCK',
     ]);
 
     const refused = await repo.run(['update', '--all'], { expectExit: 2 });
-    expect(refused.stdout).toContain('14 invalid');
+    expect(refused.stdout).toContain('15 invalid');
     expect(repo.read('README.md')).toBe(repo.fixtureText('README.md'));
     const named = await repo.run(['update', 'README.md'], { expectExit: 0 });
     expect(named.stdout).toBe('written  README.md\n');

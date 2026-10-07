@@ -708,9 +708,10 @@ binary (§10.1) or not valid UTF-8 has no text and is not an inline file.
    `[[Subject]]` `docstamp`, and return as in step 2.
 5. For each key of the block other than `dependencies` and `hash`, collect `E_UNKNOWN_KEY`,
    `[[Subject]]` the key.
-6. If `dependencies` is absent, or not a non-empty List of Strings, collect `E_BLOCK`,
-   `[[Subject]]` `dependencies`. Otherwise, for each string *s* of it that is not a valid Pattern
-   (§8.1), collect `E_PATTERN`, `[[Subject]]` *s*.
+6. If `dependencies` is present but not a non-empty List of Strings, or is absent and step 5
+   collected no `E_UNKNOWN_KEY`, collect `E_BLOCK`, `[[Subject]]` `dependencies`. Otherwise, for
+   each string *s* of it that is not a valid Pattern (§8.1), collect `E_PATTERN`, `[[Subject]]`
+   *s*.
 7. If `hash` is present, let *recorded* be it. Collect `E_BLOCK`, `[[Subject]]` `hash`, unless
    *recorded* is a String of 64 characters of `[0-9a-f]`, the scan has exactly one
    line of *hashLines*, and that line, after `hash:`, is one or more blanks, *recorded* itself,
@@ -718,6 +719,15 @@ binary (§10.1) or not valid UTF-8 has no text and is not an inline file.
 8. If *problems* is empty, return the Declaration { `[[File]]` *file*, `[[Dependencies]]` the
    strings of `dependencies`, `[[Origin]]` `inline`, `[[Recorded]]` *recorded*, or none }. Otherwise raise *problems*, and the Declaration of the Result
    (§12.1) is { *file*, the strings of `dependencies` if it is a List of Strings else « » }.
+
+NOTE: One fault, one Diagnostic. A key that is not part of the block is reported once, as
+`E_UNKNOWN_KEY` attached to the file, and never also as `E_BLOCK`: a mistyped `dependancies` does
+not add "`dependencies` is missing". `E_BLOCK` remains for exactly these cases: the marker line is
+not a block mapping (step 2); the frontmatter is not strict YAML (step 3); the document or the
+`docstamp` key is not a mapping (step 4); `dependencies` is absent and no key is unknown, or is
+present and not a non-empty List of Strings (step 6); `hash` is not 64 lowercase hexadecimal digits
+alone on its line (step 7). A block with an unknown key and a malformed `dependencies` or `hash`
+has one Diagnostic for each fault.
 
 #### 9.6.3 Discovery
 
@@ -1630,6 +1640,14 @@ error that becomes a warning, so a *Verdicts* change and breaking. A file that w
 this reason alone becomes `ok` or `stale`, and exit code 2 becomes 0 or 1; nothing needs to
 migrate. No Hash input and no selection changes (§8.4 is unchanged), so the Lockfile `version`, the
 Dependency Hashes and the pinned vectors of §17.7 stay as they are.
+
+NOTE: An unknown key in an inline block was reported as `E_UNKNOWN_KEY` and, when it stood in for
+`dependencies`, also as `E_BLOCK` (§9.6.2); it is now `E_UNKNOWN_KEY` alone. The file is `invalid`
+and the exit code is 2 before and after, so no verdict changes, but the set of Diagnostic codes of
+that run does (§17.1, fourth item; *Contract*: the meaning of `E_BLOCK`), so it is breaking. The
+migration is to read `E_UNKNOWN_KEY` where a consumer looked for `E_BLOCK` with subject
+`dependencies` on a file that also had an unknown key. No Hash input, selection or Lockfile
+`version` changes.
 
 ### 17.3 Non-breaking changes
 
