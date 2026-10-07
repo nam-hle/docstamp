@@ -75,12 +75,12 @@ describe('§13.5 check', () => {
     const r = exec(tree(), 'nope.md');
     expect(r.code).toBe(2);
     expect(r.err).toContain('error: E_UNKNOWN_FILE: nope.md: ');
-    expect(r.out).toBe('0 ok, 0 stale, 0 invalid\n');
+    expect(r.out).toBe('');
   });
-  it('missing config raises: text summary still printed', () => {
+  it('missing config raises: no summary line', () => {
     const r = exec(makeTree({}), '--root', '.');
     expect(r.code).toBe(2);
-    expect(r.out).toBe('0 ok, 0 stale, 0 invalid\n');
+    expect(r.out).toBe('');
     expect(r.err).toContain('E_CONFIG_MISSING');
   });
   it('--json puts one document on stdout and nothing on stderr', () => {

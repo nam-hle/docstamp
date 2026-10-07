@@ -4,6 +4,7 @@ import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
 
 export interface JsonDoc {
   mode: 'check' | 'update';
+  evaluated?: boolean;
   exitCode: number;
   selected: readonly Result[];
   diagnostics: readonly Diagnostic[];
@@ -71,14 +72,18 @@ export function jsonText(doc: JsonDoc): string {
     ['version', 2],
     ['mode', doc.mode],
     ['exitCode', doc.exitCode],
-    [
-      'summary',
-      obj([
-        ['ok', count('ok')],
-        ['stale', count('stale')],
-        ['invalid', count('invalid')],
-      ]),
-    ],
+    ...(doc.evaluated !== false
+      ? [
+          [
+            'summary',
+            obj([
+              ['ok', count('ok')],
+              ['stale', count('stale')],
+              ['invalid', count('invalid')],
+            ]),
+          ] as [string, Json],
+        ]
+      : []),
     ['files', dependents],
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
   ];

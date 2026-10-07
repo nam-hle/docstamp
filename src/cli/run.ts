@@ -112,6 +112,7 @@ const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'e
 interface Output {
   json: boolean;
   mode: 'check' | 'update';
+  evaluated: boolean;
   exitCode: number;
   selected: Result[];
   global: Diagnostic[];
@@ -125,6 +126,7 @@ function emit(io: Io, o: Output): number {
     io.stdout(
       jsonText({
         mode: o.mode,
+        evaluated: o.evaluated,
         exitCode: o.exitCode,
         selected: o.selected,
         diagnostics: o.global,
@@ -240,10 +242,11 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
   const empty: Output = {
     json,
     mode,
+    evaluated: false,
     exitCode: 2,
     selected: [],
     global: [],
-    text: checkText([]),
+    text: '',
     ...(mode === 'update' ? { written: new Set<string>(), removed: [] } : {}),
   };
   try {
@@ -263,11 +266,11 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       const exitCode = refused ? 2 : stale ? 1 : 0;
       const reported = selected.map((r) => withChanges(root, r, evaluated.lock));
       const text = checkText(reported, args.root);
-      return emit(io, { ...empty, exitCode, selected: reported, global, text });
+      return emit(io, { ...empty, evaluated: true, exitCode, selected: reported, global, text });
     }
     if (refused) {
-      const text = checkText(selected, args.root);
-      return emit(io, { ...empty, selected, global, text });
+      const text = checkText(selected, args.root, false);
+      return emit(io, { ...empty, evaluated: true, selected, global, text });
     }
     const entries = new Map(evaluated.lock.entries);
     for (const t of selected) entries.set(t.file, t.current);
@@ -275,11 +278,15 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     const removed = sortPaths([...entries.keys()].filter((d) => !bound.has(d)));
     for (const d of removed) entries.delete(d);
     writeLock(root, { entries });
-    const written = selected.map((r) => r.file);
-    const text = updateText(written, removed);
+    const written = selected
+      .filter((r) => evaluated.lock.entries.get(r.file) !== r.current)
+      .map((r) => r.file);
+    const unchanged = selected.map((r) => r.file).filter((file) => !written.includes(file));
+    const text = updateText(written, unchanged, removed);
     const afterWrite = selected.map((r): Result => ({ ...r, state: 'ok', reasons: [] }));
     return emit(io, {
       ...empty,
+      evaluated: true,
       exitCode: 0,
       selected: afterWrite,
       global: global.filter((d) => d.code !== 'W_ORPHAN'),
