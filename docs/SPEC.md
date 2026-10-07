@@ -1040,7 +1040,7 @@ summary line. Diagnostics as in §14.3.
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
 | `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
-| `E_UNKNOWN_KEY` | error | §9.3 | remove or correct the key |
+| `E_UNKNOWN_KEY` | error | §9.3 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies` |
 | `E_PATTERN` | error | §9.3 | correct the pattern (§8.1) |
 | `E_DEPENDENT_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern |

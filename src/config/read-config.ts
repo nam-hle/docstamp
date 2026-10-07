@@ -11,6 +11,8 @@ import { parseStrictYaml, type YamlMap, type YamlValue } from './yaml-profile.ts
 
 const TOP_KEYS = ['version', 'gitignore', 'ignore', 'files'];
 
+const optional = (message: string | undefined) => (message === undefined ? {} : { message });
+
 const hasEntry = (path: string): boolean => {
   try {
     lstatSync(path);
@@ -85,7 +87,10 @@ function collectBinding(
     return;
   }
   for (const k of value.keys()) {
-    if (k !== 'dependencies') fatal.push(diag('E_UNKNOWN_KEY', { dependent: key, subject: k }));
+    if (k !== 'dependencies') {
+      const message = k === 'covers' ? 'Rename "covers" to "dependencies".' : undefined;
+      fatal.push(diag('E_UNKNOWN_KEY', { dependent: key, subject: k, ...optional(message) }));
+    }
   }
   for (const pattern of dependencies) {
     if (!parsePattern(pattern)) {
@@ -104,7 +109,10 @@ export function readConfig(root: string): { config: Config; attached: Diagnostic
   const fatal: Diagnostic[] = [];
   const attached: Diagnostic[] = [];
   for (const key of top.keys()) {
-    if (!TOP_KEYS.includes(key)) fatal.push(diag('E_UNKNOWN_KEY', { subject: key }));
+    if (!TOP_KEYS.includes(key)) {
+      const message = key === 'dependents' ? 'Rename "dependents" to "files".' : undefined;
+      fatal.push(diag('E_UNKNOWN_KEY', { subject: key, ...optional(message) }));
+    }
   }
   const gitignore = top.get('gitignore');
   if (gitignore !== undefined && typeof gitignore !== 'boolean') {

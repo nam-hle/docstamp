@@ -70,6 +70,23 @@ describe('§9.3 readConfig', () => {
     ]);
     expect(codes('version: 2\nfiles:\n  a.md:\n    covers: [x]\n')).toEqual(['E_CONFIG']);
   });
+  it('the version 1 keys in a version 2 file get a rename hint', () => {
+    const messages = (yaml: string) => {
+      try {
+        read(yaml);
+      } catch (e) {
+        return (e as Raised).diagnostics.map((d) => [d.subject, d.message]);
+      }
+      return [];
+    };
+    expect(messages('version: 2\ndependents:\n  a.md:\n    covers: [x]\n')).toEqual([
+      ['dependents', 'Rename "dependents" to "files".'],
+      ['files', expect.any(String)],
+    ]);
+    expect(
+      messages('version: 2\nfiles:\n  a.md:\n    dependencies: [x]\n    covers: [x]\n'),
+    ).toEqual([['covers', 'Rename "covers" to "dependencies".']]);
+  });
   it('collects every structural error', () => {
     expect(
       codes('version: 2\nfoo: 1\ngitignore: yes-ish\nfiles:\n  a.md: {dependencies: []}\n'),
