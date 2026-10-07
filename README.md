@@ -66,6 +66,10 @@ Upgrading from a version 1 lock (`docsync.lock`): delete it, review every file, 
 
 Upgrading from a version 1 configuration (`dependents` and `covers`): rename `dependents` to `files` and `covers` to `dependencies`, and set `version: 2`. Then run `pnpm exec docstamp update --all` to rewrite the version 2 lock as version 3; the hashes do not change, so first review the files with the previous docstamp version or `git diff`, because the version 2 lock stops `docstamp check` (E_LOCK_VERSION) and it reports nothing stale.
 
+## What counts as a change
+
+A file's content is hashed as it is, except that CR LF becomes LF in text files ([SPEC §10.2](docs/SPEC.md#102-normalized-content)). Nothing else is normalized: a changed license header, whitespace, a final newline, a lone CR, a byte order mark, UTF-16 text and every binary file all count as changes, byte for byte. Renaming or moving a dependency counts too. A `docstamp.yaml`, `docstamp.config.*` or `docstamp-lock.yaml` below the root is an ordinary file; only the root's own are excluded ([SPEC §7.2](docs/SPEC.md#72-walk)).
+
 ## Reviewing a stale doc
 
 A stale doc lists the dependencies that changed since its last review, as `modified`, `added` or `deleted` ([SPEC §12.3](docs/SPEC.md#123-changedsince)). `--json` carries the same list as `changes`. The list comes from read-only `git` calls and never affects the verdict or exit code.
@@ -80,12 +84,12 @@ git diff <base> -- <files>
 ## Commands
 
 - `docstamp [check]`: the verdict; exit 0 when every file is ok, 1 when one is stale, 2 on an error. A bare `docstamp` is `check`.
-- `docstamp update (--all | <file>...)`: record that you reviewed the named files.
+- `docstamp update (--all | <file>...)`: record that you reviewed the named files. In `--json`, a written file reports `state: "ok"` and `written: true`.
 - `docstamp list-dependencies [<file>...]`: each file with its dependency patterns and the files they select. It does not read the lock.
 - `docstamp list-dependents <file>...`: the reverse query. For each named file (any file in the repository), the dependents (files that depend on it) and the patterns that select it. Direct only, no lock.
 - `docstamp help` and `docstamp version`.
 
-Every command except `help` and `version` takes `--json` and `--root <dir>`. The options `--write` and `--files` were replaced by `update` and `list-dependencies`.
+Every command except `help` and `version` takes `--json` and `--root <dir>`; `--root` needs a directory and never takes another option as its value. A file argument that is unknown or outside the root fails the whole command with only its diagnostics, never a partial report. The options `--write` and `--files` were replaced by `update` and `list-dependencies`.
 
 Command line and exit codes: [SPEC §13](docs/SPEC.md#13-command-line) and [SPEC §16](docs/SPEC.md#16-exit-codes).
 

@@ -106,8 +106,9 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
   `linkLib: true`, which links the repo as `node_modules/docstamp`.
 - **Snapshots**: only the temp root becomes `<root>`; hashes stay real, which pins hash
   stability. After a deliberate behavior change run `pnpm test:e2e -u`, then read every changed
-  snapshot: a snapshot of a bug is not a test. After renaming or deleting a scenario, delete its
-  folder under `__snapshots__`. `E_PATH_ENCODING` and `E_PATH_COLLISION` need a Linux file
+  snapshot: a snapshot of a bug is not a test. Obsolete snapshots fail the run: a scenario
+  fails on files in its folder that it did not produce, and `snapshot-guard.test.ts` fails on a
+  folder no scenario names. Delete what they list after renaming or removing a scenario. `E_PATH_ENCODING` and `E_PATH_COLLISION` need a Linux file
   system: their scenarios skip on macOS and their snapshots come from a Linux run.
 - Tests are hermetic: no sleeps, no network, nothing outside the temp dir. Keep the suite near
   20 seconds.

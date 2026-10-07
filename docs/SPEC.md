@@ -245,11 +245,15 @@ Symbolic links are never followed: a link is an entry of kind *link*, whatever i
          repository); otherwise call `WalkDirectory(e, q)`.
       6. If *e* is a *file* or *link*, add *q* to the Universe.
    4. Remove the rules scoped to *p* from *rules* before returning.
-3. Remove every Configuration file name of §9.1 and `docstamp-lock.yaml` from the Universe.
+3. Remove from the Universe the entries of Root named by a Configuration file name of §9.1, and
+   the entry `docstamp-lock.yaml` of Root.
 4. Apply §7.4 and §7.5, collecting their Diagnostics.
 5. If *errors* is not empty, raise it. Otherwise return the Universe in path order.
 
-NOTE: Step 3 means a Write can never make any file stale.
+NOTE: Step 3 means a Write can never make any file stale. It removes only those entries of Root
+itself. A file of the same name below Root, such as `sub/docstamp.yaml` or
+`sub/docstamp-lock.yaml`, is an ordinary file: it is in the Universe, may be a dependency, and
+is hashed like any other.
 
 NOTE: Files tracked by git but matched by an ignore rule are not in the Universe. `core.excludesFile`
 and `.git/info/exclude` are never read; they are per-machine and would break §2. A file git ignores
@@ -516,8 +520,11 @@ raises `E_FILE_MISSING`.
 1. Evaluate the file at *path*, synchronously, as a module of the host runtime. If it cannot be
    loaded, if evaluation throws, or if evaluation is asynchronous (top-level `await`), raise
    « `E_CONFIG` ».
-2. Let *exports* be the module's exports. Let *exported* be its `default` export if *exports*
-   has one that is neither `undefined` nor Null, else *exports*.
+2. Let *exports* be the module's exports. If *exports* is an ECMAScript module namespace whose
+   `default` export is absent, `undefined` or Null, raise « `E_CONFIG` »; its message says to
+   use `export default`, and that a CommonJS `module.exports` value is accepted. Otherwise let
+   *exported* be its `default` export if *exports* has one that is neither `undefined` nor Null,
+   else *exports*.
 3. Return ? `ToPlain(exported, empty)`.
 
 `ToPlain(v, ancestors)`, where *ancestors* is the List of objects being converted, raises
@@ -574,8 +581,10 @@ A byte sequence is *binary* iff its first min(8192, length) bytes contain the by
    pair 0x0D 0x0A replaced by 0x0A.
 4. Return the bytes `file`, 0x00, and *body*.
 
-NOTE: Only CR LF pairs are normalized. A lone CR, a byte order mark, and UTF-16 text (binary by
-§10.1) are hashed as they are. A link is never followed: its target string is hashed, so a link
+NOTE: The only normalization is CR LF to LF in text. There is no normalization of license or
+copyright headers, of whitespace, of a final newline, or of formatting, so a change to any of
+them is a content change. A lone CR, a byte order mark, UTF-16 text (binary by §10.1) and every
+binary file are hashed byte for byte. A link is never followed: its target string is hashed, so a link
 to a file outside Root hashes the same on every host.
 
 ### 10.3 Hash
@@ -658,7 +667,8 @@ change one dependency conflict in a package-manager lockfile. Resolution: take e
 2. If `docstamp-lock.yaml` exists and its contents, with every 0x0D 0x0A replaced by 0x0A, equal the
    UTF-8 encoding of *text*, return without writing.
 3. Replace `docstamp-lock.yaml` atomically with the UTF-8 encoding of *text*: a concurrent reader sees
-   either the old contents or the new.
+   either the old contents or the new. If this fails, for example because Root is not writable,
+   raise « `E_UNREADABLE` » with `[[Subject]]` `docstamp-lock.yaml`, leaving the old contents.
 
 NOTE: Step 2 tolerates a checkout that converted the Lockfile to CR LF. Repositories SHOULD
 declare `docstamp-lock.yaml text eol=lf` in `.gitattributes`.
@@ -775,7 +785,8 @@ The command line is parsed before anything else.
 
 1. The options are `--json`, `--all`, `--help`, `--version`, `--root <dir>` and `--root=<dir>`.
    Before any `--`, an argument starting with `-` other than a lone `-` is an option; `--root`
-   consumes the next argument as its value. After `--`, every argument is a file argument.
+   consumes the next argument as its value, unless that argument is `--` or another recognised
+   option (including `--root` itself), which is a missing value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
    `list-dependencies`, `list-dependents`, `help` or `version`; it is then not a file argument. Otherwise, and when there
    is none, the command is `check` and that argument stays a file argument. A command word in any
@@ -788,7 +799,8 @@ The command line is parsed before anything else.
 Otherwise the following raise « `E_USAGE` » with `[[Subject]]` the offending argument, and exit 2.
 Each message states the problem:
 
-- an unknown option, a missing value for `--root`, or an option given twice;
+- an unknown option, a missing value for `--root` (none, empty, `--`, or a recognised option,
+  so `--root --json` is an error), or an option given twice;
 - `--write` or `--files`, which were removed: the message names the replacement, `docstamp update`
   for `--write` and `docstamp list-dependencies` for `--files`;
 - `--all` with any command but `update`;
@@ -800,14 +812,17 @@ command is reached as `docstamp check -- check`, `docstamp -- check` or `docstam
 
 ### 13.3 File Arguments
 
-`SelectResults(args, cwd, root, results)` returns the selected Results and a List of global
-Diagnostics:
+`SelectResults(args, cwd, root, results)` returns the selected Results or raises:
 
-1. If *args* is empty, return *results* and « ».
-2. For each *arg*: let *path* be `ToRepoPath(arg, cwd, root)`. If that fails, or no Result has
-   `[[File]]` equal to *path*, collect `E_UNKNOWN_FILE` with `[[Subject]]` *arg*.
-3. Return the Results whose `[[File]]` was named, in path order without duplicates, and the
-   collected Diagnostics.
+1. If *args* is empty, return *results*.
+2. Let *problems* be an empty List. For each *arg*: let *path* be `ToRepoPath(arg, cwd, root)`.
+   If that fails, or no Result has `[[File]]` equal to *path*, collect `E_UNKNOWN_FILE` with
+   `[[Subject]]` *arg* into *problems*.
+3. If *problems* is not empty, raise *problems*.
+4. Return the Results whose `[[File]]` was named, in path order without duplicates.
+
+NOTE: A bad file argument raises, as a usage error does: nothing is reported for the good
+arguments. A command line that cannot be answered in full is answered with its Diagnostics only.
 
 ### 13.4 Path Resolution
 
@@ -826,8 +841,7 @@ No case folding is applied: the argument must equal the key under `files`.
 
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
 2. Let (*results*, *lock*, *global*) be `? EvaluateAll(root, strict)`.
-3. Let (*selected*, *argErrors*) be `SelectResults(args, cwd, root, results)`. Append *argErrors*
-   to *global*.
+3. Let *selected* be `? SelectResults(args, cwd, root, results)`.
 4. Output *selected* and *global* (§14).
 5. Exit with:
    - 2 if *global* contains an error or any of *selected* is `invalid`;
@@ -848,8 +862,8 @@ reviewer compares them with the state at the last Write using its own tools.
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
 2. Let *policy* be `discard-invalid` if `--all` is given, else `strict`.
 3. Let (*results*, *lock*, *global*) be `? EvaluateAll(root, policy)`.
-4. If `--all` is given, let *targets* be *results*. Otherwise let (*targets*, *argErrors*) be
-   `SelectResults(args, cwd, root, results)` and append *argErrors* to *global*.
+4. If `--all` is given, let *targets* be *results*. Otherwise let *targets* be
+   `? SelectResults(args, cwd, root, results)`.
 5. If *global* contains an error or any of *targets* is `invalid`: output *targets* and *global*
    as a check would (§14), write nothing, and exit 2.
 6. For each *t* of *targets*, set the LockEntry of *t*.`[[File]]` in *lock* to
@@ -857,7 +871,8 @@ reviewer compares them with the state at the last Write using its own tools.
 7. Let *removed* be the files of *lock* that have no Declaration, in path order. Remove their
    entries.
 8. `WriteLock(root, lock)`.
-9. Output the written files and *removed* (§14). Exit 0.
+9. Output the written files and *removed* (§14), and *global* without its `W_ORPHAN`
+   Diagnostics, since step 7 removed those entries. Exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
@@ -880,9 +895,9 @@ unreadable Lockfile), so no file is marked reviewed by accident.
 3. Let *results* be `Evaluate(b, universe, « », attached of b)` for each Declaration *b* of
    `config.[[Declarations]]`, in path order, except that no dependency is read or hashed (§10.4 is
    skipped), so a Result is never `invalid` for `E_UNREADABLE`.
-4. Let (*selected*, *argErrors*) be `SelectResults(args, cwd, root, results)`.
-5. Output *selected* and *argErrors* (§14).
-6. Exit 2 if *argErrors* contains an error or any of *selected* is `invalid`; else 0.
+4. Let *selected* be `? SelectResults(args, cwd, root, results)`.
+5. Output *selected* (§14).
+6. Exit 2 if any of *selected* is `invalid`; else 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
@@ -898,19 +913,19 @@ dependents of each: the stamped files that depend on it. At least one file argum
 1. Let *root* be `? DetermineRoot(cwd, --root)`.
 2. Let (*config*, *attached*) be `? ReadConfig(root)` and *universe* be
    `? ComputeUniverse(root, config)`.
-3. Let *entries* be an empty List. For each distinct *arg* of the file arguments, in path order of
-   its *path* (an *arg* whose *path* cannot be computed sorts by its text):
-   1. Let *path* be `ToRepoPath(arg, cwd, root)`. If that fails, add the entry { `[[File]]`:
-      *arg*, `[[Dependents]]`: « », `[[Diagnostics]]`: « `E_USAGE` with `[[Subject]]` *arg* » }
-      and continue. *path* need not exist.
+3. If `ToRepoPath(arg, cwd, root)` fails for any file argument *arg*, raise « `E_USAGE` with
+   `[[Subject]]` *arg* » for each such *arg*; no entry is output. A *path* need not exist.
+4. Let *entries* be an empty List. For each distinct *arg* of the file arguments, in path order of
+   its *path*:
+   1. Let *path* be `ToRepoPath(arg, cwd, root)`.
    2. Let *found* be an empty List. For each Declaration *b* of `config.[[Declarations]]` in path order
       whose file has no `E_PATTERN` in *attached*: if *path* is in *universe*, *path* is not
       `b.[[File]]` and `Select(b.[[Dependencies]], « path »)` selects it, append { `[[File]]`:
       `b.[[File]]`, `[[Via]]`: the patterns of `b.[[Dependencies]]` that have no Negation and
       satisfy `PatternMatches(pattern, path)`, in declaration order } to *found*.
-   3. Add the entry { `[[File]]`: *path*, `[[Dependents]]`: *found*, `[[Diagnostics]]`: « » }.
-4. Output *entries* and *attached* (§14).
-5. Exit 2 if *attached* or any entry holds an error; else 0.
+   3. Add the entry { `[[File]]`: *path*, `[[Dependents]]`: *found* }.
+5. Output *entries* and *attached* (§14).
+6. Exit 2 if *attached* holds an error; else 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
@@ -1023,7 +1038,9 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   `null` when it is *unknown* or not applicable (§12.3), including in update mode.
 - With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (false only when step 5 of §13.6 refused), and the top level adds `"removed"`, a
-  List of files, after `diagnostics`.
+  List of files, after `diagnostics`. An element with `"written": true` reports the state after
+  the Write: `state` is `ok` and `reasons` is empty; `summary` counts those states. An element
+  with `"written": false` reports the state evaluated by §12.1.
 - With `list-dependencies` the document is instead (§13.7):
 
   ```json
@@ -1064,9 +1081,11 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   }
   ```
 
-  Each entry is { `[[File]]`, `[[files]]`, `[[Diagnostics]]` } of §13.8 step 3, `dependents`
-  a List of { `"file"`, `"via"` } in path order, empty when nothing depends on `file`. The top-level
-  `diagnostics` hold the attached `E_PATTERN` Diagnostics.
+  Each entry is { `[[File]]`, `[[Dependents]]` } of §13.8 step 4, `dependents`
+  a List of { `"file"`, `"via"` } in path order, empty when nothing depends on `file`. The `diagnostics`
+  of an entry is always `[]`, kept for the shape of the other modes. The top-level
+  `diagnostics` hold the attached `E_PATTERN` Diagnostics, or the raised Diagnostics, in which
+  case `files` is empty.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
   empty `[[File]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
 - When a step raises before Results exist, `summary` (not for `list-dependencies` or
@@ -1109,14 +1128,14 @@ Diagnostics as in §14.3.
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3 | create a Configuration file (§9.1) |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
-| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key |
+| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key; for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
 | `E_UNKNOWN_KEY` | error | §9.3 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies` |
 | `E_PATTERN` | error | §9.3 | correct the pattern (§8.1) |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
-| `E_UNREADABLE` | error | §7.2, §10.2 | fix permissions |
+| `E_UNREADABLE` | error | §7.2, §10.2, §11.3 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |
@@ -1131,6 +1150,6 @@ Diagnostics as in §14.3.
 | 0 | check: every selected file is `ok`; update: the Lockfile was written or already current; list-dependencies, list-dependents: the answer was listed; help, version |
 | 1 | check only: a selected file is `stale`, none is `invalid`, no global error |
 | 2 | an error Diagnostic, an `invalid` file, or a usage error |
-| 70 | an unexpected internal failure, reported on standard error |
+| 70 | an uncaught internal fault of the runtime, reported on standard error as `internal error: ` and the stack; for example a failed write to standard output. No input produces it: every failure caused by the command line, the Root or the file system is a Diagnostic and exit 2 |
 
 Warnings never affect the exit code.
