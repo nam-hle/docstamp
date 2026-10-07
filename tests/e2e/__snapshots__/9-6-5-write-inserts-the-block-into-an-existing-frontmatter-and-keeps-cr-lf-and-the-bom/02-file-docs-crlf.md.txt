@@ -1,0 +1,13 @@
+file: docs/crlf.md
+--- content ---
+<BOM>---␍
+title: Setup␍
+tags: [a, b]␍
+docstamp:␍
+  dependencies:␍
+    - scripts/*.mjs␍
+    - src/cli/main.ts␍
+---␍
+# Setup␍
+␍
+See `src/cli/main.ts` and `scripts/*.mjs`.␍

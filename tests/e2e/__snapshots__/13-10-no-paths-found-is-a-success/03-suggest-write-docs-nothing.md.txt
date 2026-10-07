@@ -1,0 +1,11 @@
+$ docstamp suggest --write docs/nothing.md
+exit: 0
+--- stdout ---
+suggest docs/nothing.md
+  no paths found
+unchanged  docs/nothing.md
+--- stderr ---
+--- setup: docs/nothing.md ---
+# Nothing
+
+This page names no path of the repository, only words and `npm run build`.

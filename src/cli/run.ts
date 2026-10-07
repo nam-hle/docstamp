@@ -30,6 +30,7 @@ import {
 import { determineRoot, existsUnderRoot, isIgnoredPath, type Universe } from '../universe/walk.ts';
 import { HELP, parseArgs, type Args } from './args.ts';
 import { resolveArgument, selectResults, toRepoPath } from './paths.ts';
+import { runSuggest } from './suggest.ts';
 import { loadWorkspace } from './workspace.ts';
 
 export interface Io {
@@ -338,6 +339,7 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
   if (args.mode === 'list-dependencies') return runList(args, cwd, io);
   if (args.mode === 'list-dependents') return runReverse(args, cwd, io);
   if (args.mode === 'stats') return runStats(args, cwd, io);
+  if (args.mode === 'suggest') return runSuggest(args, cwd, io);
   const { mode, json } = args;
   const empty: Output = {
     json,

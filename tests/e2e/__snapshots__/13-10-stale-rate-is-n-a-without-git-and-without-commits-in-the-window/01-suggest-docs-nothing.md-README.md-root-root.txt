@@ -1,0 +1,9 @@
+$ docstamp suggest docs/nothing.md README.md --root <root>
+exit: 0
+--- stdout ---
+suggest README.md
+  pattern     files  stale
+  docs/guide      1    n/a
+suggest docs/nothing.md
+  no paths found
+--- stderr ---

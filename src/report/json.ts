@@ -14,12 +14,12 @@ export interface JsonDoc {
   removed?: readonly string[];
 }
 
-type Json = null | boolean | number | string | readonly Json[] | JsonObject;
+export type Json = null | boolean | number | string | readonly Json[] | JsonObject;
 type JsonObject = { readonly members: ReadonlyArray<readonly [string, Json]> };
 
-const obj = (members: Array<[string, Json]>): JsonObject => ({ members });
+export const obj = (members: Array<[string, Json]>): JsonObject => ({ members });
 
-function render(value: Json, indent: string): string {
+export function render(value: Json, indent: string): string {
   if (value === null || typeof value === 'boolean' || typeof value === 'number') {
     return String(value);
   }
@@ -36,7 +36,7 @@ function render(value: Json, indent: string): string {
   return `[\n${items.map((x) => `${inner}${render(x, inner)}`).join(',\n')}\n${indent}]`;
 }
 
-const diagJson = (d: Diagnostic): JsonObject =>
+export const diagJson = (d: Diagnostic): JsonObject =>
   obj([
     ['code', d.code],
     ['severity', d.severity],

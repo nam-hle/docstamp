@@ -35,6 +35,7 @@ export type Args =
       paths: string[];
       window: StatsWindowArg;
     }
+  | { mode: 'suggest'; json: boolean; root?: string; paths: string[]; write: boolean }
   | { mode: 'update'; all: boolean; json: boolean; root?: string; paths: string[] };
 
 export const HELP = `Usage:
@@ -53,6 +54,9 @@ export const HELP = `Usage:
   docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
       Report how often each file's dependencies would have made it stale over recent history:
       the last <n> days (default --since 30d), or the commits of <rev>..HEAD.
+  docstamp suggest [--json] [--root <dir>] [--write] <file>...
+      Propose dependencies from the paths each file mentions; --write records them as an inline
+      block without a hash.
   docstamp help
       Print this usage (also --help).
   docstamp version
@@ -65,6 +69,7 @@ const COMMANDS = new Set([
   'list-dependencies',
   'list-dependents',
   'stats',
+  'suggest',
   'help',
   'version',
 ]);
@@ -76,9 +81,9 @@ const FLAGS = new Set([
   '--quiet',
   '--version',
   '--help',
+  '--write',
 ]);
 const REMOVED: Record<string, string> = {
-  '--write': 'docstamp update',
   '--files': 'docstamp list-dependencies',
 };
 const VALUED: Record<string, string> = {
@@ -150,8 +155,12 @@ export function parseArgs(argv: readonly string[]): Args {
     | 'update'
     | 'list-dependencies'
     | 'list-dependents'
-    | 'stats';
+    | 'stats'
+    | 'suggest';
   const all = seen.has('--all');
+  if (mode !== 'suggest' && seen.has('--write')) {
+    fail('--write', '--write was removed; use "docstamp update".');
+  }
   if (mode === 'update') {
     if (!all && paths.length === 0) {
       fail('update', 'Name the files you reviewed, or pass --all.');
@@ -168,6 +177,9 @@ export function parseArgs(argv: readonly string[]): Args {
   }
   if (mode === 'list-dependents' && paths.length === 0) {
     fail('list-dependents', 'Name the files whose dependents you want to list.');
+  }
+  if (mode === 'suggest' && paths.length === 0) {
+    fail('suggest', 'Name the files whose dependencies you want proposed.');
   }
   const since = values.get('--since');
   const from = values.get('--from');
@@ -206,6 +218,7 @@ export function parseArgs(argv: readonly string[]): Args {
     const onlyStale = seen.has('--only-stale');
     return { mode, json, onlyStale, quiet: seen.has('--quiet'), ...rootOpt, paths };
   }
+  if (mode === 'suggest') return { mode, json, ...rootOpt, paths, write: seen.has('--write') };
   return mode === 'update'
     ? { mode, all, json, ...rootOpt, paths }
     : { mode, json, ...rootOpt, paths };

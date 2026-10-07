@@ -1,0 +1,5 @@
+$ docstamp suggest --write docs/configured.md docs/overview.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: docs/configured.md: docs/configured.md is declared in the configuration file; edit it there by hand.

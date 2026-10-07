@@ -18,7 +18,7 @@ export interface InlineRead {
 const onDisk = (root: string, universe: Universe, file: string) =>
   join(root, universe.onDisk.get(file) ?? file);
 
-function textOf(path: string): string | null {
+export function textOf(path: string): string | null {
   const bytes = readFileSync(path);
   if (isBinary(bytes)) return null;
   try {
@@ -60,13 +60,11 @@ export function readInline(
   return read;
 }
 
-// SPEC §9.6.4
-export function stampFile(root: string, universe: Universe, file: string, hash: string): void {
-  const path = onDisk(root, universe, file);
+// SPEC §9.6.4 step 3: replace the file atomically, keeping its mode
+export function replaceFile(path: string, file: string, produce: () => string): void {
   const temp = `${path}.tmp-${process.pid}`;
   try {
-    const scan = scanFrontmatter(textOf(path)!)!;
-    writeFileSync(temp, stampText(scan, hash), 'utf8');
+    writeFileSync(temp, produce(), 'utf8');
     chmodSync(temp, statSync(path).mode);
     renameSync(temp, path);
   } catch {
@@ -78,4 +76,10 @@ export function stampFile(root: string, universe: Universe, file: string, hash: 
       }),
     ]);
   }
+}
+
+// SPEC §9.6.4
+export function stampFile(root: string, universe: Universe, file: string, hash: string): void {
+  const path = onDisk(root, universe, file);
+  replaceFile(path, file, () => stampText(scanFrontmatter(textOf(path)!)!, hash));
 }

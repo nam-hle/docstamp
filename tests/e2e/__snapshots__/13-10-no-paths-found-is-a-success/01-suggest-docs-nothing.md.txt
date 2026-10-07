@@ -1,0 +1,6 @@
+$ docstamp suggest docs/nothing.md
+exit: 0
+--- stdout ---
+suggest docs/nothing.md
+  no paths found
+--- stderr ---

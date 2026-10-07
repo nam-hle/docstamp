@@ -1,0 +1,18 @@
+# Overview
+
+The parser lives in `src/engine/parse.ts` and the emitter in `src/engine/emit.ts`; the entry
+point is `src/engine/index.ts:12`. Everything about the command line is in `src/cli`, which the
+[setup guide](guide/setup.md#flags) walks through.
+
+Small helpers are `src/util/a.ts`, `src/util/b.ts` and `src/util/c.ts`. The build scripts match
+`scripts/*.mjs`, and the compiled output goes to `build/output.js` (not versioned).
+
+The project is described by package.json, `pnpm-lock.yaml`, `tsconfig.json`, `Makefile` and
+LICENSE, which every dependency bump touches. Unit tests are in `tests/unit`.
+
+Not a dependency: [the site](https://example.com/src/engine/parse.ts), `docs/missing.md`,
+an `npm run build` command and the words and/or.
+
+```sh
+cat src/cli/main.ts
+```

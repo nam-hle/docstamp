@@ -1,0 +1,5 @@
+$ docstamp suggest
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: suggest: Name the files whose dependencies you want proposed.

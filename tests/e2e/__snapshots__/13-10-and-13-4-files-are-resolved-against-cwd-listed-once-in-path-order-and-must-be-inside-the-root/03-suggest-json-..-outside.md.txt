@@ -1,0 +1,19 @@
+$ docstamp suggest --json ../outside.md
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "suggest",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_USAGE",
+      "severity": "error",
+      "file": null,
+      "subject": "../outside.md",
+      "message": "Name a file inside the root."
+    }
+  ]
+}
+--- stderr ---

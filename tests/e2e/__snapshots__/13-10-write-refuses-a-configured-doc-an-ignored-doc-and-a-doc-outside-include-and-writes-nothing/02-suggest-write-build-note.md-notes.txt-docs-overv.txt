@@ -1,0 +1,6 @@
+$ docstamp suggest --write build/note.md notes.txt docs/overview.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: build/note.md: build/note.md is ignored or not selected by include, so a docstamp block in it would never be read; name a file that include selects.
+error: E_USAGE: notes.txt: notes.txt is ignored or not selected by include, so a docstamp block in it would never be read; name a file that include selects.

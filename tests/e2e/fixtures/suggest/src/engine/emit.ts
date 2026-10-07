@@ -1,0 +1,1 @@
+// src/engine/emit.ts

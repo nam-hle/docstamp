@@ -17,13 +17,22 @@ const bare = (line: string): string => line.replace(/\r?\n$/u, '').replace(/[ \t
 
 const splitLines = (text: string): string[] => text.split(/(?<=\n)/u);
 
-// SPEC §5.6 ScanFrontmatter
-export function scanFrontmatter(text: string): Scan | null {
+// SPEC §5.6 ScanFrontmatter steps 1 to 3: the delimiters, whether or not there is a block
+export function splitFrontmatter(
+  text: string,
+): { bom: string; lines: string[]; close: number } | null {
   const bom = text.startsWith(BOM) ? BOM : '';
   const lines = splitLines(text.slice(bom.length));
   if (lines[0] === undefined || bare(lines[0]) !== '---') return null;
   const close = lines.findIndex((line, index) => index > 0 && bare(line) === '---');
-  if (close === -1) return null;
+  return close === -1 ? null : { bom, lines, close };
+}
+
+// SPEC §5.6 ScanFrontmatter
+export function scanFrontmatter(text: string): Scan | null {
+  const split = splitFrontmatter(text);
+  if (split === null) return null;
+  const { bom, lines, close } = split;
   const marker = lines.findIndex((line, index) => index > 0 && index < close && MARKER.test(line));
   if (marker === -1) return null;
   const unindented = lines.findIndex(

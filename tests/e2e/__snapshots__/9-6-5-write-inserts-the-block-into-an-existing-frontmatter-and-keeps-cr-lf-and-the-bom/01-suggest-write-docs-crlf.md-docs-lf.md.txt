@@ -1,0 +1,13 @@
+$ docstamp suggest --write docs/crlf.md docs/lf.md
+exit: 0
+--- stdout ---
+suggest docs/crlf.md
+  pattern          files  stale
+  scripts/*.mjs        2    n/a
+  src/cli/main.ts      1    n/a
+suggest docs/lf.md
+  pattern          files  stale
+  src/cli/main.ts      1    n/a
+written  docs/crlf.md
+written  docs/lf.md
+--- stderr ---

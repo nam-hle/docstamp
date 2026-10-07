@@ -1,0 +1,5 @@
+$ docstamp update docs/overview.md
+exit: 0
+--- stdout ---
+written  docs/overview.md
+--- stderr ---

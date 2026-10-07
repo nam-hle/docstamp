@@ -1,0 +1,9 @@
+$ docstamp suggest --write docs/block.md
+exit: 0
+--- stdout ---
+suggest docs/block.md
+  pattern              files  stale
+  src/cli                  3    n/a
+  src/engine/parse.ts      1    n/a
+written  docs/block.md
+--- stderr ---

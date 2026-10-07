@@ -1,0 +1,7 @@
+$ docstamp suggest missing.md docs blob.md README.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNREADABLE: blob.md: Cannot read blob.md as text; name a readable text file.
+error: E_UNREADABLE: docs: Cannot read docs as text; name a readable text file.
+error: E_UNREADABLE: missing.md: Cannot read missing.md as text; name a readable text file.

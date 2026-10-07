@@ -1,0 +1,11 @@
+$ docstamp suggest page.md ../nothing.md ./page.md
+cwd: docs/guide
+exit: 0
+--- stdout ---
+suggest docs/guide/page.md
+  pattern              files  stale
+  docs/guide/setup.md      1    n/a
+  src/cli/args.ts          1    n/a
+suggest docs/nothing.md
+  no paths found
+--- stderr ---

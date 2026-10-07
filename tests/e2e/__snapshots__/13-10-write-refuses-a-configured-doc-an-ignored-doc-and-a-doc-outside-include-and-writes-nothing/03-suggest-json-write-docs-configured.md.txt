@@ -1,0 +1,19 @@
+$ docstamp suggest --json --write docs/configured.md
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "suggest",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_USAGE",
+      "severity": "error",
+      "file": null,
+      "subject": "docs/configured.md",
+      "message": "docs/configured.md is declared in the configuration file; edit it there by hand."
+    }
+  ]
+}
+--- stderr ---

@@ -1,0 +1,9 @@
+file: docs/lf.md
+--- content ---
+---
+title: Plain
+docstamp:
+  dependencies:
+    - src/cli/main.ts
+---
+See `src/cli/main.ts`.
