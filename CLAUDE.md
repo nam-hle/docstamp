@@ -174,7 +174,8 @@ The repository is public and used by strangers, so the root files are part of th
   through GitHub-native channels (private vulnerability reporting, the maintainer's profile), never
   an email address.
 - `.github/` also holds issue forms, the pull request template, `CODEOWNERS` and
-  `dependabot.yml` (weekly, minor and patch grouped, at most 5 open pull requests).
+  `dependabot.yml` (weekly, minor and patch grouped, at most 5 open pull requests; major
+  `@types/node` bumps are ignored because `engines.node` is `>=24`).
 - Never name an employer or an internal project, in any file, commit message or issue. Cite
   findings without attribution.
 
