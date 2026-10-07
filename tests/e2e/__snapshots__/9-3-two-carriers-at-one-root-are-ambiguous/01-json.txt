@@ -5,11 +5,6 @@ exit: 2
   "version": 2,
   "mode": "check",
   "exitCode": 2,
-  "summary": {
-    "ok": 0,
-    "stale": 0,
-    "invalid": 0
-  },
   "files": [],
   "diagnostics": [
     {

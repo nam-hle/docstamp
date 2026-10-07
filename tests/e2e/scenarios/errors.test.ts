@@ -110,9 +110,9 @@ scenario(
     );
     const json = await repo.run(['--json'], { label: 'a configuration error as JSON' });
     expect(json.stderr).toBe('');
+    expect('summary' in json.json()).toBe(false);
     expect(json.json()).toMatchObject({
       exitCode: 2,
-      summary: { ok: 0, stale: 0, invalid: 0 },
       files: [],
       diagnostics: [{ code: 'E_UNKNOWN_KEY', severity: 'error', file: null, subject: 'extra' }],
     });
@@ -329,7 +329,7 @@ scenario(
       seen.add(code);
       expect(result.exit, label).toBe(2);
       expect(result.stderr, label).toContain(`error: ${code}`);
-      expect(result.stdout, label).toBe('0 ok, 0 stale, 0 invalid\n');
+      expect(result.stdout, label).toBe('');
     }
     repo.write('docstamp-lock.yaml', good);
     repo.write('docsync.lock', 'version: 1\n');
@@ -388,7 +388,7 @@ scenario(
     repo.chmod('.', 0o555);
     const result = await repo.run(['update', '--all'], { label: 'read-only root' });
     expect(result.exit).toBe(2);
-    expect(result.stdout).toBe('0 ok, 0 stale, 0 invalid\n');
+    expect(result.stdout).toBe('');
     expect(result.stderr).toContain('error: E_UNREADABLE: docstamp-lock.yaml');
     expect(repo.exists('docstamp-lock.yaml')).toBe(false);
     expect(repo.list()).toEqual(['CLAUDE.md', 'README.md', 'docs', 'docstamp.yaml', 'src']);

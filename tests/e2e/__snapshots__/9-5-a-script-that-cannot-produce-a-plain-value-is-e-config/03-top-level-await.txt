@@ -2,7 +2,6 @@
 $ docstamp
 exit: 2
 --- stdout ---
-0 ok, 0 stale, 0 invalid
 --- stderr ---
 error: E_CONFIG: Fix the configuration file; the key named, if any, is the problem.
 --- setup: docstamp.config.ts ---

@@ -1,6 +1,7 @@
-$ docstamp update docs/guide.md CLAUDE.md
+$ docstamp update docs/guide.md CLAUDE.md README.md
 exit: 0
 --- stdout ---
 written  CLAUDE.md
+unchanged  README.md
 written  docs/guide.md
 --- stderr ---

@@ -2,7 +2,6 @@
 $ docstamp
 exit: 2
 --- stdout ---
-0 ok, 0 stale, 0 invalid
 --- stderr ---
 error: E_UNREADABLE: .gitignore: Fix the permissions or remove the entry.
 --- setup: docstamp.yaml ---

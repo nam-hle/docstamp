@@ -34,7 +34,17 @@ scenario('§13.6 update <file> records only the named file', { fixture }, async 
     /^version: 3\nfiles:\n {2}"README\.md": [0-9a-f]{64}\n$/u,
   );
 
-  await repo.run(['update', 'docs/guide.md', 'CLAUDE.md'], { expectExit: 0 });
+  const again = await repo.run(['update', 'README.md']);
+  expect(again.stdout).toBe('unchanged  README.md\n');
+  const mixed = await repo.run(['update', 'docs/guide.md', 'CLAUDE.md', 'README.md']);
+  expect(mixed.stdout).toBe('written  CLAUDE.md\nunchanged  README.md\nwritten  docs/guide.md\n');
+  const unchangedJson = await repo.run(['update', '--json', 'README.md']);
+  expect(unchangedJson.json().files[0]).toMatchObject({
+    state: 'ok',
+    reasons: [],
+    written: false,
+  });
+  expect(unchangedJson.json().summary).toEqual({ ok: 1, stale: 0, invalid: 0 });
   await repo.snapFile('docstamp-lock.yaml', 'lock with three files');
   const names = [...repo.read('docstamp-lock.yaml').matchAll(/^ {2}"(\S+)": /gmu)].map((m) => m[1]);
   expect(names).toEqual(['CLAUDE.md', 'README.md', 'docs/guide.md']);
@@ -50,7 +60,9 @@ scenario('§11.3 an unchanged lock is left untouched', { fixture }, async (repo)
 
   const again = await repo.run(['update', '--all']);
   expect(again.exit).toBe(0);
-  expect(again.stdout).toBe('written  CLAUDE.md\nwritten  README.md\nwritten  docs/guide.md\n');
+  expect(again.stdout).toBe(
+    'unchanged  CLAUDE.md\nunchanged  README.md\nunchanged  docs/guide.md\n',
+  );
   expect(repo.read('docstamp-lock.yaml')).toBe(before);
   expect(statSync(lockPath).mtimeMs).toBe(old.getTime());
   expect(statSync(lockPath).ino).toBe(inode);
@@ -92,7 +104,7 @@ scenario('§13.6 update removes entries that lost their Declaration', { fixture 
   expect(check.stderr).toContain('warning: W_ORPHAN: docs/guide.md');
 
   const update = await repo.run(['update', 'CLAUDE.md']);
-  expect(update.stdout).toBe('written  CLAUDE.md\nremoved  README.md\nremoved  docs/guide.md\n');
+  expect(update.stdout).toBe('unchanged  CLAUDE.md\nremoved  README.md\nremoved  docs/guide.md\n');
   expect(update.stderr).toBe('');
   await repo.snapFile('docstamp-lock.yaml');
   const after = await repo.run([]);
@@ -158,6 +170,8 @@ scenario(
     const named = await repo.run(['update', 'GONE.md', 'CLAUDE.md']);
     expect(named.exit).toBe(2);
     expect(named.stderr).toContain('E_FILE_MISSING');
+    expect(named.stdout).not.toContain('next:');
+    expect(named.stdout).toContain('INVALID  GONE.md');
     expect(repo.read('docstamp-lock.yaml')).toBe(lock);
 
     const all = await repo.run(['update', '--all']);
@@ -182,6 +196,7 @@ scenario('§13.6 update with an unknown file argument writes nothing', { fixture
   const result = await repo.run(['update', 'CLAUDE.md', 'missing.md']);
   expect(result.exit).toBe(2);
   expect(result.stderr).toContain('E_UNKNOWN_FILE: missing.md');
+  expect(result.stdout).toBe('');
   expect(repo.exists('docstamp-lock.yaml')).toBe(false);
 });
 

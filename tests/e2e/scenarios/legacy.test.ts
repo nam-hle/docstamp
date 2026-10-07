@@ -28,8 +28,8 @@ scenario(
     expect(json.json()).toMatchObject({
       exitCode: 2,
       files: [],
-      summary: { ok: 0, stale: 0, invalid: 0 },
     });
+    expect('summary' in json.json()).toBe(false);
     expect(json.json().diagnostics[0]).toMatchObject({ code: 'E_CONFIG_VERSION', file: null });
   },
 );

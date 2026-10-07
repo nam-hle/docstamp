@@ -2,6 +2,5 @@
 $ docstamp check x
 exit: 2
 --- stdout ---
-0 ok, 0 stale, 0 invalid
 --- stderr ---
 error: E_CONFIG_MISSING: Create docstamp.yaml with "version: 2" and a "files" mapping, or docstamp.config.ts exporting the same value.

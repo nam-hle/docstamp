@@ -1,6 +1,5 @@
 $ docstamp update CLAUDE.md
 exit: 2
 --- stdout ---
-0 ok, 0 stale, 0 invalid
 --- stderr ---
 error: E_LOCK_VERSION: The version 2 Lockfile is no longer read; run "docstamp update --all" to rewrite it as version 3 (hashes are unchanged).

@@ -2,5 +2,5 @@ $ docstamp update <root>/CLAUDE.md
 cwd: src
 exit: 0
 --- stdout ---
-written  CLAUDE.md
+unchanged  CLAUDE.md
 --- stderr ---

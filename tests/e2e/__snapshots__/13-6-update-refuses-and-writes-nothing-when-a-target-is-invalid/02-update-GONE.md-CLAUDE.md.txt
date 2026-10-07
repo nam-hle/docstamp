@@ -6,6 +6,5 @@ STALE    CLAUDE.md  (unrecorded)
   depends   !src/**/*.test.ts
 INVALID  GONE.md
 0 ok, 1 stale, 1 invalid
-next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 --- stderr ---
 error: E_FILE_MISSING: GONE.md: Rename the key under "files" in the configuration file or restore the file.

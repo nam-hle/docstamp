@@ -1,5 +1,5 @@
 $ docstamp update CLAUDE.md
 exit: 0
 --- stdout ---
-written  CLAUDE.md
+unchanged  CLAUDE.md
 --- stderr ---
