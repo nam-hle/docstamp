@@ -225,13 +225,13 @@ An *inline block* is a mapping under the key `docstamp` in the frontmatter of a 
 title: README
 docstamp:
   dependencies: [src/cli, docs/SPEC.md]
-  hash: v1:0f3a...64 lowercase hexadecimal digits...
+  hash: 0f3a...64 lowercase hexadecimal digits...
 ---
 ```
 
 `dependencies` is required: a non-empty List of patterns of the dialect of §8.1. `hash` is optional:
-the String `v1:` followed by a Hash (§10.3), the Dependency Hash (§10.4) recorded at the last Write
-of the file. `v1` names the version of the Dependency Hash algorithm (§17.5).
+a Hash (§10.3): the Dependency Hash (§10.4) recorded at the last Write of the file, the same value
+the Lockfile records. It has no version of its own (§17.5).
 
 The following definitions are lexical: they do not depend on the text being valid YAML, so that
 the Hash of a file (§10.2) never depends on whether its block parses.
@@ -674,12 +674,11 @@ binary (§10.1) or not valid UTF-8 has no text and is not an inline file.
    `[[Subject]]` `dependencies`. Otherwise, for each string *s* of it that is not a valid Pattern
    (§8.1), collect `E_PATTERN`, `[[Subject]]` *s*.
 7. If `hash` is present, let *recorded* be it. Collect `E_BLOCK`, `[[Subject]]` `hash`, unless
-   *recorded* is a String of `v1:` and 64 characters of `[0-9a-f]`, the scan has exactly one
+   *recorded* is a String of 64 characters of `[0-9a-f]`, the scan has exactly one
    line of *hashLines*, and that line, after `hash:`, is one or more blanks, *recorded* itself,
    optional blanks, an optional `#` comment and its terminator.
 8. If *problems* is empty, return the Declaration { `[[File]]` *file*, `[[Dependencies]]` the
-   strings of `dependencies`, `[[Origin]]` `inline`, `[[Recorded]]` the Hash after `v1:` of
-   *recorded*, or none }. Otherwise raise *problems*, and the Declaration of the Result
+   strings of `dependencies`, `[[Origin]]` `inline`, `[[Recorded]]` *recorded*, or none }. Otherwise raise *problems*, and the Declaration of the Result
    (§12.1) is { *file*, the strings of `dependencies` if it is a List of Strings else « » }.
 
 #### 9.6.3 Discovery
@@ -706,9 +705,9 @@ anchors, tags and every other YAML feature the profile rejects are harmless ther
 `Stamp(root, file, hash)` writes the Hash *hash* into the inline block of *file*, whose scan is
 *scan*. It changes no byte of the file other than the ones it names:
 
-1. If *scan* has exactly one line of *hashLines*, replace in that line the 67 characters of its
-   value by `v1:` and *hash*.
-2. Otherwise insert, after the line *last* of *scan*, the line *keyIndent*, `hash: v1:`, *hash*
+1. If *scan* has exactly one line of *hashLines*, replace in that line the 64 characters of its
+   value by *hash*.
+2. Otherwise insert, after the line *last* of *scan*, the line *keyIndent*, `hash: `, *hash*
    and the terminator of the line *last*, which has one because *close* follows it.
 3. Replace *file* atomically with the resulting bytes, with its file mode: a concurrent reader sees
    either the old contents or the new. If this fails, raise « `E_UNREADABLE` » with `[[Subject]]`
@@ -926,7 +925,7 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
 
    For an inline file, steps 1.1 to 1.3 are instead: list the commits of
    `git log --format=%H -S<entry> -- <file>`, newest first; the recorded Hash of the file as of a
-   commit or its first parent is the Hash after `v1:` on the one line of *hashLines* of
+   commit or its first parent is the Hash on the one line of *hashLines* of
    `ScanFrontmatter` (§5.6) of its text there, *none* if the file is absent, has no such line or no
    such value; *C* is as above. A file renamed since the commit yields *unknown*.
 2. Let *diff* be the output of `git diff --name-status --no-renames -z
@@ -1347,7 +1346,7 @@ Diagnostics as in §14.3.
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
 | `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; attached to the file when it is a key of an inline block |
 | `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1) |
-| `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: v1:<64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies` or `hash` |
+| `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies` or `hash` |
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern |
@@ -1457,11 +1456,11 @@ A release that keeps verifying an older Lockfile version MUST, before it ships:
 
 A deprecation notice for an older version MAY be a new `warning` Diagnostic (§17.3).
 
-The prefix `v1` of an inline `hash` (§5.6) is the version of the Dependency Hash algorithm and is
-independent of the Lockfile version. A change that needs a new Lockfile version (§17.4) also needs
-a new prefix, and a release that does not support the prefix of a `hash` reports `E_BLOCK`
-for it, as it reports `E_LOCK_VERSION` for a Lockfile of another version. It never accepts a `v1`
-Hash computed by another algorithm.
+An inline `hash` (§5.6) has no version of its own: it is the Dependency Hash of the Lockfile
+version of this document. A future change to the hash rules adds an explicit optional key to the
+block, whose absence means the rules of this version. A release that does not know the key refuses
+it with `E_UNKNOWN_KEY` (§9.6.2 step 5), as it refuses a Lockfile of another version with
+`E_LOCK_VERSION`, so §17.4 holds: it never accepts a Hash that now means something else.
 
 ### 17.6 Versioning and migration notes
 
