@@ -12,7 +12,7 @@ that has to bend is named in the commit message. Each reads _prefer X over Y_.
 3. **Content over history**: what a file contains now, never how it got there. Rebase, squash and
    cherry-pick cannot change a verdict.
 4. **Precise over noisy**: a false stale costs more trust than it saves. Flag only what a binding
-   covers, and only when its content changed.
+   selects, and only when its content changed.
 5. **Doable output over prose**: data on stdout, messages on stderr, every finding names the
    command that resolves it. A missing input fails rather than prompts.
 6. **Explicit over implicit**: stated defaults, refusal over guesswork. A pattern that matches

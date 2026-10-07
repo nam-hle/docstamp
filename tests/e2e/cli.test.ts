@@ -66,7 +66,7 @@ describe('§13 workflow', () => {
     const r = docstamp(root, '--json');
     expect(r.code).toBe(2);
     const doc = JSON.parse(r.out);
-    expect(doc.dependents.map((d: { state: string }) => d.state)).toEqual(['stale', 'invalid']);
+    expect(doc.files.map((d: { state: string }) => d.state)).toEqual(['stale', 'invalid']);
   });
 
   it('write refuses on lock conflict markers and writes nothing', () => {
@@ -116,7 +116,7 @@ describe('§13 workflow', () => {
       err: '',
     });
     const json = JSON.parse(docstamp(root, 'list-dependents', '--json').out);
-    expect(json.dependents[0].files).toEqual(['src/a.ts']);
+    expect(json.files[0].files).toEqual(['src/a.ts']);
   });
 
   it('§13.7 list-dependents exits 2 for an invalid Dependent', () => {

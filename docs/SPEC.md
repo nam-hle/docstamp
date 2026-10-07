@@ -966,9 +966,9 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   "mode": "check",
   "exitCode": 1,
   "summary": { "ok": 12, "stale": 1, "invalid": 0 },
-  "dependents": [
+  "files": [
     {
-      "dependent": "CLAUDE.md",
+      "file": "CLAUDE.md",
       "state": "stale",
       "reasons": ["content-changed"],
       "dependencies": ["src/**", "!src/**/*.test.ts", "package.json"],
@@ -981,11 +981,11 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 ```
 
 - `mode` is `check`, `update` or `list-dependents`.
-- `dependents` holds every selected Result (check) or every target (update), in path order,
+- `files` holds every selected Result (check) or every target (update), in path order,
   including `ok` ones.
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path" }` in this order, or
   `null` when it is *unknown* or not applicable (§12.3), including in update mode.
-- With `update`, each element of `dependents` adds `"written": true|false` after
+- With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (false only when step 5 of §13.6 refused), and the top level adds `"removed"`, a
   List of Dependents, after `diagnostics`.
 - With `list-dependents` the document is instead (§13.7):
@@ -995,9 +995,9 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
     "version": 2,
     "mode": "list-dependents",
     "exitCode": 0,
-    "dependents": [
+    "files": [
       {
-        "dependent": "CLAUDE.md",
+        "file": "CLAUDE.md",
         "dependencies": ["src/**", "package.json"],
         "files": ["package.json", "src/cli/run.ts"],
         "diagnostics": []
@@ -1007,12 +1007,12 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   }
   ```
 
-  It has no `summary`, `state`, `reasons` or `changes`. `files` is the Result's `[[Resolved]]` in
+  It has no `summary`, `state`, `reasons` or `changes`. In an entry, `file` is the Result's `[[Dependent]]` and `files` is its `[[Resolved]]` in
   path order, and `[]` for an `invalid` Result.
-- A Diagnostic is `{ "code", "severity", "dependent", "subject", "message" }`, with `null` for an
-  empty `dependent` or `subject`. Diagnostic Lists are in Diagnostic order.
+- A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
+  empty `[[Dependent]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
 - When a step raises before Results exist, `summary` (not for `list-dependents`) counts zeros and
-  `dependents` is empty.
+  `files` is empty.
 - Consumers MUST ignore unknown members. Within version 2, later revisions only add members.
 
 ### 14.6 List-Dependents, Text Mode

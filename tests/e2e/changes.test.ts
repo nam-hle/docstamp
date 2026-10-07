@@ -84,14 +84,14 @@ describe('§12.3 ChangedSince', () => {
     const root = reviewedRepo();
     changeEverything(root);
     const doc = JSON.parse(docstamp(root, '--json').out);
-    expect(doc.dependents[0].changes).toEqual([
+    expect(doc.files[0].changes).toEqual([
       { status: 'modified', path: 'src/a.ts' },
       { status: 'deleted', path: 'src/c.ts' },
       { status: 'modified', path: 'src/d.ts' },
       { status: 'added', path: 'src/new.ts' },
       { status: 'added', path: 'src/untracked.ts' },
     ]);
-    expect('files' in doc.dependents[0]).toBe(false);
+    expect('files' in doc.files[0]).toBe(false);
   });
 
   it('survives a rewrite of the review commit', () => {
@@ -138,7 +138,7 @@ describe('§12.3 ChangedSince', () => {
     const r = docstamp(root);
     expect(r.code).toBe(1);
     expect(r.out).toContain('  depends  src/**\n');
-    expect(JSON.parse(docstamp(root, '--json').out).dependents[0].changes).toBeNull();
+    expect(JSON.parse(docstamp(root, '--json').out).files[0].changes).toBeNull();
   });
 
   it('is unknown when the written lock was never committed', () => {
@@ -149,12 +149,12 @@ describe('§12.3 ChangedSince', () => {
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstamp(root);
     expect(r.out).toContain('  depends  src/**\n');
-    expect(JSON.parse(docstamp(root, '--json').out).dependents[0].changes).toBeNull();
+    expect(JSON.parse(docstamp(root, '--json').out).files[0].changes).toBeNull();
   });
 
   it('is null for ok dependents', () => {
     const root = reviewedRepo();
-    expect(JSON.parse(docstamp(root, '--json').out).dependents[0].changes).toBeNull();
+    expect(JSON.parse(docstamp(root, '--json').out).files[0].changes).toBeNull();
   });
 
   it('ignores a sibling Dependent that removed the same Hash later', () => {
@@ -176,7 +176,7 @@ describe('§12.3 ChangedSince', () => {
     commit(root, 'review b');
     put(root, 'src/z.ts', 'z\n');
     const doc = JSON.parse(docstamp(root, '--json').out);
-    const a = doc.dependents.find((d: { dependent: string }) => d.dependent === 'CLAUDE.md');
+    const a = doc.files.find((d: { file: string }) => d.file === 'CLAUDE.md');
     expect(a.changes.map((c: { path: string }) => c.path)).toEqual([
       'src/x.ts',
       'src/y.ts',
@@ -191,7 +191,7 @@ describe('§12.3 ChangedSince', () => {
     appendFileSync(join(clone, 'src/a.ts'), 'more\n');
     const r = docstamp(clone, '--json');
     expect(r.code).toBe(1);
-    expect(JSON.parse(r.out).dependents[0].changes).toBeNull();
+    expect(JSON.parse(r.out).files[0].changes).toBeNull();
   });
 
   it('ignores an inherited GIT_DIR', () => {
@@ -199,9 +199,7 @@ describe('§12.3 ChangedSince', () => {
     const foreign = reviewedRepo();
     appendFileSync(join(root, 'src/a.ts'), 'more\n');
     const r = docstampEnv(root, { GIT_DIR: join(foreign, '.git') }, '--json');
-    expect(JSON.parse(r.out).dependents[0].changes).toEqual([
-      { status: 'modified', path: 'src/a.ts' },
-    ]);
+    expect(JSON.parse(r.out).files[0].changes).toEqual([{ status: 'modified', path: 'src/a.ts' }]);
   });
 
   it('survives a real rebase of the review commit', () => {

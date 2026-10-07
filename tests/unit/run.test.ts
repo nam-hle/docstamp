@@ -113,7 +113,7 @@ describe('§13.6 update', () => {
   it('json write has written and removed', () => {
     const doc = JSON.parse(exec(tree(), 'update', '--json', 'doc.md').out);
     expect(doc.mode).toBe('update');
-    expect(doc.dependents[0].written).toBe(true);
+    expect(doc.files[0].written).toBe(true);
     expect(doc.removed).toEqual([]);
   });
   it('strict write fails on a broken lock; --all recovers', () => {
@@ -220,17 +220,15 @@ describe('§13.7 list-dependents', () => {
       version: 2,
       mode: 'list-dependents',
       exitCode: 0,
-      dependents: [
-        { dependent: 'doc.md', dependencies: ['src/**'], files: ['src/a.ts'], diagnostics: [] },
-      ],
+      files: [{ file: 'doc.md', dependencies: ['src/**'], files: ['src/a.ts'], diagnostics: [] }],
       diagnostics: [],
     });
   });
-  it('--json on a raised error has empty dependents', () => {
+  it('--json on a raised error has empty files', () => {
     const r = exec(makeTree({}), list, '--json', '--root', '.');
     const doc = JSON.parse(r.out);
     expect(r.code).toBe(2);
-    expect(doc.dependents).toEqual([]);
+    expect(doc.files).toEqual([]);
     expect(doc.diagnostics[0].code).toBe('E_CONFIG_MISSING');
   });
   it('--all is a usage error', () => {

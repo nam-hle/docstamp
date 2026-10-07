@@ -100,18 +100,18 @@ describe('§14.5 JSON', () => {
       diagnostics: [],
     });
     expect(out.endsWith('}\n')).toBe(true);
-    expect(out).toContain('"dependent": "a\\u2028.md"');
+    expect(out).toContain('"file": "a\\u2028.md"');
     const doc = JSON.parse(out);
     expect(Object.keys(doc)).toEqual([
       'version',
       'mode',
       'exitCode',
       'summary',
-      'dependents',
+      'files',
       'diagnostics',
     ]);
-    expect(Object.keys(doc.dependents[0])).toEqual([
-      'dependent',
+    expect(Object.keys(doc.files[0])).toEqual([
+      'file',
       'state',
       'reasons',
       'dependencies',
@@ -133,9 +133,9 @@ describe('§14.5 JSON', () => {
         diagnostics: [],
       }),
     );
-    expect(doc.dependents[0].changes).toEqual([{ status: 'added', path: 'src/b.ts' }]);
-    expect(doc.dependents[1].changes).toBeNull();
-    expect(doc.dependents[2].changes).toBeNull();
+    expect(doc.files[0].changes).toEqual([{ status: 'added', path: 'src/b.ts' }]);
+    expect(doc.files[1].changes).toBeNull();
+    expect(doc.files[2].changes).toBeNull();
   });
   it('update adds written and removed', () => {
     const doc = JSON.parse(
@@ -149,7 +149,7 @@ describe('§14.5 JSON', () => {
       }),
     );
     expect(doc.mode).toBe('update');
-    expect(doc.dependents[0].written).toBe(true);
+    expect(doc.files[0].written).toBe(true);
     expect(Object.keys(doc).at(-1)).toBe('removed');
   });
   it('matches JSON.stringify for ASCII documents', () => {
@@ -167,13 +167,13 @@ describe('§14.5 JSON', () => {
   it('empty selection renders empty containers', () => {
     const doc = JSON.parse(jsonText({ mode: 'check', exitCode: 2, selected: [], diagnostics: [] }));
     expect(doc.summary).toEqual({ ok: 0, stale: 0, invalid: 0 });
-    expect(doc.dependents).toEqual([]);
+    expect(doc.files).toEqual([]);
   });
   it('null for empty dependent/subject', () => {
     const doc = JSON.parse(
       jsonText({ mode: 'check', exitCode: 2, selected: [], diagnostics: [diag('E_ROOT')] }),
     );
-    expect(doc.diagnostics[0].dependent).toBeNull();
+    expect(doc.diagnostics[0].file).toBeNull();
     expect(doc.diagnostics[0].subject).toBeNull();
   });
   it('list-dependents has no summary, state, reasons or changes', () => {
@@ -187,16 +187,11 @@ describe('§14.5 JSON', () => {
     });
     expect(out).toBe(`${JSON.stringify(JSON.parse(out), null, 2)}\n`);
     const doc = JSON.parse(out);
-    expect(Object.keys(doc)).toEqual(['version', 'mode', 'exitCode', 'dependents', 'diagnostics']);
+    expect(Object.keys(doc)).toEqual(['version', 'mode', 'exitCode', 'files', 'diagnostics']);
     expect(doc.mode).toBe('list-dependents');
-    expect(Object.keys(doc.dependents[0])).toEqual([
-      'dependent',
-      'dependencies',
-      'files',
-      'diagnostics',
-    ]);
-    expect(doc.dependents[0].files).toEqual(['src/a.ts']);
-    expect(doc.dependents[1].files).toEqual([]);
-    expect(doc.dependents[1].diagnostics[0].code).toBe('E_EMPTY_COVERS');
+    expect(Object.keys(doc.files[0])).toEqual(['file', 'dependencies', 'files', 'diagnostics']);
+    expect(doc.files[0].files).toEqual(['src/a.ts']);
+    expect(doc.files[1].files).toEqual([]);
+    expect(doc.files[1].diagnostics[0].code).toBe('E_EMPTY_COVERS');
   });
 });
