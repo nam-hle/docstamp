@@ -20,7 +20,7 @@ The workflow it serves:
 
 This specification defines how a Root is determined (§6), the Universe (§7), patterns (§8), the
 Configuration file (§9), hashing (§10), the Lockfile (§11), evaluation (§12), the command line
-(§13), output (§14), diagnostics (§15) and exit codes (§16).
+(§13), output (§14), diagnostics (§15), exit codes (§16) and compatibility (§17).
 
 ## 2 Conformance
 
@@ -1167,3 +1167,104 @@ Diagnostics as in §14.3.
 | 70 | an uncaught internal fault of the runtime, reported on standard error as `internal error: ` and the stack; for example a failed write to standard output. No input produces it: every failure caused by the command line, the Root or the file system is a Diagnostic and exit 2 |
 
 Warnings never affect the exit code.
+
+## 17 Compatibility
+
+A user commits a Lockfile and runs `docstamp` in CI. This clause defines which changes to docstamp
+may alter what that Lockfile and that CI mean, and how they are announced.
+
+### 17.1 Definitions
+
+A *release* is a published version of docstamp. A change is *breaking* iff, for some Root, command
+line or consumer that a previous release accepted, it makes a release do any of the following:
+
+- compute a different Dependency Hash (§10.4) for the same Lockfile version;
+- select a different set of dependencies (§8.5, §7.2);
+- reject, or read with a different meaning, a Configuration file, Lockfile or command line that the
+  previous release accepted;
+- reach a different verdict (§12.1), exit code (§16) or Diagnostic code or severity (§15);
+- change the shape or meaning of output that a program reads (§14.5);
+- stop running on a platform it supported.
+
+The classification of §17.2 is normative; where a change fits a row, the row decides.
+
+### 17.2 Breaking changes
+
+A change to any of the following is breaking:
+
+| Area | Breaking |
+|---|---|
+| Hash inputs | the hash algorithm (§10.3); the normalization of content (§10.1, §10.2), including CR LF handling, a byte order mark, the binary sniff, the link rule and the `file`/`link` tags; anything that feeds the Dependency Hash, or its byte layout (§10.4); the order of its entries (§3.3) |
+| Selection | the pattern dialect or its parsing (§8.1); pattern matching, negation order or directory semantics (§8.2 to §8.5); the Universe: which entries it holds, ignore rules, `.gitignore` handling, the excluded names, path normalization and collisions (§7); symbolic link handling (§7.1) |
+| Formats | the `version` of the Configuration file (§9.3) or the Lockfile (§11.1); a key name of either; the accepted Configuration file names and their precedence (§9.1); the canonical form of the Lockfile (§11.2) |
+| Verdicts | what is `stale` or `ok`; the Reasons (§5.4); any Diagnostic that turns a run from passing to failing or the reverse, including a warning that becomes an error and an error that becomes a warning (§15, §16) |
+| Contract | an exit code or its meaning (§16); the name, severity or meaning of a Diagnostic code (§15); a member of the JSON output removed, renamed or given another meaning, or the JSON output `version` (§14.5); a command name, an option name, or the meaning of an argument (§13) |
+| Platform | the minimum Node.js version (the `engines` field of the package); how a script Carrier is loaded or what it may export (§9.5) |
+
+### 17.3 Non-breaking changes
+
+The following are not breaking:
+
+- the wording of a Diagnostic `[[Message]]` (§5.5), which is informative; a test MAY snapshot it,
+  and then the snapshot is updated with the change;
+- a new Diagnostic with severity `warning`, which never affects the exit code (§16);
+- a new command, or a new option that no existing command line uses;
+- a new member of the JSON output (§14.5: consumers ignore unknown members);
+- a change to the output of `--help`, `--version` or the changed-file report (§2);
+- a bug fix whose previous behavior contradicted this specification, unless it changes a Dependency
+  Hash or the selection of dependencies (§17.4): a Lockfile records the value the previous release
+  computed, so such a fix is breaking.
+
+### 17.4 The Hash Guarantee
+
+1. For a given Lockfile `version`, the Dependency Hash of a given input (a Root's selected
+   dependencies and their contents) MUST NOT change between releases.
+2. Any change to a hash input or to the selection of dependencies (the rows *Hash inputs* and
+   *Selection* of §17.2) MUST be released with a new Lockfile `version`.
+3. A release MUST either verify every Lockfile version it names as supported, with the algorithm
+   of that version, or refuse a Lockfile of another version with `E_LOCK_VERSION` (§11.1) whose
+   message names the migration. It MUST NOT recompute a Hash in place of the recorded one, and MUST
+   NOT accept a recorded Hash that now means something else.
+4. A refusal is never silent and a migration is never implicit: only `docstamp update` writes a
+   Lockfile (§13.6).
+
+### 17.5 Current policy
+
+A release supports exactly one Lockfile version, the one in the header of this document, and
+refuses every other with `E_LOCK_VERSION` (§11.1). It keeps no algorithm of an older version. When
+the Hash is unchanged between two versions, as between versions 2 and 3, the message says so and
+`docstamp update --all` migrates.
+
+A release that keeps verifying an older Lockfile version MUST, before it ships:
+
+1. specify the algorithm of that version in this document, normatively, including its selection;
+2. keep that algorithm, and the vectors of §17.7 for it, for as long as it is supported;
+3. verify without writing: `check` MUST NOT rewrite the Lockfile, and `update` MUST either write
+   the version it read or migrate every entry, never mix versions in one file;
+4. treat dropping that support as a breaking change (§17.2, *Formats*).
+
+A deprecation notice for an older version MAY be a new `warning` Diagnostic (§17.3).
+
+### 17.6 Versioning and migration notes
+
+- Before version 1.0.0 of the package, a breaking change raises the minor version; from 1.0.0 it
+  raises the major version. A change that is not breaking never does.
+- Each of the Configuration `version`, the Lockfile `version` and the JSON output `version` is
+  raised only by a breaking change to its own format and by none other.
+- Every breaking change MUST ship a migration note in the release notes: what changed (before and
+  after) and the steps a user takes. The note is stated where the change is made, in the commit
+  message, and is not inferred afterwards.
+
+### 17.7 Pinned vectors
+
+The test suite of an implementation MUST pin, as literals computed once from a release:
+
+- the file Hashes and the Dependency Hashes (§10) of a fixed tree that covers plain text, CR LF
+  against LF, a byte order mark, binary bytes, an empty file, a symbolic link, a deleted
+  dependency, a directory dependency of several files, a glob with a negation, and the order of
+  entries;
+- the selected dependencies (§8.4) of a fixed tree and pattern list, with ignore rules and
+  `.gitignore` files in effect (§7).
+
+A change that makes a vector fail is breaking (§17.2). The vector is updated only together with a
+new Lockfile `version` (§17.4) and its migration note (§17.6).
