@@ -3,6 +3,10 @@ import { types } from 'node:util';
 import { Raised, diag } from '../core/diagnostics.ts';
 import type { Value } from './value.ts';
 
+const NO_DEFAULT =
+  'The configuration module has no default export; use "export default" ' +
+  '(a CommonJS module.exports value is also accepted).';
+
 class Violation extends Error {
   constructor(readonly key: string) {
     super(key);
@@ -54,9 +58,16 @@ export function loadScript(absPath: string): Value {
   let exported: unknown;
   try {
     const loaded: unknown = createRequire(absPath)(absPath);
+    if (
+      types.isModuleNamespaceObject(loaded) &&
+      (loaded as { default?: unknown }).default == null
+    ) {
+      throw new Raised([diag('E_CONFIG', { message: NO_DEFAULT })]);
+    }
     const fallback = (loaded as { default?: unknown } | null)?.default;
     exported = fallback ?? loaded;
-  } catch {
+  } catch (error) {
+    if (error instanceof Raised) throw error;
     throw new Raised([diag('E_CONFIG')]);
   }
   try {

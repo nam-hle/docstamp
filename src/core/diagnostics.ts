@@ -8,7 +8,7 @@ const FIX: Record<Code, string> = {
     'Create docstamp.yaml with "version: 2" and a "files" mapping, ' +
     'or docstamp.config.ts exporting the same value.',
   E_CONFIG_AMBIGUOUS: 'Keep one configuration file.',
-  E_CONFIG: 'Fix the named key in the configuration file.',
+  E_CONFIG: 'Fix the configuration file; the key named, if any, is the problem.',
   E_CONFIG_VERSION:
     'Rename "dependents" to "files" and "covers" to "dependencies", set "version: 2".',
   E_UNKNOWN_KEY: 'Remove or correct the key.',
@@ -20,8 +20,8 @@ const FIX: Record<Code, string> = {
   E_PATH_ENCODING: 'Rename the file to a valid UTF-8 name.',
   E_PATH_COLLISION: 'Rename one of the files; names differ only by case or normalization.',
   E_LOCK:
-    'Resolve the conflict by taking either side, or run "docstamp update --all" ' +
-    'after reviewing every file.',
+    'The Lockfile is not valid; after a merge conflict take either side, otherwise ' +
+    'run "docstamp update --all" after reviewing every file.',
   E_LOCK_VERSION: 'Run "docstamp update --all" after reviewing every file.',
   // Lockfile version 2 uses a dedicated message (lock.ts).
   E_UNKNOWN_FILE: 'Name a file listed under "files" in the configuration file.',

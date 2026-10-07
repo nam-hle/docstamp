@@ -40,6 +40,8 @@ const REMOVED: Record<string, string> = {
   '--write': 'docstamp update',
   '--files': 'docstamp list-dependencies',
 };
+const isOption = (arg: string) =>
+  arg === '--' || arg === '--root' || arg.startsWith('--root=') || FLAGS.has(arg) || arg in REMOVED;
 const usage = (subject: string, message?: string) =>
   new Raised([diag('E_USAGE', { subject, ...(message === undefined ? {} : { message }) })]);
 
@@ -65,7 +67,14 @@ export function parseArgs(argv: readonly string[]): Args {
     }
     if (arg === '--root' || arg.startsWith('--root=')) {
       mark('--root');
-      root = arg === '--root' ? argv[++i] : arg.slice('--root='.length);
+      const next = argv[i + 1];
+      if (arg === '--root' && next !== undefined && !isOption(next)) i++;
+      root =
+        arg === '--root'
+          ? next !== undefined && !isOption(next)
+            ? next
+            : undefined
+          : arg.slice('--root='.length);
       if (root === undefined || root === '') fail('--root', '--root needs a directory.');
     } else if (FLAGS.has(arg)) mark(arg);
     else if (REMOVED[arg] !== undefined) fail(arg, `${arg} was removed; use "${REMOVED[arg]}".`);
