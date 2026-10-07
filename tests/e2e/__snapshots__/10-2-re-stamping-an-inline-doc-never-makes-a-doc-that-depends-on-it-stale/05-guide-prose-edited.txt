@@ -1,0 +1,9 @@
+# guide prose edited
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    README.md  (content-changed)
+  modified  docs/GUIDE.md
+1 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md
+--- stderr ---

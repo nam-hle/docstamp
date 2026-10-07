@@ -10,6 +10,7 @@ import type { Config } from '../../src/core/types.ts';
 const config = (over: Partial<Config> = {}): Config => ({
   ignore: [],
   useGitignore: true,
+  include: ['**/*.md'],
   declarations: [],
   ...over,
 });
@@ -44,6 +45,22 @@ describe('§6 determineRoot', () => {
   it('a directory named docstamp.yaml still counts as an entry', () => {
     const root = makeTree({ 'docstamp.yaml/x': '' });
     expect(determineRoot(root, undefined)).toBe(root);
+  });
+  it('without a configuration file the nearest .git directory is the root', () => {
+    const root = makeTree({ '.git/HEAD': '', 'a/b/x': '', 'a/.git/HEAD': '' });
+    expect(determineRoot(join(root, 'a/b'), undefined)).toBe(join(root, 'a'));
+  });
+  it('a .git file, as in a linked work tree, counts', () => {
+    const root = makeTree({ '.git': 'gitdir: elsewhere\n', 'a/b/x': '' });
+    expect(determineRoot(join(root, 'a/b'), undefined)).toBe(root);
+  });
+  it('a configuration file further up wins over a nearer .git', () => {
+    const root = makeTree({ 'docstamp.yaml': '', 'a/.git/HEAD': '', 'a/b/x': '' });
+    expect(determineRoot(join(root, 'a/b'), undefined)).toBe(root);
+  });
+  it('--root wins over both', () => {
+    const root = makeTree({ 'docstamp.yaml': '', 'a/.git/HEAD': '' });
+    expect(determineRoot(join(root, 'a'), '..')).toBe(root);
   });
 });
 

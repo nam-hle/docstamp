@@ -9,6 +9,7 @@ const configSchema = {
     version: { const: 2 },
     gitignore: { type: 'boolean', default: true },
     ignore: { type: 'array', items: { type: 'string' }, default: [] },
+    include: { type: 'array', minItems: 1, items: { type: 'string' }, default: ['**/*.md'] },
     files: {
       type: 'object',
       additionalProperties: {

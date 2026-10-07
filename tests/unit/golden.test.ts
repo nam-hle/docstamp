@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { loadWorkspace } from '../../src/cli/workspace.ts';
 import { evaluate, resolveDependencies } from '../../src/engine/evaluate.ts';
 import { fileHash } from '../../src/hash/hash.ts';
 import { select } from '../../src/pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
 import { computeUniverse, type Universe } from '../../src/universe/walk.ts';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
-import { GOLDEN_IGNORE, GOLDEN_TREE } from '../helpers/golden-tree.ts';
+import { GOLDEN_IGNORE, GOLDEN_TREE, INLINE_GOLDEN_TREE } from '../helpers/golden-tree.ts';
 
 afterEach(cleanupTrees);
 
@@ -208,5 +209,58 @@ describe('§17.7 golden selection', () => {
       universe.paths,
     );
     expect(resolved, SELECTION_BREAKING).toEqual(['.hidden/h.txt', 'Zed.txt', 'lib/keep.log']);
+  });
+});
+
+describe('§17.7 golden inline files', () => {
+  const inline = () => {
+    const root = makeTree(INLINE_GOLDEN_TREE);
+    const { universe } = loadWorkspace(root);
+    return { root, universe };
+  };
+  const expected: Record<string, string> = {
+    'without.md': '0b96181a7fae2381f131a3d01662ab90f482886f4d5f7e38fdc9d78a6a196e15',
+    'with.md': '0b96181a7fae2381f131a3d01662ab90f482886f4d5f7e38fdc9d78a6a196e15',
+    'with-other.md': '0b96181a7fae2381f131a3d01662ab90f482886f4d5f7e38fdc9d78a6a196e15',
+    'crlf.md': '0b96181a7fae2381f131a3d01662ab90f482886f4d5f7e38fdc9d78a6a196e15',
+    'deps.md': '2ee7bbf4136754b105b7d64b05df89f11f3a2143323b4df8e7b9c73d01c91983',
+    'bom.md': 'f442e46a1d48a7b5dd6c9fc313df86570cf65643ac9db9946533c7be0c302dcb',
+    'outside.txt': '99f56b5f35435cbba23cc2d9c7bd79375046d17fa86dfb3a2824371eeff15190',
+    'plain.md': '8095494ef76326cc53ca864551f2851d6bc2464ca7200c4a75d2e75e2a12a817',
+  };
+
+  it.each(Object.entries(expected))('%s', (path, hash) => {
+    const { root, universe } = inline();
+    expect(fileHash(root, universe, path), BREAKING).toBe(hash);
+  });
+
+  it('a block with and without a hash line, in LF and CR LF, hash identically', () => {
+    const { root, universe } = inline();
+    const hashes = ['without.md', 'with.md', 'with-other.md', 'crlf.md'].map((path) =>
+      fileHash(root, universe, path),
+    );
+    expect(new Set(hashes).size, BREAKING).toBe(1);
+  });
+
+  it('a changed dependencies list, a byte order mark and a file outside include change it', () => {
+    const { root, universe } = inline();
+    const hash = (path: string) => fileHash(root, universe, path);
+    expect(hash('deps.md')).not.toBe(hash('without.md'));
+    expect(hash('bom.md')).not.toBe(hash('with.md'));
+    expect(hash('outside.txt')).not.toBe(hash('with.md'));
+  });
+
+  it('the Dependency Hash over inline files', () => {
+    const { root, universe } = inline();
+    const dependencyHash = evaluate(
+      { file: 'DOC.md', dependencies: ['deps.md', 'with.md'] },
+      universe.paths,
+      { entries: new Map() },
+      [],
+      { isStampedFile: () => true, fileHash: (path) => fileHash(root, universe, path) },
+    ).current;
+    expect(dependencyHash, BREAKING).toBe(
+      '3a55c8a5c25de7c67d79fb34c7692fa74b79973a7e8943fd69db2cafaaef1b8b',
+    );
   });
 });

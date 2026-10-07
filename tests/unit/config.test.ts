@@ -128,7 +128,38 @@ describe('§9.3 readConfig', () => {
       expect.objectContaining({ diagnostics: [expect.objectContaining({ code: 'E_CONFIG' })] }),
     );
   });
-  it('missing file', () => {
-    expect(() => readConfig(makeTree({}))).toThrow(Raised);
+  it('no file is the defaults and not present (§9.3 step 2)', () => {
+    expect(readConfig(makeTree({}))).toMatchObject({ present: false, attached: [] });
+  });
+});
+
+describe('§9.3 include', () => {
+  const include = (value: string) => `version: 2\ninclude: ${value}\nfiles: {}\n`;
+  it('defaults to **/*.md and is replaced by the key', () => {
+    expect(read('version: 2\nfiles: {}\n').config.include).toEqual(['**/*.md']);
+    expect(read(include('[docs/**/*.md, "!docs/drafts"]')).config.include).toEqual([
+      'docs/**/*.md',
+      '!docs/drafts',
+    ]);
+  });
+  it.each(['[]', 'a.md', '[1]', '{}'])('%s is E_CONFIG with subject include', (value) => {
+    try {
+      read(include(value));
+      expect.unreachable();
+    } catch (e) {
+      expect((e as Raised).diagnostics.map((d) => [d.code, d.subject])).toEqual([
+        ['E_CONFIG', 'include'],
+      ]);
+    }
+  });
+  it('an invalid pattern is E_PATTERN, not attached to a file', () => {
+    try {
+      read(include('["/abs/*.md"]'));
+      expect.unreachable();
+    } catch (e) {
+      expect((e as Raised).diagnostics.map((d) => [d.code, d.file, d.subject])).toEqual([
+        ['E_PATTERN', '', '/abs/*.md'],
+      ]);
+    }
   });
 });

@@ -1,0 +1,30 @@
+$ docstamp update --all
+exit: 0
+--- stdout ---
+written  README.md
+written  docs/GUIDE.md
+--- stderr ---
+--- setup: README.md ---
+---
+title: Project README
+docstamp:
+  dependencies: [src/cli, docs/GUIDE.md]
+  hash: v1:2f53c1d51dcf746f92f504696646076f887423abe29da261fb8dec8ca5f9fd84
+---
+
+# Project
+
+Run `tool check` to verify the project. The command line lives in `src/cli`; the guide
+explains the core.
+--- setup: docs/GUIDE.md ---
+---
+title: Guide
+docstamp:
+  dependencies:
+    - src/core
+  hash: v1:b324d17d193a5930eb18545d1f21d246b253788ea45b6a89f908becbb4b27cce
+---
+
+# Guide
+
+The core hashes files and compares the result with what was recorded.

@@ -1,0 +1,22 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    README.md  (unrecorded)
+  depends   src/cli
+  depends   docs/GUIDE.md
+STALE    docs/GUIDE.md  (unrecorded)
+  depends   src/core
+0 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md docs/GUIDE.md
+--- stderr ---
+--- setup: README.md ---
+---
+title: Project README
+docstamp:
+  dependencies: [src/cli, docs/GUIDE.md]
+---
+
+# Project
+
+Run `tool check` to verify the project. The command line lives in `src/cli`; the guide
+explains the core.

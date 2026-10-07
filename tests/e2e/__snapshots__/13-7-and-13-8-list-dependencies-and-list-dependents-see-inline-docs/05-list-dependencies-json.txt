@@ -1,0 +1,34 @@
+$ docstamp list-dependencies --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "README.md",
+      "dependencies": [
+        "src/cli",
+        "docs/GUIDE.md"
+      ],
+      "resolvedFiles": [
+        "docs/GUIDE.md",
+        "src/cli/run.ts"
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "docs/GUIDE.md",
+      "dependencies": [
+        "src/core"
+      ],
+      "resolvedFiles": [
+        "src/core/hash.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

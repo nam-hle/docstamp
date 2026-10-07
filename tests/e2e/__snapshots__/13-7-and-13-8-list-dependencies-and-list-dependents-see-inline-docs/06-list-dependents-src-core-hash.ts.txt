@@ -1,0 +1,7 @@
+$ docstamp list-dependents src/core/hash.ts
+exit: 2
+--- stdout ---
+src/core/hash.ts
+  docs/GUIDE.md   via src/core
+--- stderr ---
+error: E_UNKNOWN_KEY: docs/BROKEN.md: extra: Remove or correct the key.

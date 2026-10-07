@@ -1,0 +1,25 @@
+# malformed and duplicate blocks
+$ docstamp
+exit: 2
+--- stdout ---
+STALE    OK.md  (unrecorded)
+  depends   src/**
+INVALID  flow.md
+INVALID  twice.md
+INVALID  unknown.md
+0 ok, 1 stale, 3 invalid
+next: review each stale file against its dependencies, then run: docstamp update OK.md
+--- stderr ---
+error: E_BLOCK: flow.md: docstamp: Write the docstamp block as a block mapping, one key per line.
+error: E_DUPLICATE_DECLARATION: twice.md: Declare the file once: remove its entry under "files" or its docstamp block.
+error: E_UNKNOWN_KEY: unknown.md: nope: Remove or correct the key.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "twice.md":
+    dependencies:
+      - "src/**"
+--- setup: flow.md ---
+---
+docstamp: {dependencies: [src/**]}
+---

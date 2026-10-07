@@ -33,9 +33,11 @@ Docs are the main case, not the only one. The same problem appears wherever one 
 depends on another and nothing links them: a test fixture and the schema it mirrors, a
 translation and its source text, a hand-written type and the API it describes, a runbook and the
 deploy script. docstamp treats any file in the repository (the same scope git sees) as a possible
-file with dependencies, and any file as a dependency. Every link is declared in one place,
-the configuration file (`docstamp.yaml` or a `docstamp.config.*` script); the files themselves
-carry no markers.
+file with dependencies, and any file as a dependency. A link is declared in the configuration file
+(`docstamp.yaml` or a `docstamp.config.*` script), which works for any file because the file
+itself carries no marker. A Markdown doc may instead declare its own links in its frontmatter,
+so a repository of docs needs no configuration file and no lock, and the declaration travels
+with the doc when it moves.
 
 ## Who it is for
 

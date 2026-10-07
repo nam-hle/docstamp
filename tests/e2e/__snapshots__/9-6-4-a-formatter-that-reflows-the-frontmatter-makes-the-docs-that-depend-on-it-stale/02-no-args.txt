@@ -1,0 +1,20 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    README.md  (content-changed)
+  modified  docs/GUIDE.md
+1 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md
+--- stderr ---
+--- setup: docs/GUIDE.md ---
+---
+title: Guide
+docstamp:
+  dependencies:
+    - "src/core"
+  hash: v1:b324d17d193a5930eb18545d1f21d246b253788ea45b6a89f908becbb4b27cce
+---
+
+# Guide
+
+The core hashes files and compares the result with what was recorded.

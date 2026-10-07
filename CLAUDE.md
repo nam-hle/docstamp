@@ -59,8 +59,9 @@ docstamp/
 │   ├── index.ts          # entry; wires the CLI
 │   ├── lib.ts            # library entry: defineConfig, DocstampConfig (§9.5)
 │   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
-│   ├── cli/              # args, path resolution, run; exit codes (§13, §16)
+│   ├── cli/              # args, path resolution, workspace load, run; exit codes (§13, §16)
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
+│   ├── inline/           # inline declarations: frontmatter scan, block parse, stamp (§5.6, §9.6)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and dependency hash (§10)
@@ -122,7 +123,10 @@ Only what no test can check stays here.
   for the verdict, the exit code or the Lockfile.
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
 - **Nothing writes the Lockfile automatically.** Only `docstamp update` with named files or
-  `--all` may write it; a Write is the record that a review happened.
+  `--all` may write it, or the `hash:` line of an inline doc (§9.6.4); a Write is the record that a
+  review happened. `Stamp` changes no other byte of a doc.
+- **The hash input rule has one exception.** A file with an inline block is hashed without its
+  `hash:` line (§10.2 step 4); anything else about hashing is a breaking change (§17).
 
 ## Known Anti-Patterns
 
@@ -137,10 +141,20 @@ Conventional Commits (by convention, not enforced by tooling). `!` marks a break
 classified by [SPEC §17.2](docs/SPEC.md#172-breaking-changes). Commit types drive releases, so get
 them right.
 
+## Inline declarations
+
+A Markdown doc may declare its dependencies in its own frontmatter (SPEC §5.6, §9.6); every
+command treats it like a configured file. To change that behavior, touch `src/inline/`
+(`frontmatter.ts` is the lexical scan and the stamp rewrite, `block.ts` the strict parse,
+`read-inline.ts` the discovery and the atomic write), `src/cli/workspace.ts` (merge with `files`,
+duplicate check) and the `marked` hash rule in `src/hash/hash.ts`. Tests: `tests/unit/inline.test.ts`,
+`tests/e2e/scenarios/inline.test.ts` on the `inline-docs` fixture.
+
 ## Compatibility guard
 
 `tests/unit/golden.test.ts` pins exact file hashes, Dependency Hashes and selected file lists for
-the fixed tree in `tests/helpers/golden-tree.ts` ([SPEC §17.7](docs/SPEC.md#177-pinned-vectors)). A
+the fixed trees in `tests/helpers/golden-tree.ts` (`GOLDEN_TREE`, and `INLINE_GOLDEN_TREE` for inline
+files; [SPEC §17.7](docs/SPEC.md#177-pinned-vectors)). A
 failure there is a breaking change, not a stale test: never edit a literal to make it pass.
 To change one on purpose, follow "Breaking changes" in [CONTRIBUTING.md](CONTRIBUTING.md): spec
 first, bump the Lockfile version, then regenerate the literals and review each diff.

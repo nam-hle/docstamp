@@ -1,0 +1,5 @@
+file: docstamp-lock.yaml
+--- content ---
+version: 3
+files:
+  "CLAUDE.md": b5e6f6dcf74c91bcc8d869835eafbb133bed407b504b3494b722192026ec843a

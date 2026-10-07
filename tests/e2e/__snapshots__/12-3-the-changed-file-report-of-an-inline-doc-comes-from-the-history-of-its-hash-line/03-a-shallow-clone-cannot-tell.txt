@@ -1,0 +1,10 @@
+# a shallow clone cannot tell
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    README.md  (content-changed)
+  depends   src/cli
+  depends   docs/GUIDE.md
+1 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md
+--- stderr ---

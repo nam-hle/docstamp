@@ -1,4 +1,7 @@
 version: 2
+include:
+  - "**/*.md"
+  - "!tests/e2e/fixtures"
 files:
   CLAUDE.md:
     dependencies:

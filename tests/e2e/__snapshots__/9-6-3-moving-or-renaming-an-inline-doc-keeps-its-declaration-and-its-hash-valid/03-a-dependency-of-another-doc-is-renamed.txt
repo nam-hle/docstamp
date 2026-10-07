@@ -1,0 +1,8 @@
+# a dependency of another doc is renamed
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  docs/OVERVIEW.md
+1 ok, 0 stale, 1 invalid
+--- stderr ---
+error: E_EMPTY_PATTERN: docs/OVERVIEW.md: docs/GUIDE.md: Correct or remove the pattern; it matches no file.

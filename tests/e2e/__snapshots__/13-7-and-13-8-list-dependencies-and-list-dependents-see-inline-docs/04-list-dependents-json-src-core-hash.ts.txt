@@ -1,0 +1,24 @@
+$ docstamp list-dependents --json src/core/hash.ts
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependents",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "src/core/hash.ts",
+      "dependents": [
+        {
+          "file": "docs/GUIDE.md",
+          "via": [
+            "src/core"
+          ]
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

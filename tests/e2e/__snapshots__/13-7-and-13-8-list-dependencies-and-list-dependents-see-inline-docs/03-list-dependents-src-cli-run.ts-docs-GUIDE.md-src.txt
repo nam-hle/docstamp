@@ -1,0 +1,10 @@
+$ docstamp list-dependents src/cli/run.ts docs/GUIDE.md src/index.ts
+exit: 0
+--- stdout ---
+docs/GUIDE.md
+  README.md   via docs/GUIDE.md
+src/cli/run.ts
+  README.md   via src/cli
+src/index.ts
+  (no dependents)
+--- stderr ---

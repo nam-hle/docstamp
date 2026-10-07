@@ -1,0 +1,12 @@
+$ docstamp list-dependencies
+exit: 0
+--- stdout ---
+README.md
+  depends   src/cli
+  depends   docs/GUIDE.md
+  resolved  docs/GUIDE.md
+  resolved  src/cli/run.ts
+docs/GUIDE.md
+  depends   src/core
+  resolved  src/core/hash.ts
+--- stderr ---

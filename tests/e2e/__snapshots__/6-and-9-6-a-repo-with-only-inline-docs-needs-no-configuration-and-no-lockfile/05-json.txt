@@ -1,0 +1,45 @@
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 1,
+    "stale": 1,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "README.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/cli",
+        "docs/GUIDE.md"
+      ],
+      "changes": [
+        {
+          "status": "modified",
+          "path": "src/cli/run.ts"
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "docs/GUIDE.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/core"
+      ],
+      "changes": null,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

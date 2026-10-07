@@ -1,0 +1,6 @@
+$ docstamp update --all
+exit: 0
+--- stdout ---
+written  README.md
+written  docs/GUIDE.md
+--- stderr ---
