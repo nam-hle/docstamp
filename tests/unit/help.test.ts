@@ -98,6 +98,13 @@ describe('§13.11 help', () => {
     }
   });
 
+  it('a diagnostic code is looked up in any letter case and printed as SPEC §15 writes it', () => {
+    for (const name of ['e_usage', 'E_usage', 'w_orphan']) {
+      expect(helpText(['diagnostics', name])).toBe(helpText(['diagnostics', name.toUpperCase()]));
+    }
+    expect(raised(['diagnostics', 'e_bogus'])[0]).toMatchObject({ subject: 'e_bogus' });
+  });
+
   it('the exit-codes topic has every exit code of SPEC §16', () => {
     const codes = tableColumn(clause('## 16 Exit Codes')).filter((c) => /^\d+$/u.test(c));
     expect(codes).toEqual(['0', '1', '2', '70']);

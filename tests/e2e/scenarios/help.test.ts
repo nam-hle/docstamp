@@ -47,6 +47,8 @@ scenario('§13.11 every help page', { git: false }, async (repo) => {
   }
   const one = await repo.run(['help', 'diagnostics', 'E_CONFIG_MISSING']);
   expect(one.stdout).toMatch(/^E_CONFIG_MISSING \(error\)\n/u);
+  const lower = await repo.run(['help', 'diagnostics', 'e_config_missing'], { snapshot: false });
+  expect(lower).toMatchObject({ exit: 0, stdout: one.stdout, stderr: '' });
 });
 
 scenario('§13.11 a command with --help prints its page', { git: false }, async (repo) => {

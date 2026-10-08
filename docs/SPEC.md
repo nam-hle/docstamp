@@ -1908,7 +1908,8 @@ a network. `help` reads no file and no Root; it prints to standard output and ex
    `diagnostics` (every code of §15, its meaning and its fix), `agents` (the review workflow of
    §1, ready to paste into an agent's instructions), `schema` (the JSON Schemas the package ships)
    and `spec` (where this document is, and its sections).
-4. With the two names `diagnostics` and a code of §15: the entry of that code alone.
+4. With the two names `diagnostics` and a code of §15 in any letter case (`e_usage` names
+   `E_USAGE`): the entry of that code alone, which names the code as §15 writes it.
 
 Any other help names raise « `E_USAGE` », `[[Subject]]` the first name that is not known, whose
 message lists the names that are; it is written as §14.3 writes a Diagnostic, and the exit code is
@@ -2587,6 +2588,8 @@ The following are not breaking:
   bare `docstamp help` or `--help` still exits 0. So is shipping `docs/SPEC.md` in the package,
   which no command reads, the rule line after the stale `next:` line (§14.3.3, text layout of
   §14.3), and the wording of the `E_USAGE` and `E_CONFIG_MISSING` messages that name a help page;
+- `help diagnostics <code>` with a code in another letter case (§13.11 step 4): it was `E_USAGE`
+  with exit 2 and now prints the entry and exits 0, which only a person reads;
 - the warnings `W_DUPLICATE_PATTERN`, `W_SHADOWED_EXCLUSION` (§8.5) and `W_UNKNOWN_PATH` (§13.8): new, warning severity,
   no change to a verdict, a Hash, a selection or an exit code; `list-dependents` still exits 0
   for a path it does not know;
