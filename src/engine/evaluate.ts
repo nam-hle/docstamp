@@ -101,7 +101,10 @@ function resolveWithWarnings(
     warnings.push(diag('W_DUPLICATE_PATTERN', { file: b.file, subject }));
   }
   const resolved = select(patterns, candidates);
-  if (resolved.length === 0) problems.push(diag('E_EMPTY_DEPENDENCIES', { file: b.file }));
+  // §8.5 step 6: an E_EMPTY_PATTERN already explains an empty selection
+  if (resolved.length === 0 && problems.length === 0) {
+    problems.push(diag('E_EMPTY_DEPENDENCIES', { file: b.file }));
+  }
   warnings.push(...shadowedExclusions(b, patterns, resolved));
   if (problems.length > 0) throw new Raised([...problems, ...warnings]);
   return { resolved, warnings };

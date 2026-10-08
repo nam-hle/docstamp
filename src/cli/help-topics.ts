@@ -163,7 +163,7 @@ to the root and use / as the separator on every platform.
     !src/gen          a leading ! excludes; \\! is a literal leading !
 
 - The last matching pattern wins: write an exclusion after the patterns it cuts from. A later inclusion selects the excluded files again (W_SHADOWED_EXCLUSION).
-- A pattern without ! must select a file (E_EMPTY_PATTERN), and the list together too (E_EMPTY_DEPENDENCIES). An exclusion that matches nothing is only W_EMPTY_EXCLUSION.
+- A pattern without ! must select a file (E_EMPTY_PATTERN), and the list together too (E_EMPTY_DEPENDENCIES, only when no pattern is E_EMPTY_PATTERN). An exclusion that matches nothing is only W_EMPTY_EXCLUSION.
 - \\ escapes the next character, so src\\cli is the literal srccli. Escape * ? [ ] { } , and \\ to mean them literally.
 - Matching is case-sensitive, and a leading . is not special. No leading or trailing /, no . or .. segment.
 - A file is never its own dependency. An ignored file cannot be a dependency: depend on its source.

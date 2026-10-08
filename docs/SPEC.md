@@ -514,7 +514,8 @@ a file under a directory an earlier negation removed.
    equality, §3.2), collect `W_DUPLICATE_PATTERN` into *warnings*, `[[Subject]]` that String. A
    pattern that comes from a Preset is not counted: only the file's own patterns are.
 5. Let *resolved* be `Select` of the effective patterns of *declaration* and *candidates*.
-6. If *resolved* is empty, collect `E_EMPTY_DEPENDENCIES` into *problems*.
+6. If *resolved* is empty and *problems* is empty, collect `E_EMPTY_DEPENDENCIES` into
+   *problems*.
 7. Call a *path* of *resolved* *re-selected* when its last matching pattern (§8.4) is not a literal
    path (NOTE below) that denotes *path* itself. For each distinct String *e* of the effective
    patterns that has a Negation and satisfies `PatternMatches(e, path)` for some re-selected *path*,
@@ -527,7 +528,10 @@ a file under a directory an earlier negation removed.
 NOTE: A file is never one of its own dependencies (step 2), so editing a file never
 makes it stale. A pattern without Negation must match something (Principle 6): a dependency that
 matches nothing is a mistyped or stale rule, and a declaration whose patterns together select
-nothing is a mistake (step 6).
+nothing is a mistake (step 6). One mistake gives one Diagnostic: when a pattern raised
+`E_EMPTY_PATTERN`, that already explains an empty selection, so step 6 raises
+`E_EMPTY_DEPENDENCIES` only when every pattern without Negation matches a file and together they
+still select nothing: there is no such pattern, or the exclusions deselect every file.
 
 NOTE: A *duplicate* is the same String twice, whatever its Negation, and is warned once however
 many times it repeats. Patterns that differ in any code point, such as `src` and `src/**`, are not
@@ -560,10 +564,9 @@ already raised `E_EMPTY_PATTERN`, and it changes nothing but that wording.
 NOTE: For the same reason, the `[[Message]]` of `E_EMPTY_PATTERN` SHOULD say that patterns use `/`
 as the separator and that `\` escapes the next character when the pattern holds a `\` followed by a
 letter: `src\core` is the literal `srccore` (§8.1 NOTE), almost always a Windows path. When that
-pattern is the Declaration's only inclusion, `E_EMPTY_DEPENDENCIES` (step 6) is raised too: the two
-codes report two facts, the pattern that matches nothing and the Declaration that selects nothing,
-and a consumer may read either, so neither is dropped (§17.1); the hint is in the message of the
-first.
+pattern is the Declaration's only inclusion, it is the only Diagnostic: step 6 raises no
+`E_EMPTY_DEPENDENCIES` beside an `E_EMPTY_PATTERN`. The Diagnostic line shows the pattern as written
+(§14.3), `src\core`.
 
 NOTE: A pattern that comes from a Preset (§8.6) is reported like any other when it is not an
 exclusion: `E_EMPTY_PATTERN`, with the Preset named in the `[[Message]]`. An exclusion that comes
@@ -741,10 +744,11 @@ raises:
    for each string *n* of it that is not a key of `presets` (all of them when `presets` is absent or
    not a Map), collect `E_UNKNOWN_PRESET` into *fatal*, `[[Subject]]` *n*, with an empty `[[File]]`:
    a global Diagnostic, as every other Diagnostic of this step.
-7. If `files` is absent, or not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]`
-   `files`. When it is absent, the message says that `files` is required and to write `files: {}`
-   for none; when a key of step 5 has `files` as its near key (NOTE below), it names that key
-   and its `E_UNKNOWN_KEY` instead, so one typo reads as one problem.
+7. If `files` is not a Map, or is absent while no key of step 5 has `files` as its near key
+   (NOTE below), collect `E_CONFIG` into *fatal*, `[[Subject]]` `files`. When it is absent, the
+   message says that `files` is required and to write `files: {}` for none. When it is absent and
+   a key of step 5 has `files` as its near key, nothing is collected here: that key's
+   `E_UNKNOWN_KEY`, which names `files`, is the one Diagnostic of the typo.
 8. Otherwise, for each (*key*, *value*) of `files`:
    1. If *key* is not a RepoPath, collect `E_CONFIG` into *fatal*, `[[Subject]]` *key*, and
       continue.
@@ -2006,7 +2010,10 @@ Each Diagnostic, global and attached, in Diagnostic order, is written to standar
 <severity>: <code>[: <file>][: <subject>]: <message>
 ```
 
-omitting the bracketed parts when empty. §14.3.2 says when each is written.
+omitting the bracketed parts when empty. `<file>` is written as in §14.2, and so is `<subject>`,
+except that a `\` alone does not make it quoted: a pattern or argument is shown as the user wrote
+it (`src\core`, not `"src\\core"`). A Diagnostic line is read, never pasted as a command, so this
+loses nothing. §14.3.2 says when each is written.
 
 #### 14.3.1 Change Lines
 
@@ -2463,7 +2470,7 @@ command raised.
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6); `docstamp help start` shows both |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
-| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file, `default-presets` for the default Presets; an empty `use` needs `default-presets`); for a missing `files`, write `files: {}` for none, or correct the unknown key that stands for it; for a module without a default export, `export default` the value |
+| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file, `default-presets` for the default Presets; an empty `use` needs `default-presets`); for a missing `files`, write `files: {}` for none (a key one or two edits from `files` is `E_UNKNOWN_KEY` alone, §9.3 step 7); for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2`; for a file with neither `version` nor `dependents`, add `version: 2` |
 | `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; otherwise its near key, if any (§9.3 NOTE: `did you mean "dependencies"?`); attached to the file when it is a key of an inline block |
 | `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1); for an empty pattern, write a path or glob or remove it; for a lone `!`, write the path to exclude after it or remove it |
@@ -2472,7 +2479,7 @@ command raised.
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when git shows the path renamed (§12.7), depend on the new path, which the message names; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
-| `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
+| `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies`: no inclusion is empty, but together they select no file (there is no inclusion, or the exclusions deselect every file); never raised beside an `E_EMPTY_PATTERN` of the same file |
 | `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3, §13.10 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
@@ -2552,6 +2559,19 @@ migration is to read `E_USAGE` where a consumer looked for `E_UNKNOWN_FILE` with
 says the argument resolves outside Root; `E_UNKNOWN_FILE` now always means a file inside Root that
 is neither declared nor carries an inline block. No Hash input, selection or Lockfile `version`
 changes.
+
+NOTE: One mistake gives one Diagnostic. A top-level key of the Configuration file whose near key is
+`files`, with `files` absent (`fils: {}`), was `E_UNKNOWN_KEY` and `E_CONFIG` (subject `files`); it
+is now `E_UNKNOWN_KEY` alone (§9.3 step 7), whose message names `files`. A Declaration whose
+inclusions include one that matches nothing, so that nothing is selected (`src\core` as the only
+pattern), was `E_EMPTY_PATTERN` and `E_EMPTY_DEPENDENCIES`; it is now `E_EMPTY_PATTERN` alone
+(§8.5 step 6). The verdict (`invalid`, or a refused run) and the exit code 2 are unchanged, but the
+set of Diagnostic codes of that run changes (§17.1, fourth item), so it is breaking. The migration
+is to read `E_UNKNOWN_KEY` where a consumer looked for the `E_CONFIG` of a missing `files`, and
+`E_EMPTY_PATTERN` on the file where it looked for `E_EMPTY_DEPENDENCIES`; `E_EMPTY_DEPENDENCIES`
+now means that no inclusion is empty, yet together the patterns select nothing. A subject with a
+`\` is no longer quoted on a Diagnostic line of text mode (§14.3); that is text layout (§17.3),
+and `--json` is unchanged. No Hash input, selection or Lockfile `version` changes.
 
 ### 17.3 Non-breaking changes
 

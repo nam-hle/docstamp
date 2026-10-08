@@ -112,7 +112,6 @@ STALE    docs/api.md  (content-changed)
   changed   13 renamed
   renamed   src/old/ -> src/new/  (13 files)
 INVALID  docs/old.md
-error: E_EMPTY_DEPENDENCIES: docs/old.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/old.md: src/old: Correct or remove the pattern; it matches no file.
 0 ok, 1 stale, 1 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/api.md
@@ -126,7 +125,6 @@ When the pattern is a file path and git shows the file moved with its content un
 $ git mv src/lib/old-name.ts src/lib/new-name.ts
 $ docstamp docs/api.md
 INVALID  docs/api.md
-error: E_EMPTY_DEPENDENCIES: docs/api.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/api.md: src/lib/old-name.ts: Correct or remove the pattern; it matches no file: git shows it renamed to src/lib/new-name.ts; depend on the new path.
 0 ok, 0 stale, 1 invalid
 next: fix the configuration of each invalid file, then run: docstamp check docs/api.md
@@ -228,7 +226,7 @@ Things to know:
   validate({ docstamp: { dependencies: ['src'] } }); // true
   validate({ docstamp: { dependancies: ['src'] } }); // false: no "dependencies"
   ```
-- **One typo, one diagnostic.** An unknown key in the block is reported once, as `E_UNKNOWN_KEY` for the file, and not also as `E_BLOCK` for the `dependencies` it replaced ([SPEC §9.6.2](docs/SPEC.md#962-parsing)). When the key is one or two edits from a real one, the message names it: `dependecies: Remove or correct the key; did you mean "dependencies"?` ([SPEC §9.3](docs/SPEC.md#93-reading)).
+- **One typo, one diagnostic.** An unknown key in the block is reported once, as `E_UNKNOWN_KEY` for the file, and not also as `E_BLOCK` for the `dependencies` it replaced ([SPEC §9.6.2](docs/SPEC.md#962-parsing)). When the key is one or two edits from a real one, the message names it: `dependecies: Remove or correct the key; did you mean "dependencies"?` ([SPEC §9.3](docs/SPEC.md#93-reading)). The same holds at the top level of the configuration file: `fils: {}` is one `E_UNKNOWN_KEY` that names `files`, not also an `E_CONFIG` for the missing `files`.
 - **Changed files.** The list of changed dependencies comes from git history of the doc's own `hash:` line, like the lock's history ([SPEC §12.3](docs/SPEC.md#123-changedsince)); a doc that was renamed since the review prints `depends` lines instead.
 
 ## Working with AI agents
@@ -287,7 +285,7 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
 ## Writing good dependencies
 
 - **Bind to the narrowest files that make the doc true.** A doc that depends on all of `src` goes stale on every commit, and people then stop reading the reports. `docs/architecture.md` should depend on `src/core`, not on the repository. Measure it with `docstamp stats` ([below](#measuring-how-noisy-a-list-is)).
-- **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns use `/` on every platform: `\` escapes the next character, so `src\core` is the literal `srccore`, and the `E_EMPTY_PATTERN` it gets says so. Patterns are in [SPEC §8](docs/SPEC.md#8-patterns).
+- **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns use `/` on every platform: `\` escapes the next character, so `src\core` is the literal `srccore`, and the `E_EMPTY_PATTERN` it gets (shown as written, `src\core`) says so. Patterns are in [SPEC §8](docs/SPEC.md#8-patterns).
 - **Exclude generated or noisy files with `!`.** The last matching pattern wins, so put exclusions after the pattern they cut from. A pattern without `!` must select at least one file, or it is an error (`E_EMPTY_PATTERN`). An exclusion that matches no file is only a warning (`W_EMPTY_EXCLUSION`), so a standard block such as `!src/core/**/__test__/**` can be copied into every doc before any test folder exists, and survives the deletion of the last test. The warning never changes the exit code or the verdict:
 
   ```
@@ -296,7 +294,7 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
   1 ok, 0 stale, 0 invalid
   ```
 
-  A doc whose patterns together select nothing is still an error (`E_EMPTY_DEPENDENCIES`). An exclusion that a later pattern undoes, as in `src`, `!src/**/*.test.ts`, `src/sub` once a test exists under `src/sub/`, is a warning too (`W_SHADOWED_EXCLUSION`), naming the later pattern. A file named by its own path after the exclusion, such as `src/sub/keep.test.ts`, is taken as deliberate and not warned about ([SPEC §8.5](docs/SPEC.md#85-resolution)).
+  A doc whose patterns together select nothing is still an error (`E_EMPTY_DEPENDENCIES`), for example when its exclusions remove every file its inclusions select; when one of its patterns is already `E_EMPTY_PATTERN`, that error alone is reported, one per mistake. An exclusion that a later pattern undoes, as in `src`, `!src/**/*.test.ts`, `src/sub` once a test exists under `src/sub/`, is a warning too (`W_SHADOWED_EXCLUSION`), naming the later pattern. A file named by its own path after the exclusion, such as `src/sub/keep.test.ts`, is taken as deliberate and not warned about ([SPEC §8.5](docs/SPEC.md#85-resolution)).
 - **List each pattern once.** The same pattern twice in one doc is a warning (`W_DUPLICATE_PATTERN`), once per repeated pattern. It changes nothing: the selection, the hash and the exit code stay as they were. Keep one copy, unless the order of the patterns needs both, because the last matching pattern wins:
 
   ```
@@ -309,7 +307,6 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
   ```
   $ docstamp
   INVALID  docs/output.md
-  error: E_EMPTY_DEPENDENCIES: docs/output.md: Correct the patterns in "dependencies"; together they select no file.
   error: E_EMPTY_PATTERN: docs/output.md: build/output/index.js: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
   0 ok, 0 stale, 1 invalid
   next: fix the configuration of each invalid file, then run: docstamp check docs/output.md

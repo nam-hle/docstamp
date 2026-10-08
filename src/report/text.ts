@@ -10,6 +10,12 @@ export function shown(s: string): string {
   return needsQuoting(s) || /[ ()]/u.test(s) ? quote(s) : s;
 }
 
+// SPEC §14.3: a Diagnostic subject as written; a "\" alone does not quote it
+function shownSubject(s: string): string {
+  const rest = s.replaceAll('\\', '');
+  return shown(rest) === rest ? s : shown(s);
+}
+
 const LABEL = { ok: 'OK', stale: 'STALE', invalid: 'INVALID' } as const;
 const GROUP_MIN = 5;
 const NEXT_MAX = 10;
@@ -262,7 +268,7 @@ export function diagnosticsText(ds: readonly Diagnostic[]): string {
     .map((d) => {
       const parts: string[] = [d.severity, d.code];
       if (d.file !== '') parts.push(shown(d.file));
-      if (d.subject !== '') parts.push(shown(d.subject));
+      if (d.subject !== '') parts.push(shownSubject(d.subject));
       return `${parts.join(': ')}: ${d.message}\n`;
     })
     .join('');

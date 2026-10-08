@@ -13,5 +13,4 @@ next: review each stale file against its dependencies, then run: docstamp update
   run update only after the review, never --all just to pass; see docstamp help agents
 next: fix the configuration of each invalid file, then run: docstamp check docs/directory.md
 --- stderr ---
-error: E_EMPTY_DEPENDENCIES: docs/directory.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/directory.md: src/lib: Correct or remove the pattern; it matches no file.

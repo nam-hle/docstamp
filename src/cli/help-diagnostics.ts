@@ -36,8 +36,9 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
     fix:
       'Fix the key the subject names (presets.<name> for a preset, use for a file, ' +
       'default-presets for the default presets; an empty use needs default-presets); for a ' +
-      'missing files, write files: {} for none, or correct the unknown key that stands for it; ' +
-      'a script must export default plain data. See docstamp help config.',
+      'missing files, write files: {} for none (a key one or two edits from files, such as ' +
+      'fils, is E_UNKNOWN_KEY alone); a script must export default plain data. See docstamp ' +
+      'help config.',
   },
   E_CONFIG_VERSION: {
     meaning: 'The configuration file has no version: 2 (a version 1 file used other key names).',
@@ -90,7 +91,9 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'file, and use / as the separator.',
   },
   E_EMPTY_DEPENDENCIES: {
-    meaning: 'The patterns of a file together select no file.',
+    meaning:
+      'The patterns of a file together select no file, though none is E_EMPTY_PATTERN: there ' +
+      'is no pattern without !, or the exclusions remove every selected file.',
     fix: 'Correct the patterns in dependencies; docstamp list-dependencies <file> shows them.',
   },
   E_UNREADABLE: {
