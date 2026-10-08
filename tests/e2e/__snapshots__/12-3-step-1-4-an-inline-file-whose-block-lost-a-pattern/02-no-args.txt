@@ -1,0 +1,9 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    guide.md  (content-changed)
+  edited    guide.md  (dependency list)
+  review: git diff 03d3f06b324b53387b06932bda92919e84e5975d -- guide.md
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update guide.md
+--- stderr ---

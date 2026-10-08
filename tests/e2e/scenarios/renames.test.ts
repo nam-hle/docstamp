@@ -15,19 +15,31 @@ scenario('§12.1 renaming a dependency inside a dependency directory', { fixture
   const result = await repo.run([]);
   expect(result.exit).toBe(1);
   expect(result.stdout).toContain(
-    'STALE    README.md  (content-changed)\n  added     src/lib/new-name.ts\n  deleted   src/lib/old-name.ts\n',
+    'STALE    README.md  (content-changed)\n  renamed   src/lib/old-name.ts -> src/lib/new-name.ts\n',
   );
   expect(result.stdout).toContain(
-    'STALE    docs/api.md  (content-changed)\n  added     src/lib/new-name.ts\n  deleted   src/lib/old-name.ts\n',
+    'STALE    docs/api.md  (content-changed)\n  renamed   src/lib/old-name.ts -> src/lib/new-name.ts\n',
   );
   expect(result.stdout).toContain('0 ok, 2 stale, 0 invalid');
 
   repo.commit('rename');
   const committed = await repo.run(['--json'], { label: 'rename committed' });
   expect(committed.json().files[0].changes).toEqual([
-    { status: 'added', path: 'src/lib/new-name.ts', via: ['src/**'] },
-    { status: 'deleted', path: 'src/lib/old-name.ts', via: ['src/**'] },
+    { status: 'added', path: 'src/lib/new-name.ts', via: ['src/**'], pair: 'src/lib/old-name.ts' },
+    {
+      status: 'deleted',
+      path: 'src/lib/old-name.ts',
+      via: ['src/**'],
+      pair: 'src/lib/new-name.ts',
+    },
   ]);
+
+  repo.append('src/lib/new-name.ts', 'edited after the move\n');
+  const edited = await repo.run([], { label: 'renamed and edited' });
+  expect(edited.stdout).toContain(
+    'STALE    README.md  (content-changed)\n  added     src/lib/new-name.ts\n  deleted   src/lib/old-name.ts\n',
+  );
+  repo.git('checkout', '--', 'src/lib/new-name.ts');
 
   repo.rename('src/lib/new-name.ts', 'src/lib/old-name.ts');
   expect((await repo.run([], { label: 'renamed back' })).exit).toBe(0);
@@ -112,8 +124,8 @@ scenario(
     expect(text.stdout.match(/^INVALID {2}/gmu)).toHaveLength(11);
     expect(text.stdout).toContain(
       'STALE    docs/stale-01.md  (content-changed)\n' +
-        '  added     src/new/  (13 files)\n' +
-        '  deleted   src/old/  (13 files)\n',
+        '  changed   13 renamed\n' +
+        '  renamed   src/old/ -> src/new/  (13 files)\n',
     );
     expect(text.stdout).not.toContain('file-01.ts');
     expect(text.stdout).toContain('0 ok, 12 stale, 11 invalid\n');

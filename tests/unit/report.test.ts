@@ -56,6 +56,31 @@ describe('§14.3 check text', () => {
         '  modified  src/a.ts\n  deleted   src/c.ts\n  added     "src/my b.ts"\n0 ok',
     );
   });
+  it('from 5 Changes a summary line counts each status that occurs, in a fixed order', () => {
+    const changes = [...many('deleted', 'src/old/', 4), change('added', 'src/z.ts')];
+    expect(checkText([res('a.md', 'stale', { changes })])).toContain(
+      'STALE    a.md  (content-changed)\n  changed   1 added, 4 deleted\n  deleted   src/old/f00',
+    );
+    expect(checkText([res('a.md', 'stale', { changes: changes.slice(1) })])).not.toContain(
+      'changed ',
+    );
+  });
+  it('an edited own list is its own line, before the summary line', () => {
+    const changes = [change('modified', 'src/a.ts')];
+    const edited = res('a.md', 'stale', { changes, edited: 'docstamp.yaml', base: 'c0ffee' });
+    expect(checkText([edited])).toContain(
+      'STALE    a.md  (content-changed)\n  edited    docstamp.yaml  (dependency list)\n' +
+        '  modified  src/a.ts\n' +
+        '  review: git diff c0ffee -- src/a.ts docstamp.yaml\n0 ok',
+    );
+  });
+  it('an edited own list with no Change prints the edited line and its review line only', () => {
+    const edited = res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee' });
+    expect(checkText([edited])).toContain(
+      'STALE    a.md  (content-changed)\n  edited    a.md  (dependency list)\n' +
+        '  review: git diff c0ffee -- a.md\n0 ok',
+    );
+  });
   it('unknown or empty changes print depends lines', () => {
     const dependencies = 'STALE    a.md  (content-changed)\n  depends   src/**\n';
     expect(checkText([res('a.md', 'stale', { changes: null })])).toContain(dependencies);
@@ -147,7 +172,51 @@ describe('§14.3.1 change lines', () => {
   it('is part of the block of a stale file', () => {
     const changes = [...many('deleted', 'src/old/', 5), change('modified', 'src/m.ts')];
     expect(checkText([res('a.md', 'stale', { changes })])).toContain(
-      'STALE    a.md  (content-changed)\n  modified  src/m.ts\n  deleted   src/old/  (5 files)\n0 ok',
+      'STALE    a.md  (content-changed)\n  changed   1 modified, 5 deleted\n' +
+        '  modified  src/m.ts\n  deleted   src/old/  (5 files)\n0 ok',
+    );
+  });
+});
+
+describe('§14.3.1 renamed lines', () => {
+  const moved = (from: string, to: string, count: number): Change[] =>
+    Array.from({ length: count }, (_, i) => {
+      const name = `f${String(i).padStart(2, '0')}.ts`;
+      return [
+        change('deleted', `${from}${name}`, { pair: `${to}${name}` }),
+        change('added', `${to}${name}`, { pair: `${from}${name}` }),
+      ];
+    }).flat();
+  const sorted = (changes: Change[]) => changes.sort((x, y) => (x.path < y.path ? -1 : 1));
+  it('a pair is one line at its deleted path', () => {
+    const changes = sorted([
+      change('deleted', 'src/a.ts', { pair: 'lib/b.ts' }),
+      change('added', 'lib/b.ts', { pair: 'src/a.ts' }),
+      change('added', 'lib/c.ts'),
+    ]);
+    expect(changeLines(changes)).toEqual([
+      '  added     lib/c.ts\n',
+      '  renamed   src/a.ts -> lib/b.ts\n',
+    ]);
+  });
+  it('5 or more files moved between two directories under the same names are one line', () => {
+    expect(changeLines(sorted(moved('src/old/', 'src/new/', 13)))).toEqual([
+      '  renamed   src/old/ -> src/new/  (13 files)\n',
+    ]);
+    expect(changeLines(sorted(moved('src/old/', 'src/new/', 4)))).toHaveLength(4);
+  });
+  it('a renamed file inside one directory, or under another name, is never grouped', () => {
+    const renamedInPlace = Array.from({ length: 5 }, (_, i) => [
+      change('deleted', `src/a${i}.ts`, { pair: `src/b${i}.ts` }),
+      change('added', `src/b${i}.ts`, { pair: `src/a${i}.ts` }),
+    ]).flat();
+    expect(changeLines(sorted(renamedInPlace))).toHaveLength(5);
+  });
+  it('the summary line counts a pair once, as renamed', () => {
+    const changes = sorted([...moved('src/old/', 'src/new/', 5), change('added', 'src/x.ts')]);
+    expect(checkText([res('a.md', 'stale', { changes })])).toContain(
+      '  changed   1 added, 5 renamed\n  renamed   src/old/ -> src/new/  (5 files)\n' +
+        '  added     src/x.ts\n',
     );
   });
 });
@@ -206,6 +275,16 @@ describe('§14.3.4 review line', () => {
     const eleven = Array.from({ length: 11 }, (_, i) => change('modified', `src/f${i}.ts`));
     expect(reviewLine(stale(eleven, ['src/**/*.{ts,js}']))).toBe('');
     expect(checkText([stale(eleven, ['src/**/*.{ts,js}'])])).not.toContain('review:');
+  });
+  it('names the carrier of an edited own list once, outside the path cap', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => change('modified', `src/f${i}.ts`));
+    expect(reviewLine({ ...stale(ten), edited: 'docstamp.yaml' })).toMatch(
+      / src\/f9\.ts docstamp\.yaml\n$/u,
+    );
+    const listed = [change('modified', 'docstamp.yaml')];
+    expect(reviewLine({ ...stale(listed), edited: 'docstamp.yaml' })).toBe(
+      '  review: git diff c0ffee -- docstamp.yaml\n',
+    );
   });
   it('no line without a known base or changes', () => {
     expect(reviewLine(res('a.md', 'stale', { changes: [change('added', 'x')] }))).toBe('');
@@ -396,6 +475,30 @@ describe('§14.5 JSON', () => {
     expect(doc.files[1].changes).toBeNull();
     expect(doc.files[2].changes).toBeNull();
   });
+  it('dependenciesEdited follows changes only when the own list was edited', () => {
+    const doc = JSON.parse(
+      jsonText({
+        mode: 'check',
+        exitCode: 1,
+        selected: [
+          res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee' }),
+          res('b.md', 'stale', { changes: null }),
+        ],
+        diagnostics: [],
+      }),
+    );
+    expect(Object.keys(doc.files[0])).toEqual([
+      'file',
+      'state',
+      'reasons',
+      'dependencies',
+      'changes',
+      'dependenciesEdited',
+      'diagnostics',
+    ]);
+    expect(doc.files[0]).toMatchObject({ reasons: ['content-changed'], dependenciesEdited: true });
+    expect(doc.files[1]).not.toHaveProperty('dependenciesEdited');
+  });
   it('a change has via, and whitespaceOnly only when true, in this order', () => {
     const changes = [
       change('modified', 'src/a.ts', { via: ['src', 'src/*.ts'], whitespaceOnly: true }),
@@ -420,6 +523,24 @@ describe('§14.5 JSON', () => {
     });
     expect(Object.keys(doc.files[0].changes[1])).toEqual(['status', 'path', 'via']);
     expect(out).toBe(`${JSON.stringify(doc, null, 2)}\n`);
+  });
+  it('both Changes of a pair stay listed, each with the other as its pair', () => {
+    const changes = [
+      change('added', 'lib/a.ts', { pair: 'src/a.ts' }),
+      change('deleted', 'src/a.ts', { pair: 'lib/a.ts' }),
+    ];
+    const doc = JSON.parse(
+      jsonText({
+        mode: 'check',
+        exitCode: 1,
+        selected: [res('a.md', 'stale', { changes })],
+        diagnostics: [],
+      }),
+    );
+    expect(doc.files[0].changes).toEqual([
+      { status: 'added', path: 'lib/a.ts', via: ['src/**'], pair: 'src/a.ts' },
+      { status: 'deleted', path: 'src/a.ts', via: ['src/**'], pair: 'lib/a.ts' },
+    ]);
   });
   it('onlyStale omits the ok files and still counts them', () => {
     const doc = JSON.parse(

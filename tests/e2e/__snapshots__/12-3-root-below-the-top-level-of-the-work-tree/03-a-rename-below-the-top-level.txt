@@ -1,13 +1,10 @@
-# alternation in a pattern
+# a rename below the top level
 $ docstamp
 exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
-  edited    docstamp.yaml  (dependency list)
-  changed   2 modified, 11 added
-  added     src/gen/  (11 files)
-  modified  src/util.test.ts
-  modified  src/util.ts
+  renamed   src/a.ts -> src/b.ts
+  review: git diff 7ac41499f1c27d6212228ffa0ad8cdc6d57768f3 -- src/a.ts src/b.ts
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 --- stderr ---

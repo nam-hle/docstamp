@@ -30,6 +30,7 @@ function changeEverything(repo: Repo): void {
 
 const expectedText = (base: string) =>
   'STALE    CLAUDE.md  (content-changed)\n' +
+  '  changed   2 modified, 2 added, 1 deleted\n' +
   '  deleted   src/c.ts\n' +
   '  modified  src/d.ts\n' +
   '  added     src/new.ts\n' +
@@ -133,6 +134,12 @@ scenario('§12.3 Root below the top level of the work tree', { git: false }, asy
   const result = await repo.run([]);
   expect(result.stdout).toContain(
     'STALE    CLAUDE.md  (content-changed)\n  modified  src/a.ts\n  review: git diff',
+  );
+  repo.write('src/a.ts', 'a\n');
+  repo.rename('src/a.ts', 'src/b.ts');
+  const renamed = await repo.run([], { label: 'a rename below the top level' });
+  expect(renamed.stdout).toContain(
+    'STALE    CLAUDE.md  (content-changed)\n  renamed   src/a.ts -> src/b.ts\n',
   );
 });
 
@@ -455,3 +462,59 @@ scenario(
     expect(braces.stdout).not.toContain('review:');
   },
 );
+
+scenario(
+  '§12.3 step 1.4 an edited own list is reported, and the Reason stays content-changed',
+  { fixture },
+  async (repo) => {
+    const base = await reviewedRepo(repo);
+    repo.write(
+      'docstamp.yaml',
+      config({ 'CLAUDE.md': ['src/**', '!src/**/*.test.ts', '!src/c.ts'] }),
+    );
+    const removed = await repo.run([], { label: 'a pattern narrowed', show: ['docstamp.yaml'] });
+    expect(removed.exit).toBe(1);
+    expect(removed.stdout).toContain(
+      'STALE    CLAUDE.md  (content-changed)\n' +
+        '  edited    docstamp.yaml  (dependency list)\n' +
+        `  review: git diff ${base} -- docstamp.yaml\n`,
+    );
+    const json = (await repo.run(['--json'])).json().files[0];
+    expect(json).toMatchObject({
+      reasons: ['content-changed'],
+      changes: [],
+      dependenciesEdited: true,
+    });
+
+    repo.append('src/util.ts', 'more\n');
+    const both = await repo.run([], { label: 'and a dependency changed' });
+    expect(both.stdout).toContain(
+      '  edited    docstamp.yaml  (dependency list)\n' +
+        '  modified  src/util.ts\n' +
+        `  review: git diff ${base} -- src/util.ts docstamp.yaml\n`,
+    );
+
+    repo.write('docstamp.yaml', config(CLAUDE));
+    const restored = await repo.run(['--json'], { label: 'own list restored' });
+    expect(restored.json().files[0]).not.toHaveProperty('dependenciesEdited');
+  },
+);
+
+scenario('§12.3 step 1.4 an inline file whose block lost a pattern', async (repo) => {
+  const block = (deps: string[]) =>
+    `---\ndocstamp:\n  dependencies:\n${deps.map((d) => `    - ${d}\n`).join('')}---\n# Guide\n`;
+  repo.write('src/a.ts', 'a\n');
+  repo.write('src/b.ts', 'b\n');
+  repo.write('guide.md', block(['src/a.ts', 'src/b.ts']));
+  repo.commit('initial');
+  await repo.run(['update', 'guide.md'], { expectExit: 0 });
+  const base = repo.commit('review');
+  repo.write('guide.md', repo.read('guide.md').replace('    - src/b.ts\n', ''));
+  const result = await repo.run([]);
+  expect(result.exit).toBe(1);
+  expect(result.stdout).toContain(
+    'STALE    guide.md  (content-changed)\n' +
+      '  edited    guide.md  (dependency list)\n' +
+      `  review: git diff ${base} -- guide.md\n`,
+  );
+});

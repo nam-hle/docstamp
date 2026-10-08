@@ -4,10 +4,16 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildChanges,
+  configuredOwnList,
+  inlineOwnList,
   isWhitespaceOnly,
+  ownListOf,
+  pairRenames,
+  parseTree,
   parseNameList,
   parseNameStatus,
 } from '../../src/history/changes.ts';
+import type { Change } from '../../src/core/types.ts';
 import { git as gitRun } from '../../src/history/git.ts';
 import { viaOf } from '../../src/pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
@@ -29,6 +35,99 @@ const entry = (status: string, path: string) => ({
 afterEach(() => {
   cleanupTrees();
   vi.unstubAllEnvs();
+});
+
+describe('§12.3 step 1.4: own list', () => {
+  const yaml = (body: string) => `version: 2\nfiles:\n${body}`;
+  it('reads a configured file from docstamp.yaml, use included', () => {
+    const text = yaml('  a.md:\n    dependencies: [src, "!src/x"]\n    use: [tests]\n');
+    expect(configuredOwnList(text, 'a.md')).toEqual({
+      dependencies: ['src', '!src/x'],
+      use: ['tests'],
+    });
+    expect(configuredOwnList(yaml('  a.md:\n    dependencies: [src]\n'), 'a.md')).toEqual({
+      dependencies: ['src'],
+      use: [],
+    });
+  });
+  it('is unknown for a missing key, an empty list or a text that does not parse', () => {
+    expect(configuredOwnList(yaml('  b.md:\n    dependencies: [src]\n'), 'a.md')).toBeNull();
+    expect(configuredOwnList(yaml('  a.md:\n    dependencies: []\n'), 'a.md')).toBeNull();
+    expect(configuredOwnList('files: [', 'a.md')).toBeNull();
+  });
+  it('reads an inline block, and is unknown without one', () => {
+    const text = '---\ndocstamp:\n  dependencies:\n    - src\n  hash: x\n---\n# A\n';
+    expect(inlineOwnList(text, 'a.md')).toEqual({ dependencies: ['src'], use: [] });
+    expect(inlineOwnList('# A\n', 'a.md')).toBeNull();
+  });
+  it('the own list now leaves out the patterns of a Preset', () => {
+    const result = {
+      file: 'a.md',
+      dependencies: ['src', 'tests/**', 'lib'],
+      origins: [null, 'tests', null],
+      use: ['tests'],
+      state: 'stale' as const,
+      reasons: [],
+      resolved: [],
+      current: '',
+      diagnostics: [],
+    };
+    expect(ownListOf(result)).toEqual({ dependencies: ['src', 'lib'], use: ['tests'] });
+  });
+});
+
+describe('§12.3 step 8: pairs', () => {
+  const c = (status: Change['status'], path: string): Change => ({
+    ...entry(status, path),
+    status,
+  });
+  it('parses regular files of ls-tree, and skips links and submodules', () => {
+    const out = [
+      '100644 blob aaa\tsrc/a.ts',
+      '100755 blob bbb\tbin/run',
+      '120000 blob ccc\tlink',
+      '160000 commit ddd\tsub',
+      '',
+    ].join('\0');
+    expect([...parseTree(out)]).toEqual([
+      ['src/a.ts', 'aaa'],
+      ['bin/run', 'bbb'],
+    ]);
+  });
+  it('pairs a deleted path with the first unpaired added path of equal content', () => {
+    const changes = [
+      c('added', 'a.ts'),
+      c('added', 'b.ts'),
+      c('deleted', 'x.ts'),
+      c('deleted', 'y.ts'),
+    ];
+    const before = new Map([
+      ['x.ts', 'o1'],
+      ['y.ts', 'o1'],
+    ]);
+    const after = new Map([
+      ['a.ts', 'o1'],
+      ['b.ts', 'o1'],
+    ]);
+    expect(pairRenames(changes, before, after).map((p) => [p.path, p.pair])).toEqual([
+      ['a.ts', 'x.ts'],
+      ['b.ts', 'y.ts'],
+      ['x.ts', 'a.ts'],
+      ['y.ts', 'b.ts'],
+    ]);
+  });
+  it('leaves edited, modified and unknown paths unpaired', () => {
+    const changes = [c('added', 'a.ts'), c('modified', 'm.ts'), c('deleted', 'x.ts')];
+    const paired = pairRenames(
+      changes,
+      new Map([
+        ['x.ts', 'o1'],
+        ['m.ts', 'o2'],
+      ]),
+      new Map([['a.ts', 'o3']]),
+    );
+    expect(paired.every((p) => p.pair === undefined)).toBe(true);
+  });
 });
 
 describe('§12.3 ChangedSince: git output parsing', () => {
@@ -165,6 +264,14 @@ describe('§12.3 step 7: whitespace only', () => {
     writeFileSync(join(root, 'a.ts'), 'one\r\ntwo\r\n');
     expect(gitRun(root, ['diff', '--name-status', '--no-renames', base, '--'])).toBe('M\ta.ts\n');
     expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(true);
+  });
+  it('step 8: a user core.autocrlf=true does not pair a file whose line endings changed', () => {
+    const { root, base } = committed({ 'a.ts': 'one\ntwo\n' });
+    writeFileSync(join(process.env['HOME'] ?? '', '.gitconfig'), '[core]\n\tautocrlf = true\n');
+    writeFileSync(join(root, 'b.ts'), 'one\r\ntwo\r\n');
+    const before = parseTree(gitRun(root, ['ls-tree', '-r', '-z', base]));
+    const after = gitRun(root, ['hash-object', '--stdin-paths'], {}, 'b.ts\n').trim();
+    expect(after).not.toBe(before.get('a.ts'));
   });
   it('reads the path literally, not as a pattern', () => {
     const { root, base } = committed({ '[id].ts': 'a\n', 'i.ts': 'b\n' });

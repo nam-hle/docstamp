@@ -4,8 +4,8 @@ exit: 2
 --- stdout ---
 INVALID  docs/invalid-01.md
 STALE    docs/stale-01.md  (content-changed)
-  added     src/new/  (13 files)
-  deleted   src/old/  (13 files)
+  changed   13 renamed
+  renamed   src/old/ -> src/new/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 0 ok, 1 stale, 1 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/stale-01.md

@@ -65,10 +65,12 @@ export function jsonText(doc: JsonDoc): string {
                 ['path', c.path],
                 ['via', [...c.via]],
                 ...(c.whitespaceOnly ? [['whitespaceOnly', true] as [string, Json]] : []),
+                ...(c.pair === undefined ? [] : [['pair', c.pair] as [string, Json]]),
               ]),
             )
           : null,
       ],
+      ...(r.edited === undefined ? [] : [['dependenciesEdited', true] as [string, Json]]),
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ];
     if (doc.mode === 'update') members.push(['written', doc.written?.has(r.file) ?? false]);

@@ -15,11 +15,13 @@ export const git = (
   root: string,
   args: readonly string[],
   extraEnv: Record<string, string> = {},
+  input?: string,
 ): string =>
   execFileSync('git', [...PINNED, ...args], {
     cwd: root,
     env: gitEnv(extraEnv),
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
+    stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'ignore'],
     maxBuffer: 256 * 1024 * 1024,
+    ...(input === undefined ? {} : { input }),
   });

@@ -133,7 +133,12 @@ function withChanges(
   const report = changedSince(root, result, entry, inline !== undefined, whitespace);
   return report === null
     ? { ...result, changes: null }
-    : { ...result, changes: report.changes, base: report.base };
+    : {
+        ...result,
+        changes: report.changes,
+        base: report.base,
+        ...(report.edited === undefined ? {} : { edited: report.edited }),
+      };
 }
 
 const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'error');

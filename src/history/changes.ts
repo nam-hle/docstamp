@@ -1,7 +1,9 @@
 import { comparePaths } from '../core/order.ts';
 import type { Change, Result } from '../core/types.ts';
 import { git } from './git.ts';
-import { recordedHash as inlineHash } from '../inline/frontmatter.ts';
+import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
+import { parseBlock } from '../inline/block.ts';
+import { recordedHash as inlineHash, scanFrontmatter } from '../inline/frontmatter.ts';
 import { parseLock } from '../lock/lock.ts';
 import { select, viaOf } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
@@ -95,6 +97,64 @@ function reviewCommit(root: string, file: string, hash: string, inline: boolean)
   return null;
 }
 
+interface OwnList {
+  readonly dependencies: readonly string[];
+  readonly use: readonly string[];
+}
+
+const isYamlMap = (v: YamlValue | undefined): v is YamlMap =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const strings = (v: YamlValue | undefined): string[] | null =>
+  Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : null;
+
+// SPEC §12.3 step 1.4: the own list of `file` in a docstamp.yaml text, null when unknown
+export function configuredOwnList(text: string, file: string): OwnList | null {
+  const top = parseStrictYaml(text)?.value;
+  const files = isYamlMap(top) ? top.entries.get('files')?.value : undefined;
+  const entry = isYamlMap(files) ? files.entries.get(file)?.value : undefined;
+  if (!isYamlMap(entry)) return null;
+  const dependencies = strings(entry.entries.get('dependencies')?.value);
+  if (dependencies === null || dependencies.length === 0) return null;
+  return { dependencies, use: strings(entry.entries.get('use')?.value) ?? [] };
+}
+
+// SPEC §12.3 step 1.4: the own list of an inline file's text, null when unknown
+export function inlineOwnList(text: string, file: string): OwnList | null {
+  const scan = scanFrontmatter(text);
+  if (scan === null) return null;
+  const { declaration } = parseBlock(file, scan);
+  if (declaration.dependencies.length === 0) return null;
+  return { dependencies: declaration.dependencies, use: declaration.use ?? [] };
+}
+
+// SPEC §12.3 step 1.4: the own list now, without the patterns a Preset brought
+export function ownListOf(result: Result): OwnList {
+  return {
+    dependencies: result.dependencies.filter((_, i) => (result.origins?.[i] ?? null) === null),
+    use: result.use ?? [],
+  };
+}
+
+const sameList = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((x, i) => x === b[i]);
+
+// SPEC §12.3 step 1.4: the carrier when the own list is known at `rev` and differs, else null
+function editedCarrier(root: string, rev: string, result: Result, inline: boolean): string | null {
+  const carrier = inline ? result.file : 'docstamp.yaml';
+  let then: OwnList | null;
+  try {
+    const text = git(root, ['show', `${rev}:./${carrier}`]);
+    then = inline ? inlineOwnList(text, result.file) : configuredOwnList(text, result.file);
+  } catch {
+    return null;
+  }
+  if (then === null) return null;
+  const now = ownListOf(result);
+  const same = sameList(then.dependencies, now.dependencies) && sameList(then.use, now.use);
+  return same ? null : carrier;
+}
+
 const MODES = /^:(\d+) (\d+) /u;
 
 // SPEC §12.3 step 7
@@ -110,9 +170,56 @@ export function isWhitespaceOnly(root: string, commit: string, path: string): bo
   }
 }
 
+const TREE_ENTRY = /^(100644|100755) blob ([0-9a-f]+)\t(.*)$/su;
+
+// SPEC §12.3 step 8: path to object name, regular files only
+export function parseTree(output: string): Map<string, string> {
+  const objects = new Map<string, string>();
+  for (const field of nulFields(output)) {
+    const match = TREE_ENTRY.exec(field);
+    if (match) objects.set(match[3]!, match[2]!);
+  }
+  return objects;
+}
+
+// SPEC §12.3 step 8: each deleted Change takes the first unpaired added Change of equal content
+export function pairRenames(
+  changes: readonly Change[],
+  before: ReadonlyMap<string, string>,
+  after: ReadonlyMap<string, string>,
+): Change[] {
+  const pairs = new Map<string, string>();
+  const added = changes.filter((c) => c.status === 'added');
+  for (const d of changes.filter((c) => c.status === 'deleted')) {
+    const object = before.get(d.path);
+    if (object === undefined) continue;
+    const a = added.find((c) => !pairs.has(c.path) && after.get(c.path) === object);
+    if (a === undefined) continue;
+    pairs.set(d.path, a.path);
+    pairs.set(a.path, d.path);
+  }
+  return changes.map((c) => (pairs.has(c.path) ? { ...c, pair: pairs.get(c.path)! } : c));
+}
+
+function renamed(root: string, commit: string, changes: readonly Change[]): Change[] {
+  const added = changes.filter((c) => c.status === 'added' && !c.path.includes('\n'));
+  if (added.length === 0 || !changes.some((c) => c.status === 'deleted')) return [...changes];
+  try {
+    const before = parseTree(git(root, ['ls-tree', '-r', '-z', commit]));
+    const prefix = git(root, ['rev-parse', '--show-prefix']).replace(/\r?\n$/u, '');
+    const input = added.map((c) => `${prefix}${c.path}\n`).join('');
+    const objects = git(root, ['hash-object', '--stdin-paths'], {}, input).split('\n');
+    const after = new Map(added.map((c, i) => [c.path, objects[i]?.trim() ?? '']));
+    return pairRenames(changes, before, after);
+  } catch {
+    return [...changes];
+  }
+}
+
 export interface ChangedReport {
   readonly changes: readonly Change[];
   readonly base: string;
+  readonly edited?: string;
 }
 
 // SPEC §12.3; `entry` is the LockEntry, or the recorded Hash of an inline file; `whitespace`
@@ -143,18 +250,22 @@ export function changedSince(
       selectsDeleted: (path) => path !== result.file && select(parsed, [path]).length === 1,
       viaOf: (path) => viaOf(result.dependencies, parsed, path),
     });
-    if (changes === null || changes.length === 0) return null;
+    if (changes === null) return null;
+    const edited = editedCarrier(root, id, result, inline);
+    if (changes.length === 0 && edited === null) return null;
     const whitespaceOnly = (path: string): boolean => {
       const key = `${id}\0${path}`;
       const known = whitespace.get(key) ?? isWhitespaceOnly(root, id, path);
       whitespace.set(key, known);
       return known;
     };
+    const marked = changes.map((c) =>
+      c.status === 'modified' && whitespaceOnly(c.path) ? { ...c, whitespaceOnly: true } : c,
+    );
     return {
-      changes: changes.map((c) =>
-        c.status === 'modified' && whitespaceOnly(c.path) ? { ...c, whitespaceOnly: true } : c,
-      ),
+      changes: renamed(root, id, marked),
       base: id,
+      ...(edited === null ? {} : { edited }),
     };
   } catch {
     return null;

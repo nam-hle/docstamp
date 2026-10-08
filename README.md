@@ -99,14 +99,14 @@ next: review each stale file against its dependencies, then run: docstamp update
 
 The `review:` line is a read-only git command that shows the change since the last `update` (the work tree against that commit, so uncommitted edits are in it, but untracked files are not until `git add -N`). `(whitespace only)` is git's judgement that a modified file differs only in white space and blank lines, to help you skim; it never changes the verdict. With more than 10 changed files the `review:` line gives a pathspec of the patterns instead of the paths.
 
-When a directory moves, the report does not list every file twice. Five or more `added` (or `deleted`) files directly in one directory become one line, and a doc that became `invalid` keeps its errors right under its line on a terminal (each stream alone is unchanged: errors are still on standard error):
+When a directory moves, the report does not list every file twice. A file deleted at one path and added at another with exactly the same content is one `renamed  <old> -> <new>` line; five or more of them moved between the same two directories, or five or more `added` (or `deleted`) files directly in one directory, become one line. A moved file that was also edited stays an `added` and a `deleted` line. And a doc that became `invalid` keeps its errors right under its line on a terminal (each stream alone is unchanged: errors are still on standard error):
 
 ```console
 $ git mv src/old src/new
 $ docstamp docs/api.md docs/old.md
 STALE    docs/api.md  (content-changed)
-  added     src/new/  (13 files)
-  deleted   src/old/  (13 files)
+  changed   13 renamed
+  renamed   src/old/ -> src/new/  (13 files)
 INVALID  docs/old.md
 error: E_EMPTY_DEPENDENCIES: docs/old.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/old.md: src/old: Correct or remove the pattern; it matches no file.
@@ -115,7 +115,18 @@ next: review each stale file against its dependencies, then run: docstamp update
 next: fix the configuration of each invalid file, then run: docstamp check docs/old.md
 ```
 
-Each `next:` line names at most 10 files and ends with `  and <m> more` when there are more; update those and run `docstamp` again ([SPEC §14.3](docs/SPEC.md#143-check-text-mode)). `--json` still lists every changed file.
+Each `next:` line names at most 10 files and ends with `  and <m> more` when there are more; update those and run `docstamp` again ([SPEC §14.3](docs/SPEC.md#143-check-text-mode)). A block of 5 or more changed files starts with a `changed` line that counts them by status. `--json` still lists every changed file.
+
+When the doc's own dependency list was edited since its last review (a pattern added, removed or reordered in `docstamp.yaml` or in its inline block), the block says so on an `edited` line and the `review:` line includes the file that holds the list. The reason stays `content-changed`: the lock records a hash, not the patterns, so only git history can tell the two apart, and the verdict never depends on git.
+
+```console
+$ docstamp
+STALE    CLAUDE.md  (content-changed)
+  edited    docstamp.yaml  (dependency list)
+  review: git diff 6eff57282542cf9d373c2934764350e274eadf1a -- docstamp.yaml
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+```
 
 Review each stale doc against the listed files, fix what is no longer true, then record the review and commit the lock:
 
@@ -488,7 +499,7 @@ A script must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carrie
 
 ### JSON output
 
-`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)). Here is the stale `README.md` from the example above, with `changes` listing the changed dependencies (`null` when git history cannot answer). `via` names the patterns that select each path, and `"whitespaceOnly": true` appears on a modified file whose change is white space only:
+`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)). Here is the stale `README.md` from the example above, with `changes` listing the changed dependencies (`null` when git history cannot answer). `via` names the patterns that select each path, and `"whitespaceOnly": true` appears on a modified file whose change is white space only. `"pair"` links a deleted and an added file with the same content (both stay listed). `"dependenciesEdited": true` follows `changes` when the doc's own dependency list was edited:
 
 ```json
 {

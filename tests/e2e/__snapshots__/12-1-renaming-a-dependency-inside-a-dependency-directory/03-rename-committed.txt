@@ -27,14 +27,16 @@ exit: 1
           "path": "src/lib/new-name.ts",
           "via": [
             "src/**"
-          ]
+          ],
+          "pair": "src/lib/old-name.ts"
         },
         {
           "status": "deleted",
           "path": "src/lib/old-name.ts",
           "via": [
             "src/**"
-          ]
+          ],
+          "pair": "src/lib/new-name.ts"
         }
       ],
       "diagnostics": []
@@ -54,14 +56,16 @@ exit: 1
           "path": "src/lib/new-name.ts",
           "via": [
             "src/lib"
-          ]
+          ],
+          "pair": "src/lib/old-name.ts"
         },
         {
           "status": "deleted",
           "path": "src/lib/old-name.ts",
           "via": [
             "src/lib"
-          ]
+          ],
+          "pair": "src/lib/new-name.ts"
         }
       ],
       "diagnostics": []
