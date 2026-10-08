@@ -25,7 +25,7 @@ Or in the frontmatter of a Markdown file, with no configuration file at all in a
 
     ---
     docstamp:
-      dependencies: [docs/guide.md]
+      dependencies: [src/cli.ts]
     ---
 
 To enroll an existing doc quickly, docstamp suggest --write <doc> proposes its dependencies from the
