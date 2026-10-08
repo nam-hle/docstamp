@@ -1,0 +1,13 @@
+$ docstamp help exit-codes
+exit: 0
+--- stdout ---
+docstamp help exit-codes: What each exit code means.
+
+    0    check: every selected file is ok. update: written or already current. list-dependencies,
+         list-dependents, stats, suggest: listed. help, version.
+    1    check only: a selected file is stale, none is invalid, no global error.
+    2    an error diagnostic, an invalid file, or a usage error.
+    70   an internal fault, reported on standard error as "internal error:" and a stack.
+
+Warnings never affect the exit code.
+--- stderr ---

@@ -1,0 +1,5 @@
+$ docstamp help diagnostics E_BOGUS
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: E_BOGUS: Unknown diagnostic code E_BOGUS; see docstamp help diagnostics.

@@ -1,0 +1,40 @@
+$ docstamp help list-dependents
+exit: 0
+--- stdout ---
+docstamp list-dependents: List the files that depend on each named file, and the patterns that
+select it.
+
+Usage:
+  docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
+
+The reverse query: any file of the repository may be named. Run it before changing code to see which
+docs the change affects. A path that is neither in the universe nor on disk prints (no dependents)
+and the warning W_UNKNOWN_PATH; the exit code stays 0. Direct dependents only, unless --transitive.
+
+Options:
+  --json        Print one JSON document instead of text (docstamp help json).
+  --transitive  Also list the dependents of each dependent, depth first; a file reached again is
+                marked (listed above), a cycle (cycle).
+  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
+                file, else with .git. File arguments are still resolved against the current
+                directory.
+  <file>...     Any files, resolved against the current directory. At least one.
+  --help        Print this page.
+
+Reads:
+  the configuration file, the docstamp blocks and the file tree; not the lock.
+
+Writes:
+  nothing.
+
+Examples:
+  $ docstamp list-dependents src/hash.ts
+  src/hash.ts
+    docs/guide.md   via src
+
+Exit codes:
+  0  the dependents were listed, even when there are none.
+  2  an error diagnostic, or a usage error.
+
+Related: docstamp help list-dependencies, docstamp help agents
+--- stderr ---

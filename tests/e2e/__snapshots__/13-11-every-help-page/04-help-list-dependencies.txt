@@ -1,0 +1,40 @@
+$ docstamp help list-dependencies
+exit: 0
+--- stdout ---
+docstamp list-dependencies: List each file with its dependency patterns and the files they select.
+
+Usage:
+  docstamp list-dependencies [--json] [--root <dir>] [<file>...]
+
+For each stamped file (or the named ones): one depends line per pattern, in order, marked (preset
+<name>) when it comes from a preset, then one resolved line per selected file. It does not read the
+lock and does not hash, so it works before the first update.
+
+Options:
+  --json        Print one JSON document instead of text (docstamp help json).
+  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
+                file, else with .git. File arguments are still resolved against the current
+                directory.
+  <file>...     List only these stamped files.
+  --help        Print this page.
+
+Reads:
+  the configuration file, the docstamp blocks and the file tree; not the lock.
+
+Writes:
+  nothing.
+
+Examples:
+  $ docstamp list-dependencies docs/guide.md
+  docs/guide.md
+    depends   src
+    depends   !src/**/*.test.ts
+    resolved  src/cli.ts
+    resolved  src/hash.ts
+
+Exit codes:
+  0  the files were listed.
+  2  a listed file is invalid, or an error.
+
+Related: docstamp help list-dependents, docstamp help patterns, docstamp help check
+--- stderr ---

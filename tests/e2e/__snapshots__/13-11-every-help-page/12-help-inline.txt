@@ -1,0 +1,34 @@
+$ docstamp help inline
+exit: 0
+--- stdout ---
+docstamp help inline: Declaring dependencies in the frontmatter of a Markdown file.
+
+A file can carry its own declaration in a docstamp block of its frontmatter:
+
+    ---
+    title: Guide
+    docstamp:
+      dependencies: [src, "!src/gen"]
+      use: [no-tests]
+      hash: <64 lowercase hex digits>
+    ---
+
+- docstamp: must start in column 0 and hold a block mapping, not a flow mapping.
+- dependencies is required: a non-empty list of patterns (docstamp help patterns).
+- use is optional: names of presets, which only the configuration file defines.
+- hash is written by docstamp update, alone on its line. Never write or edit it by hand.
+- Searched files: those that include selects (default "**/*.md") and that are not ignored. Only a
+  frontmatter with a docstamp: line is parsed, and strictly: no anchors, tags or duplicate keys.
+- A malformed block makes only that file invalid (E_BLOCK, E_UNKNOWN_KEY, E_PATTERN); the others
+  still run.
+- update rewrites the hash: line, or appends it as the last key; every other byte stays. No lock is
+  written for inline files.
+- A file both under files and inline is E_DUPLICATE_DECLARATION.
+- In a git repository, no configuration file is needed: the root is the nearest directory with .git.
+- The hash: line is not part of the file's content for the files that depend on it, so updating B
+  does not make A stale. Its prose, other frontmatter and dependencies still count.
+- A formatter that rewrites the block changes the file; exclude the block from formatters.
+- docstamp suggest --write <file> writes a block without hash.
+
+The JSON Schema for this frontmatter: docstamp help schema.
+--- stderr ---

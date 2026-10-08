@@ -1,0 +1,52 @@
+$ docstamp help json
+exit: 0
+--- stdout ---
+docstamp help json: The shape of the --json output of every command.
+
+With --json, one JSON document goes to standard output and nothing to standard error. Every document
+starts with version (2), mode (the command) and exitCode, and ends with diagnostics: the global
+ones, each { code, severity, file, subject, message }, file and subject null when empty. Consumers
+must ignore members they do not know: later releases only add members.
+
+- check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons,
+  dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via }
+  (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's
+  own list was edited; use and origins when it uses presets.
+- update: as check, with written true or false on each file and a top-level removed list. A written
+  file reports state ok.
+- list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and
+  origins with presets.
+- list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive
+  each dependent also has dependents, cycle and repeated.
+- stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount,
+  staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }.
+- suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate }], ignored, declared,
+  diagnostics }, plus written with --write.
+
+A command that fails before it evaluates anything has an empty files list and no summary. Read the
+verdict from exitCode and state, and the next step from the text mode's next: lines, which have no
+JSON member: a stale file needs a review, then docstamp update <file>.
+
+Example:
+  $ docstamp --json list-dependents src/hash.ts
+  {
+    "version": 2,
+    "mode": "list-dependents",
+    "exitCode": 0,
+    "files": [
+      {
+        "file": "src/hash.ts",
+        "dependents": [
+          {
+            "file": "docs/guide.md",
+            "via": [
+              "src"
+            ]
+          }
+        ],
+        "diagnostics": []
+      }
+    ],
+    "diagnostics": []
+  }
+--- stderr ---

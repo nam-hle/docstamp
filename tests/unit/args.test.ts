@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HELP, parseArgs } from '../../src/cli/args.ts';
+import { parseArgs } from '../../src/cli/args.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 
 const failure = (argv: string[]) => {
@@ -74,15 +74,22 @@ describe('§13.2 parseArgs', () => {
     });
   });
   it('help and version win over everything else, without E_USAGE', () => {
-    for (const argv of [
-      ['check', '--help'],
-      ['--help', '--json'],
-      ['help', 'a'],
-      ['help', '--bogus'],
-      ['update', '--help', '--all', 'a'],
-      ['--json', 'help'],
-    ]) {
-      expect(parseArgs(argv)).toEqual({ mode: 'help' });
+    for (const [argv, names] of [
+      [['check', '--help'], ['check']],
+      [['--help', '--json'], []],
+      [['help', 'a'], ['a']],
+      [['help', '--bogus'], []],
+      [['update', '--help', '--all', 'a'], ['update']],
+      [['--json', 'help'], []],
+      [['a.md', '--help'], []],
+      [
+        ['help', 'diagnostics', 'E_USAGE'],
+        ['diagnostics', 'E_USAGE'],
+      ],
+      [['version', '--help'], ['version']],
+      [['help', '--help', 'stats'], ['stats']],
+    ] as const) {
+      expect(parseArgs([...argv]), argv.join(' ')).toEqual({ mode: 'help', names });
     }
     for (const argv of [
       ['--version', 'a'],
@@ -91,15 +98,20 @@ describe('§13.2 parseArgs', () => {
     ]) {
       expect(parseArgs(argv)).toEqual({ mode: 'version' });
     }
-    expect(parseArgs(['--version', '--help'])).toEqual({ mode: 'help' });
+    expect(parseArgs(['--version', '--help'])).toEqual({ mode: 'help', names: [] });
   });
   it('E_USAGE messages state the problem', () => {
     const message = (argv: string[]) => failure(argv)?.message;
     expect(message(['check', '--all'])).toContain('only valid with "docstamp update"');
-    expect(message(['update'])).toBe('Name the files you reviewed, or pass --all.');
-    expect(message(['update', '--all', 'a'])).toBe('Pass either files or --all, not both.');
-    expect(message(['--json', '--json'])).toBe('--json given twice.');
+    expect(message(['update'])).toBe(
+      'Name the files you reviewed, or pass --all; see docstamp help update.',
+    );
+    expect(message(['update', '--all', 'a'])).toBe(
+      'Pass either files or --all, not both; see docstamp help update.',
+    );
+    expect(message(['--json', '--json'])).toBe('--json given twice; see docstamp help.');
     expect(message(['--bogus'])).toBe('Unknown option --bogus; see docstamp help.');
+    expect(message(['stats', '--bogus'])).toBe('Unknown option --bogus; see docstamp help stats.');
   });
   it('a file named like a command is reached after --', () => {
     expect(parseArgs(['check', '--', 'check'])).toMatchObject({ mode: 'check', paths: ['check'] });
@@ -120,7 +132,7 @@ describe('§13.2 parseArgs', () => {
       }
       expect(usage([option, option])).toBe(option);
     }
-    expect(parseArgs(['--help', '--quiet'])).toEqual({ mode: 'help' });
+    expect(parseArgs(['--help', '--quiet'])).toEqual({ mode: 'help', names: [] });
   });
   it('--root forms and --', () => {
     expect(parseArgs(['--root=x', '--', '--json'])).toMatchObject({ root: 'x', paths: ['--json'] });
@@ -183,19 +195,10 @@ describe('§13.2 parseArgs', () => {
     expect(parseArgs(['-'])).toMatchObject({ paths: ['-'] });
   });
   it('help and version alone', () => {
-    expect(parseArgs(['--help'])).toEqual({ mode: 'help' });
-    expect(parseArgs(['help'])).toEqual({ mode: 'help' });
+    expect(parseArgs(['--help'])).toEqual({ mode: 'help', names: [] });
+    expect(parseArgs(['help'])).toEqual({ mode: 'help', names: [] });
     expect(parseArgs(['--version'])).toEqual({ mode: 'version' });
     expect(parseArgs(['version'])).toEqual({ mode: 'version' });
-  });
-  it('HELP lists every command and is LF text with a final newline', () => {
-    for (const name of ['check', 'update', 'list-dependencies', 'help', 'version']) {
-      expect(HELP).toContain(`docstamp ${name}`);
-    }
-    expect(HELP.endsWith('\n')).toBe(true);
-    expect(HELP).not.toContain('\r');
-    const codes = Array.from({ length: HELP.length }, (_, i) => HELP.charCodeAt(i));
-    expect(codes.every((code) => code === 10 || (code >= 32 && code <= 126))).toBe(true);
   });
 });
 
@@ -276,8 +279,5 @@ describe('§13.2 suggest', () => {
       mode: 'suggest',
       paths: ['suggest'],
     });
-  });
-  it('HELP names the command and its options', () => {
-    expect(HELP).toContain('docstamp suggest [--json] [--root <dir>] [--write] <file>...');
   });
 });

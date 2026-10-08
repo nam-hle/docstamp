@@ -1,0 +1,45 @@
+$ docstamp help update
+exit: 0
+--- stdout ---
+docstamp update: Record that you reviewed the named files against their dependencies.
+
+Usage:
+  docstamp update [--json] [--root <dir>] (--all | <file>...)
+
+Records the current dependency hash of each named file: in docstamp-lock.yaml for a file declared in
+the configuration file, in the hash: line of its docstamp block for an inline file. It prints
+written or unchanged for each file, and removed for a lock entry whose file is no longer declared.
+
+A write asserts that a review happened, and docstamp cannot check that. Run it only after reading
+the changed dependencies and fixing what the file no longer gets right. --all is for the first
+adoption and for recovery from an unreadable lock, never for making a failing check pass. When a
+named file is invalid nothing is written.
+
+Options:
+  --all         Record every stamped file. Not with file arguments.
+  --json        Print one JSON document instead of text (docstamp help json).
+  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
+                file, else with .git. File arguments are still resolved against the current
+                directory.
+  <file>...     The stamped files you reviewed.
+  --help        Print this page.
+
+Reads:
+  what check reads, without git.
+
+Writes:
+  docstamp-lock.yaml (only when a file is declared in the configuration file, or the lock exists),
+  and the hash: line of each named inline file.
+
+Examples:
+  $ docstamp update docs/guide.md
+  written  docs/guide.md
+  $ docstamp check docs/guide.md
+  1 ok, 0 stale, 0 invalid
+
+Exit codes:
+  0  the hashes were written, or were already current.
+  2  a named file is invalid (nothing written), an error diagnostic, or a usage error.
+
+Related: docstamp help check, docstamp help agents, docstamp help states
+--- stderr ---

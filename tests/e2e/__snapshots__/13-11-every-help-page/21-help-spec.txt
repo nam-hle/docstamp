@@ -1,0 +1,29 @@
+$ docstamp help spec
+exit: 0
+--- stdout ---
+docstamp help spec: Where the specification is, and its sections.
+
+The specification defines all observable behavior: formats, algorithms, output, diagnostics, exit
+codes and compatibility. The help pages summarize it; it decides. It ships with the package, for the
+installed version, as docs/SPEC.md (in a project, node_modules/docstamp/docs/SPEC.md), and is online
+at https://github.com/nam-hle/docstamp/blob/main/docs/SPEC.md. Clauses are numbered, such as 8.4 for
+selection; search the file for the heading. Its sections:
+
+    1 Scope
+    2 Conformance
+    3 Notational Conventions
+    4 Terms
+    5 Records
+    6 Root
+    7 Universe
+    8 Patterns
+    9 Configuration File
+    10 Hashing
+    11 Lockfile
+    12 Evaluation
+    13 Command Line
+    14 Output
+    15 Diagnostics
+    16 Exit Codes
+    17 Compatibility
+--- stderr ---

@@ -1,0 +1,19 @@
+$ docstamp help schema
+exit: 0
+--- stdout ---
+docstamp help schema: The JSON Schemas the package ships, and how to point an editor at them.
+
+The package ships two JSON Schemas (draft-07). docstamp itself does not read them; it checks the
+same rules on its own.
+
+    schema.json               the configuration file docstamp.yaml
+    schema-frontmatter.json   the frontmatter of a file with a docstamp block
+
+They are at the top of the installed package (in a project, node_modules/docstamp/schema.json),
+exported as docstamp/schema.json and docstamp/schema-frontmatter.json, and online at
+https://unpkg.com/docstamp/schema.json (the latest release). For editor completion in docstamp.yaml,
+start it with one of:
+
+    # yaml-language-server: $schema=https://unpkg.com/docstamp/schema.json
+    # yaml-language-server: $schema=./node_modules/docstamp/schema.json
+--- stderr ---

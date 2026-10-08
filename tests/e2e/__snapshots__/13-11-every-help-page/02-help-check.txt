@@ -1,0 +1,51 @@
+$ docstamp help check
+exit: 0
+--- stdout ---
+docstamp check: Check that each file's dependencies are unchanged since its last review.
+
+Usage:
+  docstamp [check] [--json] [--only-stale] [--quiet] [--root <dir>] [<file>...]
+
+The default command: a bare docstamp is docstamp check. It evaluates every stamped file (or only the
+named ones), prints a block for each file that is not ok, a summary line, and next: lines that name
+the command to run.
+
+A stale block lists, when git history allows, the dependencies that changed since the last review
+and a review: line with a read-only git command that shows the change; otherwise it lists the file's
+patterns as depends lines. That report is advisory: the verdict never reads git.
+
+Options:
+  --json        Print one JSON document instead of text (docstamp help json).
+  --only-stale  With --json, leave the ok files out of files; summary still counts them.
+  --quiet       Print nothing on standard output when every selected file is ok.
+  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
+                file, else with .git. File arguments are still resolved against the current
+                directory.
+  <file>...     Check only these stamped files.
+  --help        Print this page.
+
+Reads:
+  the configuration file, the docstamp blocks, every dependency, docstamp-lock.yaml; git history,
+  read-only, for the changed-file report only.
+
+Writes:
+  nothing.
+
+Examples:
+  $ docstamp docs/guide.md
+  STALE    docs/guide.md  (unrecorded)
+    depends   src
+    depends   !src/**/*.test.ts
+  0 ok, 1 stale, 0 invalid
+  next: review each stale file against its dependencies, then run: docstamp update docs/guide.md
+    run update only after the review, never --all just to pass; see docstamp help agents
+  $ docstamp --json --only-stale
+
+Exit codes:
+  0  every selected file is ok.
+  1  a selected file is stale, and none is invalid.
+  2  a selected file is invalid, an error diagnostic, or a usage error.
+
+Related: docstamp help update, docstamp help list-dependencies, docstamp help states, docstamp help
+agents
+--- stderr ---

@@ -1,0 +1,31 @@
+$ docstamp help help
+exit: 0
+--- stdout ---
+docstamp help: Print the index, a command page or a topic page.
+
+Usage:
+  docstamp help [<command> | <topic>]
+  docstamp help diagnostics <code>
+  docstamp <command> --help
+
+Without a name: the index of commands and topics. With a command or topic: its page. With
+diagnostics and a code: that code alone. It reads no file. --help anywhere before -- prints the page
+of the command word given, or the index when there is none.
+
+Reads:
+  nothing.
+
+Writes:
+  nothing.
+
+Examples:
+  $ docstamp help start
+  $ docstamp update --help
+  $ docstamp help diagnostics E_EMPTY_PATTERN
+
+Exit codes:
+  0  the page was printed.
+  2  an unknown name (E_USAGE lists the names).
+
+Related: docstamp help start, docstamp help agents
+--- stderr ---

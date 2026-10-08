@@ -1,0 +1,52 @@
+$ docstamp help config
+exit: 0
+--- stdout ---
+docstamp help config: The configuration file: docstamp.yaml or docstamp.config.ts, and every key.
+
+The configuration file sits at the root. It is one of docstamp.yaml, docstamp.config.ts,
+docstamp.config.mts, docstamp.config.js and docstamp.config.mjs; two of them are E_CONFIG_AMBIGUOUS.
+Without one, only inline declarations exist (docstamp help inline).
+
+    # yaml-language-server: $schema=https://unpkg.com/docstamp/schema.json
+    version: 2
+    gitignore: true
+    ignore:
+      - build/
+    include:
+      - "**/*.md"
+    presets:
+      no-tests:
+        - "!**/*.test.ts"
+    files:
+      docs/guide.md:
+        dependencies:
+          - src
+          - "!src/gen"
+        use: [no-tests]
+
+- version: required, exactly 2.
+- files: required. Maps each file, by its path from the root, to dependencies (a non-empty list of
+  patterns, docstamp help patterns) and optionally use (preset names, docstamp help presets). Write
+  files: {} when every file is inline.
+- gitignore: read the .gitignore files (default true). Ignored files are not in the universe and
+  cannot be dependencies.
+- ignore: more ignore rules, in .gitignore syntax, relative to the root.
+- include: the patterns of the files searched for docstamp blocks (default "**/*.md").
+- presets: named pattern lists that a file includes with use.
+- Any other key is E_UNKNOWN_KEY. In YAML, quote a pattern that starts with ! or *.
+
+The same value as a script, which must export plain data (no functions or class instances, no
+top-level await). TypeScript runs through Node's type stripping, so no enum and no value namespace.
+Import only docstamp:
+
+    import { defineConfig } from 'docstamp';
+
+    export default defineConfig({
+      version: 2,
+      files: { 'docs/guide.md': { dependencies: ['src', '!src/gen'] } },
+    });
+
+The root is --root, else the nearest directory upward with a configuration file, else the nearest
+with .git. docstamp update writes docstamp-lock.yaml next to it; commit it. After a merge conflict
+in the lock, take either side, run docstamp, review what is stale and update again.
+--- stderr ---
