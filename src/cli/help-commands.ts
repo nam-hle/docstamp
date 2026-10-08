@@ -215,8 +215,18 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
       {
         args: ['suggest', 'docs/notes.md'],
         out: `suggest docs/notes.md
-  pattern      files  stale
-  src/hash.ts      1    n/a
+  pattern      files   stale
+  src/hash.ts      1  0.5000
+`,
+      },
+      {
+        args: ['suggest', 'docs/guide.md'],
+        out: `suggest docs/guide.md
+  pattern      files   stale  status
+  src/cli.ts       1  1.0000  covered
+  src/hash.ts      1  0.5000  covered
+  only declared  src
+  only declared  !src/**/*.test.ts
 `,
       },
       { args: ['suggest', '--write', 'docs/notes.md'] },

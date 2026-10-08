@@ -185,7 +185,7 @@ command of `COMMANDS` in `src/cli/args.ts`), `src/cli/help-topics.ts`, `src/cli/
 and looks them up. `tests/unit/help.test.ts` pins them to the parser (every accepted option on its
 page), to SPEC §15, §16, §5.4 and the section list, and to 100 columns of ASCII;
 `tests/e2e/scenarios/help.test.ts` runs every example that shows output on the `help-examples`
-fixture. A behavior change that a page describes changes the page in the same change.
+fixture, committed twice in the last days so `suggest` shows a real stale rate. A behavior change that a page describes changes the page in the same change.
 
 ## Presets
 

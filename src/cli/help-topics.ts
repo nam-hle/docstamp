@@ -53,8 +53,8 @@ When it fails later, follow docstamp help agents.`,
       {
         args: ['suggest', '--write', 'docs/notes.md'],
         out: `suggest docs/notes.md
-  pattern      files  stale
-  src/hash.ts      1    n/a
+  pattern      files   stale
+  src/hash.ts      1  0.5000
 written  docs/notes.md
 `,
       },

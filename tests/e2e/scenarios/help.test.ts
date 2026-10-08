@@ -13,12 +13,18 @@ const pages: [string, readonly Example[]][] = [
   ]),
 ];
 
-// SPEC §13.11: an example that shows output shows what the command prints on a fixed tree
+const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
+// SPEC §13.11: an example that shows output shows what the command prints on a fixed tree, in a
+// git repository with recent commits, as a reader runs it (so suggest shows a stale rate)
 for (const [name, examples] of pages.filter(([, list]) => list.some((e) => e.out !== undefined))) {
   scenario(
     `§13.11 the examples of help ${name} are real output`,
-    { fixture: 'help-examples', git: false },
+    { fixture: 'help-examples' },
     async (repo) => {
+      repo.commit('fixture', ago(2));
+      repo.append('src/cli.ts', 'export const name = "cli";\n');
+      repo.commit('name the cli', ago(1));
       for (const example of examples.filter((e) => e.out !== undefined)) {
         const result = await repo.run(example.args, { snapshot: false });
         expect(result, example.args.join(' ')).toEqual({

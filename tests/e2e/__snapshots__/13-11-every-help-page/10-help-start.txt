@@ -45,8 +45,8 @@ When it fails later, follow docstamp help agents.
 Example:
   $ docstamp suggest --write docs/notes.md
   suggest docs/notes.md
-    pattern      files  stale
-    src/hash.ts      1    n/a
+    pattern      files   stale
+    src/hash.ts      1  0.5000
   written  docs/notes.md
   $ docstamp docs/notes.md
   STALE    docs/notes.md  (unrecorded)

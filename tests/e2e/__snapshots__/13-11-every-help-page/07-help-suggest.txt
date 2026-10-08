@@ -39,8 +39,15 @@ Writes:
 Examples:
   $ docstamp suggest docs/notes.md
   suggest docs/notes.md
-    pattern      files  stale
-    src/hash.ts      1    n/a
+    pattern      files   stale
+    src/hash.ts      1  0.5000
+  $ docstamp suggest docs/guide.md
+  suggest docs/guide.md
+    pattern      files   stale  status
+    src/cli.ts       1  1.0000  covered
+    src/hash.ts      1  0.5000  covered
+    only declared  src
+    only declared  !src/**/*.test.ts
   $ docstamp suggest --write docs/notes.md
 
 Exit codes:
