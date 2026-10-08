@@ -11,11 +11,12 @@ must ignore members they do not know: later releases only add members.
 - check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons,
   dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via }
   (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's
-  own list was edited; use and origins when it uses presets.
+  own list was edited; use and origins when it uses presets (use is [] when they are only
+  default-presets).
 - update: as check, with written true or false on each file and a top-level removed list. A written
   file reports state ok.
 - list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and
-  origins with presets.
+  origins with presets, default-presets included.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive
   each dependent also has dependents, cycle and repeated.
 - stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount,

@@ -33,7 +33,8 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'that fails or exports no plain data, a key with a value of the wrong type, a missing ' +
       'files.',
     fix:
-      'Fix the key the subject names (presets.<name> for a preset, use for a file); for a ' +
+      'Fix the key the subject names (presets.<name> for a preset, use for a file, ' +
+      'default-presets for the default presets; an empty use needs default-presets); for a ' +
       'missing files, write files: {} for none, or correct the unknown key that stands for it; ' +
       'a script must export default plain data. See docstamp help config.',
   },
@@ -56,8 +57,12 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'remove it.',
   },
   E_UNKNOWN_PRESET: {
-    meaning: 'A file uses a preset that the configuration file does not define.',
-    fix: 'Define it under presets in the configuration file, or correct the name in use.',
+    meaning:
+      'A file, or default-presets, names a preset that the configuration file does not ' +
+      'define. For default-presets it is global and stops the run.',
+    fix:
+      'Define it under presets in the configuration file, or correct the name in use or ' +
+      'default-presets.',
   },
   E_BLOCK: {
     meaning:

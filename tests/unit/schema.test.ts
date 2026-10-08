@@ -21,6 +21,7 @@ describe('§9.3 schema.json', () => {
       'ignore',
       'include',
       'presets',
+      'default-presets',
       'files',
     ]);
   });
@@ -61,10 +62,10 @@ describe('§5.6 schema-frontmatter.json', () => {
     expect(block().additionalProperties).toBe(false);
     expect(Object.keys(block().properties)).toEqual([...BLOCK_KEYS]);
   });
-  it('requires dependencies, a non-empty list; use is a non-empty list; hash is 64 hex', () => {
+  it('requires dependencies, a non-empty list; use is a list (empty opts out of defaults); hash is 64 hex', () => {
     expect(block().required).toEqual(['dependencies']);
     expect(block().properties['dependencies']).toMatchObject({ type: 'array', minItems: 1 });
-    expect(block().properties['use']).toMatchObject({ type: 'array', minItems: 1 });
+    expect(block().properties['use']).toMatchObject({ type: 'array', uniqueItems: true });
     expect(hashPattern().test('a'.repeat(64))).toBe(true);
     expect(hashPattern().test('A'.repeat(64))).toBe(false);
     expect(hashPattern().test('a'.repeat(63))).toBe(false);

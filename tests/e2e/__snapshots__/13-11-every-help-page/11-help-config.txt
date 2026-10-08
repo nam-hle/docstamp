@@ -17,12 +17,12 @@ Without one, only inline declarations exist (docstamp help inline).
     presets:
       no-tests:
         - "!**/*.test.ts"
+    default-presets: [no-tests]
     files:
       docs/guide.md:
         dependencies:
           - src
           - "!src/gen"
-        use: [no-tests]
 
 - version: required, exactly 2. A file without it is E_CONFIG_VERSION: add version: 2 (or, for a
   version 1 file, migrate its keys).
@@ -34,6 +34,7 @@ Without one, only inline declarations exist (docstamp help inline).
 - ignore: more ignore rules, in .gitignore syntax, relative to the root.
 - include: the patterns of the files searched for docstamp blocks (default "**/*.md").
 - presets: named pattern lists that a file includes with use.
+- default-presets: presets every file without its own use gets (docstamp help presets).
 - Any other key is E_UNKNOWN_KEY. In YAML, quote a pattern that starts with ! or *.
 
 The same value as a script, which must export plain data (no functions or class instances, no

@@ -5,7 +5,6 @@ const properties = {
   dependencies: { type: 'array', minItems: 1, items: PATTERN_SCHEMA },
   use: {
     type: 'array',
-    minItems: 1,
     uniqueItems: true,
     items: { type: 'string', pattern: PRESET_NAME.source },
   },
