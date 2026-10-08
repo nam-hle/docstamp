@@ -582,3 +582,30 @@ describe('§13.10 step 7 written patterns', () => {
     ).toEqual(['pkg', '!pkg/run.test.ts', 'pkg/run.test.ts', 'scripts']);
   });
 });
+
+describe('§12.6 step 9 test exclusions of a glob', () => {
+  it('a glob that selects test files gets the exclusions of its literal scope', () => {
+    expect(patterns('Code in `pkg/*.ts`.\n')).toEqual(['pkg/*.ts', '!pkg/**/*.test.*']);
+  });
+  it('a glob with no literal scope gets them for the whole repository', () => {
+    expect(patterns('Code in `**/*.ts`.\n')).toEqual(['**/*.ts', '!**/*.test.*', '!**/__tests__']);
+  });
+  it('a test file the doc names is listed after the exclusions', () => {
+    expect(patterns('Code in `**/*.ts`; see `pkg/run.test.ts`.\n')).toEqual([
+      '**/*.ts',
+      '!**/*.test.*',
+      '!**/__tests__',
+      'pkg/run.test.ts',
+    ]);
+  });
+  it('none for a glob that selects only test files or names a test directory', () => {
+    expect(patterns('Tests: `**/*.test.ts`.\n')).toEqual(['**/*.test.ts']);
+    expect(patterns('Tests: `tests/**/*.ts`.\n')).toEqual(['tests/**/*.ts']);
+  });
+  it('the same exclusion from a directory and a glob is written once', () => {
+    const universe = tree('README.md', 'pkg/a.ts', 'pkg/b.ts', 'pkg/c.ts', 'pkg/c.test.ts');
+    expect(
+      patterns('See `pkg/a.ts`, `pkg/b.ts`, `pkg/c.ts` and `pkg/*.ts`.\n', { universe }),
+    ).toEqual(['pkg', '!pkg/**/*.test.*']);
+  });
+});

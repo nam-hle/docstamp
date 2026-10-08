@@ -1411,13 +1411,21 @@ prefix, before a `/`, of some path of *U*.
    `!`*d*`/**/__test__` and `!`*d*`/**/__tests__` that match (§8.3) at least one file of *U*, and
    none if some segment of *d* is `test`, `tests`, `spec`, `specs`, `__test__` or `__tests__`. Remove
    from *files* every file below a member *d* of *dirs* unless one of the exclusions of *d* matches it.
-10. *Subsumption.* Let *reincluded* be the members of *files* below a member of *dirs* (those that
-   an exclusion matches, step 9), and *base* the other members of *files*, *dirs* and *globs*. Let
+   For each *g* of *globs*, let its *scope* be its segments before the first one that holds `*`,
+   `?`, `[` or `{`, joined with `/` (the empty String for `**/src/**`), and *sel*(*g*) be
+   `Select(« g », U)`; its *exclusions* are, in this order, those of `!`*s*`**/*.test.*`,
+   `!`*s*`**/*.spec.*`, `!`*s*`**/__test__` and `!`*s*`**/__tests__` that match a file of
+   *sel*(*g*), *s* being the scope followed by `/`, or nothing when the scope is empty; and none if
+   some segment of *g* is one of the names above, or if every file of *sel*(*g*) is matched by one of
+   them (a glob that selects only test files).
+10. *Subsumption.* Let *cuts* be the exclusions of every member of *dirs* and of *globs*, ordered
+   by the path order of the directory or scope they come from and, for one, in the order of step 9,
+   without duplicates. Let *reincluded* be the members of *files* that a member of *cuts* matches
+   (with step 9, the files below a member of *dirs* that remain), and *base* the other members of
+   *files*, *dirs* and *globs*. Let
    *sel*(*p*) be `Select(« p », U)`. Remove from *base* every *p* for which another member *q* of
    *base* has *sel*(*p*) ⊆ *sel*(*q*), and either *sel*(*q*) ⊄ *sel*(*p*) or *q* precedes *p* in
-   path order; every *p* is tested against *base* as it was before this step. Let *cuts* be the
-   exclusions of every member of *dirs*, in path order of their directory and, for one directory,
-   in the order of step 9.
+   path order; every *p* is tested against *base* as it was before this step.
 11. *Order.* The Suggestions are, first, the members *p* of *base* in path order, each with
    `[[Files]]` `Select(« p » followed by cuts, U)`; then
    one Suggestion for each of *cuts* in order, with `[[Files]]` the files of *U* that it matches;
@@ -1438,7 +1446,13 @@ another one covers, such as `packages/*` under `packages`, so the list has no re
 of two that select the same files, the first in path order is kept. A Suggestion
 for an exclusion has no files of its own: its `[[Files]]` are the files it matches. A mention in a
 fenced block, in the inline block or of an ignored path is never proposed. A glob keeps a generic
-file it happens to select. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern
+file it happens to select. A glob that selects test files gets the exclusions of step 9 for its
+scope, its literal leading segments: `packages/*/src` gets `!packages/**/*.test.*`, and `**/src/**`,
+which has none, gets `!**/*.test.*`. Since every exclusion follows every inclusion, such an
+exclusion also trims the test files of the other inclusions; a test file the doc names is still
+listed after it. The notion of a test file is the one of step 9: a name with `.test.` or `.spec.`,
+or a path through `__test__` or `__tests__`; a file under a `test` or `tests` directory with
+neither is not excluded. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern
 as written and is dropped.
 
 ### 12.7 Renamed Path
@@ -2520,6 +2534,8 @@ The following are not breaking:
   `depends` line of `check` (§14.3) and the wording of the second `next:` line for inline files
   (§14.3.3): text layout of §14.3; and the members `use` and `origins` in `check` and `update`
   (§14.5), new members;
+- the test exclusions of a glob in a proposal (§12.6 step 9): a proposal rule of §12.6, like the
+  directory exclusions; `suggest` prints and `--write` writes them, and nothing else reads them;
 - `suggest --write` on a block without a `hash` that declares patterns (§9.6.5 steps 2.3 to 2.5,
   §13.10 step 7): it used to replace the list by the proposal, dropping every declared pattern the
   proposal lacked; it now keeps the declared patterns first and adds only `new` ones that leave

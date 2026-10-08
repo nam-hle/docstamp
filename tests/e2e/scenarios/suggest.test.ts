@@ -745,3 +745,29 @@ scenario(
     expect(third.resolvedFiles).toContain('pkg/c.test.ts');
   },
 );
+
+scenario(
+  '§12.6 step 9 a glob that selects test files gets the exclusions of its scope',
+  async (repo) => {
+    repo.write('packages/a/src/x.ts', 'export const x = 1;\n');
+    repo.write('packages/a/src/x.test.ts', 'import { x } from "./x.ts";\n');
+    repo.write('apps/web/src/page.ts', 'export const page = 1;\n');
+    repo.write('apps/web/src/__tests__/page.ts', 'import { page } from "../page.ts";\n');
+    repo.write('docs/guide.md', 'All sources live under `**/src/**`.\n');
+    repo.commit('init');
+    const text = await repo.run(['suggest', 'docs/guide.md'], { show: ['docs/guide.md'] });
+    expect(text.exit).toBe(0);
+    expect(patterns((await repo.run(['suggest', '--json', 'docs/guide.md'])).json())).toEqual([
+      '**/src/**',
+      '!**/*.test.*',
+      '!**/__tests__',
+    ]);
+    await repo.run(['suggest', '--write', 'docs/guide.md'], { expectExit: 0 });
+    const listed = await repo.run(['list-dependencies', '--json', 'docs/guide.md']);
+    expect(listed.json().files[0].resolvedFiles).toEqual([
+      'apps/web/src/page.ts',
+      'packages/a/src/x.ts',
+    ]);
+    expect(listed.json().files[0].diagnostics).toEqual([]);
+  },
+);
