@@ -193,7 +193,7 @@ in the order of SPEC §14.3.2 (an `INVALID` line, then its Diagnostics). `emit` 
 writes them one by one, in that order: never all of stdout first. Each stream alone must stay what
 §14.1 says; `tests/unit/run.test.ts` pins the interleaving. `reviewLine` (§14.3.4) only builds the
 text of a git command for the reader; `git` still runs in `src/history/` alone, read-only, and
-`isWhitespaceOnly` (§12.3 step 7) is its one more call.
+`isWhitespaceOnly` (§12.3 step 7) makes two more read-only calls there.
 
 ## Compatibility guard
 
