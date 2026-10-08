@@ -4,13 +4,15 @@ import type { Code } from '../core/types.ts';
 export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
   E_USAGE: {
     meaning:
-      'The command line is wrong: an unknown or repeated option, a missing value, an option ' +
+      'The command line is wrong: a mistyped command (did you mean "update"?), an unknown or ' +
+      'repeated option, a missing value, an option ' +
       'used with a command that does not take it, a missing file argument, a file argument ' +
       'that resolves outside the root (any command), an unknown help name, or a suggest ' +
       '--write that cannot write a block.',
     fix:
       'Correct the command line as docstamp help <command> shows it. A removed option names ' +
-      'its replacement. A file argument is resolved against the current directory, not --root.',
+      'its replacement; a mistyped command names the command, and -- before it makes it a ' +
+      'file. A file argument is resolved against the current directory, not --root.',
   },
   E_ROOT: {
     meaning: 'The directory given to --root does not exist.',

@@ -1,5 +1,5 @@
 import { lstatSync, readdirSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
@@ -51,6 +51,16 @@ function isStampedFile(root: string, path: string): boolean {
   try {
     const name = readdirSync(dir).find((n) => n.normalize('NFC') === basename(path));
     return name !== undefined && lstatSync(join(dir, name)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+// SPEC §13.2 step 2: an entry of any kind, not followed
+function isEntry(path: string): boolean {
+  try {
+    lstatSync(path);
+    return true;
   } catch {
     return false;
   }
@@ -342,7 +352,7 @@ function runStats(args: Extract<Args, { mode: 'stats' }>, cwd: string, io: Io): 
 export function run(argv: readonly string[], cwd: string, io: Io): number {
   let args: ReturnType<typeof parseArgs>;
   try {
-    args = parseArgs(argv);
+    args = parseArgs(argv, (arg) => isEntry(resolve(cwd, arg)));
   } catch (e) {
     if (!(e instanceof Raised)) throw e;
     io.stderr(diagnosticsText(e.diagnostics));

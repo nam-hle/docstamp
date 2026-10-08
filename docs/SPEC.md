@@ -1571,15 +1571,22 @@ The command line is parsed before anything else.
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
-   `list-dependencies`, `list-dependents`, `stats`, `suggest`, `help` or `version`; it is then not a file argument. Otherwise, and when there
-   is none, the command is `check` and that argument stays a file argument. A command word in any
-   later position, or after `--`, is a file argument. Options and file arguments may appear in
-   any order.
+   `list-dependencies`, `list-dependents`, `stats`, `suggest`, `help` or `version`; it is then not a file argument. Otherwise, if it
+   is not an existing entry (any kind, not followed) at the path it resolves to against the
+   current directory (§13.4 step 2), and a command name is at edit distance 1 or 2 from it (the
+   distance of the §9.3 NOTE), it is a *mistyped command*: raise « `E_USAGE` », `[[Subject]]` that
+   argument, whose message names the first such command name at the smallest distance, in the
+   order above, and says that a file of that name is reached after `--` (`Unknown command "updte";
+   did you mean "update"? ...`). Otherwise, and when there is none, the command is `check` and that
+   argument stays a file argument. A command word in any later position, or after `--`, is a file
+   argument. Options and file arguments may appear in any order.
 3. `--help` before any `--`, or the command `help`, selects `help`; `--version` or the command
    `version` selects `version`. `help` wins over `version`. The *help names* are the file
    arguments when the command is `help`; else, when step 2 found a command word, that word alone
    (so `docstamp update --help` names `update`); else none. Both ignore every other argument,
-   options included, and raise no `E_USAGE` here; `help` checks its names itself (§13.11).
+   options included, and raise no `E_USAGE` here; `help` checks its names itself (§13.11). A
+   mistyped command (step 2) is raised before this step, so `docstamp updte --help` and
+   `docstamp updte --version` are `E_USAGE` too, never the index.
 
 Otherwise the following raise « `E_USAGE` » with `[[Subject]]` the offending argument, and exit 2.
 Each message states the problem:
@@ -1603,7 +1610,15 @@ Each message states the problem:
 
 `help` prints help (§13.11) and `version` prints the version; both exit 0 (§14.1), except a
 `help` name that is not known (§13.11). A file named like a command is reached as
-`docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`.
+`docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`, and a file named
+like a mistyped command that does not exist yet as `docstamp -- updte`.
+
+NOTE: The mistyped command of step 2 is the one place where parsing reads the file system: one
+`lstat` of the first non-option argument, made only when that argument is near a command name. An
+existing path keeps meaning a file, so `docstamp stat` checks a stamped file named `stat` as
+before; only an argument that names nothing on disk, which `check` could only refuse with
+`E_UNKNOWN_FILE` or `E_USAGE` (§13.3), is read as a command typed wrong. The rule does not
+apply after `--`, nor to a command word in a later position.
 
 ### 13.3 File Arguments
 
@@ -2466,7 +2481,7 @@ command raised.
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2, §13.3, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a file argument outside Root, name a path that resolves, against the current directory, inside Root; for an unknown help name, one of those the message lists |
+| `E_USAGE` | error | §13.2, §13.3, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a mistyped command, the command name it suggests, or `--` before a file of that name; for a file argument outside Root, name a path that resolves, against the current directory, inside Root; for an unknown help name, one of those the message lists |
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6); `docstamp help start` shows both |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
@@ -2572,6 +2587,16 @@ is to read `E_UNKNOWN_KEY` where a consumer looked for the `E_CONFIG` of a missi
 now means that no inclusion is empty, yet together the patterns select nothing. A subject with a
 `\` is no longer quoted on a Diagnostic line of text mode (§14.3); that is text layout (§17.3),
 and `--json` is unchanged. No Hash input, selection or Lockfile `version` changes.
+
+NOTE: A first non-option argument that names no existing path and is one or two edits from a
+command name (`docstamp updte`) was a file argument of `check`, refused with `E_UNKNOWN_FILE`,
+`E_USAGE` (outside Root) or a Root error such as `E_CONFIG_MISSING`; with `--help` it printed the
+index and exited 0. It is now a mistyped command (§13.2 step 2): `E_USAGE`, exit 2, before any
+Root is read, with or without `--help`. A command line that exited 0 now exits 2 and the
+Diagnostic code changes (§17.1, fourth item), so it is breaking. The migration is to spell the
+command, or to write `--` before a file argument that does not exist and is named like a command
+(`docstamp -- updte`). An existing path is read as a file exactly as before. No Hash input,
+selection or Lockfile `version` changes.
 
 ### 17.3 Non-breaking changes
 

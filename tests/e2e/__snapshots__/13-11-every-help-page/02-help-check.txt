@@ -8,7 +8,8 @@ Usage:
 
 The default command: a bare docstamp is docstamp check. It evaluates every stamped file (or only the
 named ones), prints a block for each file that is not ok, a summary line, and next: lines that name
-the command to run.
+the command to run. A first word that names no file and is one or two edits from a command name is a
+mistyped command (E_USAGE: did you mean "update"?), not a file; write -- before such a file name.
 
 A stale block lists, when git history allows, the dependencies that changed since the last review
 and a review: line with a read-only git command that shows the change; otherwise it lists the file's
