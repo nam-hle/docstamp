@@ -1,3 +1,4 @@
+# a flow list
 $ docstamp suggest --write docs/block.md
 exit: 0
 --- stdout ---

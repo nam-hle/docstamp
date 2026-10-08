@@ -290,18 +290,30 @@ scenario(
 );
 
 scenario(
-  '§9.6.5 write replaces the dependencies of a block that has no hash and keeps the rest',
+  '§9.6.5 steps 2.4 and 2.5 write keeps the declared patterns of a block that has no hash',
   { fixture: 'suggest' },
   async (repo) => {
     repo.write(
       'docs/block.md',
       '---\ntitle: Block\ndocstamp: # keep this comment\n  dependencies: [src/util]\nauthor: me\n---\nSee `src/cli` and `src/engine/parse.ts`.\n',
     );
-    const result = await repo.run(['suggest', '--write', 'docs/block.md']);
+    const flow = await repo.run(['suggest', '--write', 'docs/block.md'], { label: 'a flow list' });
+    expect(flow.exit).toBe(0);
+    expect(repo.read('docs/block.md')).toBe(
+      '---\ntitle: Block\ndocstamp: # keep this comment\n  dependencies:\n    - src/util\n    - src/cli\n    - src/engine/parse.ts\nauthor: me\n---\nSee `src/cli` and `src/engine/parse.ts`.\n',
+    );
+
+    repo.write(
+      'docs/block.md',
+      '---\ntitle: Block\ndocstamp: # keep this comment\n  dependencies:\n    # the helpers\n    - src/util\nauthor: me\n---\nSee `src/cli` and `src/engine/parse.ts`.\n',
+    );
+    const result = await repo.run(['suggest', '--write', 'docs/block.md'], {
+      label: 'a block list',
+    });
     expect(result.exit).toBe(0);
     await repo.snapFile('docs/block.md');
     expect(repo.read('docs/block.md')).toBe(
-      '---\ntitle: Block\ndocstamp: # keep this comment\n  dependencies:\n    - src/cli\n    - src/engine/parse.ts\nauthor: me\n---\nSee `src/cli` and `src/engine/parse.ts`.\n',
+      '---\ntitle: Block\ndocstamp: # keep this comment\n  dependencies:\n    # the helpers\n    - src/util\n    - src/cli\n    - src/engine/parse.ts\nauthor: me\n---\nSee `src/cli` and `src/engine/parse.ts`.\n',
     );
     await repo.run(['check', 'docs/block.md'], { expectExit: 1, snapshot: false });
   },
@@ -589,7 +601,9 @@ scenario(
     const written = await repo.run(['suggest', '--write', OVERVIEW], { snapshot: false });
     expect(written.stdout).toContain('  only declared  old/dir\n');
     const again = await repo.run(['suggest', '--json', OVERVIEW], { snapshot: false });
-    expect(again.json().files[0].declared).toEqual(patterns(again.json()));
+    const declared: string[] = again.json().files[0].declared;
+    expect(declared.slice(0, 2)).toEqual(['src/cli', 'old/dir']);
+    expect([...declared].sort()).toEqual(['old/dir', ...patterns(again.json())].sort());
   },
 );
 
@@ -621,5 +635,113 @@ scenario(
       'covered',
       'covered',
     ]);
+  },
+);
+
+scenario(
+  '§13.10 step 7 write never drops a declared pattern that already covers the proposal',
+  async (repo) => {
+    guideRepo(repo);
+    const result = await repo.run(['suggest', '--write', 'docs/guide.md'], {
+      show: ['docs/guide.md'],
+    });
+    expect(result.exit).toBe(0);
+    expect(result.stdout).toContain('unchanged  docs/guide.md\n');
+    expect(repo.read('docs/guide.md')).toBe(GUIDE);
+    const listed = await repo.run(['list-dependencies', '--json', 'docs/guide.md']);
+    expect(listed.json().files[0].dependencies).toEqual(['src/**/*.ts']);
+    expect(listed.json().files[0].resolvedFiles).toEqual(['src/a.ts', 'src/sub/b.ts']);
+  },
+);
+
+scenario(
+  '§9.6.5 step 2.4 write appends after the declared patterns and keeps use',
+  async (repo) => {
+    repo.write('docstamp.yaml', 'version: 2\npresets:\n  sources:\n    - "src/a.ts"\nfiles: {}\n');
+    guideRepo(
+      repo,
+      '---\ndocstamp:\n  use:\n    - sources\n  dependencies:\n    - docs/notes.md\n---\n\n' +
+        'The entry point is `src/a.ts`; helpers live in `src/sub/b.ts`.\n',
+    );
+    repo.write('docs/notes.md', '# Notes\n');
+    repo.commit('notes');
+    const result = await repo.run(['suggest', '--write', 'docs/guide.md'], {
+      show: ['docs/guide.md'],
+    });
+    expect(result.exit).toBe(0);
+    await repo.snapFile('docs/guide.md');
+    expect(repo.read('docs/guide.md')).toBe(
+      '---\ndocstamp:\n  use:\n    - sources\n  dependencies:\n    - docs/notes.md\n' +
+        '    - src/a.ts\n    - src/sub/b.ts\n---\n\n' +
+        'The entry point is `src/a.ts`; helpers live in `src/sub/b.ts`.\n',
+    );
+    const listed = await repo.run(['list-dependencies', '--json', 'docs/guide.md']);
+    expect(listed.exit).toBe(0);
+    expect(listed.json().files[0].use).toEqual(['sources']);
+    expect(listed.json().files[0].resolvedFiles).toEqual([
+      'docs/notes.md',
+      'src/a.ts',
+      'src/sub/b.ts',
+    ]);
+  },
+);
+
+scenario(
+  '§13.10 step 7 write keeps declared exclusions valid and leaves out what would change them',
+  async (repo) => {
+    repo.write('src/a.ts', 'export const a = 1;\n');
+    repo.write('src/a.test.ts', 'import { a } from "./a.ts";\n');
+    repo.write('lib/x.ts', 'export const x = 1;\n');
+    repo.write('lib/y.ts', 'export const y = 1;\n');
+    const head = '---\ndocstamp:\n  dependencies:\n    - src\n    - "!src/**/*.test.*"\n---\n';
+    repo.write('docs/guide.md', `${head}Code in \`src/a.ts\` and \`lib/x.ts\`.\n`);
+    repo.commit('init');
+    const listed = async (label: string) => {
+      const run = await repo.run(['list-dependencies', '--json', 'docs/guide.md'], { label });
+      expect(run.exit).toBe(0);
+      expect(run.json().files[0].diagnostics).toEqual([]);
+      return run.json().files[0];
+    };
+    const added = await repo.run(['suggest', '--write', 'docs/guide.md'], {
+      label: 'an added file',
+      show: ['docs/guide.md'],
+    });
+    expect(added.exit).toBe(0);
+    await repo.snapFile('docs/guide.md');
+    const first = await listed('after the added file');
+    expect(first.dependencies).toEqual(['src', '!src/**/*.test.*', 'lib/x.ts']);
+    expect(first.resolvedFiles).toEqual(['lib/x.ts', 'src/a.ts']);
+
+    repo.write('src/gen/out.ts', 'export const out = 1;\n');
+    repo.write(
+      'docs/guide.md',
+      '---\ndocstamp:\n  dependencies:\n    - src\n    - "!src/gen/**"\n---\n' +
+        'Code in `**/out.ts` and `lib/*.ts`.\n',
+    );
+    const glob = await repo.run(['suggest', '--write', 'docs/guide.md'], {
+      label: 'a glob that selects an excluded file',
+    });
+    expect(glob.exit).toBe(0);
+    expect(glob.stdout).toMatch(/ {2}\*\*\/out\.ts +1 +n\/a {2}new\n/u);
+    const second = await listed('after the glob');
+    expect(second.dependencies).toEqual(['src', '!src/gen/**', 'lib/*.ts']);
+    expect(second.resolvedFiles).not.toContain('src/gen/out.ts');
+
+    repo.write('pkg/a.ts', 'a\n');
+    repo.write('pkg/b.ts', 'b\n');
+    repo.write('pkg/c.ts', 'c\n');
+    repo.write('pkg/c.test.ts', 'c\n');
+    repo.write(
+      'docs/guide.md',
+      '---\ndocstamp:\n  dependencies:\n    - pkg/c.test.ts\n---\n' +
+        'See `pkg/a.ts`, `pkg/b.ts` and `pkg/c.ts`.\n',
+    );
+    const cut = await repo.run(['suggest', '--write', 'docs/guide.md'], {
+      label: 'an exclusion that deselects a declared file',
+    });
+    expect(cut.exit).toBe(0);
+    const third = await listed('after the exclusion');
+    expect(third.dependencies).toEqual(['pkg/c.test.ts', 'pkg']);
+    expect(third.resolvedFiles).toContain('pkg/c.test.ts');
   },
 );

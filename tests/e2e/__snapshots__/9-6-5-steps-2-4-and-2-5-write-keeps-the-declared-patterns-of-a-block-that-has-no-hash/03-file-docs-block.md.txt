@@ -4,6 +4,8 @@ file: docs/block.md
 title: Block
 docstamp: # keep this comment
   dependencies:
+    # the helpers
+    - src/util
     - src/cli
     - src/engine/parse.ts
 author: me

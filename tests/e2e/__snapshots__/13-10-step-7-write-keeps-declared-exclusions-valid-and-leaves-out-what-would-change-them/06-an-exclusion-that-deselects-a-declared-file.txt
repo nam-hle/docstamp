@@ -1,0 +1,11 @@
+# an exclusion that deselects a declared file
+$ docstamp suggest --write docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern           files  stale  status
+  pkg                   3    n/a  new
+  !pkg/**/*.test.*     -1         new
+  only declared  pkg/c.test.ts
+written  docs/guide.md
+--- stderr ---

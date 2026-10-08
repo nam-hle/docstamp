@@ -27,6 +27,40 @@ function frontmatterIndent(lines: readonly string[]): string {
   return '  ';
 }
 
+const ITEM = /^( *)- /u;
+const leading = (line: string): number => /^ */u.exec(line)![0].length;
+
+// SPEC §9.6.5 step 2.4: the last item line of the block list under `dependencies:`
+function lastItem(
+  lines: readonly string[],
+  from: number,
+  to: number,
+  keyIndent: string,
+): { index: number; indent: string } | null {
+  const key = lines
+    .slice(from, to + 1)
+    .findIndex(
+      (line) =>
+        line.startsWith(`${keyIndent}dependencies:`) &&
+        MARKER_REST.test(line.slice(`${keyIndent}dependencies:`.length)),
+    );
+  if (key === -1) return null;
+  let indent: string | null = null;
+  let last: number | null = null;
+  for (let index = from + key + 1; index <= to; index++) {
+    const line = lines[index]!;
+    if (MARKER_REST.test(line)) continue;
+    const match = ITEM.exec(line);
+    if (indent === null) {
+      if (match === null) return null;
+      indent = match[1]!;
+    }
+    if ((match !== null && match[1] === indent) || leading(line) > indent.length) last = index;
+    else break;
+  }
+  return indent === null || last === null ? null : { index: last, indent };
+}
+
 // SPEC §9.6.5
 export function writeBlock(file: string, text: string, dependencies: readonly string[]): string {
   const refuse = (message: string) => new Raised([diag('E_USAGE', { subject: file, message })]);
@@ -41,17 +75,36 @@ export function writeBlock(file: string, text: string, dependencies: readonly st
       throw refuse(`${file} has a docstamp block that is not a block mapping; edit it by hand.`);
     }
     const { keyIndent } = scan;
-    const usesPresets =
-      keyIndent !== null &&
-      scan.lines
-        .slice(scan.marker + 1, scan.last + 1)
-        .some((line) => line.startsWith(`${keyIndent}use:`));
-    if (usesPresets) {
-      throw refuse(`${file} has a docstamp block that uses presets; edit it by hand.`);
+    const parsed = parseBlock(file, scan);
+    const declared = parsed.declaration.dependencies;
+    if (!declared.every((pattern, index) => dependencies[index] === pattern)) {
+      throw refuse(`${file} declares patterns the proposal does not keep; edit it by hand.`);
     }
+    if (declared.length > 0 && dependencies.length === declared.length) return text;
     const lines = [...scan.lines];
-    const replaced = body(dependencies, scan.keyIndent ?? '  ', eolOf(marker));
-    lines.splice(scan.marker + 1, scan.last - scan.marker, ...replaced);
+    const last =
+      declared.length > 0 && parsed.problems.length === 0
+        ? lastItem(scan.lines, scan.marker + 1, scan.last, keyIndent ?? '')
+        : null;
+    if (last !== null) {
+      // §9.6.5 step 2.4: the block keeps every line and gains the patterns after declared
+      const added = dependencies
+        .slice(declared.length)
+        .map((pattern) => `${last.indent}- ${item(pattern)}${eolOf(lines[last.index]!)}`);
+      lines.splice(last.index + 1, 0, ...added);
+    } else {
+      // §9.6.5 step 2.5
+      const usesPresets =
+        keyIndent !== null &&
+        scan.lines
+          .slice(scan.marker + 1, scan.last + 1)
+          .some((line) => line.startsWith(`${keyIndent}use:`));
+      if (usesPresets) {
+        throw refuse(`${file} has a docstamp block that uses presets; edit it by hand.`);
+      }
+      const replaced = body(dependencies, keyIndent ?? '  ', eolOf(marker));
+      lines.splice(scan.marker + 1, scan.last - scan.marker, ...replaced);
+    }
     result = scan.bom + lines.join('');
   } else {
     const split = splitFrontmatter(text);

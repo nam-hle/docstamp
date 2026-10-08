@@ -208,3 +208,34 @@ export function statusOf(
   const selected = new Set(select(validPatterns(declared), files));
   return suggestion.files.every((path) => selected.has(path)) ? 'covered' : 'new';
 }
+
+// SPEC §13.10 step 7: the declared patterns, then the new ones that leave their selection intact
+export function writtenPatterns(
+  suggestions: readonly Suggestion[],
+  statuses: readonly (Status | null)[],
+  declared: readonly string[] | null,
+  files: readonly string[],
+): string[] {
+  if (declared === null) return suggestions.map((s) => s.pattern);
+  const own = validPatterns(declared);
+  const selected = select(own, files);
+  const exclusions = own.filter((pattern) => pattern.negated);
+  const fresh = suggestions.filter((_, index) => statuses[index] === 'new');
+  const cuts = fresh.filter((s) => {
+    if (!s.pattern.startsWith('!')) return false;
+    const cut = parsePattern(s.pattern)!;
+    return !selected.some((path) => patternMatches(cut, path));
+  });
+  const trims = cuts.map((s) => parsePattern(s.pattern)!);
+  const inclusions = fresh.filter((s) => {
+    if (s.pattern.startsWith('!')) return false;
+    const pattern = parsePattern(s.pattern)!;
+    if (literalPath(pattern) === s.pattern && files.includes(s.pattern)) return true;
+    return !select([pattern, ...trims], files).some((path) =>
+      exclusions.some((exclusion) => patternMatches(exclusion, path)),
+    );
+  });
+  if (inclusions.length === 0) return [...declared];
+  const kept = new Set([...cuts, ...inclusions]);
+  return [...declared, ...fresh.filter((s) => kept.has(s)).map((s) => s.pattern)];
+}

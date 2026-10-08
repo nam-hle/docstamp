@@ -1,0 +1,12 @@
+# a glob that selects an excluded file
+$ docstamp suggest --write docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern    files  stale  status
+  **/out.ts      1    n/a  new
+  lib/*.ts       2    n/a  new
+  only declared  src
+  only declared  !src/gen/**
+written  docs/guide.md
+--- stderr ---

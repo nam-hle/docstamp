@@ -920,31 +920,49 @@ used only by `suggest --write` (§13.10); it never records a Review.
    `y`, `n`, `yes`, `no`, `on`, `off`, `.inf`, `.nan` in any letter case, else `Quote(s)` (§3.4).
 2. If *scan* is not *none*:
    1. If *hashLines* of *scan* is not empty, raise: a block that records a Hash is never
-      overwritten; its message tells the user to edit it by hand. Likewise raise if a line from
-      *marker* + 1 to *last* starts with *keyIndent* followed by `use:`: a block that names presets
-      (§8.6) is never overwritten, so its `use` is never lost.
+      overwritten; its message tells the user to edit it by hand.
    2. If the marker line, after `docstamp:`, is not only blanks and an optional `#` comment, raise.
-   3. Let *indent* be *keyIndent*, or two U+0020 if it is *absent*, and *eol* the terminator of the
-      marker line. Replace the lines after *marker* up to and including *last* by the line *indent*
-      and `dependencies:`, and, for each pattern *s*, the line *indent*, two U+0020, `- `,
-      *item*(*s*), each followed by *eol*.
+   3. Let *declared* be the `[[Dependencies]]` of the Declaration that `ParseBlock(scan)` (§9.6.2)
+      returns, even when it raises. If *dependencies* does not start with the elements of
+      *declared*, in order, raise. If *declared* is not empty and *dependencies* has no other
+      element, return *text*.
+   4. If *declared* is not empty and `ParseBlock(scan)` does not raise, look for the *last item*:
+      let *key* be the first line from *marker* + 1 to *last* that starts with *keyIndent* followed
+      by `dependencies:` and, after it, only blanks and an optional `#` comment. Let an *item line*
+      be a line that, after some U+0020 *itemIndent*, starts with `- `. Walk the lines after *key*
+      up to *last*: skip a line that is only blanks or blanks and a `#` comment; the first other
+      line must be an item line, which fixes *itemIndent*; then an item line with that
+      *itemIndent*, or a line with more leading U+0020 than *itemIndent* (it continues an item),
+      is the *last item*, and any other line ends the walk. If there is a *last item*, the block is
+      *extended*: insert after it, for each pattern *s* of *dependencies* after the elements of
+      *declared*, the line *itemIndent*, `- `, *item*(*s*), each followed by the terminator of the
+      *last item*. Every other line of *text* is kept as it is, including `use`, comments and the
+      items of *declared*.
+   5. Otherwise (no *key* or no item line, as for `dependencies: [a, b]`, or a block that declares
+      no pattern or raises), raise if a line from *marker* + 1 to *last* starts with *keyIndent*
+      followed by `use:`, so a `use` is never lost. Let *indent* be *keyIndent*, or two U+0020 if it
+      is *absent*, and *eol* the terminator of the marker line. Replace the lines after *marker* up
+      to and including *last* by the line *indent* and `dependencies:`, and, for each pattern *s*,
+      the line *indent*, two U+0020, `- `, *item*(*s*), each followed by *eol*.
 3. Otherwise, if the first line of *text* (without a leading U+FEFF) and a later line are `---`
    (§5.6 steps 2 and 3), insert before that later line the line `docstamp:` and the lines of
-   step 2.3, each followed by the terminator of the first line, with *indent* the U+0020 characters
+   step 2.5, each followed by the terminator of the first line, with *indent* the U+0020 characters
    that start the first line between the two that starts with U+0020 followed by a character other
    than U+0020, a tab or a line terminator, or two U+0020 if there is no such line. The block then
    follows the indentation the frontmatter already uses.
 4. Otherwise let *text* start with the U+FEFF if it has one, then the lines `---`, `docstamp:` and
-   the lines of step 2.3 with *indent* two U+0020, then `---`, each followed by the terminator of
+   the lines of step 2.5 with *indent* two U+0020, then `---`, each followed by the terminator of
    the first line of *text* (CR LF if it is CR LF, else LF), then the rest of *text*.
 5. Let *result* be the text so produced. If `ScanFrontmatter(result)` is *none*, if `ParseBlock`
    (§9.6.2) of it raises, or if the dependencies it declares differ from *dependencies*, raise.
    Otherwise return *result*.
 
 NOTE: Every byte of *text* outside the replaced lines survives: the other frontmatter, the byte
-order mark, the body and the line terminators of every line. The replaced lines are the ones of the
-block, so a comment inside a block without a `hash` is not kept; the marker line, with its own
-comment, is. Step 5 is the safety net: a frontmatter this clause cannot extend with certainty (for
+order mark, the body and the line terminators of every line. An extended block (step 2.4) only gains
+lines, so a declared pattern, a `use` and a comment in it are never lost. A block that is not
+extended is replaced (step 2.5): its declared patterns are kept, since *dependencies* starts with
+them, but a comment inside it is not; the marker line, with its own comment, is. Step 5 is the
+safety net: a frontmatter this clause cannot extend with certainty (for
 example one that is not strict YAML, §9.2, or already has a quoted `"docstamp"` key) is
 refused, never rewritten.
 
@@ -1764,8 +1782,19 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
 6. For each Suggestion of each file whose pattern has no Negation, let its *staleRate* be the
    `[[StaleRate]]` that `Statistics` (§12.5) gives it for the Result with `[[Resolved]]` its
    `[[Files]]`, or *none* if *window* is *none*. The *staleRate* of every other Suggestion is *none*.
-7. If `--write` is given, let *new* be, for each *path* whose *suggestions* is not empty,
-   `? WriteBlock(text, patterns)` (§9.6.5), *patterns* being the patterns of *suggestions* in order.
+7. If `--write` is given, then for each *path* whose *suggestions* is not empty, let *patterns* be:
+   the patterns of *suggestions* in order when *declared* is *none*; otherwise the elements of
+   *declared*, then the patterns of the Suggestions whose *status* is `new`, in order, without:
+   1. a Suggestion with a Negation that matches (§8.3) a file of `Select(P, U)`: written after
+      *declared*, it would deselect a file *declared* selects;
+   2. a Suggestion without a Negation whose pattern *p* is not a literal path (§8.5 NOTE) of a
+      file of *U*, when an
+      exclusion of *P* matches a file of `Select(« p » followed by the patterns with a Negation
+      that item 1 keeps, U)`: written after that exclusion, it would select that file again;
+   3. then, if every pattern so added has a Negation, all of them: an exclusion is proposed only
+      with the inclusions it trims.
+
+   Let *new* be `? WriteBlock(text, patterns)` (§9.6.5).
    Only if no step has raised, replace each *path* whose *new* differs from its text atomically, as
    §9.6.4 step 3 does; it is then *written*, and every other file is not.
 8. Output the Suggestions, *ignored*, *declared* and, with `--write`, which files were *written*
@@ -1777,8 +1806,16 @@ replaced before it replaced.
 
 NOTE: A block that records a `hash` is never overwritten by this command, nor is a configured
 Declaration: both are the result of a decision, and the message says to edit them by hand. A block
-without a `hash` is replaced, so `suggest --write` twice gives the same bytes (§12.6 step 1 never
-reads the block). A file with no Suggestion is not written: a block needs a dependency. The
+without a `hash` keeps every pattern it declares, in its order, and only gains `new` ones after
+them (§9.6.5 steps 2.4 and 2.5): `--write` never drops a declared pattern, never adds one whose
+files *declared* already selects (`covered`), and leaves out an addition that would change what
+the declared patterns select: an exclusion that would deselect one of their files, or a pattern
+other than a literal path that would select again a file a declared exclusion cuts (step 7.2), so
+the written list raises no new `W_SHADOWED_EXCLUSION` (§8.5 step 7). Such a Suggestion keeps its
+*status* `new` in the output; the block is the place to add it by hand. `suggest --write` twice
+gives the same bytes: after the first write every Suggestion is `declared`, `covered` or left out
+again (§12.6 step 1 never reads the block). A file with no Suggestion is not written: a block
+needs a dependency. The
 `staleRate` follows §12.5 with the caveat of its NOTE: dependencies are the ones of `HEAD`, and a
 proposal that names a file the window deleted cannot see it. A file literally named `suggest` is
 reached as `docstamp -- suggest` (§13.2).
@@ -2483,6 +2520,14 @@ The following are not breaking:
   `depends` line of `check` (§14.3) and the wording of the second `next:` line for inline files
   (§14.3.3): text layout of §14.3; and the members `use` and `origins` in `check` and `update`
   (§14.5), new members;
+- `suggest --write` on a block without a `hash` that declares patterns (§9.6.5 steps 2.3 to 2.5,
+  §13.10 step 7): it used to replace the list by the proposal, dropping every declared pattern the
+  proposal lacked; it now keeps the declared patterns first and adds only `new` ones that leave
+  their selection intact, extending a block list line by line and so keeping its `use` and
+  comments. Every command line exits as before: a block that `suggest --write` refused (a `hash`,
+  or `use` in a block it must rewrite) is still refused with `E_USAGE`, and no input is newly
+  refused. It writes only a file that was not stamped, so no Hash, Lockfile or verdict of `check`
+  changes, and `suggest` without `--write` writes nothing, as before;
 - the indent of a block that `suggest --write` adds to an existing frontmatter (§9.6.5 step 3): it
   writes a file that was not stamped, the block declares the same patterns, and §9.6.5 step 5 still
   checks it.

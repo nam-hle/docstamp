@@ -1,0 +1,22 @@
+$ docstamp suggest --write docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern       files  stale  status
+  src/a.ts          1    n/a  new
+  src/sub/b.ts      1    n/a  new
+  only declared  docs/notes.md
+written  docs/guide.md
+--- stderr ---
+--- setup: docs/guide.md ---
+---
+docstamp:
+  use:
+    - sources
+  dependencies:
+    - docs/notes.md
+    - src/a.ts
+    - src/sub/b.ts
+---
+
+The entry point is `src/a.ts`; helpers live in `src/sub/b.ts`.
