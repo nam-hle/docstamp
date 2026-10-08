@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { propose } from '../../src/engine/suggest.ts';
+import { propose, statusOf } from '../../src/engine/suggest.ts';
 
 const tree = (...paths: string[]) => paths.sort();
 const REPO = tree(
@@ -504,5 +504,28 @@ describe('§12.6 Proposal', () => {
         ignored: [],
       });
     });
+  });
+});
+
+describe('§13.10 step 4 status', () => {
+  const files = REPO.filter((path) => path !== 'README.md');
+  const status = (pattern: string, selected: string[], declared: string[]) =>
+    statusOf({ pattern, files: selected }, declared, files);
+  it('declared when the pattern is in the list as written', () => {
+    expect(status('src/a.ts', ['src/a.ts'], ['src/a.ts'])).toBe('declared');
+    expect(status('!src/**/*.test.*', [], ['src', '!src/**/*.test.*'])).toBe('declared');
+  });
+  it('covered when the declared patterns select every file of it', () => {
+    expect(status('src/a.ts', ['src/a.ts'], ['src/**/*.ts'])).toBe('covered');
+    expect(status('src/cli', ['src/cli/args.ts', 'src/cli/run.ts'], ['src'])).toBe('covered');
+  });
+  it('new when one file is not selected, an exclusion cuts it, or the pattern is invalid', () => {
+    expect(status('pkg', ['pkg/args.ts', 'pkg/run.ts'], ['pkg/args.ts'])).toBe('new');
+    expect(status('src/a.ts', ['src/a.ts'], ['src', '!src/a.ts'])).toBe('new');
+    expect(status('src/a.ts', ['src/a.ts'], ['src/[', 'docs'])).toBe('new');
+  });
+  it('an exclusion and a pattern with no files are never covered', () => {
+    expect(status('!pkg/**/*.test.*', ['pkg/run.test.ts'], ['pkg'])).toBe('new');
+    expect(status('src', [], ['src/**'])).toBe('new');
   });
 });

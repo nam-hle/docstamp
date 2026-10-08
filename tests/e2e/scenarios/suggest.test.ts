@@ -67,14 +67,19 @@ scenario(
         {
           file: OVERVIEW,
           suggestions: [
-            { pattern: 'docs/guide/setup.md', resolvedCount: 1, staleRate: 0.2 },
-            { pattern: 'scripts/*.mjs', resolvedCount: 2, staleRate: 0.2 },
-            { pattern: 'src/cli', resolvedCount: 3, staleRate: 0.2 },
-            { pattern: 'src/engine', resolvedCount: 3, staleRate: 0.2 },
-            { pattern: 'src/util', resolvedCount: 4, staleRate: 0 },
-            { pattern: 'tests/unit', resolvedCount: 1, staleRate: 0 },
-            { pattern: '!src/engine/**/*.test.*', resolvedCount: 1, staleRate: null },
-            { pattern: '!src/engine/**/__tests__', resolvedCount: 1, staleRate: null },
+            { pattern: 'docs/guide/setup.md', resolvedCount: 1, staleRate: 0.2, status: null },
+            { pattern: 'scripts/*.mjs', resolvedCount: 2, staleRate: 0.2, status: null },
+            { pattern: 'src/cli', resolvedCount: 3, staleRate: 0.2, status: null },
+            { pattern: 'src/engine', resolvedCount: 3, staleRate: 0.2, status: null },
+            { pattern: 'src/util', resolvedCount: 4, staleRate: 0, status: null },
+            { pattern: 'tests/unit', resolvedCount: 1, staleRate: 0, status: null },
+            { pattern: '!src/engine/**/*.test.*', resolvedCount: 1, staleRate: null, status: null },
+            {
+              pattern: '!src/engine/**/__tests__',
+              resolvedCount: 1,
+              staleRate: null,
+              status: null,
+            },
           ],
           ignored: ['build/output.js'],
           declared: null,
@@ -585,5 +590,36 @@ scenario(
     expect(written.stdout).toContain('  only declared  old/dir\n');
     const again = await repo.run(['suggest', '--json', OVERVIEW], { snapshot: false });
     expect(again.json().files[0].declared).toEqual(patterns(again.json()));
+  },
+);
+
+const GUIDE =
+  '---\ndocstamp:\n  dependencies:\n    - "src/**/*.ts"\n---\n\n# Guide\n\n' +
+  'The entry point is `src/a.ts`; helpers live in `src/sub/b.ts`.\n';
+function guideRepo(repo: Repo, guide = GUIDE): void {
+  repo.write('src/a.ts', 'export const a = 1;\n');
+  repo.write('src/sub/b.ts', 'export const b = 2;\n');
+  repo.write('docs/guide.md', guide);
+  repo.commit('init');
+}
+
+scenario(
+  '§13.10 step 4 a proposal that the declared patterns already select is covered',
+  async (repo) => {
+    guideRepo(repo);
+    const text = await repo.run(['suggest', 'docs/guide.md'], { show: ['docs/guide.md'] });
+    expect(text.exit).toBe(0);
+    expect(text.stdout).toBe(
+      'suggest docs/guide.md\n' +
+        '  pattern       files  stale  status\n' +
+        '  src/a.ts          1    n/a  covered\n' +
+        '  src/sub/b.ts      1    n/a  covered\n' +
+        '  only declared  src/**/*.ts\n',
+    );
+    const json = await repo.run(['suggest', '--json', 'docs/guide.md']);
+    expect(json.json().files[0].suggestions.map((s: { status: string }) => s.status)).toEqual([
+      'covered',
+      'covered',
+    ]);
   },
 );

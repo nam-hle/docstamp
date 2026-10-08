@@ -1,5 +1,6 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import type { Diagnostic } from '../core/types.ts';
+import type { Status } from '../engine/suggest.ts';
 import { diagJson, obj, render, type Json } from './json.ts';
 import { shown } from './text.ts';
 
@@ -8,6 +9,8 @@ interface SuggestRow {
   readonly pattern: string;
   readonly resolvedCount: number;
   readonly staleRate: number | null;
+  // SPEC §13.10 step 4: null when the file has no declaration
+  readonly status: Status | null;
 }
 
 export interface SuggestEntry {
@@ -29,7 +32,7 @@ function table(rows: readonly SuggestRow[], declared: readonly string[] | null):
     shown(row.pattern),
     excludes(row) ? `-${row.resolvedCount}` : String(row.resolvedCount),
     excludes(row) ? '' : row.staleRate === null ? 'n/a' : fixed4(row.staleRate),
-    ...(declared === null ? [] : [declared.includes(row.pattern) ? 'declared' : 'new']),
+    ...(declared === null ? [] : [row.status ?? 'new']),
   ]);
   const header = ['pattern', 'files', 'stale', ...(declared === null ? [] : ['status'])];
   const all = [header, ...cells];
@@ -84,6 +87,7 @@ export function suggestJsonText(doc: SuggestJsonDoc): string {
             ['pattern', row.pattern],
             ['resolvedCount', row.resolvedCount],
             ['staleRate', row.staleRate === null ? null : row.staleRate / 10000],
+            ['status', row.status],
           ]),
         ),
       ],

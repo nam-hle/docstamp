@@ -4,7 +4,7 @@ import { readConfig } from '../config/read-config.ts';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import type { Diagnostic } from '../core/types.ts';
-import { propose, type Suggestion } from '../engine/suggest.ts';
+import { propose, statusOf, type Suggestion } from '../engine/suggest.ts';
 import { statistics } from '../engine/stats.ts';
 import { replay } from '../history/replay.ts';
 import { parseBlock } from '../inline/block.ts';
@@ -127,15 +127,18 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
   }
   return names.map((path) => {
     const { suggestions, ignored } = proposals.get(path)!;
+    const declared = declaredOf(path);
+    const others = universe.paths.filter((p) => p !== path);
     return {
       file: path,
       suggestions: suggestions.map((s) => ({
         pattern: s.pattern,
         resolvedCount: s.files.length,
         staleRate: s.pattern.startsWith('!') ? null : (rates.get(`${path}\0${s.pattern}`) ?? null),
+        status: declared === null ? null : statusOf(s, declared, others),
       })),
       ignored,
-      declared: declaredOf(path),
+      declared,
       written: rewritten.has(path),
     };
   });

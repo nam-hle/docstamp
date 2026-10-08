@@ -1753,7 +1753,12 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
    its text is not *none*, the `[[Dependencies]]` of the Declaration that `ParseBlock` (§9.6.2)
    returns, even when it raises (so « » when they are not a List of Strings); otherwise *none*.
    *declared* is read from the text before step 7 writes, never expands Presets (§8.6), and
-   raises nothing.
+   raises nothing. When *declared* is not *none*, let *selected* be `Select(P, U)` (§8.4), *P*
+   being the elements of *declared* that are valid Patterns (§8.1) in order and *U* the Universe
+   without *path*, and give each Suggestion a *status*: `declared` if its pattern is in *declared*
+   (String equality, §3.2); otherwise `covered` if its pattern has no Negation, its `[[Files]]` is
+   not empty and every one of them is in *selected*; otherwise `new`. When *declared* is *none*,
+   no Suggestion has a *status*.
 5. Let *window* be `Replay(root, days 30, now)` (§12.4), *now* being the wall-clock time; if it
    raises, or the Window has no Commit, let *window* be *none*: no Diagnostic is output for it.
 6. For each Suggestion of each file whose pattern has no Negation, let its *staleRate* be the
@@ -1779,11 +1784,12 @@ proposal that names a file the window deleted cannot see it. A file literally na
 reached as `docstamp -- suggest` (§13.2).
 
 NOTE: *declared* makes a proposal for a file that already has a declaration read as a difference:
-a Suggestion whose pattern is in *declared* (String equality, §3.2) is already declared, any other
-is new, and a pattern of *declared* that no Suggestion has is only declared: the doc no longer
-mentions it, or mentions it in another form.
-Patterns are compared as written, so `src` and `src/**` differ even when they select the same
-files.
+a Suggestion whose pattern is in *declared* (String equality, §3.2) is already declared, one whose
+files the declared patterns already select is covered, any other is new, and a pattern of
+*declared* that no Suggestion has is only declared: the doc no longer mentions it, or mentions it in
+another form. Patterns are compared as written for `declared`, so `src` and `src/**` differ; `covered`
+compares the files they select, so a proposed `src/a.ts` is covered by a declared `src/**/*.ts`.
+An exclusion is never `covered`.
 
 ## 14 Output
 
@@ -2157,8 +2163,13 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
       {
         "file": "README.md",
         "suggestions": [
-          { "pattern": "src/cli", "resolvedCount": 12, "staleRate": 0.1234 },
-          { "pattern": "!src/cli/**/*.test.*", "resolvedCount": 3, "staleRate": null }
+          { "pattern": "src/cli", "resolvedCount": 12, "staleRate": 0.1234, "status": null },
+          {
+            "pattern": "!src/cli/**/*.test.*",
+            "resolvedCount": 3,
+            "staleRate": null,
+            "status": null
+          }
         ],
         "ignored": ["dist/index.js"],
         "declared": null,
@@ -2172,7 +2183,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   It has no `summary`, `state`, `reasons` or `changes`. `files` holds each named file in path order,
   with `suggestions` the Suggestions of §12.6 in their order: `pattern`, `resolvedCount` the number
   of `[[Files]]`, and `staleRate` the Number of §13.10 step 6 (as `stats` writes `staleRate`, §14.5
-  above) or `null`. `ignored` is the List of §12.6, `[]` when there is none. `declared` follows
+  above) or `null`, then `status`, the *status* of §13.10 step 4 (`"declared"`, `"covered"` or
+  `"new"`), or `null` when `declared` is `null`. `ignored` is the List of §12.6, `[]` when there is none. `declared` follows
   `ignored`: the List *declared* of §13.10 step 4, in its order, or `null` when it is *none*. With `--write` each
   element adds `"written": true|false` after `diagnostics`. The `diagnostics` of a file are always
   `[]`, kept for the shape of the other modes; the top-level `diagnostics` hold the raised
@@ -2277,8 +2289,8 @@ single line `  no paths found`. Then one line `  ignored  <path>` per *ignored* 
 in path order.
 
 When *declared* (§13.10 step 4) is not *none*, the table has a fourth column, `status`, padded on
-the right like `pattern` (a row has still no trailing space): `declared` for a Suggestion whose
-pattern is in *declared*, else `new`. Then, after the `ignored` lines, one line
+the right like `pattern` (a row has still no trailing space): the *status* of the Suggestion
+(§13.10 step 4), `declared`, `covered` or `new`. Then, after the `ignored` lines, one line
 `  only declared  <pattern>` per distinct pattern of *declared* that no Suggestion has, in the
 order of *declared*, written as in §14.2:
 
@@ -2416,6 +2428,9 @@ The following are not breaking:
   §14.9 for a file that already has a declaration, and the member `declared` of §14.5. A file
   without one prints exactly what it printed; the proposal, `--write` and the exit code are
   unchanged;
+- the *status* `covered` of `suggest` (§13.10 step 4): a value of the `status` column of §14.9 for
+  a Suggestion whose files the declared patterns already select, which was `new`, and the member
+  `status` of a Suggestion in §14.5, a new member. The proposal and the exit code are unchanged;
 - the legend line of `stats` in text mode (§14.8): a fixed line after the `window:` line; the rows,
   the `window:` line and `--json` are unchanged, and `stats` still exits 0;
 - `[[Edited]]` (§5.4, §12.3 step 1.4): the edited line and the summary line of §14.3, and the

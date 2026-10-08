@@ -190,3 +190,21 @@ export function propose(
   ];
   return { suggestions, ignored: sortPaths([...ignored]) };
 }
+
+export type Status = 'declared' | 'covered' | 'new';
+
+// SPEC §13.10 step 4: the valid patterns of the declared list, as parsed
+const validPatterns = (patterns: readonly string[]): ParsedPattern[] =>
+  patterns.flatMap((source) => parsePattern(source) ?? []);
+
+// SPEC §13.10 step 4: `files` is the Universe without the doc
+export function statusOf(
+  suggestion: Suggestion,
+  declared: readonly string[],
+  files: readonly string[],
+): Status {
+  if (declared.includes(suggestion.pattern)) return 'declared';
+  if (suggestion.pattern.startsWith('!') || suggestion.files.length === 0) return 'new';
+  const selected = new Set(select(validPatterns(declared), files));
+  return suggestion.files.every((path) => selected.has(path)) ? 'covered' : 'new';
+}

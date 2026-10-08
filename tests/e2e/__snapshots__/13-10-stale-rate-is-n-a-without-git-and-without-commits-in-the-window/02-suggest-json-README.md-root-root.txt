@@ -12,7 +12,8 @@ exit: 0
         {
           "pattern": "docs/guide",
           "resolvedCount": 1,
-          "staleRate": null
+          "staleRate": null,
+          "status": null
         }
       ],
       "ignored": [],

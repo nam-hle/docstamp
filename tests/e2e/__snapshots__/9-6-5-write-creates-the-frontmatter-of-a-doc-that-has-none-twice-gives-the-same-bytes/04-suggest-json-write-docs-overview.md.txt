@@ -12,42 +12,50 @@ exit: 0
         {
           "pattern": "docs/guide/setup.md",
           "resolvedCount": 1,
-          "staleRate": null
+          "staleRate": null,
+          "status": "declared"
         },
         {
           "pattern": "scripts/*.mjs",
           "resolvedCount": 2,
-          "staleRate": null
+          "staleRate": null,
+          "status": "declared"
         },
         {
           "pattern": "src/cli",
           "resolvedCount": 3,
-          "staleRate": null
+          "staleRate": null,
+          "status": "declared"
         },
         {
           "pattern": "src/engine",
           "resolvedCount": 3,
-          "staleRate": null
+          "staleRate": null,
+          "status": "declared"
         },
         {
           "pattern": "src/util",
           "resolvedCount": 4,
-          "staleRate": null
+          "staleRate": null,
+          "status": "declared"
         },
         {
           "pattern": "tests/unit",
           "resolvedCount": 1,
-          "staleRate": null
+          "staleRate": null,
+          "status": "declared"
         },
         {
           "pattern": "!src/engine/**/*.test.*",
           "resolvedCount": 1,
-          "staleRate": null
+          "staleRate": null,
+          "status": "declared"
         },
         {
           "pattern": "!src/engine/**/__tests__",
           "resolvedCount": 1,
-          "staleRate": null
+          "staleRate": null,
+          "status": "declared"
         }
       ],
       "ignored": [
