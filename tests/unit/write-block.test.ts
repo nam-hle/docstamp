@@ -85,22 +85,72 @@ describe('§9.6.5 Writing a Block', () => {
     });
   });
 
-  describe('step 2 a block without a hash', () => {
-    it('replaces the lines of the block and nothing else', () => {
+  describe('step 2.4 a block without a hash that declares patterns is extended', () => {
+    it('keeps every declared pattern first and appends the others after the last item', () => {
       const text =
-        '---\ntitle: Doc\ndocstamp: # why\n  dependencies: [old]\nauthor: me\n---\nbody\n';
+        '---\ntitle: Doc\ndocstamp: # why\n  dependencies:\n    - "src/**/*.ts"\nauthor: me\n---\nbody\n';
+      expect(writeBlock('d.md', text, ['src/**/*.ts', 'docs/SPEC.md', '!src/x.ts'])).toBe(
+        '---\ntitle: Doc\ndocstamp: # why\n  dependencies:\n    - "src/**/*.ts"\n' +
+          '    - docs/SPEC.md\n    - "!src/x.ts"\nauthor: me\n---\nbody\n',
+      );
+    });
+    it('keeps use, comments, blank lines and the item indent of the block', () => {
+      const text =
+        '---\ndocstamp:\n  use:\n    - tests\n  dependencies:\n  # main\n  - src\n\n' +
+        '  # why\n  - lib\n---\n';
+      expect(writeBlock('d.md', text, ['src', 'lib', 'docs'])).toBe(
+        '---\ndocstamp:\n  use:\n    - tests\n  dependencies:\n  # main\n  - src\n\n' +
+          '  # why\n  - lib\n  - docs\n---\n',
+      );
+    });
+    it('appends after the continuation lines of the last item', () => {
+      const text = '---\ndocstamp:\n  dependencies:\n    - "a\n      b"\n---\n';
+      expect(writeBlock('d.md', text, ['a b', 'src'])).toBe(
+        '---\ndocstamp:\n  dependencies:\n    - "a\n      b"\n    - src\n---\n',
+      );
+    });
+    it('keeps CR LF and the byte order mark', () => {
+      const text = '﻿---\r\ndocstamp:\r\n  dependencies:\r\n    - old\r\n---\r\nbody\r\n';
+      expect(writeBlock('d.md', text, ['old', 'src'])).toBe(
+        '﻿---\r\ndocstamp:\r\n  dependencies:\r\n    - old\r\n    - src\r\n---\r\nbody\r\n',
+      );
+    });
+    it('changes nothing when nothing is added', () => {
+      const text = '---\ndocstamp:\n  dependencies:\n    - old # kept\n---\n';
+      expect(writeBlock('d.md', text, ['old'])).toBe(text);
+    });
+  });
+
+  describe('step 2.5 a block that cannot be extended is replaced, its patterns first', () => {
+    it('a flow list', () => {
+      const text = '---\ndocstamp:\n  dependencies: [old] # gone\nauthor: me\n---\n';
+      expect(writeBlock('d.md', text, ['old', 'src'])).toBe(
+        '---\ndocstamp:\n  dependencies:\n    - old\n    - src\nauthor: me\n---\n',
+      );
+    });
+    it('a block with an unknown key', () => {
+      const text = '---\ndocstamp:\n  dependencies:\n    - old\n  note: x\n---\n';
+      expect(writeBlock('d.md', text, ['old', 'src'])).toBe(
+        '---\ndocstamp:\n  dependencies:\n    - old\n    - src\n---\n',
+      );
+    });
+  });
+
+  describe('step 2.5 a block without a hash that declares no pattern is replaced', () => {
+    it('replaces the lines of the block and nothing else', () => {
+      const text = '---\ntitle: Doc\ndocstamp: # why\n  dependencies: []\nauthor: me\n---\nbody\n';
       expect(writeBlock('d.md', text, DEPS)).toBe(
         `---\ntitle: Doc\ndocstamp: # why\n  dependencies:\n${DEPS.map((d) => `    - ${d.startsWith('!') ? JSON.stringify(d) : d}\n`).join('')}author: me\n---\nbody\n`,
       );
     });
     it('keeps the indentation of the block and blank lines after it', () => {
-      const text = '---\ndocstamp:\n    dependencies:\n        - old\n\n---\n';
+      const text = '---\ndocstamp:\n    dependencies: 3\n\n---\n';
       expect(writeBlock('d.md', text, ['src'])).toBe(
         '---\ndocstamp:\n    dependencies:\n      - src\n\n---\n',
       );
     });
     it('keeps CR LF and the byte order mark', () => {
-      const text = '﻿---\r\ndocstamp:\r\n  dependencies: [old]\r\n---\r\nbody\r\n';
+      const text = '﻿---\r\ndocstamp:\r\n  dependencies: []\r\n---\r\nbody\r\n';
       expect(writeBlock('d.md', text, DEPS)).toBe(`﻿---\r\n${BLOCK('\r\n')}---\r\nbody\r\n`);
     });
     it('fills an empty block', () => {
@@ -108,6 +158,9 @@ describe('§9.6.5 Writing a Block', () => {
         '---\ndocstamp:\n  dependencies:\n    - src\n---\nb\n',
       );
     });
+  });
+
+  describe('step 2', () => {
     it('is idempotent', () => {
       const once = writeBlock('d.md', '# T\n', DEPS);
       expect(writeBlock('d.md', once, DEPS)).toBe(once);
@@ -115,11 +168,7 @@ describe('§9.6.5 Writing a Block', () => {
       expect(writeBlock('d.md', crlf, DEPS)).toBe(crlf);
     });
     it('never writes a hash line', () => {
-      for (const text of [
-        'x\n',
-        '---\na: 1\n---\n',
-        '---\ndocstamp:\n  dependencies: [a]\n---\n',
-      ]) {
+      for (const text of ['x\n', '---\na: 1\n---\n', '---\ndocstamp:\n  dependencies: []\n---\n']) {
         expect(scanFrontmatter(writeBlock('d.md', text, DEPS))!.hashLines).toEqual([]);
       }
     });
@@ -137,10 +186,19 @@ describe('§9.6.5 Writing a Block', () => {
         'E_USAGE',
       );
     });
-    it('a block that uses presets', () => {
-      const refused = refusal('---\ndocstamp:\n  dependencies: [a]\n  use: [tests]\n---\n');
+    it('a block that uses presets and declares no pattern', () => {
+      const refused = refusal('---\ndocstamp:\n  dependencies: []\n  use: [tests]\n---\n');
       expect([refused.code, refused.subject]).toEqual(['E_USAGE', 'd.md']);
       expect(refused.message).toContain('by hand');
+    });
+    it('a proposal that does not start with the declared patterns', () => {
+      const text = '---\ndocstamp:\n  dependencies:\n    - old\n---\n';
+      expect(refusal(text, ['src', 'old']).message).toContain('by hand');
+      expect(refusal(text, ['src']).message).toContain('by hand');
+    });
+    it('a block with use that has to be rewritten', () => {
+      const text = '---\ndocstamp:\n  dependencies: [old]\n  use: [tests]\n---\n';
+      expect(refusal(text, ['old', 'src']).message).toContain('by hand');
     });
     it('a block that is not a block mapping', () => {
       expect(refusal('---\ndocstamp: {dependencies: [a]}\n---\n').message).toContain('by hand');

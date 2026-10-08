@@ -155,10 +155,41 @@ export function propose(
     const covering = roots.find((dir) => path.startsWith(`${dir}/`));
     if (covering !== undefined && !cutBy(covering, path)) kept.delete(path);
   }
+  // §12.6 step 9: a glob that selects test files gets the exclusions of its literal scope
+  const shapeOf = (scope: string, shape: string) => `!${scope === '' ? '' : `${scope}/`}${shape}`;
+  const scoped = roots.flatMap((dir) =>
+    TEST_SHAPES.map((shape, rank) => ({ scope: dir, rank, source: shapeOf(dir, shape) })).filter(
+      ({ source }) => exclusions.get(dir)!.includes(source),
+    ),
+  );
+  for (const glob of globs) {
+    const segments = glob.split('/');
+    if (segments.some((segment) => TEST_SEGMENTS.has(segment))) continue;
+    const scope = segments
+      .slice(
+        0,
+        segments.findIndex((s) => GLOB_CHARS.test(s)),
+      )
+      .join('/');
+    const selected = select([parsePattern(glob)!], files);
+    const sources = TEST_SHAPES.map((shape, rank) => ({
+      scope,
+      rank,
+      source: shapeOf(scope, shape),
+    }))
+      .map((entry) => ({ ...entry, cut: parsePattern(entry.source)! }))
+      .filter(({ cut }) => selected.some((path) => patternMatches(cut, path)));
+    const trimmed = selected.some((path) => !sources.some(({ cut }) => patternMatches(cut, path)));
+    if (trimmed)
+      scoped.push(...sources.map(({ scope: s, rank, source }) => ({ scope: s, rank, source })));
+  }
 
   // §12.6 step 10
+  const ordered = scoped.sort((a, b) => comparePaths(a.scope, b.scope) || a.rank - b.rank);
+  const cuts = [...new Set(ordered.map(({ source }) => source))];
+  const negations = cuts.map((cut) => parsePattern(cut)!);
   const reincluded = sortPaths(
-    [...kept].filter((path) => roots.some((dir) => path.startsWith(`${dir}/`))),
+    [...kept].filter((path) => negations.some((cut) => patternMatches(cut, path))),
   );
   const base = [...new Set([...kept, ...roots, ...globs])]
     .filter((source) => !reincluded.includes(source))
@@ -170,8 +201,6 @@ export function propose(
   };
   const subsumed = (p: string): boolean =>
     base.some((q) => q !== p && within(p, q) && (!within(q, p) || comparePaths(q, p) < 0));
-  const cuts = [...roots].sort(comparePaths).flatMap((dir) => exclusions.get(dir)!);
-  const negations = cuts.map((cut) => parsePattern(cut)!);
 
   // §12.6 step 11
   const inclusions = base
@@ -189,4 +218,53 @@ export function propose(
     ...reincluded.map((path) => ({ pattern: path, files: [path] })),
   ];
   return { suggestions, ignored: sortPaths([...ignored]) };
+}
+
+export type Status = 'declared' | 'covered' | 'new';
+
+// SPEC §13.10 step 4: the valid patterns of the declared list, as parsed
+const validPatterns = (patterns: readonly string[]): ParsedPattern[] =>
+  patterns.flatMap((source) => parsePattern(source) ?? []);
+
+// SPEC §13.10 step 4: `files` is the Universe without the doc
+export function statusOf(
+  suggestion: Suggestion,
+  declared: readonly string[],
+  files: readonly string[],
+): Status {
+  if (declared.includes(suggestion.pattern)) return 'declared';
+  if (suggestion.pattern.startsWith('!') || suggestion.files.length === 0) return 'new';
+  const selected = new Set(select(validPatterns(declared), files));
+  return suggestion.files.every((path) => selected.has(path)) ? 'covered' : 'new';
+}
+
+// SPEC §13.10 step 7: the declared patterns, then the new ones that leave their selection intact
+export function writtenPatterns(
+  suggestions: readonly Suggestion[],
+  statuses: readonly (Status | null)[],
+  declared: readonly string[] | null,
+  files: readonly string[],
+): string[] {
+  if (declared === null) return suggestions.map((s) => s.pattern);
+  const own = validPatterns(declared);
+  const selected = select(own, files);
+  const exclusions = own.filter((pattern) => pattern.negated);
+  const fresh = suggestions.filter((_, index) => statuses[index] === 'new');
+  const cuts = fresh.filter((s) => {
+    if (!s.pattern.startsWith('!')) return false;
+    const cut = parsePattern(s.pattern)!;
+    return !selected.some((path) => patternMatches(cut, path));
+  });
+  const trims = cuts.map((s) => parsePattern(s.pattern)!);
+  const inclusions = fresh.filter((s) => {
+    if (s.pattern.startsWith('!')) return false;
+    const pattern = parsePattern(s.pattern)!;
+    if (literalPath(pattern) === s.pattern && files.includes(s.pattern)) return true;
+    return !select([pattern, ...trims], files).some((path) =>
+      exclusions.some((exclusion) => patternMatches(exclusion, path)),
+    );
+  });
+  if (inclusions.length === 0) return [...declared];
+  const kept = new Set([...cuts, ...inclusions]);
+  return [...declared, ...fresh.filter((s) => kept.has(s)).map((s) => s.pattern)];
 }

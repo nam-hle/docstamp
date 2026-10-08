@@ -161,7 +161,7 @@ A Markdown doc may declare its dependencies in its own frontmatter (SPEC §5.6, 
 command treats it like a configured file. To change that behavior, touch `src/inline/`
 (`frontmatter.ts` is the lexical scan and the stamp rewrite, `block.ts` the strict parse,
 `read-inline.ts` the discovery and the atomic write, `write-block.ts` the block `suggest --write`
-adds), `src/cli/workspace.ts` (merge with `files`, duplicate check) and the `marked` hash rule in
+adds or extends), `src/cli/workspace.ts` (merge with `files`, duplicate check) and the `marked` hash rule in
 `src/hash/hash.ts`. Tests: `tests/unit/inline.test.ts`, `tests/e2e/scenarios/inline.test.ts` on the
 `inline-docs` fixture.
 
@@ -169,7 +169,8 @@ adds), `src/cli/workspace.ts` (merge with `files`, duplicate check) and the `mar
 
 `docstamp suggest` (SPEC §12.6, §13.10) proposes a doc's `dependencies` from the paths it mentions.
 The extraction is `src/engine/mentions.ts` (text to normalized candidates) and
-`src/engine/suggest.ts` (classification, the generic-file list, collapse, test exclusions; both
+`src/engine/suggest.ts` (classification, the generic-file list, collapse, test exclusions, the
+`declared`/`covered`/`new` status and the list `--write` writes after the declared patterns; both
 pure), the command is `src/cli/suggest.ts` and its output `src/report/suggest.ts`. Tests:
 `tests/unit/suggest.test.ts`, `tests/unit/write-block.test.ts`,
 `tests/e2e/scenarios/suggest.test.ts` on the `suggest` fixture. Every rule is in the spec, so a

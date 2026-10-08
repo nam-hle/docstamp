@@ -162,7 +162,12 @@ export function readConfig(root: string): {
     return { config, attached: [], present: false };
   }
   if (!isMap(top)) throw new Raised([diag('E_CONFIG')]);
-  if (top.get('version') !== 2) throw new Raised([diag('E_CONFIG_VERSION')]);
+  if (top.get('version') !== 2) {
+    // §9.3 step 4: name the migration only when an old key shows a version 1 file
+    const fresh = !top.has('version') && !top.has('dependents');
+    const message = fresh ? 'Add "version: 2" to the configuration file.' : undefined;
+    throw new Raised([diag('E_CONFIG_VERSION', optional(message))]);
+  }
 
   const fatal: Diagnostic[] = [];
   const attached: Diagnostic[] = [];
@@ -193,7 +198,18 @@ export function readConfig(root: string): {
   const presets = collectPresets(top.get('presets'), fatal);
   const declarations: Declaration[] = [];
   const files = top.get('files');
-  if (!isMap(files)) {
+  if (files === undefined) {
+    // §9.3 step 7: a near miss of "files" is reported once more as E_UNKNOWN_KEY
+    const typo = [...top.keys()].find(
+      (key) => !TOP_KEYS.includes(key) && closestKey(key, TOP_KEYS) === 'files',
+    );
+    const message =
+      typo === undefined
+        ? '"files" is required; write "files: {}" for none.'
+        : `"files" is required; the unknown key "${typo}" (E_UNKNOWN_KEY) looks like it: ` +
+          'did you mean "files"?';
+    fatal.push(diag('E_CONFIG', { subject: 'files', message }));
+  } else if (!isMap(files)) {
     fatal.push(diag('E_CONFIG', { subject: 'files' }));
   } else {
     for (const [key, value] of files) {

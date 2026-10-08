@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { propose } from '../../src/engine/suggest.ts';
+import { propose, statusOf, writtenPatterns } from '../../src/engine/suggest.ts';
 
 const tree = (...paths: string[]) => paths.sort();
 const REPO = tree(
@@ -504,5 +504,108 @@ describe('§12.6 Proposal', () => {
         ignored: [],
       });
     });
+  });
+});
+
+describe('§13.10 step 4 status', () => {
+  const files = REPO.filter((path) => path !== 'README.md');
+  const status = (pattern: string, selected: string[], declared: string[]) =>
+    statusOf({ pattern, files: selected }, declared, files);
+  it('declared when the pattern is in the list as written', () => {
+    expect(status('src/a.ts', ['src/a.ts'], ['src/a.ts'])).toBe('declared');
+    expect(status('!src/**/*.test.*', [], ['src', '!src/**/*.test.*'])).toBe('declared');
+  });
+  it('covered when the declared patterns select every file of it', () => {
+    expect(status('src/a.ts', ['src/a.ts'], ['src/**/*.ts'])).toBe('covered');
+    expect(status('src/cli', ['src/cli/args.ts', 'src/cli/run.ts'], ['src'])).toBe('covered');
+  });
+  it('new when one file is not selected, an exclusion cuts it, or the pattern is invalid', () => {
+    expect(status('pkg', ['pkg/args.ts', 'pkg/run.ts'], ['pkg/args.ts'])).toBe('new');
+    expect(status('src/a.ts', ['src/a.ts'], ['src', '!src/a.ts'])).toBe('new');
+    expect(status('src/a.ts', ['src/a.ts'], ['src/[', 'docs'])).toBe('new');
+  });
+  it('an exclusion and a pattern with no files are never covered', () => {
+    expect(status('!pkg/**/*.test.*', ['pkg/run.test.ts'], ['pkg'])).toBe('new');
+    expect(status('src', [], ['src/**'])).toBe('new');
+  });
+});
+
+describe('§13.10 step 7 written patterns', () => {
+  const files = REPO.filter((path) => path !== 'README.md');
+  const written = (declared: string[] | null, proposed: Array<[string, string[]]>) => {
+    const suggestions = proposed.map(([pattern, selected]) => ({ pattern, files: selected }));
+    const statuses = suggestions.map((s) =>
+      declared === null ? null : statusOf(s, declared, files),
+    );
+    return writtenPatterns(suggestions, statuses, declared, files);
+  };
+  it('a file without a declaration gets the whole proposal', () => {
+    expect(written(null, [['src/a.ts', ['src/a.ts']]])).toEqual(['src/a.ts']);
+  });
+  it('keeps every declared pattern first and adds only the new ones', () => {
+    expect(
+      written(
+        ['src/**/*.ts', 'old'],
+        [
+          ['src/a.ts', ['src/a.ts']],
+          ['docs/SPEC.md', ['docs/SPEC.md']],
+          ['old', []],
+        ],
+      ),
+    ).toEqual(['src/**/*.ts', 'old', 'docs/SPEC.md']);
+  });
+  it('adds nothing when everything is covered, or only exclusions are new', () => {
+    expect(written(['src'], [['src/a.ts', ['src/a.ts']]])).toEqual(['src']);
+    expect(written(['src'], [['!scripts/**/x.*', []]])).toEqual(['src']);
+  });
+  it('leaves out an exclusion that would deselect a declared file', () => {
+    expect(
+      written(
+        ['pkg/run.test.ts'],
+        [
+          ['pkg', ['pkg/args.ts', 'pkg/run.ts']],
+          ['!pkg/**/*.test.*', ['pkg/run.test.ts']],
+        ],
+      ),
+    ).toEqual(['pkg/run.test.ts', 'pkg']);
+  });
+  it('leaves out a glob that would select a declared exclusion again, never a literal file', () => {
+    expect(
+      written(
+        ['pkg', '!pkg/run.test.ts'],
+        [
+          ['**/run*.ts', ['pkg/run.test.ts', 'pkg/run.ts', 'src/cli/run.ts']],
+          ['pkg/run.test.ts', ['pkg/run.test.ts']],
+          ['scripts', ['scripts/build.mjs', 'scripts/lint.mjs']],
+        ],
+      ),
+    ).toEqual(['pkg', '!pkg/run.test.ts', 'pkg/run.test.ts', 'scripts']);
+  });
+});
+
+describe('§12.6 step 9 test exclusions of a glob', () => {
+  it('a glob that selects test files gets the exclusions of its literal scope', () => {
+    expect(patterns('Code in `pkg/*.ts`.\n')).toEqual(['pkg/*.ts', '!pkg/**/*.test.*']);
+  });
+  it('a glob with no literal scope gets them for the whole repository', () => {
+    expect(patterns('Code in `**/*.ts`.\n')).toEqual(['**/*.ts', '!**/*.test.*', '!**/__tests__']);
+  });
+  it('a test file the doc names is listed after the exclusions', () => {
+    expect(patterns('Code in `**/*.ts`; see `pkg/run.test.ts`.\n')).toEqual([
+      '**/*.ts',
+      '!**/*.test.*',
+      '!**/__tests__',
+      'pkg/run.test.ts',
+    ]);
+  });
+  it('none for a glob that selects only test files or names a test directory', () => {
+    expect(patterns('Tests: `**/*.test.ts`.\n')).toEqual(['**/*.test.ts']);
+    expect(patterns('Tests: `tests/**/*.ts`.\n')).toEqual(['tests/**/*.ts']);
+  });
+  it('the same exclusion from a directory and a glob is written once', () => {
+    const universe = tree('README.md', 'pkg/a.ts', 'pkg/b.ts', 'pkg/c.ts', 'pkg/c.test.ts');
+    expect(
+      patterns('See `pkg/a.ts`, `pkg/b.ts`, `pkg/c.ts` and `pkg/*.ts`.\n', { universe }),
+    ).toEqual(['pkg', '!pkg/**/*.test.*']);
   });
 });

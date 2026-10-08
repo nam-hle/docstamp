@@ -1,0 +1,21 @@
+# an added file
+$ docstamp suggest --write docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern   files  stale  status
+  lib/x.ts      1    n/a  new
+  src/a.ts      1    n/a  covered
+  only declared  src
+  only declared  !src/**/*.test.*
+written  docs/guide.md
+--- stderr ---
+--- setup: docs/guide.md ---
+---
+docstamp:
+  dependencies:
+    - src
+    - "!src/**/*.test.*"
+    - lib/x.ts
+---
+Code in `src/a.ts` and `lib/x.ts`.

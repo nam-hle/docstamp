@@ -1,0 +1,19 @@
+$ docstamp suggest docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern       files  stale  status
+  src/a.ts          1    n/a  covered
+  src/sub/b.ts      1    n/a  covered
+  only declared  src/**/*.ts
+--- stderr ---
+--- setup: docs/guide.md ---
+---
+docstamp:
+  dependencies:
+    - "src/**/*.ts"
+---
+
+# Guide
+
+The entry point is `src/a.ts`; helpers live in `src/sub/b.ts`.

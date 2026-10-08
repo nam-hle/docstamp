@@ -1,0 +1,13 @@
+file: docs/guide.md
+--- content ---
+---
+docstamp:
+  use:
+    - sources
+  dependencies:
+    - docs/notes.md
+    - src/a.ts
+    - src/sub/b.ts
+---
+
+The entry point is `src/a.ts`; helpers live in `src/sub/b.ts`.

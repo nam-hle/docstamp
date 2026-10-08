@@ -695,7 +695,8 @@ raises:
 3. Let *value* be the normalized value of that file: under §9.2 for `docstamp.yaml`, under §9.5
    for any other name. On failure, or if *value* is not a Map, raise « `E_CONFIG` ».
 4. If the key `version` is absent, or its value is not the Number 2, raise « `E_CONFIG_VERSION` »,
-   whose message names the migration from version 1.
+   whose message names the migration from version 1 when *value* has the key `version` or
+   `dependents`, and otherwise (a first configuration file) says to add `version: 2`.
 5. For each key of *value* other than `version`, `gitignore`, `ignore`, `include`, `presets` and
    `files`, collect `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` the key.
 6. If `gitignore` is present and not a Boolean, or `ignore` is present and not a List of
@@ -709,7 +710,9 @@ raises:
    string *s* of *list* that is not a valid Pattern (§8.1), collect `E_PATTERN` into *fatal*,
    `[[Subject]]` *s*.
 7. If `files` is absent, or not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]`
-   `files`.
+   `files`. When it is absent, the message says that `files` is required and to write `files: {}`
+   for none; when a key of step 5 has `files` as its near key (NOTE below), it names that key
+   and its `E_UNKNOWN_KEY` instead, so one typo reads as one problem.
 8. Otherwise, for each (*key*, *value*) of `files`:
    1. If *key* is not a RepoPath, collect `E_CONFIG` into *fatal*, `[[Subject]]` *key*, and
       continue.
@@ -920,31 +923,49 @@ used only by `suggest --write` (§13.10); it never records a Review.
    `y`, `n`, `yes`, `no`, `on`, `off`, `.inf`, `.nan` in any letter case, else `Quote(s)` (§3.4).
 2. If *scan* is not *none*:
    1. If *hashLines* of *scan* is not empty, raise: a block that records a Hash is never
-      overwritten; its message tells the user to edit it by hand. Likewise raise if a line from
-      *marker* + 1 to *last* starts with *keyIndent* followed by `use:`: a block that names presets
-      (§8.6) is never overwritten, so its `use` is never lost.
+      overwritten; its message tells the user to edit it by hand.
    2. If the marker line, after `docstamp:`, is not only blanks and an optional `#` comment, raise.
-   3. Let *indent* be *keyIndent*, or two U+0020 if it is *absent*, and *eol* the terminator of the
-      marker line. Replace the lines after *marker* up to and including *last* by the line *indent*
-      and `dependencies:`, and, for each pattern *s*, the line *indent*, two U+0020, `- `,
-      *item*(*s*), each followed by *eol*.
+   3. Let *declared* be the `[[Dependencies]]` of the Declaration that `ParseBlock(scan)` (§9.6.2)
+      returns, even when it raises. If *dependencies* does not start with the elements of
+      *declared*, in order, raise. If *declared* is not empty and *dependencies* has no other
+      element, return *text*.
+   4. If *declared* is not empty and `ParseBlock(scan)` does not raise, look for the *last item*:
+      let *key* be the first line from *marker* + 1 to *last* that starts with *keyIndent* followed
+      by `dependencies:` and, after it, only blanks and an optional `#` comment. Let an *item line*
+      be a line that, after some U+0020 *itemIndent*, starts with `- `. Walk the lines after *key*
+      up to *last*: skip a line that is only blanks or blanks and a `#` comment; the first other
+      line must be an item line, which fixes *itemIndent*; then an item line with that
+      *itemIndent*, or a line with more leading U+0020 than *itemIndent* (it continues an item),
+      is the *last item*, and any other line ends the walk. If there is a *last item*, the block is
+      *extended*: insert after it, for each pattern *s* of *dependencies* after the elements of
+      *declared*, the line *itemIndent*, `- `, *item*(*s*), each followed by the terminator of the
+      *last item*. Every other line of *text* is kept as it is, including `use`, comments and the
+      items of *declared*.
+   5. Otherwise (no *key* or no item line, as for `dependencies: [a, b]`, or a block that declares
+      no pattern or raises), raise if a line from *marker* + 1 to *last* starts with *keyIndent*
+      followed by `use:`, so a `use` is never lost. Let *indent* be *keyIndent*, or two U+0020 if it
+      is *absent*, and *eol* the terminator of the marker line. Replace the lines after *marker* up
+      to and including *last* by the line *indent* and `dependencies:`, and, for each pattern *s*,
+      the line *indent*, two U+0020, `- `, *item*(*s*), each followed by *eol*.
 3. Otherwise, if the first line of *text* (without a leading U+FEFF) and a later line are `---`
    (§5.6 steps 2 and 3), insert before that later line the line `docstamp:` and the lines of
-   step 2.3, each followed by the terminator of the first line, with *indent* the U+0020 characters
+   step 2.5, each followed by the terminator of the first line, with *indent* the U+0020 characters
    that start the first line between the two that starts with U+0020 followed by a character other
    than U+0020, a tab or a line terminator, or two U+0020 if there is no such line. The block then
    follows the indentation the frontmatter already uses.
 4. Otherwise let *text* start with the U+FEFF if it has one, then the lines `---`, `docstamp:` and
-   the lines of step 2.3 with *indent* two U+0020, then `---`, each followed by the terminator of
+   the lines of step 2.5 with *indent* two U+0020, then `---`, each followed by the terminator of
    the first line of *text* (CR LF if it is CR LF, else LF), then the rest of *text*.
 5. Let *result* be the text so produced. If `ScanFrontmatter(result)` is *none*, if `ParseBlock`
    (§9.6.2) of it raises, or if the dependencies it declares differ from *dependencies*, raise.
    Otherwise return *result*.
 
 NOTE: Every byte of *text* outside the replaced lines survives: the other frontmatter, the byte
-order mark, the body and the line terminators of every line. The replaced lines are the ones of the
-block, so a comment inside a block without a `hash` is not kept; the marker line, with its own
-comment, is. Step 5 is the safety net: a frontmatter this clause cannot extend with certainty (for
+order mark, the body and the line terminators of every line. An extended block (step 2.4) only gains
+lines, so a declared pattern, a `use` and a comment in it are never lost. A block that is not
+extended is replaced (step 2.5): its declared patterns are kept, since *dependencies* starts with
+them, but a comment inside it is not; the marker line, with its own comment, is. Step 5 is the
+safety net: a frontmatter this clause cannot extend with certainty (for
 example one that is not strict YAML, §9.2, or already has a quoted `"docstamp"` key) is
 refused, never rewritten.
 
@@ -1393,13 +1414,21 @@ prefix, before a `/`, of some path of *U*.
    `!`*d*`/**/__test__` and `!`*d*`/**/__tests__` that match (§8.3) at least one file of *U*, and
    none if some segment of *d* is `test`, `tests`, `spec`, `specs`, `__test__` or `__tests__`. Remove
    from *files* every file below a member *d* of *dirs* unless one of the exclusions of *d* matches it.
-10. *Subsumption.* Let *reincluded* be the members of *files* below a member of *dirs* (those that
-   an exclusion matches, step 9), and *base* the other members of *files*, *dirs* and *globs*. Let
+   For each *g* of *globs*, let its *scope* be its segments before the first one that holds `*`,
+   `?`, `[` or `{`, joined with `/` (the empty String for `**/src/**`), and *sel*(*g*) be
+   `Select(« g », U)`; its *exclusions* are, in this order, those of `!`*s*`**/*.test.*`,
+   `!`*s*`**/*.spec.*`, `!`*s*`**/__test__` and `!`*s*`**/__tests__` that match a file of
+   *sel*(*g*), *s* being the scope followed by `/`, or nothing when the scope is empty; and none if
+   some segment of *g* is one of the names above, or if every file of *sel*(*g*) is matched by one of
+   them (a glob that selects only test files).
+10. *Subsumption.* Let *cuts* be the exclusions of every member of *dirs* and of *globs*, ordered
+   by the path order of the directory or scope they come from and, for one, in the order of step 9,
+   without duplicates. Let *reincluded* be the members of *files* that a member of *cuts* matches
+   (with step 9, the files below a member of *dirs* that remain), and *base* the other members of
+   *files*, *dirs* and *globs*. Let
    *sel*(*p*) be `Select(« p », U)`. Remove from *base* every *p* for which another member *q* of
    *base* has *sel*(*p*) ⊆ *sel*(*q*), and either *sel*(*q*) ⊄ *sel*(*p*) or *q* precedes *p* in
-   path order; every *p* is tested against *base* as it was before this step. Let *cuts* be the
-   exclusions of every member of *dirs*, in path order of their directory and, for one directory,
-   in the order of step 9.
+   path order; every *p* is tested against *base* as it was before this step.
 11. *Order.* The Suggestions are, first, the members *p* of *base* in path order, each with
    `[[Files]]` `Select(« p » followed by cuts, U)`; then
    one Suggestion for each of *cuts* in order, with `[[Files]]` the files of *U* that it matches;
@@ -1420,7 +1449,13 @@ another one covers, such as `packages/*` under `packages`, so the list has no re
 of two that select the same files, the first in path order is kept. A Suggestion
 for an exclusion has no files of its own: its `[[Files]]` are the files it matches. A mention in a
 fenced block, in the inline block or of an ignored path is never proposed. A glob keeps a generic
-file it happens to select. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern
+file it happens to select. A glob that selects test files gets the exclusions of step 9 for its
+scope, its literal leading segments: `packages/*/src` gets `!packages/**/*.test.*`, and `**/src/**`,
+which has none, gets `!**/*.test.*`. Since every exclusion follows every inclusion, such an
+exclusion also trims the test files of the other inclusions; a test file the doc names is still
+listed after it. The notion of a test file is the one of step 9: a name with `.test.` or `.spec.`,
+or a path through `__test__` or `__tests__`; a file under a `test` or `tests` directory with
+neither is not excluded. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern
 as written and is dropped.
 
 ### 12.7 Renamed Path
@@ -1753,14 +1788,30 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
    its text is not *none*, the `[[Dependencies]]` of the Declaration that `ParseBlock` (§9.6.2)
    returns, even when it raises (so « » when they are not a List of Strings); otherwise *none*.
    *declared* is read from the text before step 7 writes, never expands Presets (§8.6), and
-   raises nothing.
+   raises nothing. When *declared* is not *none*, let *selected* be `Select(P, U)` (§8.4), *P*
+   being the elements of *declared* that are valid Patterns (§8.1) in order and *U* the Universe
+   without *path*, and give each Suggestion a *status*: `declared` if its pattern is in *declared*
+   (String equality, §3.2); otherwise `covered` if its pattern has no Negation, its `[[Files]]` is
+   not empty and every one of them is in *selected*; otherwise `new`. When *declared* is *none*,
+   no Suggestion has a *status*.
 5. Let *window* be `Replay(root, days 30, now)` (§12.4), *now* being the wall-clock time; if it
    raises, or the Window has no Commit, let *window* be *none*: no Diagnostic is output for it.
 6. For each Suggestion of each file whose pattern has no Negation, let its *staleRate* be the
    `[[StaleRate]]` that `Statistics` (§12.5) gives it for the Result with `[[Resolved]]` its
    `[[Files]]`, or *none* if *window* is *none*. The *staleRate* of every other Suggestion is *none*.
-7. If `--write` is given, let *new* be, for each *path* whose *suggestions* is not empty,
-   `? WriteBlock(text, patterns)` (§9.6.5), *patterns* being the patterns of *suggestions* in order.
+7. If `--write` is given, then for each *path* whose *suggestions* is not empty, let *patterns* be:
+   the patterns of *suggestions* in order when *declared* is *none*; otherwise the elements of
+   *declared*, then the patterns of the Suggestions whose *status* is `new`, in order, without:
+   1. a Suggestion with a Negation that matches (§8.3) a file of `Select(P, U)`: written after
+      *declared*, it would deselect a file *declared* selects;
+   2. a Suggestion without a Negation whose pattern *p* is not a literal path (§8.5 NOTE) of a
+      file of *U*, when an
+      exclusion of *P* matches a file of `Select(« p » followed by the patterns with a Negation
+      that item 1 keeps, U)`: written after that exclusion, it would select that file again;
+   3. then, if every pattern so added has a Negation, all of them: an exclusion is proposed only
+      with the inclusions it trims.
+
+   Let *new* be `? WriteBlock(text, patterns)` (§9.6.5).
    Only if no step has raised, replace each *path* whose *new* differs from its text atomically, as
    §9.6.4 step 3 does; it is then *written*, and every other file is not.
 8. Output the Suggestions, *ignored*, *declared* and, with `--write`, which files were *written*
@@ -1772,18 +1823,27 @@ replaced before it replaced.
 
 NOTE: A block that records a `hash` is never overwritten by this command, nor is a configured
 Declaration: both are the result of a decision, and the message says to edit them by hand. A block
-without a `hash` is replaced, so `suggest --write` twice gives the same bytes (§12.6 step 1 never
-reads the block). A file with no Suggestion is not written: a block needs a dependency. The
+without a `hash` keeps every pattern it declares, in its order, and only gains `new` ones after
+them (§9.6.5 steps 2.4 and 2.5): `--write` never drops a declared pattern, never adds one whose
+files *declared* already selects (`covered`), and leaves out an addition that would change what
+the declared patterns select: an exclusion that would deselect one of their files, or a pattern
+other than a literal path that would select again a file a declared exclusion cuts (step 7.2), so
+the written list raises no new `W_SHADOWED_EXCLUSION` (§8.5 step 7). Such a Suggestion keeps its
+*status* `new` in the output; the block is the place to add it by hand. `suggest --write` twice
+gives the same bytes: after the first write every Suggestion is `declared`, `covered` or left out
+again (§12.6 step 1 never reads the block). A file with no Suggestion is not written: a block
+needs a dependency. The
 `staleRate` follows §12.5 with the caveat of its NOTE: dependencies are the ones of `HEAD`, and a
 proposal that names a file the window deleted cannot see it. A file literally named `suggest` is
 reached as `docstamp -- suggest` (§13.2).
 
 NOTE: *declared* makes a proposal for a file that already has a declaration read as a difference:
-a Suggestion whose pattern is in *declared* (String equality, §3.2) is already declared, any other
-is new, and a pattern of *declared* that no Suggestion has is only declared: the doc no longer
-mentions it, or mentions it in another form.
-Patterns are compared as written, so `src` and `src/**` differ even when they select the same
-files.
+a Suggestion whose pattern is in *declared* (String equality, §3.2) is already declared, one whose
+files the declared patterns already select is covered, any other is new, and a pattern of
+*declared* that no Suggestion has is only declared: the doc no longer mentions it, or mentions it in
+another form. Patterns are compared as written for `declared`, so `src` and `src/**` differ; `covered`
+compares the files they select, so a proposed `src/a.ts` is covered by a declared `src/**/*.ts`.
+An exclusion is never `covered`.
 
 ## 14 Output
 
@@ -2157,8 +2217,13 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
       {
         "file": "README.md",
         "suggestions": [
-          { "pattern": "src/cli", "resolvedCount": 12, "staleRate": 0.1234 },
-          { "pattern": "!src/cli/**/*.test.*", "resolvedCount": 3, "staleRate": null }
+          { "pattern": "src/cli", "resolvedCount": 12, "staleRate": 0.1234, "status": null },
+          {
+            "pattern": "!src/cli/**/*.test.*",
+            "resolvedCount": 3,
+            "staleRate": null,
+            "status": null
+          }
         ],
         "ignored": ["dist/index.js"],
         "declared": null,
@@ -2172,7 +2237,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   It has no `summary`, `state`, `reasons` or `changes`. `files` holds each named file in path order,
   with `suggestions` the Suggestions of §12.6 in their order: `pattern`, `resolvedCount` the number
   of `[[Files]]`, and `staleRate` the Number of §13.10 step 6 (as `stats` writes `staleRate`, §14.5
-  above) or `null`. `ignored` is the List of §12.6, `[]` when there is none. `declared` follows
+  above) or `null`, then `status`, the *status* of §13.10 step 4 (`"declared"`, `"covered"` or
+  `"new"`), or `null` when `declared` is `null`. `ignored` is the List of §12.6, `[]` when there is none. `declared` follows
   `ignored`: the List *declared* of §13.10 step 4, in its order, or `null` when it is *none*. With `--write` each
   element adds `"written": true|false` after `diagnostics`. The `diagnostics` of a file are always
   `[]`, kept for the shape of the other modes; the top-level `diagnostics` hold the raised
@@ -2277,8 +2343,8 @@ single line `  no paths found`. Then one line `  ignored  <path>` per *ignored* 
 in path order.
 
 When *declared* (§13.10 step 4) is not *none*, the table has a fourth column, `status`, padded on
-the right like `pattern` (a row has still no trailing space): `declared` for a Suggestion whose
-pattern is in *declared*, else `new`. Then, after the `ignored` lines, one line
+the right like `pattern` (a row has still no trailing space): the *status* of the Suggestion
+(§13.10 step 4), `declared`, `covered` or `new`. Then, after the `ignored` lines, one line
 `  only declared  <pattern>` per distinct pattern of *declared* that no Suggestion has, in the
 order of *declared*, written as in §14.2:
 
@@ -2303,8 +2369,8 @@ command raised.
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6) |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
-| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file); for a module without a default export, `export default` the value |
-| `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
+| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file); for a missing `files`, write `files: {}` for none, or correct the unknown key that stands for it; for a module without a default export, `export default` the value |
+| `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2`; for a file with neither `version` nor `dependents`, add `version: 2` |
 | `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; otherwise its near key, if any (§9.3 NOTE: `did you mean "dependencies"?`); attached to the file when it is a key of an inline block |
 | `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1); for an empty pattern, write a path or glob or remove it; for a lone `!`, write the path to exclude after it or remove it |
 | `E_UNKNOWN_PRESET` | error | §8.6 | define the Preset under `presets` in the Configuration file, or correct the name in `use`; subject the name, attached to the file |
@@ -2390,7 +2456,9 @@ The following are not breaking:
 
 - the wording of a Diagnostic `[[Message]]` (§5.5), which is informative; a test MAY snapshot it,
   and then the snapshot is updated with the change. This covers the near key named by
-  `E_UNKNOWN_KEY` and `E_CONFIG` (§9.3 NOTE), and the renamed path named by `E_EMPTY_PATTERN`
+  `E_UNKNOWN_KEY` and `E_CONFIG` (§9.3 NOTE), the messages of `E_CONFIG_VERSION` for a first
+  configuration file and of `E_CONFIG` for a missing `files` (§9.3 steps 4 and 7), which change
+  no code and no Diagnostic order, and the renamed path named by `E_EMPTY_PATTERN`
   (§8.5 NOTE, §12.7), whose read of the history changes no verdict, code or exit code;
 - a new Diagnostic with severity `warning`, which never affects the exit code (§16);
 - a new command, or a new option that no existing command line uses: `stats` (§13.9), its options
@@ -2416,6 +2484,9 @@ The following are not breaking:
   §14.9 for a file that already has a declaration, and the member `declared` of §14.5. A file
   without one prints exactly what it printed; the proposal, `--write` and the exit code are
   unchanged;
+- the *status* `covered` of `suggest` (§13.10 step 4): a value of the `status` column of §14.9 for
+  a Suggestion whose files the declared patterns already select, which was `new`, and the member
+  `status` of a Suggestion in §14.5, a new member. The proposal and the exit code are unchanged;
 - the legend line of `stats` in text mode (§14.8): a fixed line after the `window:` line; the rows,
   the `window:` line and `--json` are unchanged, and `stats` still exits 0;
 - `[[Edited]]` (§5.4, §12.3 step 1.4): the edited line and the summary line of §14.3, and the
@@ -2468,6 +2539,16 @@ The following are not breaking:
   `depends` line of `check` (§14.3) and the wording of the second `next:` line for inline files
   (§14.3.3): text layout of §14.3; and the members `use` and `origins` in `check` and `update`
   (§14.5), new members;
+- the test exclusions of a glob in a proposal (§12.6 step 9): a proposal rule of §12.6, like the
+  directory exclusions; `suggest` prints and `--write` writes them, and nothing else reads them;
+- `suggest --write` on a block without a `hash` that declares patterns (§9.6.5 steps 2.3 to 2.5,
+  §13.10 step 7): it used to replace the list by the proposal, dropping every declared pattern the
+  proposal lacked; it now keeps the declared patterns first and adds only `new` ones that leave
+  their selection intact, extending a block list line by line and so keeping its `use` and
+  comments. Every command line exits as before: a block that `suggest --write` refused (a `hash`,
+  or `use` in a block it must rewrite) is still refused with `E_USAGE`, and no input is newly
+  refused. It writes only a file that was not stamped, so no Hash, Lockfile or verdict of `check`
+  changes, and `suggest` without `--write` writes nothing, as before;
 - the indent of a block that `suggest --write` adds to an existing frontmatter (§9.6.5 step 3): it
   writes a file that was not stamped, the block declares the same patterns, and §9.6.5 step 5 still
   checks it.

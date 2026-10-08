@@ -1,0 +1,36 @@
+$ docstamp list-dependencies --json docs/guide.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "docs/guide.md",
+      "dependencies": [
+        "docs/notes.md",
+        "src/a.ts",
+        "src/sub/b.ts",
+        "src/a.ts"
+      ],
+      "use": [
+        "sources"
+      ],
+      "origins": [
+        null,
+        null,
+        null,
+        "sources"
+      ],
+      "resolvedFiles": [
+        "docs/notes.md",
+        "src/a.ts",
+        "src/sub/b.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

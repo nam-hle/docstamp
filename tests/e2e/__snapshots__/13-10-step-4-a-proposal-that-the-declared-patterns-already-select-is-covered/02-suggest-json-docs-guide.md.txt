@@ -1,0 +1,34 @@
+$ docstamp suggest --json docs/guide.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "suggest",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "docs/guide.md",
+      "suggestions": [
+        {
+          "pattern": "src/a.ts",
+          "resolvedCount": 1,
+          "staleRate": null,
+          "status": "covered"
+        },
+        {
+          "pattern": "src/sub/b.ts",
+          "resolvedCount": 1,
+          "staleRate": null,
+          "status": "covered"
+        }
+      ],
+      "ignored": [],
+      "declared": [
+        "src/**/*.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

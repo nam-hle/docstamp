@@ -1,0 +1,28 @@
+# after the glob
+$ docstamp list-dependencies --json docs/guide.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "docs/guide.md",
+      "dependencies": [
+        "src",
+        "!src/gen/**",
+        "lib/*.ts"
+      ],
+      "resolvedFiles": [
+        "lib/x.ts",
+        "lib/y.ts",
+        "src/a.test.ts",
+        "src/a.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

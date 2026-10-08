@@ -4,7 +4,7 @@ import { readConfig } from '../config/read-config.ts';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import type { Diagnostic } from '../core/types.ts';
-import { propose, type Suggestion } from '../engine/suggest.ts';
+import { propose, statusOf, writtenPatterns, type Suggestion } from '../engine/suggest.ts';
 import { statistics } from '../engine/stats.ts';
 import { replay } from '../history/replay.ts';
 import { parseBlock } from '../inline/block.ts';
@@ -111,31 +111,48 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
     new Map([...proposals].map(([path, proposal]) => [path, proposal.suggestions])),
   );
 
+  const declaredAll = new Map(names.map((path) => [path, declaredOf(path)]));
+  const statuses = new Map(
+    names.map((path) => {
+      const declared = declaredAll.get(path)!;
+      const others = universe.paths.filter((p) => p !== path);
+      const { suggestions } = proposals.get(path)!;
+      return [
+        path,
+        suggestions.map((s) => (declared === null ? null : statusOf(s, declared, others))),
+      ];
+    }),
+  );
+
   const rewritten = new Map<string, string>();
   if (args.write) {
     for (const path of names) {
       const { suggestions } = proposals.get(path)!;
       if (suggestions.length === 0) continue;
-      const text = writeBlock(
-        path,
-        texts.get(path)!,
-        suggestions.map((s) => s.pattern),
+      const patterns = writtenPatterns(
+        suggestions,
+        statuses.get(path)!,
+        declaredAll.get(path)!,
+        universe.paths.filter((p) => p !== path),
       );
+      const text = writeBlock(path, texts.get(path)!, patterns);
       if (text !== texts.get(path)) rewritten.set(path, text);
     }
     for (const [path, text] of rewritten) replaceFile(absolute(path), path, () => text);
   }
   return names.map((path) => {
     const { suggestions, ignored } = proposals.get(path)!;
+    const status = statuses.get(path)!;
     return {
       file: path,
-      suggestions: suggestions.map((s) => ({
+      suggestions: suggestions.map((s, index) => ({
         pattern: s.pattern,
         resolvedCount: s.files.length,
         staleRate: s.pattern.startsWith('!') ? null : (rates.get(`${path}\0${s.pattern}`) ?? null),
+        status: status[index]!,
       })),
       ignored,
-      declared: declaredOf(path),
+      declared: declaredAll.get(path)!,
       written: rewritten.has(path),
     };
   });

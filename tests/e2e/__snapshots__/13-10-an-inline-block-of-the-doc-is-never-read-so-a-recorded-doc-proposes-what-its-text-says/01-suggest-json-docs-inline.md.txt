@@ -12,7 +12,8 @@ exit: 0
         {
           "pattern": "src/cli",
           "resolvedCount": 3,
-          "staleRate": null
+          "staleRate": null,
+          "status": "new"
         }
       ],
       "ignored": [],

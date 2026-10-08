@@ -1,0 +1,10 @@
+file: docs/guide.md
+--- content ---
+---
+docstamp:
+  dependencies:
+    - src
+    - "!src/**/*.test.*"
+    - lib/x.ts
+---
+Code in `src/a.ts` and `lib/x.ts`.

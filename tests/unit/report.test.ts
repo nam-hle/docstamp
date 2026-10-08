@@ -750,10 +750,10 @@ describe('§14.9 suggest text', () => {
           entry(
             'README.md',
             [
-              { pattern: 'src/cli', resolvedCount: 12, staleRate: 1234 },
-              { pattern: '!src/cli/**/*.test.*', resolvedCount: 3, staleRate: null },
-              { pattern: 'docs', resolvedCount: 140, staleRate: null },
-              { pattern: 'x.md', resolvedCount: 1, staleRate: 10000 },
+              { pattern: 'src/cli', resolvedCount: 12, staleRate: 1234, status: null },
+              { pattern: '!src/cli/**/*.test.*', resolvedCount: 3, staleRate: null, status: null },
+              { pattern: 'docs', resolvedCount: 140, staleRate: null, status: null },
+              { pattern: 'x.md', resolvedCount: 1, staleRate: 10000, status: null },
             ],
             ['dist/out.js'],
           ),
@@ -777,9 +777,15 @@ describe('§14.9 suggest text', () => {
   });
   it('a declared file gets a status column and its only declared patterns', () => {
     const rows = [
-      { pattern: 'src/cli', resolvedCount: 12, staleRate: 1234 },
-      { pattern: '!src/cli/**/*.test.*', resolvedCount: 3, staleRate: null },
-      { pattern: 'x.md', resolvedCount: 1, staleRate: null },
+      { pattern: 'src/cli', resolvedCount: 12, staleRate: 1234, status: 'declared' as const },
+      {
+        pattern: '!src/cli/**/*.test.*',
+        resolvedCount: 3,
+        staleRate: null,
+        status: 'declared' as const,
+      },
+      { pattern: 'src/cli/a.ts', resolvedCount: 1, staleRate: null, status: 'covered' as const },
+      { pattern: 'x.md', resolvedCount: 1, staleRate: null, status: 'new' as const },
     ];
     const declared = ['src/cli', 'old dir', 'src/cli', '!src/cli/**/*.test.*'];
     expect(suggestText([entry('README.md', rows, ['dist/out.js'], declared)], false)).toBe(
@@ -787,6 +793,7 @@ describe('§14.9 suggest text', () => {
         '  pattern               files   stale  status\n' +
         '  src/cli                  12  0.1234  declared\n' +
         '  !src/cli/**/*.test.*     -3          declared\n' +
+        '  src/cli/a.ts              1     n/a  covered\n' +
         '  x.md                      1     n/a  new\n' +
         '  ignored  dist/out.js\n' +
         '  only declared  "old dir"\n',
@@ -796,7 +803,7 @@ describe('§14.9 suggest text', () => {
     );
   });
   it('--write adds one line per file after the blocks', () => {
-    const rows = [{ pattern: 'src', resolvedCount: 2, staleRate: null }];
+    const rows = [{ pattern: 'src', resolvedCount: 2, staleRate: null, status: null }];
     expect(
       suggestText(
         [
@@ -819,8 +826,8 @@ describe('§14.5 suggest JSON', () => {
       {
         file: 'a.md',
         suggestions: [
-          { pattern: 'src', resolvedCount: 2, staleRate: 1234 },
-          { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null },
+          { pattern: 'src', resolvedCount: 2, staleRate: 1234, status: null },
+          { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null, status: null },
         ],
         ignored: ['dist'],
         declared: null,
@@ -835,8 +842,8 @@ describe('§14.5 suggest JSON', () => {
     expect(plain.files[0]).toEqual({
       file: 'a.md',
       suggestions: [
-        { pattern: 'src', resolvedCount: 2, staleRate: 0.1234 },
-        { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null },
+        { pattern: 'src', resolvedCount: 2, staleRate: 0.1234, status: null },
+        { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null, status: null },
       ],
       ignored: ['dist'],
       declared: null,
@@ -851,6 +858,28 @@ describe('§14.5 suggest JSON', () => {
       }),
     );
     expect(declared.files[0].declared).toEqual(['src', 'lib']);
+    const covered = JSON.parse(
+      suggestJsonText({
+        exitCode: 0,
+        write: false,
+        files: [
+          {
+            ...files[0]!,
+            declared: ['src/**'],
+            suggestions: [
+              { pattern: 'src', resolvedCount: 2, staleRate: null, status: 'covered' as const },
+            ],
+          },
+        ],
+        diagnostics: [],
+      }),
+    );
+    expect(covered.files[0].suggestions[0]).toEqual({
+      pattern: 'src',
+      resolvedCount: 2,
+      staleRate: null,
+      status: 'covered',
+    });
     const written = JSON.parse(
       suggestJsonText({ exitCode: 0, write: true, files, diagnostics: [] }),
     );
