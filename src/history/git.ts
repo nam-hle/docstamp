@@ -8,12 +8,15 @@ const gitEnv = (extra: Record<string, string> = {}): NodeJS.ProcessEnv => {
   return { ...env, GIT_OPTIONAL_LOCKS: '0', ...extra };
 };
 
+// SPEC §12.3 step 1: the work tree is compared byte for byte, whatever the user's line ending setup
+const PINNED = ['-c', 'core.autocrlf=false'];
+
 export const git = (
   root: string,
   args: readonly string[],
   extraEnv: Record<string, string> = {},
 ): string =>
-  execFileSync('git', args, {
+  execFileSync('git', [...PINNED, ...args], {
     cwd: root,
     env: gitEnv(extraEnv),
     encoding: 'utf8',

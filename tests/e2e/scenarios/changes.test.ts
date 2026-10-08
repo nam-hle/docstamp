@@ -310,8 +310,7 @@ scenario(
 
 scenario(
   '§12.3 step 6 and 7: via names the patterns, whitespaceOnly flags a change of white space',
-  // No POSIX mode bits on Windows; the CRLF row there is not yet understood (Git's autocrlf?).
-  { fixture, skipIf: process.platform === 'win32' },
+  { fixture },
   async (repo) => {
     repo.write(
       'docstamp.yaml',
@@ -323,7 +322,6 @@ scenario(
     repo.write('src/c.ts', 'c\n');
     repo.write('src/d.ts', 'd\n');
     repo.write('src/e.ts', 'let e = 1;\nlet f = 2;\n');
-    repo.write('src/mode.sh', 'echo\n');
     repo.write('src/crlf.txt', 'one\ntwo\n');
     repo.commit('initial');
     await repo.run(['update', '--all'], { expectExit: 0 });
@@ -332,7 +330,6 @@ scenario(
     repo.write('src/e.ts', '  let e = 1;   \n\n\n\tlet f = 2;\n');
     repo.write('src/crlf.txt', 'one\r\ntwo\r\n');
     repo.append('src/d.ts', 'more\n');
-    repo.chmod('src/mode.sh', 0o755);
     repo.write('src/c.ts', 'c\n\n');
     const text = await repo.run([]);
     expect(text.exit).toBe(1);
@@ -342,14 +339,14 @@ scenario(
         '  modified  src/crlf.txt (whitespace only)\n' +
         '  modified  src/d.ts\n' +
         '  modified  src/e.ts (whitespace only)\n' +
-        '  modified  src/mode.sh\n',
+        '  review: ',
     );
     expect(text.stdout).toContain(
       'STALE    NOTES.md  (content-changed)\n' +
         '  modified  src/crlf.txt (whitespace only)\n' +
         '  modified  src/d.ts\n' +
         '  modified  src/e.ts (whitespace only)\n' +
-        '  modified  src/mode.sh\n',
+        '  review: ',
     );
     expect(text.stdout).not.toContain('via');
 
@@ -360,13 +357,45 @@ scenario(
       { status: 'modified', path: 'src/crlf.txt', via: ['src/**'], whitespaceOnly: true },
       { status: 'modified', path: 'src/d.ts', via: ['src/**'] },
       { status: 'modified', path: 'src/e.ts', via: ['src/**'], whitespaceOnly: true },
-      { status: 'modified', path: 'src/mode.sh', via: ['src/**'] },
     ]);
     expect(byFile('NOTES.md').changes).toEqual([
       { status: 'modified', path: 'src/crlf.txt', via: ['src'], whitespaceOnly: true },
       { status: 'modified', path: 'src/d.ts', via: ['src', 'src/d.ts'] },
       { status: 'modified', path: 'src/e.ts', via: ['src'], whitespaceOnly: true },
-      { status: 'modified', path: 'src/mode.sh', via: ['src'] },
+    ]);
+  },
+);
+
+scenario(
+  '§12.3 step 7: a change of file mode is never whitespace only',
+  // No POSIX mode bits on Windows.
+  { fixture, skipIf: process.platform === 'win32' },
+  async (repo) => {
+    repo.write('docstamp.yaml', config(CLAUDE));
+    repo.remove('README.md');
+    repo.remove('docs/guide.md');
+    repo.write('src/d.ts', 'd\n');
+    repo.write('src/mode.sh', 'echo\n');
+    repo.commit('initial');
+    await repo.run(['update', '--all'], { expectExit: 0 });
+    repo.commit('review');
+
+    // The Dependency Hash reads content, not mode (§10.2): an edit makes the file stale.
+    repo.append('src/d.ts', 'more\n');
+    repo.chmod('src/mode.sh', 0o755);
+    const text = await repo.run([]);
+    expect(text.exit).toBe(1);
+    expect(text.stdout).toContain(
+      'STALE    CLAUDE.md  (content-changed)\n' +
+        '  modified  src/d.ts\n' +
+        '  modified  src/mode.sh\n',
+    );
+    expect(text.stdout).not.toContain('whitespace only');
+
+    const doc = (await repo.run(['--json'])).json();
+    expect(doc.files[0].changes).toEqual([
+      { status: 'modified', path: 'src/d.ts', via: ['src/**'] },
+      { status: 'modified', path: 'src/mode.sh', via: ['src/**'] },
     ]);
   },
 );

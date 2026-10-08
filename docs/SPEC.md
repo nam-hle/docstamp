@@ -1086,7 +1086,7 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
 
 1. Run `git` in Root with every environment variable starting with `GIT_` removed and
    `GIT_OPTIONAL_LOCKS=0` set, so that no inherited repository or index selection applies and
-   nothing is written. If `git` is unavailable, Root is not inside a git work tree, the repository
+   nothing is written, and with `-c core.autocrlf=false` before the subcommand. If `git` is unavailable, Root is not inside a git work tree, the repository
    is shallow (`git rev-parse --is-shallow-repository` prints anything but `false`), or a command
    fails, return *unknown*.
    1. List the commits of `git log --format=%H -S<entry> -- docstamp-lock.yaml`, newest first.
@@ -1138,6 +1138,12 @@ file mode or of file type is a difference, which the second command makes certai
 alone depends on the version of git. `[[WhitespaceOnly]]` says nothing about meaning (white space
 is significant in some formats) and never changes a state: the Dependency Hash still counts the
 change (§10.2).
+
+NOTE: `core.autocrlf=false` keeps the report independent of the user's git configuration. With
+`core.autocrlf=true`, the default of Git for Windows, git converts CRLF to LF when it compares the
+work tree, so a file rewritten from LF to CRLF would drop out of the report on one machine and be
+listed `modified` (whitespace only) on another. Attributes the repository itself declares
+(`.gitattributes` `text`, `eol`) still apply.
 
 NOTE: Known limit. The report is the difference between the work tree and the commit *C* that
 introduced the LockEntry, so an edit committed in the same commit as the Write is not in the
