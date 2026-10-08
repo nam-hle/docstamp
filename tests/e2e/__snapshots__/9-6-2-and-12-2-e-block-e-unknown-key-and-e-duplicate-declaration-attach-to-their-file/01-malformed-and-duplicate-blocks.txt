@@ -9,6 +9,7 @@ INVALID  twice.md
 INVALID  unknown.md
 0 ok, 1 stale, 3 invalid
 next: review each stale file against its dependencies, then run: docstamp update OK.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 next: fix the configuration or docstamp block of each invalid file, then run: docstamp check flow.md twice.md unknown.md
 --- stderr ---
 error: E_BLOCK: flow.md: docstamp: Write the docstamp block as a block mapping, one key per line.

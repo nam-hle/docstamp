@@ -8,4 +8,5 @@ STALE    CLAUDE.md  (content-changed)
   review: git diff -M 6eff57282542cf9d373c2934764350e274eadf1a -- ':(glob)src/**' ':(exclude,glob)src/**/*.test.ts' ':(exclude,glob)src/**/*.test.ts/**'
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

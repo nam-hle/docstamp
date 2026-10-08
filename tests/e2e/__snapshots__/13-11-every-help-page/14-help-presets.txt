@@ -1,0 +1,26 @@
+$ docstamp help presets
+exit: 0
+--- stdout ---
+docstamp help presets: Named pattern lists shared by many files (presets and use).
+
+When many files repeat the same lines, define them once under presets in the configuration file and
+name them with use, in a files entry or in a docstamp block:
+
+    presets:
+      no-tests:
+        - "!**/*.test.ts"
+    files:
+      docs/guide.md:
+        dependencies: [src]
+        use: [no-tests]
+
+- A file's patterns are its own dependencies first, then each preset in use order; the last match
+  still wins, so list exclusion presets last.
+- Names are [a-z][a-z0-9-]*; a preset is a non-empty list of patterns and cannot name another
+  preset.
+- dependencies stays required; use is a non-empty list of distinct names.
+- An unknown name makes the file invalid with E_UNKNOWN_PRESET.
+- Editing a preset makes a file stale only when it changes the files that file selects.
+- An exclusion of a preset that matches nothing gives no warning.
+- list-dependencies and check mark preset patterns with (preset <name>).
+--- stderr ---

@@ -19,6 +19,8 @@ Documentation (`README.md`, `CLAUDE.md`, `AGENTS.md`, `docs/*.md`, ADRs, runbook
 
 ## Quick start
 
+Everything on this page is also in the CLI, offline: `docstamp help` lists the commands and topics, `docstamp help start` walks from nothing to a first passing check, `docstamp help agents` is the review workflow, `docstamp help diagnostics <code>` explains an error, and `docstamp <command> --help` shows a command with its options and examples. The package ships the specification too (`docstamp help spec`).
+
 Requires Node.js 24 or newer. Install it, or run it with `npx docstamp`:
 
 ```sh
@@ -73,6 +75,7 @@ STALE    docs/architecture.md  (unrecorded)
   depends   !src/core/generated
 0 ok, 3 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/architecture.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 $ docstamp update --all
 written  CLAUDE.md
 written  README.md
@@ -95,6 +98,7 @@ STALE    README.md  (content-changed)
   review: git diff -M 260bd0a3cbed145f3afa9ec3db9c02f1d30f0360 -- src/cli/run.ts
 1 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
 The `review:` line is a read-only git command that shows the change since the last `update` (the work tree against that commit, so uncommitted edits are in it; `-M` shows a moved file as a rename). Untracked files are not in a git diff until `git add -N`, so when the report lists one, an `untracked: git add -N -- <path>` line follows; after a plain `mv`, run it and the `review:` line shows the rename instead of only the deletion. docstamp never runs it, since it changes the index. `(whitespace only)` is git's judgement that a modified file differs only in white space and blank lines, to help you skim; it never changes the verdict. With more than 10 changed files the `review:` line gives a pathspec of the patterns instead of the paths.
@@ -112,6 +116,7 @@ error: E_EMPTY_DEPENDENCIES: docs/old.md: Correct the patterns in "dependencies"
 error: E_EMPTY_PATTERN: docs/old.md: src/old: Correct or remove the pattern; it matches no file.
 0 ok, 1 stale, 1 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/api.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 next: fix the configuration of each invalid file, then run: docstamp check docs/old.md
 ```
 
@@ -141,6 +146,7 @@ STALE    CLAUDE.md  (content-changed)
   review: git diff -M 6eff57282542cf9d373c2934764350e274eadf1a -- docstamp.yaml
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
 Review each stale doc against the listed files, fix what is no longer true, then record the review and commit the lock:
@@ -180,6 +186,7 @@ STALE    docs/architecture.md  (unrecorded)
   depends   !src/core/generated
 0 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update README.md docs/architecture.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 $ docstamp update --all
 written  README.md
 written  docs/architecture.md
@@ -196,6 +203,7 @@ STALE    docs/architecture.md  (content-changed)
   review: git diff -M 086c7e92ed3634dd8464f9ca9feccba0fa01c06a -- src/core/hash.ts
 1 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 $ docstamp update docs/architecture.md
 written  docs/architecture.md
 $ docstamp
@@ -225,7 +233,7 @@ Things to know:
 
 ## Working with AI agents
 
-An agent is usually the one that reads the failure and does the review. Put this paragraph in your `CLAUDE.md` or `AGENTS.md`:
+An agent is usually the one that reads the failure and does the review. The stale report ends with a line that points at `docstamp help agents`, which prints the workflow below; an agent with only the installed package can read it there. Put this paragraph in your `CLAUDE.md` or `AGENTS.md`:
 
 ```md
 ## Docs
@@ -419,6 +427,7 @@ STALE    docs/architecture.md  (unrecorded)
   depends   !src/server/handlers/**/*.test.*
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
 The block is inserted into the frontmatter, indented like the first indented line already there (two spaces when there is none), or a minimal frontmatter is created; every other byte of the file stays (comments, the byte order mark, CR LF). Running it twice gives the same bytes. A block without a `hash` that already declares patterns keeps all of them in their order: only the `new` proposals are appended after its last pattern (its `use` and comments stay; a list written inline, `dependencies: [a, b]`, is rewritten one pattern per line), and nothing is written when there are none. A proposal that would change what the declared patterns select is left out, still marked `new`: an exclusion that would drop a file they select, or a glob that would select again a file they exclude. It never stamps, and it refuses to overwrite a block that records a `hash`, a block with `use` whose list it would have to rewrite, or a doc declared in the configuration file: edit those by hand. For a doc that already declares its dependencies (in the configuration file or in its own block), the table gets a `status` column, `declared` (the same pattern is declared), `covered` (the declared patterns already select every file it selects, such as `src/a.ts` under a declared `src/**/*.ts`) or `new`, and each declared pattern that is not proposed is listed as `only declared  <pattern>`, so a proposal reads as a diff against what is there; `--json` has the declared list as `declared` (`null` for a doc with none) and each suggestion's `status` (`null` then). Read the proposal before you keep it: a bare directory mention can select hundreds of files, and a mention may be an illustration, not something the doc states. The extraction rules (what counts as a mention, the generic files that are dropped, when files collapse into their directory, which test exclusions are added) are in [SPEC §12.6](docs/SPEC.md#126-proposal); the command is [§13.10](docs/SPEC.md#1310-suggest).
@@ -485,7 +494,7 @@ That is one entry of `files`; the report also has `version`, `mode`, `exitCode`,
 | `docstamp list-dependents [--transitive] <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only unless `--transitive`, which also lists the dependents of those dependents. No lock. A path that exists nowhere gets a `W_UNKNOWN_PATH` warning and exit 0. |
 | `docstamp stats [--since <n>d \| --from <rev>] [<file>...]` | Report how often each file's dependencies would have made it stale over the last `n` days or since `<rev>` ([Measuring how noisy a list is](#measuring-how-noisy-a-list-is)). Reads git history, never the lock. |
 | `docstamp suggest [--write] <file>...` | Propose each file's dependencies from the repository paths it mentions ([Proposing dependencies](#proposing-dependencies)). With `--write`, record them as an inline block without a hash. Never stamps. |
-| `docstamp help` | Usage. |
+| `docstamp help [<command> \| <topic>]` | The index of commands and topics, or one page: `help check`, `help patterns`, `help diagnostics E_EMPTY_PATTERN`. `docstamp <command> --help` is the page of that command. An unknown name is `E_USAGE`. |
 | `docstamp version` | The installed version. |
 
 Every command except `help` and `version` takes `--json` and `--root <dir>`; `--root` needs a directory and never takes another option as its value. A command that fails before anything is evaluated (bad configuration, lock, root or file argument) prints only its diagnostics: no summary line, and `--json` omits `summary`. A file argument that is unknown or outside the root fails the whole command with only its diagnostics, never a partial report. `--write` is for `suggest` alone; `--files` and the old `--write` were replaced by `list-dependencies` and `update`. Command line: [SPEC §13](docs/SPEC.md#13-command-line).

@@ -8,19 +8,14 @@ const packageVersion = (
   }
 ).version;
 
-scenario('§13.1 help: every spelling prints usage and exits 0', { git: false }, async (repo) => {
+scenario('§13.1 help: every spelling of the index exits 0', { git: false }, async (repo) => {
   const help = await repo.run(['help']);
   expect(help.exit).toBe(0);
   expect(help.stderr).toBe('');
   expect(help.stdout).toContain('docstamp');
   expect(help.stdout).toContain('list-dependents');
 
-  for (const args of [
-    ['--help'],
-    ['help', '--bogus'],
-    ['--help', 'update', '--all', 'x'],
-    ['--json', 'help'],
-  ]) {
+  for (const args of [['--help'], ['help', '--bogus'], ['--json', 'help'], ['x.md', '--help']]) {
     const same = await repo.run(args, { snapshot: false });
     expect(same, args.join(' ')).toMatchObject({ exit: 0, stdout: help.stdout, stderr: '' });
   }

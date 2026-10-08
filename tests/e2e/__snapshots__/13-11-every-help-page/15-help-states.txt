@@ -1,0 +1,28 @@
+$ docstamp help states
+exit: 0
+--- stdout ---
+docstamp help states: The states ok, stale and invalid, and the reasons unrecorded and
+content-changed.
+
+Each stamped file is in one state:
+
+    ok        its dependencies hash to what was recorded at its last review
+    stale     they do not, for one reason:
+                unrecorded        no review was recorded yet (no lock entry, no hash: line)
+                content-changed   a dependency changed: edited, added, deleted, renamed or moved,
+                                  or the patterns now select another set of files
+    invalid   it cannot be evaluated; an error diagnostic says why (docstamp help diagnostics)
+
+A stale file needs a review: read the changes its block lists (or its dependencies), fix what the
+file no longer gets right, then docstamp update <file> (docstamp help agents). An invalid file needs
+its declaration fixed, then docstamp check <file>.
+
+- Every byte counts, except that CR LF is read as LF in text files: whitespace, a final newline, a
+  license header.
+- An edit of the pattern list that selects the same files changes nothing.
+- No propagation: if C depends on B and B on code, a code change makes B stale. C becomes stale only
+  when B's content changes.
+- Warnings (W_ codes) never change a state or an exit code.
+- The changed-file report (modified, added, deleted, renamed lines and the review: line) reads git
+  history and is advisory; without history the block lists depends lines instead.
+--- stderr ---

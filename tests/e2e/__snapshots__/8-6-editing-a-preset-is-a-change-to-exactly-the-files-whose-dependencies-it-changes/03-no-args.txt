@@ -10,6 +10,7 @@ STALE    README.md  (content-changed)
   depends   docs/SPEC.md (preset spec)
 1 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 --- setup: docstamp.yaml ---
 version: 2

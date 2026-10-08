@@ -6,6 +6,7 @@ STALE    docs/GUIDE.md  (content-changed)
   review: git diff -M 6498f5f57e389b2b95d85dadcce94e04d7d73694 -- src/core/hash.ts
 4 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 --- setup: src/core/hash.ts ---
 export const hash = 1;

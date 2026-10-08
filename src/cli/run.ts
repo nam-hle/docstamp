@@ -30,7 +30,8 @@ import {
   updateText,
 } from '../report/text.ts';
 import { determineRoot, existsUnderRoot, isIgnoredPath, type Universe } from '../universe/walk.ts';
-import { HELP, parseArgs, type Args } from './args.ts';
+import { parseArgs, type Args } from './args.ts';
+import { helpText } from './help.ts';
 import { resolutionMessage, rootFromCwd, selectResults, toRepoPath } from './paths.ts';
 import { runSuggest } from './suggest.ts';
 import { loadWorkspace } from './workspace.ts';
@@ -340,8 +341,14 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     return 2;
   }
   if (args.mode === 'help') {
-    io.stdout(HELP);
-    return 0;
+    try {
+      io.stdout(helpText(args.names));
+      return 0;
+    } catch (e) {
+      if (!(e instanceof Raised)) throw e;
+      io.stderr(diagnosticsText(e.diagnostics));
+      return 2;
+    }
   }
   if (args.mode === 'version') {
     io.stdout(`${typeof VERSION === 'string' ? VERSION : '0.0.0'}\n`);

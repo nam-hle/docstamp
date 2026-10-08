@@ -2,4 +2,4 @@ $ docstamp update --only-stale --all
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: --only-stale: --only-stale is only valid with "docstamp check".
+error: E_USAGE: --only-stale: --only-stale is only valid with "docstamp check"; see docstamp help update.

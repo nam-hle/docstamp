@@ -1,0 +1,5 @@
+$ docstamp help bogus
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: bogus: Unknown help name bogus; name one of check, update, list-dependencies, list-dependents, stats, suggest, help, version, start, config, inline, patterns, presets, states, exit-codes, json, diagnostics, agents, schema, spec.

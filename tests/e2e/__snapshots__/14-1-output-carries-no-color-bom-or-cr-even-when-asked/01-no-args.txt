@@ -14,4 +14,5 @@ STALE    docs/guide.md  (unrecorded)
   depends   src/cli
 0 ok, 3 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/guide.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

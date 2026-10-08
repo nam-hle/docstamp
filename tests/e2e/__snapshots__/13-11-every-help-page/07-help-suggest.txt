@@ -1,0 +1,51 @@
+$ docstamp help suggest
+exit: 0
+--- stdout ---
+docstamp suggest: Propose dependencies from the paths each file mentions.
+
+Usage:
+  docstamp suggest [--json] [--root <dir>] [--write] <file>...
+
+Reads each named file and proposes its dependencies from the repository paths it mentions (code
+spans, links, paths in the prose), with the number of files each pattern selects and its stale rate
+over the last 30 days (n/a without git history). Generic files such as package.json and ignored
+paths are not proposed. A glob that selects test files is followed by exclusions of them
+(!<scope>/**/*.test.* and the like). For a file that already declares dependencies, a status column
+says declared (the same pattern), covered (the declared patterns already select its files) or new,
+and only declared lines list the declared patterns it no longer mentions.
+
+Read the proposal before keeping it: a mention can be an illustration, and a directory can select
+many files. It is the quick way to enroll an existing doc: suggest --write, review, then update.
+
+Options:
+  --json        Print one JSON document instead of text (docstamp help json).
+  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
+                file, else with .git. File arguments are still resolved against the current
+                directory.
+  --write       Write the proposal into the file as a docstamp block without hash, so the file stays
+                unrecorded until reviewed. A block that already declares patterns keeps them, in
+                order, and gains only new ones; an addition that would change what they select is
+                left out. Refuses (E_USAGE) a block that has a hash, a file declared in the
+                configuration file, and a block with use that cannot be extended line by line.
+  <file>...     The files to read. At least one.
+  --help        Print this page.
+
+Reads:
+  the configuration file, the named files, the file tree and git history (stale rate).
+
+Writes:
+  with --write, the docstamp block of each named file that has a proposal.
+
+Examples:
+  $ docstamp suggest docs/notes.md
+  suggest docs/notes.md
+    pattern      files  stale
+    src/hash.ts      1    n/a
+  $ docstamp suggest --write docs/notes.md
+
+Exit codes:
+  0  the proposal was listed, even when it is empty.
+  2  an error diagnostic, or a usage error.
+
+Related: docstamp help start, docstamp help inline, docstamp help stats
+--- stderr ---

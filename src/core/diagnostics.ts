@@ -2,12 +2,13 @@ import { comparePaths } from './order.ts';
 import type { Code, Diagnostic } from './types.ts';
 
 const FIX: Record<Code, string> = {
-  E_USAGE: 'Correct the command line; see docstamp --help.',
+  E_USAGE: 'Correct the command line; see docstamp help.',
   E_ROOT: 'Pass an existing directory to --root.',
   E_CONFIG_MISSING:
     'Create docstamp.yaml with "version: 2" and a "files" mapping, ' +
     'or docstamp.config.ts exporting the same value, ' +
-    'or add a docstamp block to the frontmatter of a Markdown file.',
+    'or add a docstamp block to the frontmatter of a Markdown file; ' +
+    'docstamp help start shows each.',
   E_CONFIG_AMBIGUOUS: 'Keep one configuration file.',
   E_CONFIG: 'Fix the configuration file; the key named, if any, is the problem.',
   E_CONFIG_VERSION:
@@ -35,8 +36,8 @@ const FIX: Record<Code, string> = {
   E_UNKNOWN_FILE:
     'Name a file listed under "files" in the configuration file, or one with a docstamp block.',
   E_HISTORY:
-    'Run in a git work tree with its full history, and give --since a commit, ' +
-    'a date such as 2024-01-01 or a duration such as 90.days.',
+    'Run in a git work tree with its full history (not a shallow clone); ' +
+    'for --from, name a commit.',
   W_ORPHAN: 'Run "docstamp update" on any file to remove the entry.',
   W_EMPTY_EXCLUSION:
     'The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.',

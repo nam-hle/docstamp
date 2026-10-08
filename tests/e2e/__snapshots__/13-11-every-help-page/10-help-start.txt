@@ -1,0 +1,59 @@
+$ docstamp help start
+exit: 0
+--- stdout ---
+docstamp help start: From nothing to a first passing check, with a configuration file or inline.
+
+docstamp fails a build when a file's dependencies changed since someone last reviewed that file. You
+declare what each file (usually a doc) depends on; docstamp hashes those dependencies, and docstamp
+update records the hash when a review is done. Requires Node.js 24 or newer.
+
+1. Install it in the repository (or run it with npx docstamp):
+
+    pnpm add -D docstamp
+
+2. Declare the dependencies. Either in docstamp.yaml at the repository root (docstamp help config):
+
+    version: 2
+    files:
+      docs/guide.md:
+        dependencies:
+          - src
+          - "!src/**/*.test.ts"
+
+Or in the frontmatter of a Markdown file, with no configuration file at all in a git repository
+(docstamp help inline):
+
+    ---
+    docstamp:
+      dependencies: [docs/guide.md]
+    ---
+
+To enroll an existing doc quickly, docstamp suggest --write <doc> proposes its dependencies from the
+paths it mentions and writes them as such a block. Read the proposal and trim it.
+
+3. Run docstamp. On the first run every file is stale (unrecorded): no review is recorded yet.
+
+4. Review each file against its dependencies, fix it, then run docstamp update <file>. At the first
+adoption, docstamp update --all records every file once you reviewed them all. Commit the files and
+docstamp-lock.yaml (created only for files declared in the configuration file).
+
+5. Run docstamp in CI. It exits 1 when a file is stale and 2 on an error. Fetch the full history
+(fetch-depth: 0) so that a stale report can name the changed files.
+
+When it fails later, follow docstamp help agents.
+
+Example:
+  $ docstamp suggest --write docs/notes.md
+  suggest docs/notes.md
+    pattern      files  stale
+    src/hash.ts      1    n/a
+  written  docs/notes.md
+  $ docstamp docs/notes.md
+  STALE    docs/notes.md  (unrecorded)
+    depends   src/hash.ts
+  0 ok, 1 stale, 0 invalid
+  next: review each stale file against its dependencies, then run: docstamp update docs/notes.md
+    run update only after the review, never --all just to pass; see docstamp help agents
+  $ docstamp update docs/notes.md
+  written  docs/notes.md
+--- stderr ---

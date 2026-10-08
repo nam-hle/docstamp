@@ -5,7 +5,7 @@ type StatsWindowArg =
   | { kind: 'from'; value: string };
 
 export type Args =
-  | { mode: 'help' }
+  | { mode: 'help'; names: string[] }
   | { mode: 'version' }
   | {
       mode: 'list-dependencies';
@@ -38,32 +38,8 @@ export type Args =
   | { mode: 'suggest'; json: boolean; root?: string; paths: string[]; write: boolean }
   | { mode: 'update'; all: boolean; json: boolean; root?: string; paths: string[] };
 
-export const HELP = `Usage:
-  docstamp check [--json] [--only-stale] [--quiet] [--root <dir>] [<file>...]
-      Check that each file's dependencies are unchanged since its last review.
-      The default command: a bare docstamp is docstamp check.
-      --only-stale leaves the ok files out of the --json list; --quiet prints nothing on success.
-  docstamp update [--json] [--root <dir>] (--all | <file>...)
-      Record that you reviewed the named files against their dependencies (in each file's
-      docstamp block, or in docstamp-lock.yaml for files declared in the configuration).
-  docstamp list-dependencies [--json] [--root <dir>] [<file>...]
-      List each file with its dependency patterns and the files they select.
-  docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
-      List the files that depend on each named file, and the patterns that select it;
-      --transitive also lists the dependents of those dependents.
-  docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
-      Report how often each file's dependencies would have made it stale over recent history:
-      the last <n> days (default --since 30d), or the commits of <rev>..HEAD.
-  docstamp suggest [--json] [--root <dir>] [--write] <file>...
-      Propose dependencies from the paths each file mentions; --write records them as an inline
-      block without a hash.
-  docstamp help
-      Print this usage (also --help).
-  docstamp version
-      Print the version (also --version).
-`;
-
-const COMMANDS = new Set([
+// SPEC §13.1: the command table, in the order help lists it
+export const COMMANDS = [
   'check',
   'update',
   'list-dependencies',
@@ -72,7 +48,9 @@ const COMMANDS = new Set([
   'suggest',
   'help',
   'version',
-]);
+] as const;
+export type Command = (typeof COMMANDS)[number];
+const isCommand = (arg: string): arg is Command => (COMMANDS as readonly string[]).includes(arg);
 const FLAGS = new Set([
   '--json',
   '--all',
@@ -93,6 +71,7 @@ const VALUED: Record<string, string> = {
 };
 const valuedName = (arg: string): string | undefined =>
   Object.keys(VALUED).find((name) => arg === name || arg.startsWith(`${name}=`));
+export const OPTIONS: readonly string[] = [...FLAGS, ...Object.keys(VALUED)];
 const isOption = (arg: string) =>
   arg === '--' || valuedName(arg) !== undefined || FLAGS.has(arg) || arg in REMOVED;
 const DEFAULT_SINCE = '30d';
@@ -108,10 +87,11 @@ export function parseArgs(argv: readonly string[]): Args {
   const seen = new Set<string>();
   const paths: string[] = [];
   let command: string | undefined;
+  let explicit: Command | undefined;
   const values = new Map<string, string>();
-  let failure: Raised | undefined;
+  let failure: { subject: string; message: string } | undefined;
   const fail = (subject: string, message: string) => {
-    failure ??= usage(subject, message);
+    failure ??= { subject, message };
   };
   const mark = (flag: string) => {
     if (seen.has(flag)) fail(flag, `${flag} given twice.`);
@@ -139,16 +119,18 @@ export function parseArgs(argv: readonly string[]): Args {
     } else if (FLAGS.has(arg)) mark(arg);
     else if (REMOVED[arg] !== undefined) fail(arg, `${arg} was removed; use "${REMOVED[arg]}".`);
     else if (arg.startsWith('-') && arg !== '-') {
-      fail(arg, `Unknown option ${arg}; see docstamp help.`);
+      fail(arg, `Unknown option ${arg}.`);
     } else if (command === undefined) {
-      if (COMMANDS.has(arg)) command = arg;
+      if (isCommand(arg)) command = explicit = arg;
       else {
         command = 'check';
         paths.push(arg);
       }
     } else paths.push(arg);
   }
-  if (seen.has('--help') || command === 'help') return { mode: 'help' };
+  // §13.2 step 3: the help names
+  if (command === 'help') return { mode: 'help', names: paths };
+  if (seen.has('--help')) return { mode: 'help', names: explicit === undefined ? [] : [explicit] };
   if (seen.has('--version') || command === 'version') return { mode: 'version' };
   const mode = (command ?? 'check') as
     | 'check'
@@ -189,14 +171,17 @@ export function parseArgs(argv: readonly string[]): Args {
     }
   }
   if (since !== undefined && from !== undefined) {
-    fail('--since', '--since <n>d and --from <rev> cannot be used together; pick one.');
+    fail('--since', 'Pass either --since <n>d or --from <rev>, not both.');
   }
   const days = DAYS.exec(since ?? '')?.[1];
   if (since !== undefined && (days === undefined || Number(days) > MAX_DAYS)) {
     fail('--since', `--since needs a number of days written like 30d (1d to ${MAX_DAYS}d).`);
   }
   if (from?.startsWith('-')) fail('--from', '--from needs a revision, not an option.');
-  if (failure) throw failure;
+  if (failure) {
+    const page = explicit === undefined ? 'docstamp help' : `docstamp help ${explicit}`;
+    throw usage(failure.subject, failure.message.replace(/\.$/u, `; see ${page}.`));
+  }
   const json = seen.has('--json');
   const root = values.get('--root');
   const rootOpt = root === undefined ? {} : { root };

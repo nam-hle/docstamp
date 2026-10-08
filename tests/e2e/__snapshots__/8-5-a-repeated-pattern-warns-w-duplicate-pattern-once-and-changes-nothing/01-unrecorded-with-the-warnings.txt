@@ -16,6 +16,7 @@ STALE    PLAIN.md  (unrecorded)
   depends   !src/gen
 0 ok, 3 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CONFIGURED.md INLINE.md PLAIN.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 warning: W_DUPLICATE_PATTERN: CONFIGURED.md: !src/gen: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.
 warning: W_DUPLICATE_PATTERN: CONFIGURED.md: src: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.

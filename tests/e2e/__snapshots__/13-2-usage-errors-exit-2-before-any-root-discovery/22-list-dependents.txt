@@ -2,4 +2,4 @@ $ docstamp list-dependents
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: list-dependents: Name the files whose dependents you want to list.
+error: E_USAGE: list-dependents: Name the files whose dependents you want to list; see docstamp help list-dependents.

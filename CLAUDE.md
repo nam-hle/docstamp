@@ -62,7 +62,7 @@ docstamp/
 │   ├── index.ts          # entry; wires the CLI
 │   ├── lib.ts            # library entry: defineConfig, DocstampConfig (§9.5)
 │   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
-│   ├── cli/              # args, path resolution, workspace load, run, suggest; exit codes (§13, §16)
+│   ├── cli/              # args, path resolution, workspace load, run, suggest, help; exit codes (§13, §16)
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
 │   ├── inline/           # inline declarations: frontmatter scan, block parse, keys, schema, stamp, block write (§5.6, §9.6)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
@@ -175,6 +175,17 @@ pure), the command is `src/cli/suggest.ts` and its output `src/report/suggest.ts
 `tests/unit/suggest.test.ts`, `tests/unit/write-block.test.ts`,
 `tests/e2e/scenarios/suggest.test.ts` on the `suggest` fixture. Every rule is in the spec, so a
 change to the generic list, a threshold or a mention rule starts there.
+
+## Help
+
+`docstamp help` (SPEC §13.11) must teach everything without the repository: the README is not in
+the package, `docs/SPEC.md` is. The pages are static text: `src/cli/help-commands.ts` (one page per
+command of `COMMANDS` in `src/cli/args.ts`), `src/cli/help-topics.ts`, `src/cli/help-diagnostics.ts`
+(a `Record<Code, ...>`, so a new code does not compile without its entry); `src/cli/help.ts` renders
+and looks them up. `tests/unit/help.test.ts` pins them to the parser (every accepted option on its
+page), to SPEC §15, §16, §5.4 and the section list, and to 100 columns of ASCII;
+`tests/e2e/scenarios/help.test.ts` runs every example that shows output on the `help-examples`
+fixture. A behavior change that a page describes changes the page in the same change.
 
 ## Presets
 

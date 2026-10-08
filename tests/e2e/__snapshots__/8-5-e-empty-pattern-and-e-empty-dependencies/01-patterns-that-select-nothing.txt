@@ -11,6 +11,7 @@ STALE    E.md  (unrecorded)
   depends   !src/**/*.spec.ts
 0 ok, 1 stale, 4 invalid
 next: review each stale file against its dependencies, then run: docstamp update E.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 next: fix the configuration of each invalid file, then run: docstamp check B.md C.md D.md DOC.md
 --- stderr ---
 error: E_EMPTY_PATTERN: B.md: nothing/**: Correct or remove the pattern; it matches no file.

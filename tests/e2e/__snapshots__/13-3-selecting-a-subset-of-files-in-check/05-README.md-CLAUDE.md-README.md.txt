@@ -9,4 +9,5 @@ STALE    README.md  (content-changed)
   depends   docs/guide.md
 0 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

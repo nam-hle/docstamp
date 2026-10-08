@@ -28,7 +28,8 @@ scenario(
         '  depends   src/core\n' +
         '0 ok, 2 stale, 0 invalid\n' +
         'next: review each stale file against its dependencies, then run: ' +
-        'docstamp update README.md docs/GUIDE.md\n',
+        'docstamp update README.md docs/GUIDE.md\n' +
+        '  run update only after the review, never --all just to pass; see docstamp help agents\n',
     );
 
     const update = await repo.run(['update', '--all'], { show: ['README.md', 'docs/GUIDE.md'] });
@@ -48,7 +49,8 @@ scenario(
         '  modified  src/cli/run.ts\n' +
         '  review: git diff -M <C> -- src/cli/run.ts\n' +
         '1 ok, 1 stale, 0 invalid\n' +
-        'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
+        'next: review each stale file against its dependencies, then run: docstamp update README.md\n' +
+        '  run update only after the review, never --all just to pass; see docstamp help agents\n',
     );
     const json = (await repo.run(['--json'])).json();
     expect(json.files[0]).toMatchObject({
@@ -328,6 +330,7 @@ scenario(
         '  depends   src/core\n' +
         '0 ok, 1 stale, 1 invalid\n' +
         'next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md\n' +
+        '  run update only after the review, never --all just to pass; see docstamp help agents\n' +
         'next: fix the configuration of each invalid file, then run: docstamp check README.md\n',
     );
     expect(check.stderr).toContain('error: E_DUPLICATE_DECLARATION: README.md: ');
@@ -449,7 +452,8 @@ scenario(
     expect(negated.stdout).toBe(
       'STALE    README.md  (unrecorded)\n  depends   src/cli\n  depends   docs/GUIDE.md\n' +
         '0 ok, 1 stale, 0 invalid\n' +
-        'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
+        'next: review each stale file against its dependencies, then run: docstamp update README.md\n' +
+        '  run update only after the review, never --all just to pass; see docstamp help agents\n',
     );
   },
 );
@@ -533,7 +537,8 @@ scenario(
         '  modified  docs/GUIDE.md\n' +
         '  review: git diff -M <C> -- docs/GUIDE.md\n' +
         '1 ok, 1 stale, 0 invalid\n' +
-        'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
+        'next: review each stale file against its dependencies, then run: docstamp update README.md\n' +
+        '  run update only after the review, never --all just to pass; see docstamp help agents\n',
     );
 
     const quoted = reflowed.replace(/hash: ([0-9a-f]{64})/u, 'hash: "$1"');

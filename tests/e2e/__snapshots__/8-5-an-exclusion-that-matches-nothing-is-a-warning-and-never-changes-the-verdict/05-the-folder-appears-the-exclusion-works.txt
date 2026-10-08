@@ -7,4 +7,5 @@ STALE    docs/negation.md  (content-changed)
   depends   !src/**/*.test.ts
 1 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/negation.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

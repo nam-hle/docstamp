@@ -9,6 +9,7 @@ STALE    docs/stale-01.md  (content-changed)
   review: git diff -M b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 0 ok, 1 stale, 1 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/stale-01.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 next: fix the configuration of each invalid file, then run: docstamp check docs/invalid-01.md
 --- stderr ---
 error: E_EMPTY_DEPENDENCIES: docs/invalid-01.md: Correct the patterns in "dependencies"; together they select no file.

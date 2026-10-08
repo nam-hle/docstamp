@@ -268,7 +268,8 @@ describe('§13.2 / §16 misc', () => {
     expect(r.err).toContain('E_USAGE');
   });
   it('help and version exit 0', () => {
-    expect(exec(tree(), '--help').out).toContain('Usage:');
+    expect(exec(tree(), '--help').out).toContain('Commands:');
+    expect(exec(tree(), 'help', 'bogus')).toMatchObject({ code: 2, out: '' });
     const v = exec(tree(), '--version');
     expect(v.code).toBe(0);
     expect(v.out).toMatch(/^\S+\n$/u);

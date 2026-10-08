@@ -12,4 +12,5 @@ STALE    docs/overview.md  (unrecorded)
   depends   !src/engine/**/__tests__
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/overview.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

@@ -2,4 +2,4 @@ $ docstamp --files
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: --files: --files was removed; use "docstamp list-dependencies".
+error: E_USAGE: --files: --files was removed; use "docstamp list-dependencies"; see docstamp help.

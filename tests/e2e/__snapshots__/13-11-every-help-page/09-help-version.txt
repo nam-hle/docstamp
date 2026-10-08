@@ -1,0 +1,25 @@
+$ docstamp help version
+exit: 0
+--- stdout ---
+docstamp version: Print the installed version.
+
+Usage:
+  docstamp version
+  docstamp --version
+
+Prints the version of the installed package. It reads no file.
+
+Reads:
+  nothing.
+
+Writes:
+  nothing.
+
+Examples:
+  $ docstamp version
+
+Exit codes:
+  0  always.
+
+Related: docstamp help help
+--- stderr ---

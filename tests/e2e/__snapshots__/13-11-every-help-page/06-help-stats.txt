@@ -1,0 +1,43 @@
+$ docstamp help stats
+exit: 0
+--- stdout ---
+docstamp stats: Report how often each file's dependencies would have made it stale.
+
+Usage:
+  docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
+
+Replays the commits of a window against the files each stamped file selects today, and counts the
+commits that would have made it stale. Use it to judge a list before committing to it: a list that
+goes stale on most commits is a list people stop reading. It only reports: it writes nothing, reads
+no lock, never changes the verdict of check, and exits 0 whatever the numbers are.
+
+Columns: patterns, files they select, commits and distinct days that would make the file stale,
+stale (those commits over all commits of the window) and sweep (the share of those commits that
+touch over 200 paths). It needs the full git history (fetch-depth: 0 in CI), else E_HISTORY.
+
+Options:
+  --json        Print one JSON document instead of text (docstamp help json).
+  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
+                file, else with .git. File arguments are still resolved against the current
+                directory.
+  --since <n>d  The last <n> days, written like 30d (1d to 3650d). The default: 30d.
+  --from <rev>  The commits of <rev>..HEAD, which does not move from day to day.
+  <file>...     Measure only these stamped files.
+  --help        Print this page.
+
+Reads:
+  the configuration file, the docstamp blocks, the file tree and git history.
+
+Writes:
+  nothing.
+
+Examples:
+  $ docstamp stats
+  $ docstamp stats --from v1.0.0 docs/guide.md
+
+Exit codes:
+  0  the statistics were listed.
+  2  E_HISTORY, an invalid file, or an error.
+
+Related: docstamp help suggest, docstamp help patterns
+--- stderr ---

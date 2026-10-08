@@ -1,0 +1,31 @@
+$ docstamp help agents
+exit: 0
+--- stdout ---
+docstamp help agents: The review workflow for AI agents, ready to paste into CLAUDE.md or AGENTS.md.
+
+docstamp only decides when a review is due; the review is the reader's job, and docstamp update
+asserts that it happened. When docstamp exits 1, for each stale file:
+
+1. Read what changed: the modified, added, deleted and renamed lines of its block, and the command
+on its review: line. Without them, docstamp list-dependencies <file> lists the dependencies; compare
+them with the version that was reviewed.
+
+2. Read the file and fix every claim the change made untrue. A change that does not affect the file
+needs no edit.
+
+3. Only then run docstamp update <file>, naming that file.
+
+Never run docstamp update without that review, and never use update --all, or edit a hash: line, to
+make the check pass. Exit 2 is not a review matter: fix the declaration its diagnostic names
+(docstamp help diagnostics <code>), then run docstamp check <file>. Before changing code, docstamp
+list-dependents <file> shows which docs the change affects, so they can be fixed in the same change.
+
+Paste into CLAUDE.md or AGENTS.md:
+
+    ## Docs
+    docstamp fails when a doc's dependencies changed since it was last reviewed. When it
+    fails, for each stale doc: read the changed files it lists (git diff for more context),
+    compare them with what the doc claims, and fix every claim that is no longer true. Only
+    then run docstamp update <doc>. Never run docstamp update without that re-check, and
+    never use --all to make the check pass.
+--- stderr ---

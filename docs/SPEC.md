@@ -36,7 +36,7 @@ host operating system, locale, time zone, wall-clock time and version-control hi
 permitted variations are:
 
 - the text of a Diagnostic's `[[Message]]` (§5.5), which is informative;
-- the output of `--version` and `--help`;
+- the output of `--version`, `--help` and `help` (§13.11);
 - color escape sequences (§14.1);
 - the choice of Root by the upward search of §6, which `--root` removes;
 - Unicode normalization (§7.4) and case mapping (§7.5) of code points that are unassigned in the
@@ -1499,14 +1499,16 @@ docstamp list-dependencies [--json] [--root <dir>] [<file>...]
 docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
 docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
 docstamp suggest [--json] [--root <dir>] [--write] <file>...
-docstamp help
+docstamp help [<command> | <topic> | diagnostics <code>]
+docstamp <command> --help
 docstamp version
 docstamp --help
 docstamp --version
 ```
 
 The commands are `check` (§13.5), `update` (§13.6), `list-dependencies` (§13.7),
-`list-dependents` (§13.8), `stats` (§13.9), `suggest` (§13.10), `help` and `version`. `--help` is the same command as `help`, and `--version` the same as `version`.
+`list-dependents` (§13.8), `stats` (§13.9), `suggest` (§13.10), `help` (§13.11) and `version`.
+`--help` is the same command as `help`, and `--version` the same as `version`.
 
 ### 13.2 Parsing
 
@@ -1522,8 +1524,10 @@ The command line is parsed before anything else.
    later position, or after `--`, is a file argument. Options and file arguments may appear in
    any order.
 3. `--help` before any `--`, or the command `help`, selects `help`; `--version` or the command
-   `version` selects `version`. `help` wins over `version`. Both ignore every other argument and
-   raise no `E_USAGE`.
+   `version` selects `version`. `help` wins over `version`. The *help names* are the file
+   arguments when the command is `help`; else, when step 2 found a command word, that word alone
+   (so `docstamp update --help` names `update`); else none. Both ignore every other argument,
+   options included, and raise no `E_USAGE` here; `help` checks its names itself (§13.11).
 
 Otherwise the following raise « `E_USAGE` » with `[[Subject]]` the offending argument, and exit 2.
 Each message states the problem:
@@ -1545,8 +1549,9 @@ Each message states the problem:
   refused;
 - a `--from` that starts with `-`.
 
-`help` prints usage and `version` prints the version; both exit 0 (§14.1). A file named like a
-command is reached as `docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`.
+`help` prints help (§13.11) and `version` prints the version; both exit 0 (§14.1), except a
+`help` name that is not known (§13.11). A file named like a command is reached as
+`docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`.
 
 ### 13.3 File Arguments
 
@@ -1845,6 +1850,33 @@ another form. Patterns are compared as written for `declared`, so `src` and `src
 compares the files they select, so a proposed `src/a.ts` is covered by a declared `src/**/*.ts`.
 An exclusion is never `covered`.
 
+### 13.11 Help
+
+Everything needed to use docstamp is reachable from the command line, without the repository or
+a network. `help` reads no file and no Root; it prints to standard output and exits 0:
+
+1. With no help name (§13.2 step 3): the *index*: what docstamp is for, each command with its
+   synopsis and one line, each *topic* with one line, and how to ask for a page.
+2. With one name that is a command of §13.1: the *command page*: its synopsis, every option the
+   command accepts (§13.2), what it reads and writes, examples, its exit codes and related
+   commands.
+3. With one name that is a topic: the *topic page*. The topics are `start` (from nothing to a
+   first passing check, with a configuration file or inline), `config`, `inline`, `patterns`,
+   `presets`, `states` (states and Reasons, §5.4, §12.1), `exit-codes` (§16), `json` (§14.5),
+   `diagnostics` (every code of §15, its meaning and its fix), `agents` (the review workflow of
+   §1, ready to paste into an agent's instructions), `schema` (the JSON Schemas the package ships)
+   and `spec` (where this document is, and its sections).
+4. With the two names `diagnostics` and a code of §15: the entry of that code alone.
+
+Any other help names raise « `E_USAGE` », `[[Subject]]` the first name that is not known, whose
+message lists the names that are; it is written as §14.3 writes a Diagnostic, and the exit code is
+2. The text is informative (§2), but it is pinned by tests: every command has a page that names
+every option it accepts, every code of §15 has an entry in `diagnostics` and no other code does,
+and an example that shows output shows what the command prints on a fixed tree.
+
+Help is plain text: LF line endings, no color, no line longer than 100 characters, no absolute
+path. The package ships this document as `docs/SPEC.md`, so `help spec` can name it offline.
+
 ## 14 Output
 
 ### 14.1 Streams and Encoding
@@ -1981,6 +2013,12 @@ If any selected Result is `stale`, the line
 
 ```
 next: review each stale file against its dependencies, then run: docstamp update <file> <file>
+```
+
+followed, after its `and <m> more` line if any, by the *rule line*
+
+```
+  run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
 and then, if any selected Result is `invalid`, the line
@@ -2365,9 +2403,9 @@ command raised.
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2, §13.8, §13.10, §9.6.5 | correct the command line; for a removed option, use the command it names; for a file argument outside Root, name a path that resolves, against the current directory, inside Root |
+| `E_USAGE` | error | §13.2, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a file argument outside Root, name a path that resolves, against the current directory, inside Root; for an unknown help name, one of those the message lists |
 | `E_ROOT` | error | §6 | pass an existing directory |
-| `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6) |
+| `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6); `docstamp help start` shows both |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
 | `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file); for a missing `files`, write `files: {}` for none, or correct the unknown key that stands for it; for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2`; for a file with neither `version` nor `dependents`, add `version: 2` |
@@ -2499,6 +2537,12 @@ The following are not breaking:
   consumer that ignores `pair` reads what it read before;
 - a change to the output of `--help`, `--version` or the changed-file report (§2); this includes
   the description of `update` in `--help`, reworded to hold for inline files too;
+- the help pages of §13.11: `help <command>`, `help <topic>`, `help diagnostics <code>` and
+  `<command> --help`, which printed the same usage before. A help name used to be ignored; an
+  unknown one is now `E_USAGE` with exit 2. Help is read by people and agents, not parsed, and a
+  bare `docstamp help` or `--help` still exits 0. So is shipping `docs/SPEC.md` in the package,
+  which no command reads, the rule line after the stale `next:` line (§14.3.3, text layout of
+  §14.3), and the wording of the `E_USAGE` and `E_CONFIG_MISSING` messages that name a help page;
 - the warnings `W_DUPLICATE_PATTERN`, `W_SHADOWED_EXCLUSION` (§8.5) and `W_UNKNOWN_PATH` (§13.8): new, warning severity,
   no change to a verdict, a Hash, a selection or an exit code; `list-dependents` still exits 0
   for a path it does not know;

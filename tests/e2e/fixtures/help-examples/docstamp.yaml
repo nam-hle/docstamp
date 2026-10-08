@@ -1,0 +1,6 @@
+version: 2
+files:
+  docs/guide.md:
+    dependencies:
+      - src
+      - "!src/**/*.test.ts"

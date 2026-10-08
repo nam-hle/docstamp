@@ -2,4 +2,4 @@ $ docstamp update
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: update: Name the files you reviewed, or pass --all.
+error: E_USAGE: update: Name the files you reviewed, or pass --all; see docstamp help update.

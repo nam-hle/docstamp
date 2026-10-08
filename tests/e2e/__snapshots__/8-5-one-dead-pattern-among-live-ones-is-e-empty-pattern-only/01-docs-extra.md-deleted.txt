@@ -14,6 +14,7 @@ STALE    docs/negation.md  (unrecorded)
 INVALID  docs/two.md
 0 ok, 4 stale, 1 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/all.md docs/alternation.md docs/directory.md docs/negation.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 next: fix the configuration of each invalid file, then run: docstamp check docs/two.md
 --- stderr ---
 error: E_EMPTY_PATTERN: docs/two.md: docs/extra.md: Correct or remove the pattern; it matches no file.

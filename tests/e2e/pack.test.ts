@@ -77,14 +77,27 @@ describe('§9.5 the packed tarball works from node_modules', () => {
       'dist/lib.d.ts',
       'schema.json',
       'schema-frontmatter.json',
+      'docs/SPEC.md',
       'package.json',
     ]) {
       expect(existsSync(join(packaged(), file)), file).toBe(true);
     }
     const top = readdirSync(packaged());
-    for (const leaked of ['src', 'tests', 'docs', 'scripts', 'node_modules']) {
+    for (const leaked of ['src', 'tests', 'scripts', 'node_modules']) {
       expect(top).not.toContain(leaked);
     }
+    expect(readdirSync(join(packaged(), 'docs'))).toEqual(['SPEC.md']);
+  });
+
+  it('help names the files the package ships, offline', () => {
+    const spec = docstamp('help', 'spec');
+    expect(spec).toMatchObject({ status: 0, stderr: '' });
+    expect(spec.stdout).toContain('node_modules/docstamp/docs/SPEC.md');
+    const schema = docstamp('help', 'schema');
+    expect(schema.stdout).toContain('node_modules/docstamp/schema.json');
+    expect(existsSync(join(project, '..', 'node_modules', 'docstamp', 'docs', 'SPEC.md'))).toBe(
+      true,
+    );
   });
 
   it('runs the installed bin on a docstamp.config.ts that imports docstamp', () => {

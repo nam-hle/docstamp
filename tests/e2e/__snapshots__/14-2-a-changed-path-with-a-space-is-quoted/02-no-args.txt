@@ -6,4 +6,5 @@ STALE    CLAUDE.md  (content-changed)
   review: git diff -M 6dbda60450b26a9b8e59e1cf692216788354ee1e -- 'src/my file.ts'
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

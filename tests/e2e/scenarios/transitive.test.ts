@@ -147,11 +147,13 @@ scenario('§13.2 --transitive is valid with list-dependents only', { fixture }, 
     });
     expect(result.stdout).toBe('');
     expect(result.stderr).toContain(
-      'error: E_USAGE: --transitive: --transitive is only valid with "docstamp list-dependents".',
+      'error: E_USAGE: --transitive: --transitive is only valid with "docstamp list-dependents"; see docstamp help',
     );
   }
   const twice = await repo.run(['list-dependents', 'README.md', '--transitive', '--transitive'], {
     expectExit: 2,
   });
-  expect(twice.stderr).toContain('error: E_USAGE: --transitive: --transitive given twice.');
+  expect(twice.stderr).toContain(
+    'error: E_USAGE: --transitive: --transitive given twice; see docstamp help list-dependents.',
+  );
 });

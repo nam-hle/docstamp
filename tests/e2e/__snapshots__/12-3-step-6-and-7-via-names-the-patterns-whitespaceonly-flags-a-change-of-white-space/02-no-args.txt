@@ -14,4 +14,5 @@ STALE    NOTES.md  (content-changed)
   review: git diff -M 38b7ec120c696d0cf816f366c2c78efbd78c3158 -- src/crlf.txt src/d.ts src/e.ts
 0 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md NOTES.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

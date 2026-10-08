@@ -1,0 +1,9 @@
+$ docstamp help diagnostics E_CONFIG_MISSING
+exit: 0
+--- stdout ---
+E_CONFIG_MISSING (error)
+  meaning  No configuration file was found, and the root has no file with a docstamp block, so there
+           is nothing to check. A gate that checks nothing never passes unnoticed.
+  fix      Create docstamp.yaml (or docstamp.config.ts) at the root, or add a docstamp block to the
+           frontmatter of a Markdown file; see docstamp help start.
+--- stderr ---

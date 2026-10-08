@@ -3,4 +3,4 @@ $ docstamp stats --from
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: --from: --from needs a revision.
+error: E_USAGE: --from: --from needs a revision; see docstamp help stats.

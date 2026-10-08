@@ -9,4 +9,5 @@ STALE    README.md  (content-changed)
   review: git diff -M 5343f6d4192ab959ab0f7a73ea2935ce020e2bf3 -- src/cli/run.ts
 1 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

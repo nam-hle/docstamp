@@ -1,0 +1,46 @@
+$ docstamp help
+exit: 0
+--- stdout ---
+docstamp is a deterministic gate for hidden links between files. Each file (usually a doc) declares
+the files it depends on; docstamp fails when they changed since the file was last reviewed, and
+docstamp update <file> records the review. New here: docstamp help start.
+
+Commands:
+  docstamp [check] [--json] [--only-stale] [--quiet] [--root <dir>] [<file>...]
+      Check that each file's dependencies are unchanged since its last review.
+  docstamp update [--json] [--root <dir>] (--all | <file>...)
+      Record that you reviewed the named files against their dependencies.
+  docstamp list-dependencies [--json] [--root <dir>] [<file>...]
+      List each file with its dependency patterns and the files they select.
+  docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
+      List the files that depend on each named file, and the patterns that select it.
+  docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
+      Report how often each file's dependencies would have made it stale.
+  docstamp suggest [--json] [--root <dir>] [--write] <file>...
+      Propose dependencies from the paths each file mentions.
+  docstamp help [<command> | <topic>]
+  docstamp help diagnostics <code>
+  docstamp <command> --help
+      Print the index, a command page or a topic page.
+  docstamp version
+  docstamp --version
+      Print the installed version.
+
+Topics:
+  start        From nothing to a first passing check, with a configuration file or inline.
+  config       The configuration file: docstamp.yaml or docstamp.config.ts, and every key.
+  inline       Declaring dependencies in the frontmatter of a Markdown file.
+  patterns     The pattern language: paths, globs, ! exclusions, last match wins, escapes.
+  presets      Named pattern lists shared by many files (presets and use).
+  states       The states ok, stale and invalid, and the reasons unrecorded and content-changed.
+  exit-codes   What each exit code means.
+  json         The shape of the --json output of every command.
+  diagnostics  Every diagnostic code, what it means and how to fix it.
+  agents       The review workflow for AI agents, ready to paste into CLAUDE.md or AGENTS.md.
+  schema       The JSON Schemas the package ships, and how to point an editor at them.
+  spec         Where the specification is, and its sections.
+
+Exit codes: 0 ok, 1 stale (check only), 2 error or invalid (docstamp help exit-codes).
+Run docstamp help <command> or docstamp help <topic> for a page, and
+docstamp help diagnostics <code> for one diagnostic code.
+--- stderr ---

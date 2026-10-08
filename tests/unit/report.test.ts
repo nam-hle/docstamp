@@ -32,13 +32,24 @@ const change = (status: Change['status'], path: string, extra: Partial<Change> =
   ...extra,
 });
 
+const RULE =
+  '  run update only after the review, never --all just to pass; ' + 'see docstamp help agents\n';
+
 describe('§14.3 check text', () => {
+  it('the rule line follows the stale next line and its and-more line', () => {
+    const stale = Array.from({ length: 11 }, (_, i) =>
+      res(`s${String(i).padStart(2, '0')}.md`, 'stale'),
+    );
+    expect(checkText(stale)).toContain('s09.md\n  and 1 more\n' + RULE);
+    expect(checkText([res('a.md', 'invalid')])).not.toContain(RULE);
+  });
   it('lists only non-ok, summary, next line', () => {
     expect(checkText([res('a.md', 'ok'), res('my doc.md', 'stale')])).toBe(
       'STALE    "my doc.md"  (content-changed)\n  depends   src/**\n' +
         '1 ok, 1 stale, 0 invalid\n' +
         'next: review each stale file against its dependencies, then run: ' +
-        'docstamp update "my doc.md"\n',
+        'docstamp update "my doc.md"\n' +
+        RULE,
     );
   });
   it('prints no block for ok and no file lines', () => {
@@ -360,7 +371,7 @@ describe('§14.3.3 next lines', () => {
       'docstamp update d00.md d01.md d02.md d03.md d04.md d05.md d06.md d07.md d08.md d09.md\n  and 2 more\n',
     );
     expect(out).not.toContain('d10.md d11.md');
-    expect(out.endsWith('  and 2 more\n')).toBe(true);
+    expect(out.endsWith('  and 2 more\n' + RULE)).toBe(true);
   });
   it('exactly 10 files have no continuation line', () => {
     expect(checkText(stales.slice(0, 10))).not.toContain(' more');
@@ -376,6 +387,7 @@ describe('§14.3.3 next lines', () => {
         '0 ok, 1 stale, 2 invalid\n' +
         'next: review each stale file against its dependencies, then run: ' +
         'docstamp update b.md --root sub\n' +
+        RULE +
         'next: fix the configuration of each invalid file, then run: ' +
         'docstamp check a.md c.md --root sub\n',
     );
