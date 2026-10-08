@@ -159,7 +159,7 @@ scenario(
     const base = dirname(repo.root);
     expect(slashes(update.stderr)).toBe(
       slashes(
-        'error: E_UNKNOWN_FILE: docs/guide.md: The argument is resolved against the current ' +
+        'error: E_USAGE: docs/guide.md: The argument is resolved against the current ' +
           `directory (${base}) to ${base}/docs/guide.md, which is outside the root ` +
           `${repo.root}; name a file inside the root.\n`,
       ),
@@ -168,7 +168,7 @@ scenario(
       cwd: '..',
       expectExit: 2,
     });
-    expect(check.stderr).toContain('E_UNKNOWN_FILE: docs/guide.md: The argument is resolved');
+    expect(check.stderr).toContain('E_USAGE: docs/guide.md: The argument is resolved');
     const unknown = await repo.run(['update', 'repo/src/x.ts', '--root', 'repo'], {
       cwd: '..',
       expectExit: 2,
@@ -179,6 +179,28 @@ scenario(
     );
   },
 );
+
+scenario('§13.4 a file argument outside the root is E_USAGE for every command', async (repo) => {
+  repo.write('src/x.ts', 'export const x = 1;\n');
+  repo.write('docs/guide.md', GUIDE);
+  repo.commit('init');
+  for (const command of [
+    'check',
+    'update',
+    'list-dependencies',
+    'list-dependents',
+    'stats',
+    'suggest',
+  ]) {
+    const result = await repo.run([command, 'docs/guide.md', '--root', 'repo'], {
+      cwd: '..',
+      expectExit: 2,
+      label: command,
+    });
+    expect(result.stderr).toContain('error: E_USAGE: docs/guide.md: The argument is resolved');
+    expect(result.stderr).not.toContain('E_UNKNOWN_FILE');
+  }
+});
 
 scenario(
   '§6 nested configuration: the nearest docstamp.yaml is the Root',

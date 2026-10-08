@@ -6,7 +6,8 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
     meaning:
       'The command line is wrong: an unknown or repeated option, a missing value, an option ' +
       'used with a command that does not take it, a missing file argument, a file argument ' +
-      'outside the root, an unknown help name, or a suggest --write that cannot write a block.',
+      'that resolves outside the root (any command), an unknown help name, or a suggest ' +
+      '--write that cannot write a block.',
     fix:
       'Correct the command line as docstamp help <command> shows it. A removed option names ' +
       'its replacement. A file argument is resolved against the current directory, not --root.',
@@ -119,7 +120,9 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'version 2 lock: docstamp update --all rewrites it as version 3 (hashes are unchanged).',
   },
   E_UNKNOWN_FILE: {
-    meaning: 'A file argument is not a stamped file, or resolves outside the root.',
+    meaning:
+      'A file argument resolves inside the root to a file that is not stamped. One that ' +
+      'resolves outside the root is E_USAGE.',
     fix:
       'Name a file listed under files or one with a docstamp block, resolved against the ' +
       'current directory; docstamp list-dependencies lists them all.',

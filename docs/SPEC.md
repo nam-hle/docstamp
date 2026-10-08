@@ -250,8 +250,8 @@ duplicates (all fields equal) removed.
 `[[Message]]` is one sentence naming the problem and its fix. It MUST NOT contain operating system
 error text, parser error text, or absolute paths; it MAY contain an error code name such as
 `EACCES`. The one exception is a file argument that does not resolve inside Root: the `E_USAGE` of
-§13.8 step 3 and §13.10 step 2, and the `E_UNKNOWN_FILE` of §13.3 step 2, name the current
-directory, the resolved path and Root, because that is what explains the failure.
+§13.3 step 2, §13.8 step 3 and §13.10 step 2 names the current directory, the resolved path and
+Root, because that is what explains the failure.
 
 ### 5.6 Inline Block
 
@@ -1607,9 +1607,9 @@ Each message states the problem:
 
 1. If *args* is empty, return *results*.
 2. Let *problems* be an empty List. For each *arg*: let *path* be `ToRepoPath(arg, cwd, root)`.
-   If that fails, or no Result has `[[File]]` equal to *path*, collect `E_UNKNOWN_FILE` with
-   `[[Subject]]` *arg* into *problems*. When `ToRepoPath` failed, its `[[Message]]` says how *arg*
-   was resolved, as §13.8 step 3 does.
+   If that fails, collect `E_USAGE` with `[[Subject]]` *arg* into *problems*, its `[[Message]]`
+   saying how *arg* was resolved, as §13.8 step 3 does. Otherwise, if no Result has `[[File]]`
+   equal to *path*, collect `E_UNKNOWN_FILE` with `[[Subject]]` *arg* into *problems*.
 3. If *problems* is not empty, raise *problems*.
 4. Return the Results whose `[[File]]` was named, in path order without duplicates.
 
@@ -1629,6 +1629,11 @@ happens.
 
 No case folding is applied: the argument must equal the key under `files`, or the RepoPath of an
 inline file.
+
+When `ToRepoPath` fails, the argument is wrong for this current directory and Root, whatever
+file it names: every command raises `E_USAGE` for it (§13.3 step 2, §13.8 step 3, §13.10 step 2).
+`E_UNKNOWN_FILE` is only for an argument that resolves inside Root to a file that is neither
+declared nor carries an inline block.
 
 ### 13.5 Check
 
@@ -2454,7 +2459,7 @@ command raised.
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a file argument outside Root, name a path that resolves, against the current directory, inside Root; for an unknown help name, one of those the message lists |
+| `E_USAGE` | error | §13.2, §13.3, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a file argument outside Root, name a path that resolves, against the current directory, inside Root; for an unknown help name, one of those the message lists |
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6); `docstamp help start` shows both |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
@@ -2473,7 +2478,7 @@ command raised.
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |
 | `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 Lockfile, `docstamp update --all` rewrites it as version 3 (hashes are unchanged); otherwise as `E_LOCK` |
-| `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block; for a file argument outside Root, name a path that resolves, against the current directory, inside Root |
+| `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block; raised only for an argument that resolves inside Root (§13.4) |
 | `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; for `--from`, name a commit |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 | `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
@@ -2539,6 +2544,15 @@ migration is to read `E_UNKNOWN_KEY` where a consumer looked for `E_BLOCK` with 
 `dependencies` on a file that also had an unknown key. No Hash input, selection or Lockfile
 `version` changes.
 
+NOTE: A file argument that does not resolve inside Root (§13.4) was `E_UNKNOWN_FILE` for `check`,
+`update`, `list-dependencies` and `stats` (§13.3), and `E_USAGE` for `list-dependents` and
+`suggest`, with the same message; it is now `E_USAGE` for every command. The exit code is 2 before
+and after, but the Diagnostic code of that run changes (§17.1, fourth item), so it is breaking. The
+migration is to read `E_USAGE` where a consumer looked for `E_UNKNOWN_FILE` with a message that
+says the argument resolves outside Root; `E_UNKNOWN_FILE` now always means a file inside Root that
+is neither declared nor carries an inline block. No Hash input, selection or Lockfile `version`
+changes.
+
 ### 17.3 Non-breaking changes
 
 The following are not breaking:
@@ -2603,8 +2617,9 @@ The following are not breaking:
   for a path it does not know;
 - the `[[Message]]` of the `E_USAGE` of §13.8 step 3 now names the directory and Root it was
   resolved against; the code, the exit code and the resolution of §13.4 are unchanged; so does
-  the `[[Message]]` of the `E_UNKNOWN_FILE` of §13.3 and of the `E_USAGE` of §13.10 for an argument
-  that does not resolve inside Root, with the same code and exit code;
+  the `[[Message]]` of the Diagnostic of §13.3 and of the `E_USAGE` of §13.10 for an argument
+  that does not resolve inside Root, with the same code and exit code (the code of §13.3 later
+  changed, §17.2 NOTE);
 - the files of a `next:` line (§14.3.3) written relative to the current directory when it is not
   Root, so that the command shown runs as printed; it is part of the text layout of §14.3;
 - `--transitive` (§13.2, §13.8): a new option of `list-dependents` that no existing command line uses;
