@@ -7,10 +7,10 @@ docstamp:
     - scripts/*.mjs
     - src/cli
     - src/engine
-    - "!src/engine/**/*.test.*"
-    - "!src/engine/**/__tests__"
     - src/util
     - tests/unit
+    - "!src/engine/**/*.test.*"
+    - "!src/engine/**/__tests__"
 ---
 # Overview
 

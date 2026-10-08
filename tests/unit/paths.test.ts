@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isAtOrUnderRoot,
   resolveArgument,
+  rootFromCwd,
   selectResults,
   toRepoPath,
 } from '../../src/cli/paths.ts';
@@ -86,5 +87,34 @@ describe('§13.3 selectResults', () => {
   });
   it('an outside-root arg raises with the original subject', () => {
     expect(raised(['../x.md'])).toEqual([['E_UNKNOWN_FILE', '../x.md']]);
+  });
+  it('the message of an outside-root arg says how it was resolved; an unknown one does not', () => {
+    const messages = (args: string[]) => {
+      try {
+        selectResults(args, '/w', '/w/r', results);
+      } catch (error) {
+        return (error as Raised).diagnostics.map((d) => d.message);
+      }
+      return [];
+    };
+    expect(messages(['a.md'])).toEqual([
+      'The argument is resolved against the current directory (/w) to /w/a.md, ' +
+        'which is outside the root /w/r; name a file inside the root.',
+    ]);
+    expect(messages(['r/z.md'])[0]).toMatch(/^Name a file listed under "files"/u);
+  });
+});
+
+describe('§14.3.3 rootFromCwd', () => {
+  it('is empty at the root, and relative with / elsewhere', () => {
+    expect(rootFromCwd('/w/r', '/w/r', false)).toBe('');
+    expect(rootFromCwd('/w', '/w/r', false)).toBe('r');
+    expect(rootFromCwd('/w/r/docs/x', '/w/r', false)).toBe('../..');
+    expect(rootFromCwd('/v', '/w/r', false)).toBe('../w/r');
+  });
+  it('uses / on Windows, and is empty across drives', () => {
+    expect(rootFromCwd('C:\\w', 'C:\\w\\r', true)).toBe('r');
+    expect(rootFromCwd('C:\\w\\r\\docs', 'C:\\w\\r', true)).toBe('..');
+    expect(rootFromCwd('D:\\w', 'C:\\w\\r', true)).toBe('');
   });
 });

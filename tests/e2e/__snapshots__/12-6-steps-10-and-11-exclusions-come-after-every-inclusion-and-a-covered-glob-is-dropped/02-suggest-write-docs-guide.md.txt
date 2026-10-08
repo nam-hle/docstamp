@@ -1,0 +1,9 @@
+$ docstamp suggest --write docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern                files  stale
+  packages                   2    n/a
+  !packages/**/*.test.*     -1
+written  docs/guide.md
+--- stderr ---

@@ -5,5 +5,5 @@ exit: 1
 STALE    ROOT.md  (unrecorded)
   depends   packages/*/package.json
 0 ok, 1 stale, 0 invalid
-next: review each stale file against its dependencies, then run: docstamp update ROOT.md
+next: review each stale file against its dependencies, then run: docstamp update ../../ROOT.md
 --- stderr ---

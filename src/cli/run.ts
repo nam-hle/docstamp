@@ -29,7 +29,7 @@ import {
 } from '../report/text.ts';
 import { determineRoot, existsUnderRoot, isIgnoredPath, type Universe } from '../universe/walk.ts';
 import { HELP, parseArgs, type Args } from './args.ts';
-import { isAtOrUnderRoot, resolveArgument, selectResults, toRepoPath } from './paths.ts';
+import { resolutionMessage, rootFromCwd, selectResults, toRepoPath } from './paths.ts';
 import { runSuggest } from './suggest.ts';
 import { loadWorkspace } from './workspace.ts';
 
@@ -224,16 +224,9 @@ function reverseEntries(
   const outside = sortPaths([...keyed.keys()].filter((key) => keyed.get(key) === null));
   if (outside.length > 0) {
     throw new Raised(
-      outside.map((subject) => {
-        const resolved = resolveArgument(subject, cwd);
-        const problem = isAtOrUnderRoot(resolved, root)
-          ? `which does not name a file inside the root ${root}`
-          : `which is outside the root ${root}`;
-        const message =
-          `The argument is resolved against the current directory (${cwd}) to ${resolved}, ` +
-          `${problem}; name a file inside the root.`;
-        return diag('E_USAGE', { subject, message });
-      }),
+      outside.map((subject) =>
+        diag('E_USAGE', { subject, message: resolutionMessage(subject, cwd, root) }),
+      ),
     );
   }
   const entries = sortPaths([...keyed.keys()]).map((key): ReverseEntry => ({
@@ -372,7 +365,11 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       const exitCode = refused ? 2 : stale ? 1 : 0;
       const whitespace = new Map<string, boolean>();
       const reported = selected.map((r) => withChanges(root, r, evaluated, whitespace));
-      const chunks = checkChunks(reported, global, { root: args.root, quiet: args.quiet });
+      const chunks = checkChunks(reported, global, {
+        root: args.root,
+        quiet: args.quiet,
+        rootFromCwd: rootFromCwd(cwd, root),
+      });
       return emit(io, {
         ...empty,
         evaluated: true,

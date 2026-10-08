@@ -44,6 +44,30 @@ export function toRepoPath(
   return isRepoPath(rest) ? rest : null;
 }
 
+// SPEC §5.5, §13.3, §13.8 step 3: how an argument that names no path inside the root was resolved
+export function resolutionMessage(arg: string, cwd: string, root: string): string {
+  const resolved = resolveArgument(arg, cwd);
+  const problem = isAtOrUnderRoot(resolved, root)
+    ? `which does not name a file inside the root ${root}`
+    : `which is outside the root ${root}`;
+  return (
+    `The argument is resolved against the current directory (${cwd}) to ${resolved}, ` +
+    `${problem}; name a file inside the root.`
+  );
+}
+
+// SPEC §14.3.3: the path from cwd to the root, "" when they are the same directory
+export function rootFromCwd(
+  cwd: string,
+  root: string,
+  windows: boolean = process.platform === 'win32',
+): string {
+  const [from, to] = windows ? [cwd, root].map(toPosix) : [cwd, root];
+  const drive = (value: string) => (isDriveAbsolute(value) ? value[0]!.toUpperCase() : '');
+  if (drive(from!) !== drive(to!)) return '';
+  return posix.relative(from!, to!);
+}
+
 // SPEC §13.3
 export function selectResults(
   args: readonly string[],
@@ -57,7 +81,10 @@ export function selectResults(
   const known = new Set(results.map((result) => result.file));
   for (const arg of args) {
     const path = toRepoPath(arg, cwd, root);
-    if (path === null || !known.has(path)) {
+    if (path === null) {
+      const message = resolutionMessage(arg, cwd, root);
+      errors.push(diag('E_UNKNOWN_FILE', { subject: arg, message }));
+    } else if (!known.has(path)) {
       errors.push(diag('E_UNKNOWN_FILE', { subject: arg }));
     } else {
       named.add(path);

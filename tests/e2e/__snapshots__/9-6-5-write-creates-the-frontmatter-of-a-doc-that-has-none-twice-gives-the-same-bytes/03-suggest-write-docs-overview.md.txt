@@ -7,10 +7,10 @@ suggest docs/overview.md
   scripts/*.mjs                 2    n/a
   src/cli                       3    n/a
   src/engine                    3    n/a
-  !src/engine/**/*.test.*      -1
-  !src/engine/**/__tests__     -1
   src/util                      4    n/a
   tests/unit                    1    n/a
+  !src/engine/**/*.test.*      -1
+  !src/engine/**/__tests__     -1
   ignored  build/output.js
 unchanged  docs/overview.md
 --- stderr ---

@@ -2,4 +2,4 @@ $ docstamp suggest ../outside.md docs/nothing.md
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: ../outside.md: Name a file inside the root.
+error: E_USAGE: ../outside.md: The argument is resolved against the current directory (<root>) to <tmp>/outside.md, which is outside the root <root>; name a file inside the root.

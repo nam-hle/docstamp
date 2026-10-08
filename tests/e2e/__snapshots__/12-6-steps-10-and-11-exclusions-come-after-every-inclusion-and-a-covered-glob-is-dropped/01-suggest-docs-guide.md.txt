@@ -1,0 +1,14 @@
+$ docstamp suggest docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern                files  stale
+  packages                   2    n/a
+  !packages/**/*.test.*     -1
+--- stderr ---
+--- setup: docs/guide.md ---
+# Guide
+
+All code lives in `packages`. Each package has its own folder under `packages/*`.
+
+See `packages/a/src/x.ts` too.

@@ -338,6 +338,16 @@ describe('§14.3.3 next lines', () => {
     expect(out).toContain('then run: docstamp check i00.md i01.md');
     expect(out).toContain('i09.md --root sub\n  and 1 more\n');
   });
+  it('a file is written relative to the current directory when it is not the root', () => {
+    const out = checkText([res('docs/b.md', 'stale'), res('a.md', 'invalid')], {
+      root: 'repo',
+      rootFromCwd: 'repo',
+    });
+    expect(out).toContain('then run: docstamp update repo/docs/b.md --root repo\n');
+    expect(out).toContain('then run: docstamp check repo/a.md --root repo\n');
+    const up = checkText([res('docs/b.md', 'stale')], { rootFromCwd: '../..' });
+    expect(up).toContain('then run: docstamp update ../../docs/b.md\n');
+  });
   it('an update refused by an invalid file prints no next line', () => {
     expect(checkText([res('a.md', 'invalid')], { next: false })).toBe(
       'INVALID  a.md\n0 ok, 0 stale, 1 invalid\n',

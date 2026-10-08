@@ -20,6 +20,7 @@ export interface CheckTextOptions {
   root?: string;
   next?: boolean;
   quiet?: boolean;
+  rootFromCwd?: string;
 }
 
 export interface Chunk {
@@ -140,7 +141,7 @@ function nextLine(lead: string, command: string, files: readonly string[], root:
 export function checkChunks(
   selected: readonly Result[],
   global: readonly Diagnostic[],
-  { root: rootArg, next: withNext = true, quiet = false }: CheckTextOptions = {},
+  { root: rootArg, next: withNext = true, quiet = false, rootFromCwd = '' }: CheckTextOptions = {},
 ): Chunk[] {
   const chunks: Chunk[] = [];
   const emit = (stream: Chunk['stream'], text: string) => {
@@ -160,8 +161,9 @@ export function checkChunks(
     }
     emit('stderr', diagnosticsText(r.diagnostics));
   }
+  const argument = (file: string) => (rootFromCwd === '' ? file : `${rootFromCwd}/${file}`);
   const files = (state: Result['state']) =>
-    selected.filter((r) => r.state === state).map((r) => r.file);
+    selected.filter((r) => r.state === state).map((r) => argument(r.file));
   const [stale, invalid] = [files('stale'), files('invalid')];
   if (!quiet || stale.length + invalid.length > 0) {
     const ok = selected.length - stale.length - invalid.length;

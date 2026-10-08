@@ -435,16 +435,55 @@ describe('§12.6 Proposal', () => {
     });
   });
 
-  describe('step 10 order', () => {
-    it('is path order, each exclusion after its directory', () => {
+  describe('step 10 subsumption', () => {
+    it('drops a glob that the directory covers, as in packages/* under packages', () => {
+      const universe = tree(
+        'docs/guide.md',
+        'packages/a/src/x.ts',
+        'packages/a/src/x.test.ts',
+        'packages/b/src/y.ts',
+      );
+      const text =
+        'All code lives in `packages`. Each package has its own folder under `packages/*`.\n\n' +
+        'See `packages/a/src/x.ts` too.\n';
+      const result = propose('docs/guide.md', text, universe, () => false);
+      expect(result.suggestions).toEqual([
+        { pattern: 'packages', files: ['packages/a/src/x.ts', 'packages/b/src/y.ts'] },
+        { pattern: '!packages/**/*.test.*', files: ['packages/a/src/x.test.ts'] },
+      ]);
+    });
+    it('drops a directory and a file below a mentioned directory or glob', () => {
+      const universe = tree('README.md', 'docs/a.md', 'docs/reference/b.md', 'docs/reference/c.md');
+      expect(patterns('`docs` and `docs/reference/*`', { universe })).toEqual(['docs']);
+      expect(patterns('`scripts/*.mjs` and `scripts/build.mjs`')).toEqual(['scripts/*.mjs']);
+    });
+    it('keeps the first in path order of two that select the same files', () => {
+      expect(patterns('`scripts` and `scripts/*.mjs`')).toEqual(['scripts']);
+    });
+    it('keeps an inclusion that selects a file the other does not', () => {
+      expect(patterns('`src/*.ts` and `src/cli/args.ts`')).toEqual(['src/*.ts', 'src/cli/args.ts']);
+    });
+  });
+
+  describe('step 11 order', () => {
+    it('is path order of the inclusions, then every exclusion', () => {
       expect(patterns('`pkg` `src/cli` `docs/SPEC.md` `scripts/*.mjs` `big/1.ts`')).toEqual([
         'big/1.ts',
         'docs/SPEC.md',
         'pkg',
-        '!pkg/**/*.test.*',
-        '!pkg/**/__tests__',
         'scripts/*.mjs',
         'src/cli',
+        '!pkg/**/*.test.*',
+        '!pkg/**/__tests__',
+      ]);
+    });
+    it('an inclusion before the exclusions has the files they leave', () => {
+      const universe = tree('README.md', 'p/a/x.ts', 'p/a/x.test.ts', 'p/b.ts', 'p2/q.ts');
+      const { suggestions } = propose('README.md', '`p` and `p*/*.ts`', universe, () => false);
+      expect(suggestions).toEqual([
+        { pattern: 'p', files: ['p/a/x.ts', 'p/b.ts'] },
+        { pattern: 'p*/*.ts', files: ['p/b.ts', 'p2/q.ts'] },
+        { pattern: '!p/**/*.test.*', files: ['p/a/x.test.ts'] },
       ]);
     });
     it('lists each file once, whatever the number of mentions', () => {
