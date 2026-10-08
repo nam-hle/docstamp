@@ -17,16 +17,17 @@ export interface ParsedBlock {
 }
 
 // SPEC §9.6.2
-export function parseBlock(file: string, scan: Scan): ParsedBlock {
+// `defaults`: the Configuration file names default Presets, so an empty `use` opts out of them
+export function parseBlock(file: string, scan: Scan, defaults = false): ParsedBlock {
   const problems: Diagnostic[] = [];
   const block = (subject: string, message: string) =>
     problems.push(diag('E_BLOCK', { file, subject, message }));
   const done = (
     dependencies: readonly string[],
     recorded: string | null,
-    use: readonly string[] = [],
+    use: readonly string[] | null = null,
   ): ParsedBlock => ({
-    declaration: { file, dependencies, ...(use.length > 0 ? { use } : {}), inline: { recorded } },
+    declaration: { file, dependencies, ...(use === null ? {} : { use }), inline: { recorded } },
     problems,
   });
 
@@ -77,13 +78,20 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
   const used = keys.get('use')?.value;
   const use =
     Array.isArray(used) &&
-    used.length > 0 &&
+    (used.length > 0 || defaults) &&
     used.every((name) => typeof name === 'string') &&
     new Set(used).size === used.length
       ? (used as string[])
       : null;
   if (used !== undefined && use === null) {
-    block('use', 'The use key must hold a non-empty list of distinct preset names.');
+    const empty = Array.isArray(used) && used.length === 0;
+    block(
+      'use',
+      empty
+        ? 'An empty use opts out of default presets, and the configuration file names none ' +
+            '("default-presets"): remove the use key.'
+        : 'The use key must hold a non-empty list of distinct preset names.',
+    );
   }
 
   const hashNode = keys.get('hash');
@@ -97,5 +105,5 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
   if (value !== undefined && !wellFormed) {
     block('hash', 'Write the hash as "hash:" and 64 lowercase hex digits on one line.');
   }
-  return done(dependencies ?? [], wellFormed ? (value as string) : null, use ?? []);
+  return done(dependencies ?? [], wellFormed ? (value as string) : null, use);
 }

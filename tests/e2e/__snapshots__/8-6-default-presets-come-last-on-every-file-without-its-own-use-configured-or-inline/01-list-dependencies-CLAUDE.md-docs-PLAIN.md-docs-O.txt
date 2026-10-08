@@ -1,0 +1,53 @@
+$ docstamp list-dependencies CLAUDE.md docs/PLAIN.md docs/OPT.md docs/GUIDE.md
+exit: 0
+--- stdout ---
+CLAUDE.md
+  depends   src
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  resolved  src/cli/run.ts
+  resolved  src/core/hash.ts
+  resolved  src/index.ts
+docs/GUIDE.md
+  depends   src/core
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  resolved  src/core/hash.ts
+docs/OPT.md
+  depends   src/core
+  resolved  src/core/hash.test.ts
+  resolved  src/core/hash.ts
+docs/PLAIN.md
+  depends   src/core
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  resolved  src/core/hash.ts
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  tests:
+    - "!**/*.test.ts"
+    - "!**/__test__/**"
+  spec:
+    - docs/SPEC.md
+  cli:
+    - src/cli
+default-presets: [tests]
+files:
+  CLAUDE.md:
+    dependencies:
+      - src
+--- setup: docs/PLAIN.md ---
+---
+docstamp:
+  dependencies: [src/core]
+---
+x
+--- setup: docs/OPT.md ---
+---
+docstamp:
+  dependencies: [src/core]
+  use: []
+---
+x

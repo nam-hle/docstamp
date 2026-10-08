@@ -28,13 +28,14 @@ const raised = (fn: () => unknown) => {
 describe('§8.6 ExpandPresets', () => {
   it('returns a declaration with no use as it is', () => {
     const declaration = { file: 'a.md', dependencies: ['src'] };
-    expect(expandPresets(declaration, presets, true)).toBe(declaration);
+    expect(expandPresets(declaration, presets, [], true)).toBe(declaration);
   });
 
   it('puts the own patterns first, then each preset in use order', () => {
     const expanded = expandPresets(
       { file: 'a.md', dependencies: ['src', '!src/x'], use: ['spec', 'tests'] },
       presets,
+      [],
       true,
     );
     expect(expanded.dependencies).toEqual([
@@ -51,6 +52,7 @@ describe('§8.6 ExpandPresets', () => {
     const forward = expandPresets(
       { file: 'a.md', dependencies: ['src'], use: ['tests', 'spec'] },
       presets,
+      [],
       true,
     );
     expect(forward.dependencies.slice(1)).toEqual([
@@ -65,6 +67,7 @@ describe('§8.6 ExpandPresets', () => {
       expandPresets(
         { file: 'a.md', dependencies: ['src'], use: ['nope', 'tests', 'gone'] },
         presets,
+        [],
         true,
       ),
     );
@@ -76,7 +79,7 @@ describe('§8.6 ExpandPresets', () => {
 
   it('says that presets live in a configuration file when there is none', () => {
     try {
-      expandPresets({ file: 'a.md', dependencies: ['src'], use: ['tests'] }, new Map(), false);
+      expandPresets({ file: 'a.md', dependencies: ['src'], use: ['tests'] }, new Map(), [], false);
       expect.unreachable();
     } catch (e) {
       expect((e as Raised).diagnostics[0]!.message).toContain('no configuration file');
@@ -91,6 +94,7 @@ describe('§8.6 ExpandPresets', () => {
     const expanded = expandPresets(
       { file: 'a.md', dependencies: ['x'], use: ['outer'] },
       nested,
+      [],
       true,
     );
     expect(expanded.dependencies).toEqual(['x', 'inner']);
@@ -233,6 +237,7 @@ describe('§12.2 presets in a workspace', () => {
     const preset = expandPresets(
       { file: 'a.md', dependencies: ['src'], use: ['tests'] },
       presets,
+      [],
       true,
     );
     expect(evaluateWith(preset).diagnostics).toEqual([]);
@@ -244,6 +249,7 @@ describe('§12.2 presets in a workspace', () => {
     const declaration = expandPresets(
       { file: 'a.md', dependencies: ['src'], use: ['spec'] },
       presets,
+      [],
       true,
     );
     const result = evaluate(declaration, ['a.md', 'src/a.ts'], { entries: new Map() }, [], {
@@ -261,6 +267,7 @@ describe('§12.2 presets in a workspace', () => {
     const declaration = expandPresets(
       { file: 'a.md', dependencies: ['src'], use: ['tests'] },
       presets,
+      [],
       true,
     );
     const result = evaluate(declaration, ['a.md', 'src/a.ts'], { entries: new Map() }, [], {
@@ -273,5 +280,128 @@ describe('§12.2 presets in a workspace', () => {
       origins: [null, 'tests', 'tests'],
       resolved: ['src/a.ts'],
     });
+  });
+});
+
+describe('§8.6 default presets', () => {
+  it('appends the default presets after the own patterns of a declaration without use', () => {
+    const expanded = expandPresets(
+      { file: 'a.md', dependencies: ['src'] },
+      presets,
+      ['tests'],
+      true,
+    );
+    expect(expanded.dependencies).toEqual(['src', '!**/*.test.ts', '!**/__test__/**']);
+    expect(expanded.origins).toEqual([null, 'tests', 'tests']);
+    expect(expanded.use).toBeUndefined();
+  });
+
+  it('an own use replaces the default presets, and use: [] uses none', () => {
+    const own = expandPresets(
+      { file: 'a.md', dependencies: ['src'], use: ['spec'] },
+      presets,
+      ['tests'],
+      true,
+    );
+    expect(own.origins).toEqual([null, 'spec']);
+    const none = { file: 'a.md', dependencies: ['src'], use: [] };
+    expect(expandPresets(none, presets, ['tests'], true)).toBe(none);
+  });
+});
+
+describe('§9.3 default-presets in the configuration file', () => {
+  const read = (yaml: string) => readConfig(makeTree({ 'docstamp.yaml': yaml }));
+  const failures = (yaml: string) => raised(() => read(yaml));
+  const head = 'version: 2\npresets:\n  tests: [a]\n';
+
+  it('reads default-presets into the config, and use: [] on a file', () => {
+    const { config } = read(
+      `${head}default-presets: [tests]\nfiles:\n  a.md:\n    dependencies: [src]\n    use: []\n` +
+        '  b.md:\n    dependencies: [src]\n',
+    );
+    expect(config.defaultPresets).toEqual(['tests']);
+    expect(config.declarations).toEqual([
+      { file: 'a.md', dependencies: ['src'], use: [] },
+      { file: 'b.md', dependencies: ['src'] },
+    ]);
+  });
+
+  it('is empty when absent', () => {
+    expect(read(`${head}files: {}\n`).config.defaultPresets).toEqual([]);
+  });
+
+  it.each([
+    ['empty', '[]'],
+    ['a string', 'tests'],
+    ['a non-string element', '[1]'],
+    ['a repeated name', '[tests, tests]'],
+  ])('default-presets that is %s is a global E_CONFIG', (_name, value) => {
+    expect(failures(`${head}default-presets: ${value}\nfiles: {}\n`)).toEqual([
+      ['E_CONFIG', '', 'default-presets'],
+    ]);
+  });
+
+  it('an unknown name is a global E_UNKNOWN_PRESET, also without presets', () => {
+    expect(failures(`${head}default-presets: [tests, nope]\nfiles: {}\n`)).toEqual([
+      ['E_UNKNOWN_PRESET', '', 'nope'],
+    ]);
+    expect(failures('version: 2\ndefault-presets: [tests]\nfiles: {}\n')).toEqual([
+      ['E_UNKNOWN_PRESET', '', 'tests'],
+    ]);
+  });
+
+  it('use: [] without default-presets stays E_CONFIG on the file', () => {
+    expect(failures(`${head}files:\n  a.md:\n    dependencies: [src]\n    use: []\n`)).toEqual([
+      ['E_CONFIG', 'a.md', 'use'],
+    ]);
+  });
+
+  it('a near miss of default-presets names it', () => {
+    try {
+      read(`${head}default-preset: [tests]\nfiles: {}\n`);
+      expect.unreachable();
+    } catch (e) {
+      const [found] = (e as Raised).diagnostics;
+      expect(found).toMatchObject({ code: 'E_UNKNOWN_KEY', subject: 'default-preset' });
+      expect(found!.message).toContain('"default-presets"');
+    }
+  });
+});
+
+describe('§9.6.2 use: [] in an inline block', () => {
+  const scan = scanFrontmatter('---\ndocstamp:\n  dependencies: [src]\n  use: []\n---\n')!;
+
+  it('is accepted only when there are default presets', () => {
+    expect(parseBlock('d.md', scan, true)).toMatchObject({
+      declaration: { use: [] },
+      problems: [],
+    });
+    expect(parseBlock('d.md', scan, false).problems.map((d) => d.subject)).toEqual(['use']);
+  });
+});
+
+describe('§12.2 default presets in a workspace', () => {
+  const config =
+    'version: 2\npresets:\n  quiet: ["!src/**/*.test.ts"]\ndefault-presets: [quiet]\n' +
+    'files:\n  A.md:\n    dependencies: [src]\n  B.md:\n    dependencies: [src]\n    use: []\n';
+  const tree = {
+    'docstamp.yaml': config,
+    'A.md': '# a\n',
+    'B.md': '# b\n',
+    'docs/G.md': '---\ndocstamp:\n  dependencies: [src]\n---\n',
+    'docs/H.md': '---\ndocstamp:\n  dependencies: [src]\n  use: []\n---\n',
+    'src/a.ts': 'a\n',
+    'src/a.test.ts': 't\n',
+  };
+
+  it('applies to configured and inline declarations without a use key', () => {
+    const ws = loadWorkspace(makeTree(tree));
+    expect(ws.attached).toEqual([]);
+    expect(ws.declarations.map((d) => [d.file, d.dependencies.length, d.origins])).toEqual([
+      ['A.md', 2, [null, 'quiet']],
+      ['B.md', 1, undefined],
+      ['docs/G.md', 2, [null, 'quiet']],
+      ['docs/H.md', 1, undefined],
+    ]);
   });
 });

@@ -125,7 +125,8 @@ blocks. Its default is « `**/*.md` ».
 **Preset**: a named non-empty List of patterns that the Configuration file defines under
 `presets` (§9.3) and a Declaration names under `use` (§8.6), so that a list shared by many files is
 written once. A file's *effective patterns* are its own patterns followed by those of its presets
-(§8.6).
+(§8.6). The *default Presets* are those the Configuration file names under its key
+`default-presets` (§9.3): a Declaration without a `use` of its own uses them (§8.6).
 
 **Dependency**: a file selected by a file's Declaration (§8.5).
 
@@ -157,7 +158,7 @@ the Dependency Hash of configured Declarations only (§5.3).
 |---|---|---|
 | `[[File]]` | RepoPath | |
 | `[[Dependencies]]` | List of String | the patterns, verbatim, in declaration order |
-| `[[Use]]` | List of String | the names of the Presets it uses (§8.6), in order; « » when it has no `use` |
+| `[[Use]]` | List of String, or none | the names in its own `use` key, in order; none when it has no `use` key (§8.6) |
 | `[[Origin]]` | `config` or `inline` | where it is declared |
 | `[[Recorded]]` | Hash, or none | inline only: the Hash recorded in the block (§5.6), none if it has no `hash` key |
 
@@ -169,6 +170,7 @@ the Dependency Hash of configured Declarations only (§5.3).
 | `[[UseGitignore]]` | Boolean | true |
 | `[[Include]]` | non-empty List of String (patterns, §8.1) | « `**/*.md` » |
 | `[[Presets]]` | Map from preset name (§9.3) to non-empty List of String (patterns, §8.1) | an empty Map |
+| `[[DefaultPresets]]` | List of String (names of `[[Presets]]`, distinct): the default Presets (§8.6) | « » |
 | `[[Declarations]]` | List of configured Declaration, in path order of `[[File]]` | (required) |
 
 NOTE: A Config is built from the normalized value of the Configuration file (§9.3), whatever its
@@ -197,7 +199,7 @@ identical needs no Review (Principle 4).
 | Field | Type | Meaning |
 |---|---|---|
 | `[[File]]` | RepoPath | |
-| `[[Dependencies]]` | List of String | the Declaration's effective patterns (§8.6): its `[[Dependencies]]` when it has no `[[Use]]` |
+| `[[Dependencies]]` | List of String | the Declaration's effective patterns (§8.6): its `[[Dependencies]]` when it uses no Preset |
 | `[[Use]]` | List of String | the Declaration's `[[Use]]` |
 | `[[Origins]]` | List of String or none | one element per element of `[[Dependencies]]`: the name of the Preset the pattern comes from, or none for the Declaration's own pattern |
 | `[[State]]` | `ok`, `stale` or `invalid` | §12.1 |
@@ -265,7 +267,8 @@ docstamp:
 ```
 
 `dependencies` is required: a non-empty List of patterns of the dialect of §8.1. `use` is optional:
-a non-empty List of Preset names (§8.6). `hash` is optional:
+a non-empty List of Preset names (§8.6), or the empty List when the Configuration file names default
+Presets, to use none of them (§9.6.2). `hash` is optional:
 a Hash (§10.3): the Dependency Hash (§10.4) recorded at the last Write of the file, the same value
 the Lockfile records. It has no version of its own (§17.5).
 
@@ -300,8 +303,9 @@ parsed (§9.6.2), so unrelated frontmatter cannot make a run fail.
 NOTE: The package ships `schema-frontmatter.json`, a JSON Schema (draft-07) for the frontmatter of a
 file with an inline block, so that tools that validate frontmatter can catch a mistyped key: the
 `docstamp` key is an object with `dependencies` (required, a non-empty array of strings, none of
-them empty or a lone `!`, two invalid Patterns of §8.1), `use` (a
-non-empty array of distinct Preset names) and `hash` (64 lowercase hexadecimal digits), and no other
+them empty or a lone `!`, two invalid Patterns of §8.1), `use` (an
+array of distinct Preset names; the schema cannot see the Configuration file, so it accepts the
+empty array, which §9.6.2 accepts only when there are default Presets) and `hash` (64 lowercase hexadecimal digits), and no other
 key; other frontmatter keys are free. It is generated from the same keys as §9.6.2 and is
 informative: docstamp does not read it, and §9.6.2 decides.
 
@@ -502,7 +506,7 @@ a file under a directory an earlier negation removed.
 1. Let *problems* and *warnings* be empty Lists.
 2. Let *candidates* be *universe* without `declaration.[[File]]`.
 3. For each *pattern* of the effective patterns of *declaration* (§8.6; `declaration.[[Dependencies]]`
-   when it has no `[[Use]]`): if no *path* of *candidates* satisfies `PatternMatches(pattern, path)`,
+   when it uses no Preset): if no *path* of *candidates* satisfies `PatternMatches(pattern, path)`,
    then, with `[[Subject]]` *pattern*: if *pattern* has no Negation, collect `E_EMPTY_PATTERN` into
    *problems*; otherwise, unless *pattern* comes from a Preset, collect `W_EMPTY_EXCLUSION` into
    *warnings*.
@@ -590,13 +594,18 @@ Presets it uses in its `use` key; the patterns of a Preset are not a new syntax:
 §8.1, and nothing in a pattern refers to a Preset, so no existing pattern changes meaning and a
 Preset cannot refer to another one.
 
-`ExpandPresets(declaration, presets, present)`, where *presets* is `config.[[Presets]]` and
-*present* tells whether a Configuration file exists (§9.3), returns the effective patterns and their
-origins of *declaration*, or raises:
+The *used Presets* of a Declaration are its `[[Use]]` when it is not none, and otherwise
+`config.[[DefaultPresets]]`, the default Presets (§9.3). A Declaration *uses a Preset* when its
+used Presets are not empty.
+
+`ExpandPresets(declaration, presets, defaults, present)`, where *presets* is `config.[[Presets]]`,
+*defaults* is `config.[[DefaultPresets]]` and *present* tells whether a Configuration file exists
+(§9.3), returns the effective patterns and their origins of *declaration*, or raises:
 
 1. Let *problems* be an empty List, *patterns* a copy of `declaration.[[Dependencies]]`, and *origins*
-   a List of as many none elements.
-2. For each name *n* of `declaration.[[Use]]`, in order: if *presets* has no key *n*, collect
+   a List of as many none elements. Let *used* be `declaration.[[Use]]` if it is not none, else
+   *defaults*.
+2. For each name *n* of *used*, in order: if *presets* has no key *n*, collect
    `E_UNKNOWN_PRESET` into *problems*, `[[Subject]]` *n*; otherwise append the patterns of the Preset
    *n*, in order, to *patterns*, and as many elements *n* to *origins*.
 3. If *problems* is not empty, raise it. Otherwise return *patterns* and *origins*.
@@ -614,6 +623,25 @@ files whose set of dependencies it changes (§12.1 NOTE). A Declaration whose `u
 
 NOTE: A file with an inline block that uses a Preset needs a Configuration file that defines it:
 Presets are not definable in a block, so that a list shared by many files has one definition.
+
+NOTE: The default Presets come last, after the file's own patterns, as any `use` does: a
+Declaration without `use` behaves exactly as if its own `use` named `config.[[DefaultPresets]]`.
+A Declaration with a `use` key does not get them: its `use` replaces them, so a file that needs
+other Presets and a default one names both, and `use: []` uses none (§9.3 step 8.3, §9.6.2 step 6).
+A name of `config.[[DefaultPresets]]` is checked once, when the Configuration file is read (§9.3
+step 6), so this clause never raises for it. The default Presets are those of the Configuration
+file at Root, for configured and inline Declarations alike: an inline file in a Root whose
+Configuration file has `default-presets` gets them unless its block has a `use` key, and a Root
+with no Configuration file has none. The warnings of §8.5 treat them as any Preset: an exclusion of a default Preset that
+matches nothing is silent, `W_SHADOWED_EXCLUSION` names the default Preset as the origin of a
+pattern, and `W_DUPLICATE_PATTERN` counts the file's own patterns only.
+
+NOTE: Editing `default-presets`, like editing a Preset, changes the effective patterns of every
+Declaration that has no `use` key. It is an ordinary change of selection: a file whose set of
+dependencies changes is `stale` with `content-changed`, and a file whose set of dependencies is the
+same stays `ok`, because the Dependency Hash depends on the resolved files only (§10.4), never on the
+patterns. The Lockfile and its `version` are unchanged. It is not an edit of the file's own list
+(§12.3 step 1.4), which holds the file's own `use` key only.
 
 ## 9 Configuration File
 
@@ -697,8 +725,8 @@ raises:
 4. If the key `version` is absent, or its value is not the Number 2, raise « `E_CONFIG_VERSION` »,
    whose message names the migration from version 1 when *value* has the key `version` or
    `dependents`, and otherwise (a first configuration file) says to add `version: 2`.
-5. For each key of *value* other than `version`, `gitignore`, `ignore`, `include`, `presets` and
-   `files`, collect `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` the key.
+5. For each key of *value* other than `version`, `gitignore`, `ignore`, `include`, `presets`,
+   `default-presets` and `files`, collect `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` the key.
 6. If `gitignore` is present and not a Boolean, or `ignore` is present and not a List of
    Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` the key. If `include` is present and
    not a non-empty List of Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` `include`;
@@ -708,7 +736,11 @@ raises:
    *name* is not of the form `[a-z][a-z0-9-]*`, or *list* is not a non-empty List of Strings,
    collect `E_CONFIG` into *fatal*, `[[Subject]]` `presets.` followed by *name*; otherwise, for each
    string *s* of *list* that is not a valid Pattern (§8.1), collect `E_PATTERN` into *fatal*,
-   `[[Subject]]` *s*.
+   `[[Subject]]` *s*. If `default-presets` is present and is not a non-empty List of Strings without
+   a repeated element, collect `E_CONFIG` into *fatal*, `[[Subject]]` `default-presets`; otherwise,
+   for each string *n* of it that is not a key of `presets` (all of them when `presets` is absent or
+   not a Map), collect `E_UNKNOWN_PRESET` into *fatal*, `[[Subject]]` *n*, with an empty `[[File]]`:
+   a global Diagnostic, as every other Diagnostic of this step.
 7. If `files` is absent, or not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]`
    `files`. When it is absent, the message says that `files` is required and to write `files: {}`
    for none; when a key of step 5 has `files` as its near key (NOTE below), it names that key
@@ -719,17 +751,22 @@ raises:
    2. If *value* is not a Map, or has no key `dependencies`, or `dependencies` is not a non-empty
       List of Strings, collect `E_CONFIG` into *fatal*, `[[File]]` *key*, and continue.
    3. For each key of *value* other than `dependencies` and `use`, collect `E_UNKNOWN_KEY` into
-      *fatal*, `[[File]]` *key*, `[[Subject]]` that key. If `use` is present and is not a non-empty
-      List of Strings without a repeated element, collect `E_CONFIG` into *fatal*, `[[File]]` *key*,
-      `[[Subject]]` `use`.
+      *fatal*, `[[File]]` *key*, `[[Subject]]` that key. If `use` is present and is not a List of
+      Strings without a repeated element, or is empty while `default-presets` is absent, collect
+      `E_CONFIG` into *fatal*, `[[File]]` *key*, `[[Subject]]` `use`.
    4. For each string *s* of `dependencies` that is not a valid Pattern (§8.1), collect
       `E_PATTERN` into *attached*, `[[File]]` *key*, `[[Subject]]` *s*.
    5. Produce the Declaration { `[[File]]`: *key*, `[[Dependencies]]`: the strings of
-      `dependencies`, `[[Use]]`: the strings of `use`, or « » if it is absent, `[[Origin]]`:
+      `dependencies`, `[[Use]]`: the strings of `use`, or none if it is absent, `[[Origin]]`:
       `config`, `[[Recorded]]`: none }.
 9. If *fatal* is not empty, raise *fatal*.
-10. Return the Config, with defaults (§5.2) for absent keys, `[[Presets]]` from `presets`, and the
-    Declarations in path order, *attached* and *present* true.
+10. Return the Config, with defaults (§5.2) for absent keys, `[[Presets]]` from `presets`,
+    `[[DefaultPresets]]` from `default-presets`, and the Declarations in path order, *attached* and
+    *present* true.
+
+NOTE: An empty `use` means "none of the default Presets" (§8.6), so it is accepted only where there
+are default Presets; without `default-presets` it says nothing and stays `E_CONFIG`, as it was
+before default Presets existed (§17.3).
 
 NOTE: A bad pattern makes only its file `invalid`; every other file is still evaluated.
 A structural error stops evaluation.
@@ -825,7 +862,10 @@ binary (§10.1) or not valid UTF-8 has no text and is not an inline file.
 
 #### 9.6.2 Parsing
 
-`ParseBlock(file, scan)` returns a Declaration or raises a List of Diagnostics attached to *file*:
+`ParseBlock(file, scan, defaults)`, where *defaults* is true iff `config.[[DefaultPresets]]` is
+not empty (§9.3; false where another clause calls it without *defaults*, true in §12.3 step 1.4),
+returns a Declaration or
+raises a List of Diagnostics attached to *file*:
 
 1. Let *problems* be an empty List.
 2. If the marker line, after `docstamp:`, is not only blanks and an optional `#` comment, collect
@@ -841,14 +881,14 @@ binary (§10.1) or not valid UTF-8 has no text and is not an inline file.
 6. If `dependencies` is present but not a non-empty List of Strings, or is absent and step 5
    collected no `E_UNKNOWN_KEY`, collect `E_BLOCK`, `[[Subject]]` `dependencies`. Otherwise, for
    each string *s* of it that is not a valid Pattern (§8.1), collect `E_PATTERN`, `[[Subject]]`
-   *s*. If `use` is present and is not a non-empty List of Strings without a repeated element,
-   collect `E_BLOCK`, `[[Subject]]` `use`.
+   *s*. If `use` is present and is not a List of Strings without a repeated element, or is empty
+   while *defaults* is false, collect `E_BLOCK`, `[[Subject]]` `use`.
 7. If `hash` is present, let *recorded* be it. Collect `E_BLOCK`, `[[Subject]]` `hash`, unless
    *recorded* is a String of 64 characters of `[0-9a-f]`, the scan has exactly one
    line of *hashLines*, and that line, after `hash:`, is one or more blanks, *recorded* itself,
    optional blanks, an optional `#` comment and its terminator.
 8. If *problems* is empty, return the Declaration { `[[File]]` *file*, `[[Dependencies]]` the
-   strings of `dependencies`, `[[Use]]` the strings of `use`, or « » if it is absent, `[[Origin]]`
+   strings of `dependencies`, `[[Use]]` the strings of `use`, or none if it is absent, `[[Origin]]`
    `inline`, `[[Recorded]]` *recorded*, or none }. Otherwise raise *problems*, and the Declaration of the Result
    (§12.1) is { *file*, the strings of `dependencies` if it is a List of Strings else « » }.
 
@@ -857,8 +897,8 @@ NOTE: One fault, one Diagnostic. A key that is not part of the block is reported
 not add "`dependencies` is missing". `E_BLOCK` remains for exactly these cases: the marker line is
 not a block mapping (step 2); the frontmatter is not strict YAML (step 3); the document or the
 `docstamp` key is not a mapping (step 4); `dependencies` is absent and no key is unknown, or is
-present and not a non-empty List of Strings (step 6); `use` is not a non-empty List of Strings
-without a repeated element (step 6); `hash` is not 64 lowercase hexadecimal digits
+present and not a non-empty List of Strings (step 6); `use` is not a List of Strings without a
+repeated element, or is empty without default Presets (step 6); `hash` is not 64 lowercase hexadecimal digits
 alone on its line (step 7). A block with an unknown key and a malformed `dependencies` or `hash`
 has one Diagnostic for each fault.
 
@@ -870,7 +910,8 @@ and the *marked* Map from RepoPath to the `[[hashLines]]` of its scan, or raises
 1. Let *fatal* be an empty List, and let *candidates* be as in §9.6.1.
 2. For each candidate *c*, in path order: read its text. If it cannot be read, collect
    `E_UNREADABLE` into *fatal*, `[[Subject]]` *c*, and continue. If `ScanFrontmatter` is *none*,
-   continue. Add *c* and the hash lines of its scan to *marked*, and call `ParseBlock`: add the
+   continue. Add *c* and the hash lines of its scan to *marked*, and call `ParseBlock` with
+   *defaults* from *config*: add the
    Declaration it returns to the Declarations, and its raised Diagnostics to *attached*.
 3. If *fatal* is not empty, raise it. Otherwise return the three Lists.
 
@@ -1097,7 +1138,7 @@ from §9.3, §9.6 and §12.2 attached to `declaration.[[File]]`:
 
 1. Let *r* be a Result with `[[File]]`, `[[Use]]` and `[[Dependencies]]` from *declaration*, the
    latter being its effective patterns (§8.6) and `[[Origins]]` their origins (none for each, when
-   *declaration* has no `[[Use]]`), empty `[[Reasons]]`, `[[Resolved]]` and `[[Diagnostics]]`, and
+   *declaration* uses no Preset), empty `[[Reasons]]`, `[[Resolved]]` and `[[Diagnostics]]`, and
    empty `[[Current]]`.
 2. Let *problems* be a copy of *attached*, and *warnings* an empty List.
 3. If `declaration.[[File]]` does not satisfy §9.4, collect `E_FILE_MISSING` into
@@ -1136,8 +1177,8 @@ raises:
    of `[[File]]`. For each file declared by both a configured and an inline Declaration, drop the
    inline Declaration and the Diagnostics of *attached* for that file that came from *inline*, and
    collect `E_DUPLICATE_DECLARATION` into *attached*, `[[File]]` that file. Then, for each remaining
-   Declaration *d* with a non-empty `[[Use]]`, call `ExpandPresets(d, config.[[Presets]], present)`
-   (§8.6): when it returns, the effective patterns and their origins are those of *d* from here on;
+   Declaration *d* that uses a Preset, call
+   `ExpandPresets(d, config.[[Presets]], config.[[DefaultPresets]], present)` (§8.6): when it returns, the effective patterns and their origins are those of *d* from here on;
    when it raises, collect its Diagnostics into *attached*, `[[File]]` the file of *d*.
 6. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
    entries. Otherwise let *lock* be `? ReadLock(root)`.
@@ -1179,11 +1220,11 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
       parent's does not. If there is none, return *unknown*.
    4. Let *edited* be true iff the Declaration's *own list* as of *C* is known and differs from its
       own list now. The own list is the pair (the patterns of `result.[[Dependencies]]` whose
-      `[[Origins]]` element is none, in order; `result.[[Use]]`). As of *C* it is read from
-      `docstamp.yaml` there for a configured file (the `dependencies` and `use` of the key
-      `result.[[File]]` under `files`, parsed by §9.2), and from the inline block of the file there
-      for an inline file (§9.6.2, its `dependencies` and `use`). It is unknown when that file is
-      absent at *C*, does not parse, or does not declare `result.[[File]]` with a non-empty
+      `[[Origins]]` element is none, in order; `result.[[Use]]`, where none differs from « »).
+      As of *C* it is read from `docstamp.yaml` there for a configured file (the `dependencies`
+      and `use` of the key `result.[[File]]` under `files`, parsed by §9.2), and from the inline
+      block of the file there for an inline file (§9.6.2 with *defaults* true, its `dependencies`
+      and `use`). It is unknown when that file is absent at *C*, does not parse, or does not declare `result.[[File]]` with a non-empty
       `dependencies`; a script Carrier (§9.5) is never read, so its own list at *C* is unknown.
       The *carrier* is `docstamp.yaml` for a configured file and `result.[[File]]` for an inline
       one.
@@ -1228,7 +1269,8 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
    *edited* is true, else none, which is its `[[Edited]]`, and the selection of step 10, which is
    its `[[Selection]]`.
 10. If *edited* is false, the selection is none. Otherwise let *old* be the effective patterns
-    (§8.6) of the own list as of *C*, its `use` expanded with the Presets of the Configuration now;
+    (§8.6) of the own list as of *C*, its `use` expanded with the Presets of the Configuration now
+    (with `config.[[DefaultPresets]]` now when that list has no `use`);
     if a name of that `use` is not a Preset now, or a pattern of *old* does not parse (§8.1), the
     selection is none. Otherwise let *before* be `Select(old, U)` and *after* be
     `result.[[Resolved]]`, where *U* is the Universe now (§7) without `result.[[File]]`. The
@@ -2146,7 +2188,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - `"selection"` follows `dependenciesEdited` when the Result's `[[Selection]]` is not none, and is
   absent otherwise: a List of `{ "status", "path" }`, `status` being `added` or `removed`, in path
   order (§12.3 step 10).
-- An element of `files` whose Result has a non-empty `[[Use]]` has the members `use` and `origins`
+- An element of `files` whose Declaration uses a Preset (§8.6) has the members `use` and `origins`
   between `dependencies` and `changes`, as `list-dependencies` has them (below).
 - With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (true only when it was written, §13.6 step 10; false when it was unchanged or when
@@ -2177,10 +2219,12 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 
   It has no `summary`, `state`, `reasons` or `changes`. In an entry, `file` is the Result's
   `[[File]]`, `dependencies` its effective patterns (§8.6), and `resolvedFiles` is its `[[Resolved]]`
-  in path order, and `[]` for an `invalid` Result. Only an entry whose file has a non-empty
-  `[[Use]]` has the members `use` (its `[[Use]]`) and `origins` (its `[[Origins]]`: one element per
-  element of `dependencies`, `null` for none) between `dependencies` and `resolvedFiles`; any other
-  entry is as it was before Presets. In every other mode `dependencies` is likewise the effective
+  in path order, and `[]` for an `invalid` Result. Only an entry whose Declaration uses a Preset
+  (§8.6) has the members `use` (its `[[Use]]`, `[]` when it is none) and `origins` (its
+  `[[Origins]]`: one element per element of `dependencies`, `null` for none) between `dependencies`
+  and `resolvedFiles`; any other entry is as it was before Presets. A file that gets the default
+  Presets has `"use": []` and the names of the default Presets in `origins`: `origins` says where
+  each pattern comes from, so no other member marks a default Preset. In every other mode `dependencies` is likewise the effective
   patterns; `check` and `update` output `use` and `origins` as above, and the other modes do not.
 - With `list-dependents` the document is instead (§13.8):
 
@@ -2407,11 +2451,11 @@ command raised.
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6); `docstamp help start` shows both |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
-| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file); for a missing `files`, write `files: {}` for none, or correct the unknown key that stands for it; for a module without a default export, `export default` the value |
+| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file, `default-presets` for the default Presets; an empty `use` needs `default-presets`); for a missing `files`, write `files: {}` for none, or correct the unknown key that stands for it; for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2`; for a file with neither `version` nor `dependents`, add `version: 2` |
 | `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; otherwise its near key, if any (§9.3 NOTE: `did you mean "dependencies"?`); attached to the file when it is a key of an inline block |
 | `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1); for an empty pattern, write a path or glob or remove it; for a lone `!`, write the path to exclude after it or remove it |
-| `E_UNKNOWN_PRESET` | error | §8.6 | define the Preset under `presets` in the Configuration file, or correct the name in `use`; subject the name, attached to the file |
+| `E_UNKNOWN_PRESET` | error | §8.6, §9.3 | define the Preset under `presets` in the Configuration file, or correct the name in `use` or `default-presets`; subject the name, attached to the file, or global for a name of `default-presets` |
 | `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies`, `use` or `hash` |
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
@@ -2565,6 +2609,14 @@ The following are not breaking:
   than reading them differently. The pattern dialect (§8.1) is unchanged, which is why no new pattern
   form carries a Preset. Hash inputs are unchanged too: the Dependency Hash depends on the resolved
   files only (§10.4), and the vectors of §17.7 stay as they are.
+- default Presets (§8.6): the optional key `default-presets` of the Configuration file (§9.3), the
+  empty `use` that opts out of them, and `E_UNKNOWN_PRESET` as a global Diagnostic for one of their
+  names. No existing input uses them: an old release refuses `default-presets` with
+  `E_UNKNOWN_KEY`, and an empty `use` stays `E_CONFIG` or `E_BLOCK` in a Root without
+  `default-presets`, as before, so a Root that does not name the key behaves exactly as before.
+  `use` and `origins` (§14.5) are the members Presets already added, now also present, with
+  `"use": []`, on a file that gets the default Presets. Hash inputs, the pattern dialect, the
+  Lockfile and its `version`, and the vectors of §17.7 are unchanged.
 - a bug fix whose previous behavior contradicted this specification, unless it changes a Dependency
   Hash or the selection of dependencies (§17.4): a Lockfile records the value the previous release
   computed, so such a fix is breaking.

@@ -88,12 +88,12 @@ E_CONFIG_AMBIGUOUS. Without one, only inline declarations exist (docstamp help i
     presets:
       no-tests:
         - "!**/*.test.ts"
+    default-presets: [no-tests]
     files:
       docs/guide.md:
         dependencies:
           - src
           - "!src/gen"
-        use: [no-tests]
 
 - version: required, exactly 2. A file without it is E_CONFIG_VERSION: add version: 2 (or, for a version 1 file, migrate its keys).
 - files: required, even when empty (E_CONFIG otherwise). Maps each file, by its path from the root, to dependencies (a non-empty list of patterns, docstamp help patterns) and optionally use (preset names, docstamp help presets). Write files: {} when every file is inline.
@@ -101,6 +101,7 @@ E_CONFIG_AMBIGUOUS. Without one, only inline declarations exist (docstamp help i
 - ignore: more ignore rules, in .gitignore syntax, relative to the root.
 - include: the patterns of the files searched for docstamp blocks (default "**/*.md").
 - presets: named pattern lists that a file includes with use.
+- default-presets: presets every file without its own use gets (docstamp help presets).
 - Any other key is E_UNKNOWN_KEY. In YAML, quote a pattern that starts with ! or *.
 
 The same value as a script, which must export plain data (no functions or class instances, no
@@ -133,7 +134,7 @@ A file can carry its own declaration in a docstamp block of its frontmatter:
 
 - docstamp: must start in column 0 and hold a block mapping, not a flow mapping.
 - dependencies is required: a non-empty list of patterns (docstamp help patterns).
-- use is optional: names of presets, which only the configuration file defines.
+- use is optional: names of presets, which only the configuration file defines. Without use, the block gets the default-presets of the configuration file, if any; use: [] gets none.
 - hash is written by docstamp update, alone on its line. Never write or edit it by hand.
 - Searched files: those that include selects (default "**/*.md") and that are not ignored. Only a frontmatter with a docstamp: line is parsed, and strictly: no anchors, tags or duplicate keys.
 - A malformed block makes only that file invalid (E_BLOCK, E_UNKNOWN_KEY, E_PATTERN); the others still run.
@@ -190,7 +191,20 @@ and name them with use, in a files entry or in a docstamp block:
 - An unknown name makes the file invalid with E_UNKNOWN_PRESET.
 - Editing a preset makes a file stale only when it changes the files that file selects.
 - An exclusion of a preset that matches nothing gives no warning.
-- list-dependencies and check mark preset patterns with (preset <name>).`,
+- list-dependencies and check mark preset patterns with (preset <name>).
+
+default-presets names presets that every file gets, configured or inline, when it has no use key:
+
+    presets:
+      no-tests: ["!**/*.test.ts", "!**/__test__/**"]
+    default-presets: [no-tests]
+
+- They come last: the file's own dependencies, then the default presets in order.
+- A file with its own use does not get them; re-list one to keep it. use: [] gets none, and is E_CONFIG (E_BLOCK inline) without default-presets.
+- default-presets is a non-empty list of distinct names (E_CONFIG); an unknown name is a global E_UNKNOWN_PRESET that stops the run.
+- An inline file gets the default-presets of the root configuration file; with no configuration file there are none.
+- Editing default-presets is like editing a preset: only files whose selection changes go stale.
+- In JSON a file that gets them has "use": [] and the preset names in origins.`,
   },
   states: {
     summary: 'The states ok, stale and invalid, and the reasons unrecorded and content-changed.',
@@ -233,9 +247,9 @@ document starts with version (2), mode (the command) and exitCode, and ends with
 global ones, each { code, severity, file, subject, message }, file and subject null when empty.
 Consumers must ignore members they do not know: later releases only add members.
 
-- check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited; use and origins when it uses presets.
+- check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited; use and origins when it uses presets (use is [] when they are only default-presets).
 - update: as check, with written true or false on each file and a top-level removed list. A written file reports state ok.
-- list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and origins with presets.
+- list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and origins with presets, default-presets included.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive each dependent also has dependents, cycle and repeated.
 - stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount, staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }.
 - suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate, status }], ignored, declared, diagnostics }, plus written with --write.

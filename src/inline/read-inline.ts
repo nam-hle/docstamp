@@ -33,6 +33,7 @@ export function readInline(
   root: string,
   universe: Universe,
   include: readonly string[],
+  defaults: boolean,
 ): InlineRead {
   const patterns = include.map((source) => parsePattern(source) as ParsedPattern);
   const candidates = select(
@@ -52,7 +53,7 @@ export function readInline(
     const scan = text === null ? null : scanFrontmatter(text);
     if (scan === null) continue;
     read.marked.set(file, scan.hashLines);
-    const { declaration, problems } = parseBlock(file, scan);
+    const { declaration, problems } = parseBlock(file, scan, defaults);
     read.declarations.push(declaration);
     read.attached.push(...problems);
   }

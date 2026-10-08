@@ -50,6 +50,7 @@ export interface Config {
   readonly useGitignore: boolean;
   readonly include: readonly string[];
   readonly presets: ReadonlyMap<string, readonly string[]>;
+  readonly defaultPresets: readonly string[];
   readonly declarations: readonly Declaration[];
 }
 

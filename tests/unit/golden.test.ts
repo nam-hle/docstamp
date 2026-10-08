@@ -223,6 +223,7 @@ describe('§17.7 golden presets', () => {
     const expanded = expandPresets(
       { file: 'DOC.md', dependencies: own, use: ['quiet'] },
       presets,
+      [],
       true,
     );
     expect(expanded.dependencies).toEqual(explicit);

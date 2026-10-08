@@ -53,6 +53,14 @@
         }
       }
     },
+    "default-presets": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
     "files": {
       "type": "object",
       "additionalProperties": {
@@ -75,7 +83,6 @@
           },
           "use": {
             "type": "array",
-            "minItems": 1,
             "uniqueItems": true,
             "items": {
               "type": "string"
@@ -84,5 +91,25 @@
         }
       }
     }
-  }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "default-presets"
+      ]
+    },
+    {
+      "properties": {
+        "files": {
+          "additionalProperties": {
+            "properties": {
+              "use": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

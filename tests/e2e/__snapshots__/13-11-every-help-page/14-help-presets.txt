@@ -23,4 +23,20 @@ name them with use, in a files entry or in a docstamp block:
 - Editing a preset makes a file stale only when it changes the files that file selects.
 - An exclusion of a preset that matches nothing gives no warning.
 - list-dependencies and check mark preset patterns with (preset <name>).
+
+default-presets names presets that every file gets, configured or inline, when it has no use key:
+
+    presets:
+      no-tests: ["!**/*.test.ts", "!**/__test__/**"]
+    default-presets: [no-tests]
+
+- They come last: the file's own dependencies, then the default presets in order.
+- A file with its own use does not get them; re-list one to keep it. use: [] gets none, and is
+  E_CONFIG (E_BLOCK inline) without default-presets.
+- default-presets is a non-empty list of distinct names (E_CONFIG); an unknown name is a global
+  E_UNKNOWN_PRESET that stops the run.
+- An inline file gets the default-presets of the root configuration file; with no configuration file
+  there are none.
+- Editing default-presets is like editing a preset: only files whose selection changes go stale.
+- In JSON a file that gets them has "use": [] and the preset names in origins.
 --- stderr ---

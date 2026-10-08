@@ -309,3 +309,140 @@ scenario('§13.8 list-dependents names the pattern a preset brought', { fixture 
   const tests = await repo.run(['list-dependents', 'src/cli/run.test.ts']);
   expect(tests.stdout).toBe('src/cli/run.test.ts\n  (no dependents)\n');
 });
+
+const DEFAULTS_YAML =
+  'version: 2\n' +
+  'presets:\n' +
+  '  tests:\n    - "!**/*.test.ts"\n    - "!**/__test__/**"\n' +
+  '  spec:\n    - docs/SPEC.md\n' +
+  '  cli:\n    - src/cli\n' +
+  'default-presets: [tests]\n' +
+  'files:\n' +
+  '  CLAUDE.md:\n    dependencies:\n      - src\n';
+
+scenario(
+  '§8.6 default presets come last on every file without its own use, configured or inline',
+  { fixture },
+  async (repo) => {
+    repo.write('docstamp.yaml', DEFAULTS_YAML);
+    repo.write('docs/PLAIN.md', '---\ndocstamp:\n  dependencies: [src/core]\n---\nx\n');
+    repo.write('docs/OPT.md', '---\ndocstamp:\n  dependencies: [src/core]\n  use: []\n---\nx\n');
+    const files = ['CLAUDE.md', 'docs/PLAIN.md', 'docs/OPT.md', 'docs/GUIDE.md'];
+    const list = await repo.run(['list-dependencies', ...files], {
+      show: ['docstamp.yaml', 'docs/PLAIN.md', 'docs/OPT.md'],
+    });
+    expect(list).toMatchObject({ exit: 0, stderr: '' });
+    expect(list.stdout).toBe(
+      'CLAUDE.md\n' +
+        '  depends   src\n' +
+        '  depends   !**/*.test.ts (preset tests)\n' +
+        '  depends   !**/__test__/** (preset tests)\n' +
+        '  resolved  src/cli/run.ts\n' +
+        '  resolved  src/core/hash.ts\n' +
+        '  resolved  src/index.ts\n' +
+        'docs/GUIDE.md\n' +
+        '  depends   src/core\n' +
+        '  depends   !**/*.test.ts (preset tests)\n' +
+        '  depends   !**/__test__/** (preset tests)\n' +
+        '  resolved  src/core/hash.ts\n' +
+        'docs/OPT.md\n' +
+        '  depends   src/core\n' +
+        '  resolved  src/core/hash.test.ts\n' +
+        '  resolved  src/core/hash.ts\n' +
+        'docs/PLAIN.md\n' +
+        '  depends   src/core\n' +
+        '  depends   !**/*.test.ts (preset tests)\n' +
+        '  depends   !**/__test__/** (preset tests)\n' +
+        '  resolved  src/core/hash.ts\n',
+    );
+
+    const json = (
+      await repo.run(['list-dependencies', '--json', 'CLAUDE.md', 'docs/OPT.md'])
+    ).json();
+    expect(json.files).toEqual([
+      {
+        file: 'CLAUDE.md',
+        dependencies: ['src', '!**/*.test.ts', '!**/__test__/**'],
+        use: [],
+        origins: [null, 'tests', 'tests'],
+        resolvedFiles: ['src/cli/run.ts', 'src/core/hash.ts', 'src/index.ts'],
+        diagnostics: [],
+      },
+      {
+        file: 'docs/OPT.md',
+        dependencies: ['src/core'],
+        resolvedFiles: ['src/core/hash.test.ts', 'src/core/hash.ts'],
+        diagnostics: [],
+      },
+    ]);
+  },
+);
+
+scenario(
+  '§8.5 a later default preset that re-selects is W_SHADOWED_EXCLUSION naming it',
+  { fixture },
+  async (repo) => {
+    repo.write('docstamp.yaml', DEFAULTS_YAML.replace('[tests]', '[tests, cli]'));
+    const list = await repo.run(['list-dependencies', 'CLAUDE.md'], { show: ['docstamp.yaml'] });
+    expect(list.exit).toBe(0);
+    expect(list.stderr).toContain('warning: W_SHADOWED_EXCLUSION: CLAUDE.md: !**/*.test.ts: ');
+    expect(list.stderr).toContain('preset "cli"');
+  },
+);
+
+scenario(
+  '§8.6 editing default-presets makes stale only the files whose selection changes',
+  { fixture },
+  async (repo) => {
+    repo.write('docstamp.yaml', DEFAULTS_YAML.replace('default-presets: [tests]\n', ''));
+    repo.write('docs/ABOUT.md', '---\ndocstamp:\n  dependencies: [docs/SPEC.md]\n---\nx\n');
+    await reviewedRepo(repo);
+    repo.write('docstamp.yaml', DEFAULTS_YAML.replace('[tests]', '[spec]'));
+    const result = await repo.run([], { show: ['docstamp.yaml'] });
+    expect(result.exit).toBe(1);
+    expect(result.stdout).toContain('STALE    CLAUDE.md  (content-changed)\n');
+    expect(result.stdout).not.toContain('docs/ABOUT.md');
+    expect(result.stdout).toContain('  depends   docs/SPEC.md (preset spec)\n');
+    expect(result.stdout).toContain('3 ok, 1 stale, 0 invalid\n');
+  },
+);
+
+scenario(
+  '§9.3 and §15 a malformed or unknown default-presets is a global error',
+  { fixture },
+  async (repo) => {
+    const files = 'files:\n  CLAUDE.md:\n    dependencies: [src]\n';
+    const cases: Array<[string, string, string]> = [
+      [
+        'an unknown name',
+        `version: 2\npresets:\n  a: [x]\ndefault-presets: [a, nope]\n${files}`,
+        'E_UNKNOWN_PRESET: nope',
+      ],
+      ['no presets', `version: 2\ndefault-presets: [a]\n${files}`, 'E_UNKNOWN_PRESET: a'],
+      [
+        'an empty list',
+        `version: 2\npresets:\n  a: [x]\ndefault-presets: []\n${files}`,
+        'E_CONFIG: default-presets',
+      ],
+      [
+        'a repeated name',
+        `version: 2\npresets:\n  a: [x]\ndefault-presets: [a, a]\n${files}`,
+        'E_CONFIG: default-presets',
+      ],
+      [
+        'a near miss',
+        `version: 2\npresets:\n  a: [x]\ndefault-preset: [a]\n${files}`,
+        'E_UNKNOWN_KEY: default-preset',
+      ],
+    ];
+    for (const [label, yaml, expected] of cases) {
+      repo.write('docstamp.yaml', yaml);
+      const result = await repo.run([], { label, show: ['docstamp.yaml'] });
+      expect(result.exit).toBe(2);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toContain(`error: ${expected}: `);
+    }
+    const json = (await repo.run(['--json'])).json();
+    expect(json.diagnostics[0]).toMatchObject({ code: 'E_UNKNOWN_KEY', file: null });
+  },
+);

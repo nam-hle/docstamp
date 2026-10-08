@@ -15,7 +15,8 @@ A file can carry its own declaration in a docstamp block of its frontmatter:
 
 - docstamp: must start in column 0 and hold a block mapping, not a flow mapping.
 - dependencies is required: a non-empty list of patterns (docstamp help patterns).
-- use is optional: names of presets, which only the configuration file defines.
+- use is optional: names of presets, which only the configuration file defines. Without use, the
+  block gets the default-presets of the configuration file, if any; use: [] gets none.
 - hash is written by docstamp update, alone on its line. Never write or edit it by hand.
 - Searched files: those that include selects (default "**/*.md") and that are not ignored. Only a
   frontmatter with a docstamp: line is parsed, and strictly: no anchors, tags or duplicate keys.

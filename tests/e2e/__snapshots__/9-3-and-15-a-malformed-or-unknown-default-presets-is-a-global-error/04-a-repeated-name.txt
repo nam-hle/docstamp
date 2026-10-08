@@ -1,0 +1,14 @@
+# a repeated name
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: default-presets: Fix the configuration file; the key named, if any, is the problem.
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  a: [x]
+default-presets: [a, a]
+files:
+  CLAUDE.md:
+    dependencies: [src]
