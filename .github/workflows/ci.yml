@@ -14,27 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Linux is the required check; Windows is informational until its failures are fixed.
   test:
-    name: Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # The changed-file report (SPEC §12.3) reads git history.
-          fetch-depth: 0
-
-      - uses: ./.github/actions/setup
-
-      - name: Test
-        run: pnpm test
-
-      - name: Check the package can be packed
-        run: npm pack --dry-run
-
-  # The same suite on the other platforms. The job above stays the one `Test` check that a ruleset
-  # can require. Windows is informational until its failures are fixed, then it joins macOS.
-  platforms:
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
@@ -43,6 +24,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - os: ubuntu-latest
+            experimental: false
           - os: macos-latest
             experimental: false
           - os: windows-latest
@@ -50,12 +33,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The changed-file report (SPEC §12.3) reads git history.
           fetch-depth: 0
 
       - uses: ./.github/actions/setup
 
-      # `pnpm test` stops at the first red phase. On a platform we are still learning about, run
-      # the phases as separate steps so one failure does not hide the others.
+      # The phases of `pnpm test` as separate steps, so one red phase does not hide the others.
       - name: Format, lint, types, knip
         run: pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip
 
@@ -74,3 +57,7 @@ jobs:
       - name: Pack tests
         if: ${{ !cancelled() }}
         run: pnpm run test:pack
+
+      - name: Check the package can be packed
+        if: ${{ !cancelled() }}
+        run: npm pack --dry-run

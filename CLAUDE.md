@@ -117,9 +117,8 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
   macOS and their snapshots come from a Linux run. Snapshots render CR as `␍` and the BOM as
   `<BOM>`: `.gitattributes` has `eol=lf`, so a raw CR would not survive a checkout.
 - **Other platforms are CI's job, not a local container.** `.github/workflows/ci.yml` runs
-  `pnpm test` on Linux (the required `Test` job) and, in the `platforms` job, on macOS and on
-  Windows. Windows is informational (`continue-on-error`) until its failures are fixed. Push and
-  read the run instead of reproducing Linux in Docker: the container was slower, ran knip out of
+  the `Test (<os>)` jobs on Linux (required), macOS (required) and Windows. Windows is
+  informational (`continue-on-error`) until its failures are fixed. Push and read the run instead of reproducing Linux in Docker: the container was slower, ran knip out of
   memory, and checked less than CI does. A failure that only shows on one platform is a real
   portability bug: fix the code or the test, never skip it silently.
 - Tests are hermetic: no sleeps, no network, nothing outside the temp dir. Keep the suite near
@@ -227,9 +226,9 @@ first, bump the Lockfile version, then regenerate the literals and review each d
 
 - The npm package, the command, the config files, the GitHub repository and the repository directory
   are all named `docstamp`.
-- `.github/workflows/ci.yml` runs `pnpm test` on every pull request and push to `main`: the `Test`
-  job on Linux, then `npm pack --dry-run` to prove the tarball builds, and a `platforms` job that
-  runs the same suite on macOS and Windows. It does not dry-run `npm publish`: that fails once the
+- `.github/workflows/ci.yml` runs the phases of `pnpm test` on every pull request and push to `main`,
+  in one `Test (<os>)` matrix job for Linux, macOS and Windows, then `npm pack --dry-run` to
+  prove the tarball builds. It does not dry-run `npm publish`: that fails once the
   version in `package.json` is already on npm, which is true after every release.
 - `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
   the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
