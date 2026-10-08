@@ -216,7 +216,8 @@ dependency, and the Reasons must not depend on `git` (§2). `[[Edited]]` is part
 report instead.
 
 A *Change* is { `[[Status]]`: `modified`, `added` or `deleted`, `[[Path]]`: RepoPath, `[[Via]]`: a
-non-empty List of String, `[[WhitespaceOnly]]`: Boolean }.
+non-empty List of String, `[[WhitespaceOnly]]`: Boolean, `[[Pair]]`: RepoPath or none }.
+`[[Pair]]` links a `deleted` and an `added` Change with the same content (§12.3 step 8).
 
 NOTE: The Lockfile keeps one Hash per file, so a Declaration over thousands of files costs one
 entry and the verdict cannot say which dependencies changed. `[[Changes]]` is a best-effort report
@@ -1086,7 +1087,7 @@ without changing any verdict.
 ### 12.3 ChangedSince
 
 `ChangedSince(root, result, entry)` returns a List of Change, the commit *C* below and the
-`[[Edited]]` of step 8, or *unknown*. It is
+`[[Edited]]` of step 9, or *unknown*. It is
 run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
 contain `content-changed`, and whose file has a LockEntry *entry*, or an inline `[[Recorded]]`
 Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
@@ -1138,8 +1139,25 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
    run in Root as step 1 does, exits with status 0, and `git --literal-pathspecs diff --raw
    --no-renames <C> -- <path>` shows no change of file mode; false for any other status, any other
    exit status and any failure.
-8. Return the Changes in path order, *C*, which is `[[Base]]` of the Result, and the carrier if
+8. Pair renamed files. Let *before* map each path to its object name in *C*, from
+   `git ls-tree -r -z <C>` run in Root as step 1 does, for the entries of mode `100644` or
+   `100755` only; and *after* map each path of an `added` Change that holds no LF to the object
+   name printed for it by `git hash-object --stdin-paths`, run in Root as step 1 does with those
+   paths, one per line, as its input, each preceded by the output of `git rev-parse --show-prefix`
+   without its line end (git reads these paths from the top level of the work tree, not from
+   Root). If any of these commands fails, no Change is paired. Otherwise, for
+   each `deleted` Change *d* in path order whose path is in *before*, let *a* be the first `added`
+   Change in path order that is not yet paired and whose path has the same object name in
+   *after*; if there is one, set `[[Pair]]` of *d* to the path of *a* and `[[Pair]]` of *a* to the
+   path of *d*. Every other Change has `[[Pair]]` none.
+9. Return the Changes in path order, *C*, which is `[[Base]]` of the Result, and the carrier if
    *edited* is true, else none, which is its `[[Edited]]`.
+
+NOTE: Two paths are paired only when the file was deleted at one and added at the other with
+exactly the same content, as git stores it: a renamed file that was also edited stays a `deleted`
+and an `added` Change. Pairing reads no similarity score and no git configuration of rename
+detection, and step 2 still passes `--no-renames`, so the result is the same on every host with the
+same history. Both paths stay Changes; `[[Pair]]` only links them.
 
 Any error at any step returns *unknown*. `ChangedSince` never raises a Diagnostic and never affects
 the exit code.
@@ -1680,12 +1698,12 @@ STALE    <file>  (<reason>, <reason>)
 - For `stale` with a known `[[Changes]]`, instead of the `depends` lines:
   - if `[[Edited]]` is not none, the *edited line*: `  edited    `, `[[Edited]]` as in §14.2, and
     `  (dependency list)`;
-  - if `[[Changes]]` has at least 5 Changes, the *summary line*: `  changed   ` and, for each status in the
-    order `modified`, `added`, `deleted` that at least one Change has, `<n> <status>` with *n* the
-    number of Changes of that status, separated by `, `;
+  - if `[[Changes]]` has at least 5 Changes, the *summary line*: `  changed   ` and, for each status
+    in the order `modified`, `added`, `deleted`, `renamed` that at least one entry of §14.3.1 has,
+    `<n> <status>` with *n* the number of entries of that status, separated by `, `;
   - the *change lines* of §14.3.1. Each is two spaces, the status padded with spaces to 8
     characters, two spaces, and the path as in §14.2 (`  modified  <path>`, `  added     <path>`,
-    `  deleted   <path>`), or a group line.
+    `  deleted   <path>`, `  renamed   <from> -> <to>`), or a group line.
 - For any other `stale`: one `depends` line per pattern, in declaration order.
 
 Then one summary line:
@@ -1710,33 +1728,41 @@ omitting the bracketed parts when empty. §14.3.2 says when each is written.
 
 #### 14.3.1 Change Lines
 
-Let *changes* be the `[[Changes]]` of a stale Result, in path order. A *run* is the set of Changes
-of one status, `added` or `deleted`, whose path is one *directory* *d* followed by exactly one
-more segment, where *d* is a String that ends with `/`. A run with at least 5 Changes is
-*grouped*: its Changes are replaced by one *group line*:
+Let *changes* be the `[[Changes]]` of a stale Result, in path order. Its *entries* are: for each
+`deleted` Change *d* whose `[[Pair]]` is not none, one `renamed` entry from the path of *d* (its
+*from*) to its `[[Pair]]` (its *to*); for every Change whose `[[Pair]]` is none, one entry of its
+status and path. A paired `added` Change has no entry of its own.
+
+A *run* is the set of entries of one status, `added` or `deleted`, whose path is one *directory*
+*d* followed by exactly one more segment, where *d* is a String that ends with `/`; or the set of
+`renamed` entries whose *from* is one directory *d* followed by one more segment *s* and whose *to*
+is another directory *e* followed by the same *s*. A run with at least 5 entries is *grouped*: its
+entries are replaced by one *group line*:
 
 ```
   added     <d>  (<n> files)
   deleted   <d>  (<n> files)
+  renamed   <d> -> <e>  (<n> files)
 ```
 
-two spaces, the status padded with spaces to 8 characters, two spaces, *d* as in §14.2, two
-spaces and `(<n> files)` with *n* the number of Changes of the run. Every other Change, a
-`modified` one always and one of a run of fewer than 5, is one *change line* as above, followed by
-` (whitespace only)` when its `[[WhitespaceOnly]]` is true. A Change
-is in the run of the directory it is directly in only: a Change in a subdirectory is never in the
-run of its parent.
+two spaces, the status padded with spaces to 8 characters, two spaces, *d* as in §14.2 (for
+`renamed`, then ` -> ` and *e* as in §14.2), two spaces and `(<n> files)` with *n* the number of
+entries of the run. Every other entry, a `modified` one always and one of a run of fewer than 5,
+is one *change line*: as in §14.3, followed by ` (whitespace only)` when the `[[WhitespaceOnly]]`
+of its Change is true; for `renamed`, `  renamed   `, *from* as in §14.2, ` -> ` and *to* as in
+§14.2. An entry is in the run of the directory it is directly in only: an entry in a subdirectory
+is never in the run of its parent.
 
-The lines are in path order of their path, a group line by *d* with its trailing `/`; a group
-line of `added` precedes a group line of `deleted` with the same *d*. Group lines are in text
-mode only: `changes` in `--json` always lists every Change (§14.5). The last line of the block is
-the review line of §14.3.4.
+The lines are in path order of their path (*from* for `renamed`), a group line by *d* with its
+trailing `/`; on a tie a group line of `added` precedes one of `deleted`, which precedes one of
+`renamed`. Change lines and group lines are in text mode only: `changes` in `--json` always lists
+every Change (§14.5). The last line of the block is the review line of §14.3.4.
 
-NOTE: A moved directory of 13 files, on which 5 files depend, prints 2 lines per file, not 26.
-Git is not asked about renames (§12.3 step 2 passes `--no-renames`): the group lines `deleted
-src/old/  (13 files)` and `added     src/new/  (13 files)` do not claim that the files are the
-same files. A run is the files of one directory, so a moved tree of many small directories is not
-shortened.
+NOTE: A moved directory of 13 files, on which 5 files depend, prints one line per file, not 26:
+`renamed   src/old/ -> src/new/  (13 files)`. Only a file whose content is unchanged is paired
+(§12.3 step 8); a moved file that was also edited is a `deleted` and an `added` entry, and those
+still form the runs above. A run is the files of one directory, so a moved tree of many small
+directories is not shortened.
 
 #### 14.3.2 Order of Output
 
@@ -1853,7 +1879,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   order, or `null` when it is *unknown* or not applicable (§12.3), including in update mode.
   `via` is `[[Via]]`, the List of patterns that selected the path. A fourth member,
   `"whitespaceOnly": true`, follows `via` in the entry of a Change whose `[[WhitespaceOnly]]` is
-  true, and is absent otherwise.
+  true, and is absent otherwise. A last member, `"pair"`, is the Change's `[[Pair]]` when it is not
+  none (§12.3 step 8), and is absent otherwise; both Changes of a pair stay in the List.
 - `"dependenciesEdited": true` follows `changes` when the Result's `[[Edited]]` is not none, and
   is absent otherwise. The summary line of §14.3 is text only: its counts follow from `changes`.
 - With `update`, each element of `files` adds `"written": true|false` after
@@ -2198,6 +2225,9 @@ The following are not breaking:
   unchanged. `changes` may now be `[]` where it was `null`, for a file whose own list lost a
   pattern and whose dependencies did not change; `changes` was already defined as a List or
   `null`, and the changed-file report may vary with the history (§2);
+- `[[Pair]]` (§12.3 step 8): the `renamed` change and group lines of §14.3.1, and the member `pair`
+  of a Change in §14.5. Every Change is still listed in `changes` with the status it had, so a
+  consumer that ignores `pair` reads what it read before;
 - a change to the output of `--help`, `--version` or the changed-file report (§2); this includes
   the description of `update` in `--help`, reworded to hold for inline files too;
 - the warnings `W_DUPLICATE_PATTERN` (§8.5) and `W_UNKNOWN_PATH` (§13.8): new, warning severity,

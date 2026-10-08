@@ -170,6 +170,52 @@ export function isWhitespaceOnly(root: string, commit: string, path: string): bo
   }
 }
 
+const TREE_ENTRY = /^(100644|100755) blob ([0-9a-f]+)\t(.*)$/su;
+
+// SPEC §12.3 step 8: path to object name, regular files only
+export function parseTree(output: string): Map<string, string> {
+  const objects = new Map<string, string>();
+  for (const field of nulFields(output)) {
+    const match = TREE_ENTRY.exec(field);
+    if (match) objects.set(match[3]!, match[2]!);
+  }
+  return objects;
+}
+
+// SPEC §12.3 step 8: each deleted Change takes the first unpaired added Change of equal content
+export function pairRenames(
+  changes: readonly Change[],
+  before: ReadonlyMap<string, string>,
+  after: ReadonlyMap<string, string>,
+): Change[] {
+  const pairs = new Map<string, string>();
+  const added = changes.filter((c) => c.status === 'added');
+  for (const d of changes.filter((c) => c.status === 'deleted')) {
+    const object = before.get(d.path);
+    if (object === undefined) continue;
+    const a = added.find((c) => !pairs.has(c.path) && after.get(c.path) === object);
+    if (a === undefined) continue;
+    pairs.set(d.path, a.path);
+    pairs.set(a.path, d.path);
+  }
+  return changes.map((c) => (pairs.has(c.path) ? { ...c, pair: pairs.get(c.path)! } : c));
+}
+
+function renamed(root: string, commit: string, changes: readonly Change[]): Change[] {
+  const added = changes.filter((c) => c.status === 'added' && !c.path.includes('\n'));
+  if (added.length === 0 || !changes.some((c) => c.status === 'deleted')) return [...changes];
+  try {
+    const before = parseTree(git(root, ['ls-tree', '-r', '-z', commit]));
+    const prefix = git(root, ['rev-parse', '--show-prefix']).replace(/\r?\n$/u, '');
+    const input = added.map((c) => `${prefix}${c.path}\n`).join('');
+    const objects = git(root, ['hash-object', '--stdin-paths'], {}, input).split('\n');
+    const after = new Map(added.map((c, i) => [c.path, objects[i]?.trim() ?? '']));
+    return pairRenames(changes, before, after);
+  } catch {
+    return [...changes];
+  }
+}
+
 export interface ChangedReport {
   readonly changes: readonly Change[];
   readonly base: string;
@@ -213,10 +259,11 @@ export function changedSince(
       whitespace.set(key, known);
       return known;
     };
+    const marked = changes.map((c) =>
+      c.status === 'modified' && whitespaceOnly(c.path) ? { ...c, whitespaceOnly: true } : c,
+    );
     return {
-      changes: changes.map((c) =>
-        c.status === 'modified' && whitespaceOnly(c.path) ? { ...c, whitespaceOnly: true } : c,
-      ),
+      changes: renamed(root, id, marked),
       base: id,
       ...(edited === null ? {} : { edited }),
     };

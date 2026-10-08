@@ -65,6 +65,7 @@ export function jsonText(doc: JsonDoc): string {
                 ['path', c.path],
                 ['via', [...c.via]],
                 ...(c.whitespaceOnly ? [['whitespaceOnly', true] as [string, Json]] : []),
+                ...(c.pair === undefined ? [] : [['pair', c.pair] as [string, Json]]),
               ]),
             )
           : null,

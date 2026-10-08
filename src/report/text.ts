@@ -29,29 +29,60 @@ export interface Chunk {
 
 const directoryOf = (path: string): string => path.slice(0, path.lastIndexOf('/') + 1);
 
+interface Entry {
+  readonly status: Change['status'] | 'renamed';
+  readonly path: string;
+  readonly to?: string;
+  readonly whitespaceOnly: boolean;
+}
+
+// SPEC §14.3.1: a pair is one renamed entry at its deleted path
+function entriesOf(changes: readonly Change[]): Entry[] {
+  return changes
+    .filter((c) => c.pair === undefined || c.status === 'deleted')
+    .map((c) => (c.pair === undefined ? c : { ...c, status: 'renamed', to: c.pair }));
+}
+
+const nameOf = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
+const RANK = { modified: 0, added: 0, deleted: 1, renamed: 2 } as const;
+
+// SPEC §14.3.1: the run of an entry, or null when it is in none
+function runOf(e: Entry): { key: string; head: string } | null {
+  const dir = directoryOf(e.path);
+  if (e.status === 'modified' || dir === '') return null;
+  if (e.status !== 'renamed') return { key: `${e.status}\0${dir}`, head: shown(dir) };
+  const to = directoryOf(e.to!);
+  if (to === '' || to === dir || nameOf(e.to!) !== nameOf(e.path)) return null;
+  return { key: `renamed\0${dir}\0${to}`, head: `${shown(dir)} -> ${shown(to)}` };
+}
+
 // SPEC §14.3.1
 export function changeLines(changes: readonly Change[]): string[] {
+  const entries = entriesOf(changes);
   const sizes = new Map<string, number>();
-  const runKey = (c: Change) => `${c.status}\0${directoryOf(c.path)}`;
-  const groupable = (c: Change) => c.status !== 'modified' && directoryOf(c.path) !== '';
-  for (const c of changes.filter(groupable)) sizes.set(runKey(c), (sizes.get(runKey(c)) ?? 0) + 1);
-  const entries: Array<{ sort: string; rank: number; line: string }> = [];
+  for (const e of entries) {
+    const run = runOf(e);
+    if (run !== null) sizes.set(run.key, (sizes.get(run.key) ?? 0) + 1);
+  }
+  const lines: Array<{ sort: string; rank: number; line: string }> = [];
   const grouped = new Set<string>();
-  for (const c of changes) {
-    const size = groupable(c) ? (sizes.get(runKey(c)) ?? 0) : 0;
-    const status = c.status.padEnd(8);
-    if (size < GROUP_MIN) {
-      const marker = c.whitespaceOnly ? ' (whitespace only)' : '';
-      entries.push({ sort: c.path, rank: 0, line: `  ${status}  ${shown(c.path)}${marker}\n` });
-    } else if (!grouped.has(runKey(c))) {
-      grouped.add(runKey(c));
-      const dir = directoryOf(c.path);
-      const line = `  ${status}  ${shown(dir)}  (${size} files)\n`;
-      entries.push({ sort: dir, rank: c.status === 'added' ? 0 : 1, line });
+  for (const e of entries) {
+    const run = runOf(e);
+    const size = run === null ? 0 : (sizes.get(run.key) ?? 0);
+    const status = e.status.padEnd(8);
+    if (run === null || size < GROUP_MIN) {
+      const marker = e.whitespaceOnly ? ' (whitespace only)' : '';
+      const target = e.to === undefined ? '' : ` -> ${shown(e.to)}`;
+      const line = `  ${status}  ${shown(e.path)}${target}${marker}\n`;
+      lines.push({ sort: e.path, rank: 0, line });
+    } else if (!grouped.has(run.key)) {
+      grouped.add(run.key);
+      const line = `  ${status}  ${run.head}  (${size} files)\n`;
+      lines.push({ sort: directoryOf(e.path), rank: RANK[e.status], line });
     }
   }
-  entries.sort((a, b) => comparePaths(a.sort, b.sort) || a.rank - b.rank);
-  return entries.map((entry) => entry.line);
+  lines.sort((a, b) => comparePaths(a.sort, b.sort) || a.rank - b.rank);
+  return lines.map((entry) => entry.line);
 }
 
 // SPEC §14.3.4
@@ -73,8 +104,9 @@ function headLines(r: Result): string {
   const changes = r.changes ?? [];
   const edited =
     r.edited === undefined ? '' : `  edited    ${shown(r.edited)}  (dependency list)\n`;
-  const counts = (['modified', 'added', 'deleted'] as const)
-    .map((status) => ({ status, n: changes.filter((c) => c.status === status).length }))
+  const entries = entriesOf(changes);
+  const counts = (['modified', 'added', 'deleted', 'renamed'] as const)
+    .map((status) => ({ status, n: entries.filter((e) => e.status === status).length }))
     .filter(({ n }) => n > 0)
     .map(({ status, n }) => `${n} ${status}`);
   return changes.length < GROUP_MIN ? edited : `${edited}  changed   ${counts.join(', ')}\n`;

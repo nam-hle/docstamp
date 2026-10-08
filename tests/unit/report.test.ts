@@ -178,6 +178,49 @@ describe('§14.3.1 change lines', () => {
   });
 });
 
+describe('§14.3.1 renamed lines', () => {
+  const moved = (from: string, to: string, count: number): Change[] =>
+    Array.from({ length: count }, (_, i) => {
+      const name = `f${String(i).padStart(2, '0')}.ts`;
+      return [
+        change('deleted', `${from}${name}`, { pair: `${to}${name}` }),
+        change('added', `${to}${name}`, { pair: `${from}${name}` }),
+      ];
+    }).flat();
+  const sorted = (changes: Change[]) => changes.sort((x, y) => (x.path < y.path ? -1 : 1));
+  it('a pair is one line at its deleted path', () => {
+    const changes = sorted([
+      change('deleted', 'src/a.ts', { pair: 'lib/b.ts' }),
+      change('added', 'lib/b.ts', { pair: 'src/a.ts' }),
+      change('added', 'lib/c.ts'),
+    ]);
+    expect(changeLines(changes)).toEqual([
+      '  added     lib/c.ts\n',
+      '  renamed   src/a.ts -> lib/b.ts\n',
+    ]);
+  });
+  it('5 or more files moved between two directories under the same names are one line', () => {
+    expect(changeLines(sorted(moved('src/old/', 'src/new/', 13)))).toEqual([
+      '  renamed   src/old/ -> src/new/  (13 files)\n',
+    ]);
+    expect(changeLines(sorted(moved('src/old/', 'src/new/', 4)))).toHaveLength(4);
+  });
+  it('a renamed file inside one directory, or under another name, is never grouped', () => {
+    const renamedInPlace = Array.from({ length: 5 }, (_, i) => [
+      change('deleted', `src/a${i}.ts`, { pair: `src/b${i}.ts` }),
+      change('added', `src/b${i}.ts`, { pair: `src/a${i}.ts` }),
+    ]).flat();
+    expect(changeLines(sorted(renamedInPlace))).toHaveLength(5);
+  });
+  it('the summary line counts a pair once, as renamed', () => {
+    const changes = sorted([...moved('src/old/', 'src/new/', 5), change('added', 'src/x.ts')]);
+    expect(checkText([res('a.md', 'stale', { changes })])).toContain(
+      '  changed   1 added, 5 renamed\n  renamed   src/old/ -> src/new/  (5 files)\n' +
+        '  added     src/x.ts\n',
+    );
+  });
+});
+
 describe('§14.3.1 whitespace marker', () => {
   it('follows the path of a change line, and never a group line', () => {
     const changes = [
@@ -480,6 +523,24 @@ describe('§14.5 JSON', () => {
     });
     expect(Object.keys(doc.files[0].changes[1])).toEqual(['status', 'path', 'via']);
     expect(out).toBe(`${JSON.stringify(doc, null, 2)}\n`);
+  });
+  it('both Changes of a pair stay listed, each with the other as its pair', () => {
+    const changes = [
+      change('added', 'lib/a.ts', { pair: 'src/a.ts' }),
+      change('deleted', 'src/a.ts', { pair: 'lib/a.ts' }),
+    ];
+    const doc = JSON.parse(
+      jsonText({
+        mode: 'check',
+        exitCode: 1,
+        selected: [res('a.md', 'stale', { changes })],
+        diagnostics: [],
+      }),
+    );
+    expect(doc.files[0].changes).toEqual([
+      { status: 'added', path: 'lib/a.ts', via: ['src/**'], pair: 'src/a.ts' },
+      { status: 'deleted', path: 'src/a.ts', via: ['src/**'], pair: 'lib/a.ts' },
+    ]);
   });
   it('onlyStale omits the ok files and still counts them', () => {
     const doc = JSON.parse(

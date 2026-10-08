@@ -64,6 +64,7 @@ export interface Change {
   readonly path: string;
   readonly via: readonly string[];
   readonly whitespaceOnly: boolean;
+  readonly pair?: string;
 }
 
 export interface Result {

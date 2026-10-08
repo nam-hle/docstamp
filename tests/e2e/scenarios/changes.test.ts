@@ -135,6 +135,12 @@ scenario('§12.3 Root below the top level of the work tree', { git: false }, asy
   expect(result.stdout).toContain(
     'STALE    CLAUDE.md  (content-changed)\n  modified  src/a.ts\n  review: git diff',
   );
+  repo.write('src/a.ts', 'a\n');
+  repo.rename('src/a.ts', 'src/b.ts');
+  const renamed = await repo.run([], { label: 'a rename below the top level' });
+  expect(renamed.stdout).toContain(
+    'STALE    CLAUDE.md  (content-changed)\n  renamed   src/a.ts -> src/b.ts\n',
+  );
 });
 
 scenario('§2 the verdict and the exit code do not depend on git', { fixture }, async (repo) => {
