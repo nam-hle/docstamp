@@ -95,8 +95,8 @@ E_CONFIG_AMBIGUOUS. Without one, only inline declarations exist (docstamp help i
           - "!src/gen"
         use: [no-tests]
 
-- version: required, exactly 2.
-- files: required. Maps each file, by its path from the root, to dependencies (a non-empty list of patterns, docstamp help patterns) and optionally use (preset names, docstamp help presets). Write files: {} when every file is inline.
+- version: required, exactly 2. A file without it is E_CONFIG_VERSION: add version: 2 (or, for a version 1 file, migrate its keys).
+- files: required, even when empty (E_CONFIG otherwise). Maps each file, by its path from the root, to dependencies (a non-empty list of patterns, docstamp help patterns) and optionally use (preset names, docstamp help presets). Write files: {} when every file is inline.
 - gitignore: read the .gitignore files (default true). Ignored files are not in the universe and cannot be dependencies.
 - ignore: more ignore rules, in .gitignore syntax, relative to the root.
 - include: the patterns of the files searched for docstamp blocks (default "**/*.md").
@@ -238,7 +238,7 @@ Consumers must ignore members they do not know: later releases only add members.
 - list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and origins with presets.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive each dependent also has dependents, cycle and repeated.
 - stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount, staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }.
-- suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate }], ignored, declared, diagnostics }, plus written with --write.
+- suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate, status }], ignored, declared, diagnostics }, plus written with --write.
 
 A command that fails before it evaluates anything has an empty files list and no summary. Read the
 verdict from exitCode and state, and the next step from the text mode's next: lines, which have no

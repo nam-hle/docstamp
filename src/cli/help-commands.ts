@@ -189,8 +189,10 @@ touch over 200 paths). It needs the full git history (fetch-depth: 0 in CI), els
 Reads each named file and proposes its dependencies from the repository paths it mentions (code
 spans, links, paths in the prose), with the number of files each pattern selects and its stale
 rate over the last 30 days (n/a without git history). Generic files such as package.json and
-ignored paths are not proposed. For a file that already declares dependencies, a status column
-says declared or new, and only declared lines list the declared patterns it no longer mentions.
+ignored paths are not proposed. A glob that selects test files is followed by exclusions of them
+(!<scope>/**/*.test.* and the like). For a file that already declares dependencies, a status column
+says declared (the same pattern), covered (the declared patterns already select its files) or new,
+and only declared lines list the declared patterns it no longer mentions.
 
 Read the proposal before keeping it: a mention can be an illustration, and a directory can select
 many files. It is the quick way to enroll an existing doc: suggest --write, review, then update.`,
@@ -200,8 +202,10 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
       [
         '--write',
         'Write the proposal into the file as a docstamp block without hash, so the file stays ' +
-          'unrecorded until reviewed. Never overwrites a block that has a hash or use, nor a ' +
-          'file declared in the configuration file.',
+          'unrecorded until reviewed. A block that already declares patterns keeps them, in ' +
+          'order, and gains only new ones; an addition that would change what they select is ' +
+          'left out. Refuses (E_USAGE) a block that has a hash, a file declared in the ' +
+          'configuration file, and a block with use that cannot be extended line by line.',
       ],
       ['<file>...', 'The files to read. At least one.'],
     ],

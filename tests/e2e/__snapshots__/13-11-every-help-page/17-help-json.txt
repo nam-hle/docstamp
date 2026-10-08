@@ -20,8 +20,8 @@ must ignore members they do not know: later releases only add members.
   each dependent also has dependents, cycle and repeated.
 - stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount,
   staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }.
-- suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate }], ignored, declared,
-  diagnostics }, plus written with --write.
+- suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate, status }], ignored,
+  declared, diagnostics }, plus written with --write.
 
 A command that fails before it evaluates anything has an empty files list and no summary. Read the
 verdict from exitCode and state, and the next step from the text mode's next: lines, which have no

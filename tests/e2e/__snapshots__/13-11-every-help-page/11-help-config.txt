@@ -24,10 +24,11 @@ Without one, only inline declarations exist (docstamp help inline).
           - "!src/gen"
         use: [no-tests]
 
-- version: required, exactly 2.
-- files: required. Maps each file, by its path from the root, to dependencies (a non-empty list of
-  patterns, docstamp help patterns) and optionally use (preset names, docstamp help presets). Write
-  files: {} when every file is inline.
+- version: required, exactly 2. A file without it is E_CONFIG_VERSION: add version: 2 (or, for a
+  version 1 file, migrate its keys).
+- files: required, even when empty (E_CONFIG otherwise). Maps each file, by its path from the root,
+  to dependencies (a non-empty list of patterns, docstamp help patterns) and optionally use (preset
+  names, docstamp help presets). Write files: {} when every file is inline.
 - gitignore: read the .gitignore files (default true). Ignored files are not in the universe and
   cannot be dependencies.
 - ignore: more ignore rules, in .gitignore syntax, relative to the root.

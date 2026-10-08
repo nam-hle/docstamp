@@ -30,14 +30,18 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
   E_CONFIG: {
     meaning:
       'The configuration file cannot be read or has a wrong shape: not strict YAML, a script ' +
-      'that fails or exports no plain data, a key with a value of the wrong type.',
+      'that fails or exports no plain data, a key with a value of the wrong type, a missing ' +
+      'files.',
     fix:
-      'Fix the key the subject names (presets.<name> for a preset, use for a file); a script ' +
-      'must export default plain data. See docstamp help config.',
+      'Fix the key the subject names (presets.<name> for a preset, use for a file); for a ' +
+      'missing files, write files: {} for none, or correct the unknown key that stands for it; ' +
+      'a script must export default plain data. See docstamp help config.',
   },
   E_CONFIG_VERSION: {
     meaning: 'The configuration file has no version: 2 (a version 1 file used other key names).',
-    fix: 'Rename dependents to files and covers to dependencies, and set version: 2.',
+    fix:
+      'Add version: 2. For a version 1 file, also rename dependents to files and covers to ' +
+      'dependencies.',
   },
   E_UNKNOWN_KEY: {
     meaning: 'A key that docstamp does not know, in the configuration file or in a docstamp block.',
