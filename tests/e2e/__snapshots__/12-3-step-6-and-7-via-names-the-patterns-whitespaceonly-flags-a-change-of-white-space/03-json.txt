@@ -52,13 +52,6 @@ exit: 1
             "src/**"
           ],
           "whitespaceOnly": true
-        },
-        {
-          "status": "modified",
-          "path": "src/mode.sh",
-          "via": [
-            "src/**"
-          ]
         }
       ],
       "diagnostics": []
@@ -98,13 +91,6 @@ exit: 1
             "src"
           ],
           "whitespaceOnly": true
-        },
-        {
-          "status": "modified",
-          "path": "src/mode.sh",
-          "via": [
-            "src"
-          ]
         }
       ],
       "diagnostics": []

@@ -8,6 +8,7 @@ import {
   parseNameList,
   parseNameStatus,
 } from '../../src/history/changes.ts';
+import { git as gitRun } from '../../src/history/git.ts';
 import { viaOf } from '../../src/pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
@@ -158,6 +159,13 @@ describe('§12.3 step 7: whitespace only', () => {
       expect(isWhitespaceOnly(root, 'not-a-commit', 'a.ts')).toBe(false);
     },
   );
+  it('a user core.autocrlf=true does not hide a change of line endings', () => {
+    const { root, base } = committed({ 'a.ts': 'one\ntwo\n' });
+    writeFileSync(join(process.env['HOME'] ?? '', '.gitconfig'), '[core]\n\tautocrlf = true\n');
+    writeFileSync(join(root, 'a.ts'), 'one\r\ntwo\r\n');
+    expect(gitRun(root, ['diff', '--name-status', '--no-renames', base, '--'])).toBe('M\ta.ts\n');
+    expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(true);
+  });
   it('reads the path literally, not as a pattern', () => {
     const { root, base } = committed({ '[id].ts': 'a\n', 'i.ts': 'b\n' });
     writeFileSync(join(root, '[id].ts'), ' a\n');
