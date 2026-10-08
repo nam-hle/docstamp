@@ -212,6 +212,8 @@ scenario('§9.3 invalid patterns make only their file invalid', async (repo) => 
   expect(result.stdout).toContain('STALE    DOC.md  (unrecorded)');
   expect(result.stdout).toContain('0 ok, 1 stale, 12 invalid');
   expect(result.stdout).not.toContain('E_PATTERN');
+  expect(result.stderr).toContain('E_PATTERN: p08.md: Write a path or a glob');
+  expect(result.stderr).toContain('E_PATTERN: p09.md: !: Write the path to exclude after the "!"');
 });
 
 scenario('§9.4 and §12.1 E_FILE_MISSING', async (repo) => {

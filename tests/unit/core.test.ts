@@ -58,3 +58,15 @@ describe('§5.5 diagnostic order', () => {
     expect(diag('E_LOCK').severity).toBe('error');
   });
 });
+
+describe('§15 E_PATTERN message', () => {
+  it('names an empty pattern and a lone "!" for what they are', () => {
+    expect(diag('E_PATTERN', { subject: '' }).message).toMatch(/^Write a path or a glob.*empty/);
+    expect(diag('E_PATTERN', { subject: '!' }).message).toContain('path to exclude after the "!"');
+  });
+  it('explains the separator and the escape for any other invalid pattern', () => {
+    expect(diag('E_PATTERN', { subject: 'src/' }).message).toBe(
+      'Correct the pattern; "/" separates its segments and "\\" escapes the next character.',
+    );
+  });
+});

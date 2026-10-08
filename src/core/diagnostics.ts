@@ -13,7 +13,7 @@ const FIX: Record<Code, string> = {
   E_CONFIG_VERSION:
     'Rename "dependents" to "files" and "covers" to "dependencies", set "version: 2".',
   E_UNKNOWN_KEY: 'Remove or correct the key.',
-  E_PATTERN: 'Correct the pattern; patterns use "/" and "\\" escapes.',
+  E_PATTERN: 'Correct the pattern; "/" separates its segments and "\\" escapes the next character.',
   E_UNKNOWN_PRESET:
     'Define the preset under "presets" in the configuration file, or correct the name in "use".',
   E_BLOCK:
@@ -48,17 +48,29 @@ const FIX: Record<Code, string> = {
     '(arguments are resolved against the current directory).',
 };
 
+// SPEC §8.1, §15: the two invalid patterns that name nothing get a message of their own
+const PATTERN_FIX: Record<string, string> = {
+  '': 'Write a path or a glob, or remove the pattern; it is empty.',
+  '!': 'Write the path to exclude after the "!", as in "!src/gen", or remove the pattern.',
+};
+
+function defaultMessage(code: Code, subject: string): string {
+  if (code === 'E_PATTERN') return PATTERN_FIX[subject] ?? FIX[code];
+  return FIX[code];
+}
+
 // SPEC §5
 export function diag(
   code: Code,
   fields: { file?: string; subject?: string; message?: string } = {},
 ): Diagnostic {
+  const subject = fields.subject ?? '';
   return {
     code,
     severity: code.startsWith('W_') ? 'warning' : 'error',
     file: fields.file ?? '',
-    subject: fields.subject ?? '',
-    message: fields.message ?? FIX[code],
+    subject,
+    message: fields.message ?? defaultMessage(code, subject),
   };
 }
 

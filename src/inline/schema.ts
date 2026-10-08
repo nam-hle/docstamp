@@ -1,8 +1,8 @@
-import { PRESET_NAME } from '../config/value.ts';
+import { PATTERN_SCHEMA, PRESET_NAME } from '../config/value.ts';
 import { BLOCK_KEYS, HASH } from './keys.ts';
 
 const properties = {
-  dependencies: { type: 'array', minItems: 1, items: { type: 'string' } },
+  dependencies: { type: 'array', minItems: 1, items: PATTERN_SCHEMA },
   use: {
     type: 'array',
     minItems: 1,

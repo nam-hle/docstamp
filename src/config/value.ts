@@ -15,3 +15,6 @@ export const isStrings = (v: Value | undefined): v is string[] =>
 
 // SPEC §9.3 step 6
 export const PRESET_NAME = /^[a-z][a-z0-9-]*$/u;
+
+// SPEC §8.1: the schemas reject the two invalid patterns a typo most often leaves
+export const PATTERN_SCHEMA = { type: 'string', minLength: 1, not: { const: '!' } } as const;

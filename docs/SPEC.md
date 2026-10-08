@@ -294,7 +294,8 @@ parsed (§9.6.2), so unrelated frontmatter cannot make a run fail.
 
 NOTE: The package ships `schema-frontmatter.json`, a JSON Schema (draft-07) for the frontmatter of a
 file with an inline block, so that tools that validate frontmatter can catch a mistyped key: the
-`docstamp` key is an object with `dependencies` (required, a non-empty array of strings), `use` (a
+`docstamp` key is an object with `dependencies` (required, a non-empty array of strings, none of
+them empty or a lone `!`, two invalid Patterns of §8.1), `use` (a
 non-empty array of distinct Preset names) and `hash` (64 lowercase hexadecimal digits), and no other
 key; other frontmatter keys are free. It is generated from the same keys as §9.6.2 and is
 informative: docstamp does not read it, and §9.6.2 decides.
@@ -2138,7 +2139,7 @@ command raised.
 | `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file); for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
 | `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; attached to the file when it is a key of an inline block |
-| `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1) |
+| `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1); for an empty pattern, write a path or glob or remove it; for a lone `!`, write the path to exclude after it or remove it |
 | `E_UNKNOWN_PRESET` | error | §8.6 | define the Preset under `presets` in the Configuration file, or correct the name in `use`; subject the name, attached to the file |
 | `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies`, `use` or `hash` |
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
@@ -2263,6 +2264,8 @@ The following are not breaking:
 - `--transitive` (§13.2, §13.8): a new option of `list-dependents` that no existing command line uses;
   without it the output is unchanged;
 - a new file shipped in the package, such as `schema-frontmatter.json` (§5.6), which no command reads;
+  so is a change to a shipped JSON Schema that rejects only what §8.1 already rejects, such as an
+  empty pattern or a lone `!`;
 - Presets (§8.6): the optional key `presets` of the Configuration file (§9.3), the optional key `use`
   of a file and of an inline block, the Diagnostic code `E_UNKNOWN_PRESET`, and the members `use` and
   `origins` of `list-dependencies` for a file that uses a Preset. No existing input uses them: a Configuration file or block that
