@@ -1,0 +1,15 @@
+# an undone exclusion
+$ docstamp
+exit: 0
+--- stdout ---
+1 ok, 0 stale, 0 invalid
+--- stderr ---
+warning: W_SHADOWED_EXCLUSION: DOC.md: !src/**: A later pattern selects again files the exclusion matches: "src"; move the exclusion after it, or narrow that pattern.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  "DOC.md":
+    dependencies:
+      - "src/**"
+      - "!src/**"
+      - "src"

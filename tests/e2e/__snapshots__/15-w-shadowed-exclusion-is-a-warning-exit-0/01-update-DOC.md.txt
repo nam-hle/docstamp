@@ -1,0 +1,6 @@
+$ docstamp update DOC.md
+exit: 0
+--- stdout ---
+written  DOC.md
+--- stderr ---
+warning: W_SHADOWED_EXCLUSION: DOC.md: !src/**: A later pattern selects again files the exclusion matches: "src"; move the exclusion after it, or narrow that pattern.

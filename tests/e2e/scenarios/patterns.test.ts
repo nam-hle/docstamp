@@ -373,6 +373,67 @@ scenario(
   },
 );
 
+scenario(
+  '§8.5 an exclusion that a later pattern undoes warns W_SHADOWED_EXCLUSION',
+  async (repo) => {
+    for (const file of ['src/a.ts', 'src/a.test.ts', 'src/sub/b.ts', 'src/sub/b.test.ts']) {
+      repo.write(file, `${file}\n`);
+    }
+    repo.write(
+      'docstamp.yaml',
+      [
+        'version: 2',
+        'presets:',
+        '  no-tests: ["!**/*.test.ts"]',
+        '  more-src: [src/sub]',
+        'files:',
+        '  OWN.md:',
+        '    dependencies: [src, "!src/**/*.test.ts", src/sub]',
+        '  PRESETS.md:',
+        '    dependencies: [src]',
+        '    use: [no-tests, more-src]',
+        '  FIXED.md:',
+        '    dependencies: [src]',
+        '    use: [more-src, no-tests]',
+        '  LITERAL.md:',
+        '    dependencies: [src, "!src/**/*.test.ts", src/sub/b.test.ts]',
+        '',
+      ].join('\n'),
+    );
+    for (const doc of ['OWN', 'PRESETS', 'FIXED', 'LITERAL']) repo.write(`${doc}.md`, '# d\n');
+    repo.write(
+      'INLINE.md',
+      '---\ndocstamp:\n  dependencies: [src, "!src/**/*.test.ts", src/sub]\n---\n# inline\n',
+    );
+
+    const first = await repo.run([], { label: 'unrecorded', show: ['docstamp.yaml'] });
+    expect(first.exit).toBe(1);
+    const tail = '; move the exclusion after it, or narrow that pattern.\n';
+    expect(first.stderr).toBe(
+      'warning: W_SHADOWED_EXCLUSION: INLINE.md: !src/**/*.test.ts: ' +
+        `A later pattern selects again files the exclusion matches: "src/sub"${tail}` +
+        'warning: W_SHADOWED_EXCLUSION: OWN.md: !src/**/*.test.ts: ' +
+        `A later pattern selects again files the exclusion matches: "src/sub"${tail}` +
+        'warning: W_SHADOWED_EXCLUSION: PRESETS.md: !**/*.test.ts: ' +
+        'A later pattern selects again files the exclusion matches: "src/sub" ' +
+        `(preset "more-src")${tail}`,
+    );
+
+    await repo.run(['update', '--all'], { expectExit: 0 });
+    const ok = await repo.run([], { label: 'reviewed, the warnings stay, exit 0' });
+    expect([ok.exit, ok.stdout]).toEqual([0, '5 ok, 0 stale, 0 invalid\n']);
+    expect(ok.stderr.match(/W_SHADOWED_EXCLUSION/gu)).toHaveLength(3);
+
+    const json = await repo.run(['list-dependencies', '--json', 'PRESETS.md', 'FIXED.md']);
+    const [fixed, presets] = json.json().files;
+    expect(presets.resolvedFiles).toEqual(['src/a.ts', 'src/sub/b.test.ts', 'src/sub/b.ts']);
+    expect(presets.diagnostics.map((d: { code: string }) => d.code)).toEqual([
+      'W_SHADOWED_EXCLUSION',
+    ]);
+    expect([fixed.resolvedFiles, fixed.diagnostics]).toEqual([['src/a.ts', 'src/sub/b.ts'], []]);
+  },
+);
+
 scenario('§8.5 a backslash path is told that patterns use "/"', async (repo) => {
   repo.write('src/core/a.ts', 'a\n');
   repo.write('DOC.md', '# doc\n');

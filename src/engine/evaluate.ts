@@ -17,6 +17,36 @@ const IGNORED_MESSAGE =
   'or the ignore list; depend on its source, or remove that rule (gitignore: false skips ' +
   '.gitignore files).';
 
+// SPEC §8.5 step 7
+function shadowedExclusions(
+  b: Declaration,
+  patterns: readonly ParsedPattern[],
+  resolved: readonly string[],
+): Diagnostic[] {
+  const shadowers = new Map<string, Set<number>>();
+  for (const path of resolved) {
+    const last = patterns.findLastIndex((pattern) => patternMatches(pattern, path));
+    if (literalPath(patterns[last]!) === path) continue;
+    patterns.forEach((pattern, i) => {
+      if (!pattern.negated || !patternMatches(pattern, path)) return;
+      const subject = b.dependencies[i]!;
+      shadowers.set(subject, (shadowers.get(subject) ?? new Set()).add(last));
+    });
+  }
+  return [...shadowers].map(([subject, later]) => {
+    const named = [...later]
+      .sort((x, y) => x - y)
+      .map((j) => {
+        const preset = b.origins?.[j] ?? null;
+        return `"${b.dependencies[j]}"${preset === null ? '' : ` (preset "${preset}")`}`;
+      });
+    const message =
+      `A later pattern selects again files the exclusion matches: ${named.join(', ')}; ` +
+      'move the exclusion after it, or narrow that pattern.';
+    return diag('W_SHADOWED_EXCLUSION', { file: b.file, subject, message });
+  });
+}
+
 // SPEC §8.5
 function resolveWithWarnings(
   b: Declaration,
@@ -59,6 +89,7 @@ function resolveWithWarnings(
   }
   const resolved = select(patterns, candidates);
   if (resolved.length === 0) problems.push(diag('E_EMPTY_DEPENDENCIES', { file: b.file }));
+  warnings.push(...shadowedExclusions(b, patterns, resolved));
   if (problems.length > 0) throw new Raised([...problems, ...warnings]);
   return { resolved, warnings };
 }

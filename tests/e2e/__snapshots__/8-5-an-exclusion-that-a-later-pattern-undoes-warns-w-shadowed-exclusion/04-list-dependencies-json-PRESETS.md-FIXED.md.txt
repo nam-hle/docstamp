@@ -1,0 +1,65 @@
+$ docstamp list-dependencies --json PRESETS.md FIXED.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "FIXED.md",
+      "dependencies": [
+        "src",
+        "src/sub",
+        "!**/*.test.ts"
+      ],
+      "use": [
+        "more-src",
+        "no-tests"
+      ],
+      "origins": [
+        null,
+        "more-src",
+        "no-tests"
+      ],
+      "resolvedFiles": [
+        "src/a.ts",
+        "src/sub/b.ts"
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "PRESETS.md",
+      "dependencies": [
+        "src",
+        "!**/*.test.ts",
+        "src/sub"
+      ],
+      "use": [
+        "no-tests",
+        "more-src"
+      ],
+      "origins": [
+        null,
+        "no-tests",
+        "more-src"
+      ],
+      "resolvedFiles": [
+        "src/a.ts",
+        "src/sub/b.test.ts",
+        "src/sub/b.ts"
+      ],
+      "diagnostics": [
+        {
+          "code": "W_SHADOWED_EXCLUSION",
+          "severity": "warning",
+          "file": "PRESETS.md",
+          "subject": "!**/*.test.ts",
+          "message": "A later pattern selects again files the exclusion matches: \"src/sub\" (preset \"more-src\"); move the exclusion after it, or narrow that pattern."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

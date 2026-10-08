@@ -186,6 +186,87 @@ describe('§8.5 step 4 W_DUPLICATE_PATTERN', () => {
   });
 });
 
+describe('§8.5 step 7 W_SHADOWED_EXCLUSION', () => {
+  const run = (b: Declaration) => evaluate(b, universe, lockOf({}), [], fs);
+  const shadow = (b: Declaration) =>
+    run(b)
+      .diagnostics.filter((d) => d.code === 'W_SHADOWED_EXCLUSION')
+      .map((d) => [d.subject, d.message]);
+  const MOVE = '; move the exclusion after it, or narrow that pattern.';
+
+  it('names the later pattern that selects again what the exclusion matches', () => {
+    const b = declare('B.md', ['src/**', '!src/*.ts', 'src']);
+    const r = run(b);
+    expect([r.state, r.resolved]).toEqual(['stale', ['src/a.ts', 'src/b.ts']]);
+    expect(r.diagnostics.map((d) => [d.code, d.severity, d.file, d.subject])).toEqual([
+      ['W_SHADOWED_EXCLUSION', 'warning', 'B.md', '!src/*.ts'],
+    ]);
+    expect(r.diagnostics[0]!.message).toBe(
+      `A later pattern selects again files the exclusion matches: "src"${MOVE}`,
+    );
+  });
+  it('keeps the hash, the selection and an ok state', () => {
+    const current = hashOf(['src/a.ts', 'src/b.ts']);
+    const r = evaluate(
+      declare('B.md', ['src', '!src/a.ts', 'src/*']),
+      universe,
+      lockOf({ 'B.md': current }),
+      [],
+      fs,
+    );
+    expect([r.state, r.current, r.diagnostics.map((d) => d.code)]).toEqual([
+      'ok',
+      current,
+      ['W_SHADOWED_EXCLUSION'],
+    ]);
+  });
+  it('lists each re-selecting pattern once, in pattern order', () => {
+    expect(shadow(declare('B.md', ['!src', 'src/b.ts', 'src/a.ts', 'src/*']))).toEqual([
+      ['!src', `A later pattern selects again files the exclusion matches: "src/*"${MOVE}`],
+    ]);
+    expect(shadow(declare('B.md', ['!src', 'src/*.ts', 'src/a*']))).toEqual([
+      [
+        '!src',
+        `A later pattern selects again files the exclusion matches: "src/*.ts", "src/a*"${MOVE}`,
+      ],
+    ]);
+  });
+  it('is not raised when nothing it matches is selected again', () => {
+    expect(shadow(declare('B.md', ['src/**', '!src/a.ts', 'B.md']))).toEqual([]);
+    expect(shadow(declare('B.md', ['src', 'src', '!src/a.ts']))).toEqual([]);
+    expect(shadow(declare('B.md', ['src/a.ts', '!src/b.ts']))).toEqual([]);
+  });
+  it('is not raised for a file named by its own literal path', () => {
+    expect(shadow(declare('B.md', ['src/**', '!src', 'src/a.ts']))).toEqual([]);
+    expect(shadow(declare('B.md', ['src/**', '!src', 'src/a.ts', 'src/b*']))).toEqual([
+      ['!src', `A later pattern selects again files the exclusion matches: "src/b*"${MOVE}`],
+    ]);
+  });
+  it('warns once per distinct exclusion', () => {
+    expect(shadow(declare('B.md', ['!src/a.ts', 'src', '!src/a.ts', 'src/*'])).length).toBe(1);
+  });
+  it('applies across a preset boundary and names the preset', () => {
+    const b = {
+      ...declare('B.md', ['src', '!src/a.ts', 'src/a*']),
+      origins: [null, 'no-a', 'more-src'],
+    };
+    expect(shadow(b)).toEqual([
+      [
+        '!src/a.ts',
+        'A later pattern selects again files the exclusion matches: "src/a*" ' +
+          `(preset "more-src")${MOVE}`,
+      ],
+    ]);
+  });
+  it('is reported next to the errors of an invalid file', () => {
+    const r = run(declare('B.md', ['src', '!src/a.ts', 'src/*', 'gone']));
+    expect(r.diagnostics.map((d) => [d.code, d.subject])).toEqual([
+      ['E_EMPTY_PATTERN', 'gone'],
+      ['W_SHADOWED_EXCLUSION', '!src/a.ts'],
+    ]);
+  });
+});
+
 describe('§8.5 NOTE E_EMPTY_PATTERN names an ignored path', () => {
   const ignoredPaths = new Set(['.npmrc', 'build', 'build/out']);
   const withIgnored: EngineFs = { ...fs, isIgnoredPath: (p) => ignoredPaths.has(p) };

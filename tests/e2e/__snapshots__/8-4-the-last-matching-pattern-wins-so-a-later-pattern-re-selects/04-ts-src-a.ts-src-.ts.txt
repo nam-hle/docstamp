@@ -19,7 +19,15 @@ exit: 0
         "src/lib/x.ts",
         "src/lib/y.ts"
       ],
-      "diagnostics": []
+      "diagnostics": [
+        {
+          "code": "W_SHADOWED_EXCLUSION",
+          "severity": "warning",
+          "file": "DOC.md",
+          "subject": "!src/a.ts",
+          "message": "A later pattern selects again files the exclusion matches: \"src/?.ts\"; move the exclusion after it, or narrow that pattern."
+        }
+      ]
     }
   ],
   "diagnostics": []

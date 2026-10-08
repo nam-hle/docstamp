@@ -43,6 +43,9 @@ const FIX: Record<Code, string> = {
   W_DUPLICATE_PATTERN:
     'The pattern is listed more than once; keep one copy, unless the order of the patterns needs ' +
     'both.',
+  W_SHADOWED_EXCLUSION:
+    'A later pattern selects again files the exclusion matches; move the exclusion after it, ' +
+    'or narrow that pattern.',
   W_UNKNOWN_PATH:
     'The path is neither tracked nor on disk, so nothing depends on it; check the spelling ' +
     '(arguments are resolved against the current directory).',

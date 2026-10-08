@@ -55,6 +55,7 @@ describe('§5.5 diagnostic order', () => {
     expect(diag('W_EMPTY_EXCLUSION').severity).toBe('warning');
     expect(diag('W_DUPLICATE_PATTERN').severity).toBe('warning');
     expect(diag('W_UNKNOWN_PATH').severity).toBe('warning');
+    expect(diag('W_SHADOWED_EXCLUSION').severity).toBe('warning');
     expect(diag('E_LOCK').severity).toBe('error');
   });
 });

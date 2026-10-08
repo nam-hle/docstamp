@@ -506,7 +506,13 @@ a file under a directory an earlier negation removed.
    pattern that comes from a Preset is not counted: only the file's own patterns are.
 5. Let *resolved* be `Select` of the effective patterns of *declaration* and *candidates*.
 6. If *resolved* is empty, collect `E_EMPTY_DEPENDENCIES` into *problems*.
-7. If *problems* is not empty, raise *problems* followed by *warnings*. Otherwise return *resolved*
+7. Call a *path* of *resolved* *re-selected* when its last matching pattern (§8.4) is not a literal
+   path (NOTE below) that denotes *path* itself. For each distinct String *e* of the effective
+   patterns that has a Negation and satisfies `PatternMatches(e, path)` for some re-selected *path*,
+   collect `W_SHADOWED_EXCLUSION` into *warnings*, `[[Subject]]` *e*. Its `[[Message]]` names, in
+   pattern order, each pattern that is the last matching pattern of such a *path*, and the Preset it
+   comes from, if any.
+8. If *problems* is not empty, raise *problems* followed by *warnings*. Otherwise return *resolved*
    and *warnings*.
 
 NOTE: A file is never one of its own dependencies (step 2), so editing a file never
@@ -552,6 +558,22 @@ exclusion: `E_EMPTY_PATTERN`, with the Preset named in the `[[Message]]`. An exc
 from a Preset never gives `W_EMPTY_EXCLUSION`: a Preset is a standard block shared by many files,
 declared for the files that need it, and a file that has nothing to exclude could not remove the
 warning without editing every other file that uses the Preset.
+
+NOTE: An exclusion is *shadowed* (step 7) when a file it matches is still selected: the last
+matching pattern wins (§8.4), so the last matching pattern of that file is an inclusion after the
+exclusion, and the exclusion has no effect on it. In `src`, `!src/**/*.test.ts`, `src/sub` the
+exclusion is shadowed by `src/sub` as soon as a test file exists under `src/sub/`. The test reads
+the resolved files, not the patterns: an inclusion after the exclusion that selects none of the
+files it matches, such as `docs` after `!src/gen`, gives no warning. A file named by its own literal
+path after the exclusion, as `src/lib/x.ts` in `src/**`, `!src/lib`, `src/lib/x.ts` (§8.4 NOTE), is
+re-selected on purpose and gives no warning; `src/lib`, which names a directory, is not such a path
+for the files under it. It applies whatever the origin
+of either pattern, a Preset included, because the cause is the order of the effective patterns
+(§8.6), which `use` decides: `use: [no-tests, more-src]` re-selects the tests when `more-src` adds
+a directory after the exclusions of `no-tests`, and the fix is to list the exclusions last. A file
+that uses the Preset can fix it by its own `use` order, and the Preset's author by the Preset's own
+order, so, unlike `W_EMPTY_EXCLUSION`, it is raised for patterns of a Preset too. The warning changes neither `Select`, the resolved files, the Dependency
+Hash, the state of the file nor the exit code.
 
 ### 8.6 Presets
 
@@ -1349,7 +1371,9 @@ prefix, before a `/`, of some path of *U*.
 NOTE: A proposal is the list one would write by hand from what the doc says, and it is a proposal
 only: nothing is read from the repository history, no pattern is judged too broad, and the doc is
 not evaluated. Every non-excluding Suggestion selects a file of *U*, so the list passes §8.5 step 3
-as written, and an exclusion matches a file of *U*, so it raises no `W_EMPTY_EXCLUSION`. Under the
+as written, and an exclusion matches a file of *U*, so it raises no `W_EMPTY_EXCLUSION`; the only
+inclusions after an exclusion are literal paths of single files, so it raises no
+`W_SHADOWED_EXCLUSION` either (§8.5 step 7). Under the
 last-match-wins rule of §8.4, an exclusion written before an inclusion that selects the same file
 would be cancelled by it; steps 10 and 11 write every exclusion after every inclusion, so the
 written list selects exactly the `[[Files]]` of its inclusions. The only patterns after the
@@ -2163,6 +2187,7 @@ command raised.
 | `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; for `--from`, name a commit |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 | `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
+| `W_SHADOWED_EXCLUSION` | warning | §8.5 | move the exclusion after the named later pattern (for a Preset, list it last in `use`), or narrow that pattern, unless re-selecting those files is intended; attached to the file, subject the exclusion |
 | `W_DUPLICATE_PATTERN` | warning | §8.5 | keep one copy of the repeated pattern, unless the order of the patterns needs both (§8.4); attached to the file, subject the pattern, once per distinct repeated pattern |
 | `W_UNKNOWN_PATH` | warning | §13.8 | check the spelling: the path is not in the Universe and not on disk, so nothing depends on it; subject the path as a RepoPath, carried by the entry of that path |
 
@@ -2260,7 +2285,7 @@ The following are not breaking:
   consumer that ignores `pair` reads what it read before;
 - a change to the output of `--help`, `--version` or the changed-file report (§2); this includes
   the description of `update` in `--help`, reworded to hold for inline files too;
-- the warnings `W_DUPLICATE_PATTERN` (§8.5) and `W_UNKNOWN_PATH` (§13.8): new, warning severity,
+- the warnings `W_DUPLICATE_PATTERN`, `W_SHADOWED_EXCLUSION` (§8.5) and `W_UNKNOWN_PATH` (§13.8): new, warning severity,
   no change to a verdict, a Hash, a selection or an exit code; `list-dependents` still exits 0
   for a path it does not know;
 - the `[[Message]]` of the `E_USAGE` of §13.8 step 3 now names the directory and Root it was
