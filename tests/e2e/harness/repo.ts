@@ -268,7 +268,11 @@ export class Repo {
   private normalize(text: string): string {
     const mapped = text.replaceAll(this.root, '<root>').replaceAll(this.session.base, '<tmp>');
     if (process.platform !== 'win32') return mapped;
-    return mapped.replace(
+    // docstamp prints paths with `/`, so map the forward-slash spelling of the same paths too.
+    const slashed = mapped
+      .replaceAll(this.root.replaceAll('\\', '/'), '<root>')
+      .replaceAll(this.session.base.replaceAll('\\', '/'), '<tmp>');
+    return slashed.replace(
       /(<root>|<tmp>)([^\s'"]*)/gu,
       (_, token: string, tail: string) => token + tail.replaceAll('\\', '/'),
     );
