@@ -424,6 +424,18 @@ scenario(
   },
 );
 
+scenario('§15 W_DUPLICATE_PATTERN and W_UNKNOWN_PATH are warnings: exit 0', async (repo) => {
+  base(repo);
+  repo.write('docstamp.yaml', config({ 'DOC.md': ['src/**', 'src/**'] }));
+  await repo.run(['update', 'DOC.md'], { expectExit: 0 });
+  const duplicate = await run(repo, 'a repeated pattern', [], 0, ['W_DUPLICATE_PATTERN']);
+  expect(duplicate.stderr).toContain('warning: W_DUPLICATE_PATTERN: DOC.md: src/**: ');
+  const unknown = await run(repo, 'an unknown path', ['list-dependents', 'src/b.ts'], 0, [
+    'W_UNKNOWN_PATH',
+  ]);
+  expect(unknown.stderr).toContain('warning: W_UNKNOWN_PATH: src/b.ts: ');
+});
+
 scenario(
   '§16 exit 70 for an unexpected internal failure (injected)',
   { fixture: 'docs-site' },

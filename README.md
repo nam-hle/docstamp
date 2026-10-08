@@ -180,6 +180,15 @@ src/cli/run.ts
   README.md   via src/cli
 ```
 
+A file argument is resolved against the current directory, not `--root`, and the output is relative to the root. A path that is neither tracked nor on disk is not an error, so a script keeps working, but it is not silent either: the entry prints `(no dependents)` and a warning (`W_UNKNOWN_PATH`) names the path, so a typo shows:
+
+```console
+$ docstamp list-dependents src/core/hsh.ts
+src/core/hsh.ts
+  (no dependents)
+warning: W_UNKNOWN_PATH: src/core/hsh.ts: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory).
+```
+
 `docstamp list-dependencies <doc>` shows what a doc depends on and which files the patterns select. It does not read the lock:
 
 ```console
@@ -205,6 +214,13 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
   ```
 
   A doc whose patterns together select nothing is still an error (`E_EMPTY_DEPENDENCIES`).
+- **List each pattern once.** The same pattern twice in one doc is a warning (`W_DUPLICATE_PATTERN`), once per repeated pattern. It changes nothing: the selection, the hash and the exit code stay as they were. Keep one copy, unless the order of the patterns needs both, because the last matching pattern wins:
+
+  ```
+  $ docstamp
+  1 ok, 0 stale, 0 invalid
+  warning: W_DUPLICATE_PATTERN: docs/architecture.md: src/core: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.
+  ```
 - **Depend on the source of generated output, not on the output.** Files that `.gitignore` or the `ignore` list excludes are not in the universe, so they cannot be dependencies, whether or not they exist on disk. When a pattern names such a path, the error says so instead of suggesting a typo:
 
   ```
@@ -285,7 +301,7 @@ That is one entry of `files`; the report also has `version`, `mode`, `exitCode`,
 | `docstamp [check]` | The verdict. A bare `docstamp` is `check`. |
 | `docstamp update (--all \| <file>...)` | Record that you reviewed the named files, in the lock or, for an inline doc, in its own `hash:` line. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line. |
 | `docstamp list-dependencies [<file>...]` | Each file with its dependency patterns and the files they select. It does not read the lock. |
-| `docstamp list-dependents <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only, no lock. |
+| `docstamp list-dependents <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only, no lock. A path that exists nowhere gets a `W_UNKNOWN_PATH` warning and exit 0. |
 | `docstamp stats [--since <n>d \| --from <rev>] [<file>...]` | Report how often each file's dependencies would have made it stale over the last `n` days or since `<rev>` ([Measuring how noisy a list is](#measuring-how-noisy-a-list-is)). Reads git history, never the lock. |
 | `docstamp help` | Usage. |
 | `docstamp version` | The installed version. |

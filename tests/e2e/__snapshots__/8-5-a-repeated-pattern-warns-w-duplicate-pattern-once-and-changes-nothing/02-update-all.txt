@@ -1,0 +1,10 @@
+$ docstamp update --all
+exit: 0
+--- stdout ---
+written  CONFIGURED.md
+written  INLINE.md
+written  PLAIN.md
+--- stderr ---
+warning: W_DUPLICATE_PATTERN: CONFIGURED.md: !src/gen: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.
+warning: W_DUPLICATE_PATTERN: CONFIGURED.md: src: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.
+warning: W_DUPLICATE_PATTERN: INLINE.md: src: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.

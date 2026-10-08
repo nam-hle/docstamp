@@ -63,6 +63,35 @@ describe('§13.8 list-dependents', () => {
     expect(exec(root, cmd, 'nope/missing.ts').code).toBe(0);
   });
 
+  it('§13.8 step 4.3: only a path that is neither tracked nor on disk is unknown', () => {
+    const root = tree({ 'a.md': ['src/**'] }, { '.gitignore': 'src/gen\n' });
+    const warned = exec(root, cmd, 'nope/missing.ts');
+    expect(warned.code).toBe(0);
+    expect(warned.out).toBe('nope/missing.ts\n  (no dependents)\n');
+    expect(warned.err).toMatch(/^warning: W_UNKNOWN_PATH: nope\/missing\.ts: /u);
+    for (const known of ['src/gen/y.ts', 'src/gen', 'src', 'b.md', 'docstamp.yaml']) {
+      const r = exec(root, cmd, known);
+      expect([known, r.code, r.err]).toEqual([known, 0, '']);
+    }
+    expect(exec(root, cmd, 'SRC').err).toContain('W_UNKNOWN_PATH: SRC');
+  });
+
+  it('--json carries W_UNKNOWN_PATH on the entry', () => {
+    const root = tree({ 'a.md': ['src/**'] });
+    const doc = JSON.parse(exec(root, cmd, '--json', 'ghost.ts').out);
+    expect(doc.exitCode).toBe(0);
+    expect(doc.diagnostics).toEqual([]);
+    expect(doc.files[0].diagnostics).toEqual([
+      {
+        code: 'W_UNKNOWN_PATH',
+        severity: 'warning',
+        file: null,
+        subject: 'ghost.ts',
+        message: expect.any(String),
+      },
+    ]);
+  });
+
   it('a stamped file may be the argument, but never its own file', () => {
     const root = tree({ 'a.md': ['b.md', 'a.md'], 'b.md': ['src/**'] });
     expect(exec(root, cmd, 'b.md').out).toBe('b.md\n  a.md   via b.md\n');
@@ -85,6 +114,8 @@ describe('§13.8 list-dependents', () => {
     const r = exec(root, cmd, '../outside.ts');
     expect(r.code).toBe(2);
     expect(r.err).toContain('error: E_USAGE: ../outside.ts: ');
+    expect(r.err).toContain(`resolved against the current directory (${root}) to `);
+    expect(r.err).toContain(`which is outside the root ${root};`);
   });
 
   it('an invalid pattern is skipped for matching but surfaces E_PATTERN, exit 2', () => {

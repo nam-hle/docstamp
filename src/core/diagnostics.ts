@@ -38,6 +38,12 @@ const FIX: Record<Code, string> = {
   W_ORPHAN: 'Run "docstamp update" on any file to remove the entry.',
   W_EMPTY_EXCLUSION:
     'The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.',
+  W_DUPLICATE_PATTERN:
+    'The pattern is listed more than once; keep one copy, unless the order of the patterns needs ' +
+    'both.',
+  W_UNKNOWN_PATH:
+    'The path is neither tracked nor on disk, so nothing depends on it; check the spelling ' +
+    '(arguments are resolved against the current directory).',
 };
 
 // SPEC §5

@@ -1,0 +1,51 @@
+$ docstamp list-dependencies --json CONFIGURED.md PLAIN.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "CONFIGURED.md",
+      "dependencies": [
+        "src",
+        "src",
+        "!src/gen",
+        "!src/gen"
+      ],
+      "resolvedFiles": [
+        "src/a.ts"
+      ],
+      "diagnostics": [
+        {
+          "code": "W_DUPLICATE_PATTERN",
+          "severity": "warning",
+          "file": "CONFIGURED.md",
+          "subject": "!src/gen",
+          "message": "The pattern is listed more than once; keep one copy, unless the order of the patterns needs both."
+        },
+        {
+          "code": "W_DUPLICATE_PATTERN",
+          "severity": "warning",
+          "file": "CONFIGURED.md",
+          "subject": "src",
+          "message": "The pattern is listed more than once; keep one copy, unless the order of the patterns needs both."
+        }
+      ]
+    },
+    {
+      "file": "PLAIN.md",
+      "dependencies": [
+        "src",
+        "!src/gen"
+      ],
+      "resolvedFiles": [
+        "src/a.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

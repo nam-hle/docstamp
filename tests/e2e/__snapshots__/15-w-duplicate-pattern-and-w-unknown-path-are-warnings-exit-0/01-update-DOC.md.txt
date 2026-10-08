@@ -1,0 +1,6 @@
+$ docstamp update DOC.md
+exit: 0
+--- stdout ---
+written  DOC.md
+--- stderr ---
+warning: W_DUPLICATE_PATTERN: DOC.md: src/**: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.

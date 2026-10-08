@@ -1,0 +1,9 @@
+$ docstamp list-dependents src/utl.ts src/util.ts
+exit: 0
+--- stdout ---
+src/util.ts
+  CLAUDE.md   via src/**
+src/utl.ts
+  (no dependents)
+--- stderr ---
+warning: W_UNKNOWN_PATH: src/utl.ts: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory).

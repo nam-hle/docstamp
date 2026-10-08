@@ -157,8 +157,10 @@ duplicate check) and the `marked` hash rule in `src/hash/hash.ts`. Tests: `tests
 ## Pattern diagnostics
 
 `Result.diagnostics` holds the errors of an `invalid` file and the warnings of any file: an `ok` or
-`stale` file can carry `W_EMPTY_EXCLUSION` (SPEC §8.5, produced by `resolveWithWarnings` in
-`src/engine/evaluate.ts`). A warning never changes a state, a hash or an exit code, so code that
+`stale` file can carry `W_EMPTY_EXCLUSION` or `W_DUPLICATE_PATTERN` (SPEC §8.5, produced by
+`resolveWithWarnings` in `src/engine/evaluate.ts`). `W_UNKNOWN_PATH` (§13.8) is the other warning:
+it rides on a `list-dependents` entry, not on a file, and is built in `reverseEntries`
+(`src/cli/run.ts`). A warning never changes a state, a hash or an exit code, so code that
 asks "is this file invalid" reads `state`, never `diagnostics.length`.
 
 `Universe.ignored` lists the entries a rule skipped (SPEC §7.2 step 3.4). `isIgnoredPath` in

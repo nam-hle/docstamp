@@ -1,0 +1,7 @@
+# duplicates removed, still ok
+$ docstamp
+exit: 0
+--- stdout ---
+3 ok, 0 stale, 0 invalid
+--- stderr ---
+warning: W_DUPLICATE_PATTERN: INLINE.md: src: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.

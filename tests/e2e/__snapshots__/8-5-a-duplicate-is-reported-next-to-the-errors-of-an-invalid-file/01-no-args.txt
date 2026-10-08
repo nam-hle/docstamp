@@ -1,0 +1,9 @@
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  DOC.md
+0 ok, 0 stale, 1 invalid
+--- stderr ---
+error: E_EMPTY_DEPENDENCIES: DOC.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: DOC.md: gone: Correct or remove the pattern; it matches no file.
+warning: W_DUPLICATE_PATTERN: DOC.md: gone: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.

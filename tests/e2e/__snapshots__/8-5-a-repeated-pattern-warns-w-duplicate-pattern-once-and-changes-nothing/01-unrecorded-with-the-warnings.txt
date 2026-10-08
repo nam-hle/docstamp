@@ -1,0 +1,22 @@
+# unrecorded, with the warnings
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CONFIGURED.md  (unrecorded)
+  depends   src
+  depends   src
+  depends   !src/gen
+  depends   !src/gen
+STALE    INLINE.md  (unrecorded)
+  depends   src
+  depends   src/a.ts
+  depends   src
+STALE    PLAIN.md  (unrecorded)
+  depends   src
+  depends   !src/gen
+0 ok, 3 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CONFIGURED.md INLINE.md PLAIN.md
+--- stderr ---
+warning: W_DUPLICATE_PATTERN: CONFIGURED.md: !src/gen: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.
+warning: W_DUPLICATE_PATTERN: CONFIGURED.md: src: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.
+warning: W_DUPLICATE_PATTERN: INLINE.md: src: The pattern is listed more than once; keep one copy, unless the order of the patterns needs both.

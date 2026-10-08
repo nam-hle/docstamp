@@ -138,6 +138,23 @@ export function computeUniverse(
   return universe;
 }
 
+// SPEC §13.8 step 4.3: an entry of any kind, found by exact name in each directory listing
+export function existsUnderRoot(root: string, path: string): boolean {
+  let dir = root;
+  const segments = path.split('/');
+  for (const [i, segment] of segments.entries()) {
+    try {
+      const name = readdirSync(dir).find((n) => n.normalize('NFC') === segment);
+      if (name === undefined) return false;
+      dir = join(dir, name);
+      if (i < segments.length - 1 && !lstatSync(dir).isDirectory()) return false;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
 // SPEC §8.5 NOTE: a path that exists under Root, is not in the Universe, and is ignored
 export function isIgnoredPath(root: string, universe: Universe, path: string): boolean {
   const ignored = new Set(universe.ignored);
