@@ -206,7 +206,7 @@ Things to know:
   validate({ docstamp: { dependencies: ['src'] } }); // true
   validate({ docstamp: { dependancies: ['src'] } }); // false: no "dependencies"
   ```
-- **One typo, one diagnostic.** An unknown key in the block is reported once, as `E_UNKNOWN_KEY` for the file, and not also as `E_BLOCK` for the `dependencies` it replaced ([SPEC §9.6.2](docs/SPEC.md#962-parsing)).
+- **One typo, one diagnostic.** An unknown key in the block is reported once, as `E_UNKNOWN_KEY` for the file, and not also as `E_BLOCK` for the `dependencies` it replaced ([SPEC §9.6.2](docs/SPEC.md#962-parsing)). When the key is one or two edits from a real one, the message names it: `dependecies: Remove or correct the key; did you mean "dependencies"?` ([SPEC §9.3](docs/SPEC.md#93-reading)).
 - **Changed files.** The list of changed dependencies comes from git history of the doc's own `hash:` line, like the lock's history ([SPEC §12.3](docs/SPEC.md#123-changedsince)); a doc that was renamed since the review prints `depends` lines instead.
 
 ## Working with AI agents

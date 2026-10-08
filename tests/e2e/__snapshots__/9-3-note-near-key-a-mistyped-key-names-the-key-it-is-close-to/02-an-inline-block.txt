@@ -1,0 +1,15 @@
+# an inline block
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  DOC.md
+0 ok, 0 stale, 1 invalid
+next: fix the configuration of each invalid file, then run: docstamp check DOC.md
+--- stderr ---
+error: E_UNKNOWN_KEY: DOC.md: dependecies: Remove or correct the key; did you mean "dependencies"?
+--- setup: DOC.md ---
+---
+docstamp:
+  dependecies: [src]
+---
+# doc

@@ -2,6 +2,7 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
+import { closestKey, unknownKeyMessage } from '../core/did-you-mean.ts';
 import { isRepoPath } from '../core/repo-path.ts';
 import type { Declaration, Config, Diagnostic } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
@@ -12,7 +13,18 @@ import { parseStrictYaml, type YamlMap, type YamlValue } from './yaml-profile.ts
 const TOP_KEYS = ['version', 'gitignore', 'ignore', 'include', 'presets', 'files'];
 const DEFAULT_INCLUDE: readonly string[] = ['**/*.md'];
 
+const FILE_KEYS = ['dependencies', 'use'];
+
 const optional = (message: string | undefined) => (message === undefined ? {} : { message });
+
+// SPEC §9.3 step 8.2: an entry without "dependencies" whose key is a near miss of it
+function missingMessage(value: Value | undefined, dependencies: Value | undefined) {
+  if (!isMap(value) || dependencies !== undefined) return undefined;
+  const near = [...value.keys()].find((k) => closestKey(k, ['dependencies']) !== null);
+  return near === undefined
+    ? undefined
+    : `The entry has no "dependencies" key; "${near}" is not a key: did you mean "dependencies"?`;
+}
 
 const hasEntry = (path: string): boolean => {
   try {
@@ -83,7 +95,7 @@ function collectDeclaration(
   }
   const dependencies = isMap(value) ? value.get('dependencies') : undefined;
   if (!isMap(value) || !isStrings(dependencies) || dependencies.length === 0) {
-    fatal.push(diag('E_CONFIG', { file: key }));
+    fatal.push(diag('E_CONFIG', { file: key, ...optional(missingMessage(value, dependencies)) }));
     return;
   }
   const use = value.get('use');
@@ -95,7 +107,8 @@ function collectDeclaration(
   }
   for (const k of value.keys()) {
     if (k !== 'dependencies' && k !== 'use') {
-      const message = k === 'covers' ? 'Rename "covers" to "dependencies".' : undefined;
+      const message =
+        k === 'covers' ? 'Rename "covers" to "dependencies".' : unknownKeyMessage(k, FILE_KEYS);
       fatal.push(diag('E_UNKNOWN_KEY', { file: key, subject: k, ...optional(message) }));
     }
   }
@@ -155,7 +168,8 @@ export function readConfig(root: string): {
   const attached: Diagnostic[] = [];
   for (const key of top.keys()) {
     if (!TOP_KEYS.includes(key)) {
-      const message = key === 'dependents' ? 'Rename "dependents" to "files".' : undefined;
+      const message =
+        key === 'dependents' ? 'Rename "dependents" to "files".' : unknownKeyMessage(key, TOP_KEYS);
       fatal.push(diag('E_UNKNOWN_KEY', { subject: key, ...optional(message) }));
     }
   }

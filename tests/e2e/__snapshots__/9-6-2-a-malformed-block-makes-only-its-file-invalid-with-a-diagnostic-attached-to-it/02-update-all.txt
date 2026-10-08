@@ -36,6 +36,6 @@ error: E_BLOCK: bad/quoted-hash.md: hash: Write the hash as "hash:" and 64 lower
 error: E_BLOCK: bad/scalar.md: docstamp: Write the docstamp block as a block mapping, one key per line.
 error: E_BLOCK: bad/short-hash.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.
 error: E_BLOCK: bad/string-deps.md: dependencies: The dependencies key must hold a non-empty list of patterns.
-error: E_UNKNOWN_KEY: bad/typo.md: dependancies: Remove or correct the key.
+error: E_UNKNOWN_KEY: bad/typo.md: dependancies: Remove or correct the key; did you mean "dependencies"?
 error: E_UNKNOWN_KEY: bad/unknown-key.md: covers: Remove or correct the key.
 error: E_BLOCK: bad/wrong-prefix.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.

@@ -734,6 +734,16 @@ file that only sets `ignore` or `include` writes `files: {}`.
 NOTE: Steps 5 to 10 never see the Carrier. Key order in a Map is not significant: the Declarations are
 in path order (step 10).
 
+NOTE: The `[[Message]]` of `E_UNKNOWN_KEY` is informative (§5.5), and SHOULD name the *near key*
+of the unknown key when there is one: among the keys of its level, in the order listed by step 5
+(top level), step 8.3 (`dependencies`, `use`) or §9.6.2 step 5 (`dependencies`, `use`, `hash`),
+those whose edit distance to it is 1 or 2, the first one at the smallest distance. The edit
+distance is the least number of code points to insert, delete or replace. So `dependecies` names `dependencies`. The fixed
+messages for `dependents` and `covers` (§15) take precedence. Likewise the `[[Message]]` of the
+`E_CONFIG` of step 8.2, for an entry that is a Map without `dependencies`, SHOULD name a key of it
+whose edit distance to `dependencies` is 1 or 2. Neither changes a code, a `[[Subject]]` or the
+order of Diagnostics.
+
 ### 9.4 Stamped Files
 
 A file with a configured Declaration MUST be an entry of kind *file* whose name, in the listing of
@@ -2226,7 +2236,7 @@ command raised.
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
 | `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file); for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
-| `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; attached to the file when it is a key of an inline block |
+| `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; otherwise its near key, if any (§9.3 NOTE: `did you mean "dependencies"?`); attached to the file when it is a key of an inline block |
 | `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1); for an empty pattern, write a path or glob or remove it; for a lone `!`, write the path to exclude after it or remove it |
 | `E_UNKNOWN_PRESET` | error | §8.6 | define the Preset under `presets` in the Configuration file, or correct the name in `use`; subject the name, attached to the file |
 | `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies`, `use` or `hash` |
@@ -2310,7 +2320,8 @@ migration is to read `E_UNKNOWN_KEY` where a consumer looked for `E_BLOCK` with 
 The following are not breaking:
 
 - the wording of a Diagnostic `[[Message]]` (§5.5), which is informative; a test MAY snapshot it,
-  and then the snapshot is updated with the change;
+  and then the snapshot is updated with the change. This covers the near key named by
+  `E_UNKNOWN_KEY` and `E_CONFIG` (§9.3 NOTE);
 - a new Diagnostic with severity `warning`, which never affects the exit code (§16);
 - a new command, or a new option that no existing command line uses: `stats` (§13.9), its options
   and the Diagnostic code `E_HISTORY`, which only it raises. The command has no option that sets an
