@@ -30,22 +30,22 @@ exit: 0
           "staleRate": null
         },
         {
-          "pattern": "!src/engine/**/*.test.*",
-          "resolvedCount": 1,
-          "staleRate": null
-        },
-        {
-          "pattern": "!src/engine/**/__tests__",
-          "resolvedCount": 1,
-          "staleRate": null
-        },
-        {
           "pattern": "src/util",
           "resolvedCount": 4,
           "staleRate": null
         },
         {
           "pattern": "tests/unit",
+          "resolvedCount": 1,
+          "staleRate": null
+        },
+        {
+          "pattern": "!src/engine/**/*.test.*",
+          "resolvedCount": 1,
+          "staleRate": null
+        },
+        {
+          "pattern": "!src/engine/**/__tests__",
           "resolvedCount": 1,
           "staleRate": null
         }

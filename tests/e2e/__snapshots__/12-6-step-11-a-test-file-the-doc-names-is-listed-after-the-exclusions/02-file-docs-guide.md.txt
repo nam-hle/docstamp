@@ -1,0 +1,10 @@
+file: docs/guide.md
+--- content ---
+---
+docstamp:
+  dependencies:
+    - packages
+    - "!packages/**/*.test.*"
+    - packages/a/src/x.test.ts
+---
+Code in `packages`, and `packages/*`; its test is `packages/a/src/x.test.ts`.

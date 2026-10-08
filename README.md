@@ -372,10 +372,10 @@ suggest docs/architecture.md
   pattern                           files   stale
   config/*.yaml                         2  0.1111
   src/server/handlers                   4  0.2222
-  !src/server/handlers/**/*.test.*     -1
   src/server/router.ts                  1  0.2222
   src/server/schemas                    2  0.0000
   src/store/index.ts                    1  0.0000
+  !src/server/handlers/**/*.test.*     -1
   ignored  dist/server.js
 ```
 
@@ -387,20 +387,20 @@ suggest docs/architecture.md
   pattern                           files   stale
   config/*.yaml                         2  0.1111
   src/server/handlers                   4  0.2222
-  !src/server/handlers/**/*.test.*     -1
   src/server/router.ts                  1  0.2222
   src/server/schemas                    2  0.0000
   src/store/index.ts                    1  0.0000
+  !src/server/handlers/**/*.test.*     -1
   ignored  dist/server.js
 written  docs/architecture.md
 $ docstamp
 STALE    docs/architecture.md  (unrecorded)
   depends   config/*.yaml
   depends   src/server/handlers
-  depends   !src/server/handlers/**/*.test.*
   depends   src/server/router.ts
   depends   src/server/schemas
   depends   src/store/index.ts
+  depends   !src/server/handlers/**/*.test.*
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
 ```

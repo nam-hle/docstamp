@@ -48,10 +48,10 @@ scenario(
         '  scripts/*.mjs                 2  0.2000\n' +
         '  src/cli                       3  0.2000\n' +
         '  src/engine                    3  0.2000\n' +
-        '  !src/engine/**/*.test.*      -1\n' +
-        '  !src/engine/**/__tests__     -1\n' +
         '  src/util                      4  0.0000\n' +
         '  tests/unit                    1  0.0000\n' +
+        '  !src/engine/**/*.test.*      -1\n' +
+        '  !src/engine/**/__tests__     -1\n' +
         '  ignored  build/output.js\n',
     );
     expect(text.stderr).toBe('');
@@ -70,10 +70,10 @@ scenario(
             { pattern: 'scripts/*.mjs', resolvedCount: 2, staleRate: 0.2 },
             { pattern: 'src/cli', resolvedCount: 3, staleRate: 0.2 },
             { pattern: 'src/engine', resolvedCount: 3, staleRate: 0.2 },
-            { pattern: '!src/engine/**/*.test.*', resolvedCount: 1, staleRate: null },
-            { pattern: '!src/engine/**/__tests__', resolvedCount: 1, staleRate: null },
             { pattern: 'src/util', resolvedCount: 4, staleRate: 0 },
             { pattern: 'tests/unit', resolvedCount: 1, staleRate: 0 },
+            { pattern: '!src/engine/**/*.test.*', resolvedCount: 1, staleRate: null },
+            { pattern: '!src/engine/**/__tests__', resolvedCount: 1, staleRate: null },
           ],
           ignored: ['build/output.js'],
           diagnostics: [],
@@ -409,6 +409,63 @@ scenario(
     expect(json.stderr).toBe('');
   },
 );
+
+scenario(
+  '§12.6 steps 10 and 11 exclusions come after every inclusion, and a covered glob is dropped',
+  async (repo) => {
+    repo.write('packages/a/src/x.ts', 'export const x = 1;\n');
+    repo.write('packages/a/src/x.test.ts', 'import { x } from "./x.ts";\n');
+    repo.write('packages/b/src/y.ts', 'export const y = 2;\n');
+    repo.write(
+      'docs/guide.md',
+      '# Guide\n\nAll code lives in `packages`. Each package has its own folder under ' +
+        '`packages/*`.\n\nSee `packages/a/src/x.ts` too.\n',
+    );
+    repo.commit('init');
+    const text = await repo.run(['suggest', 'docs/guide.md'], { show: ['docs/guide.md'] });
+    expect(text.exit).toBe(0);
+    expect(text.stdout).toBe(
+      'suggest docs/guide.md\n' +
+        '  pattern                files  stale\n' +
+        '  packages                   2    n/a\n' +
+        '  !packages/**/*.test.*     -1\n',
+    );
+    const written = await repo.run(['suggest', '--write', 'docs/guide.md'], { expectExit: 0 });
+    expect(written.stdout).toContain('written  docs/guide.md\n');
+    await repo.snapFile('docs/guide.md');
+    expect(repo.read('docs/guide.md')).toContain(
+      'docstamp:\n  dependencies:\n    - packages\n    - "!packages/**/*.test.*"\n---\n',
+    );
+    const listed = await repo.run(['list-dependencies', '--json', 'docs/guide.md']);
+    const resolved: string[] = listed.json().files[0].resolvedFiles;
+    expect(resolved).toEqual(['packages/a/src/x.ts', 'packages/b/src/y.ts']);
+    expect(resolved.filter((path) => path.includes('.test.'))).toEqual([]);
+  },
+);
+
+scenario('§12.6 step 11 a test file the doc names is listed after the exclusions', async (repo) => {
+  repo.write('packages/a/src/x.ts', 'export const x = 1;\n');
+  repo.write('packages/a/src/x.test.ts', 'import { x } from "./x.ts";\n');
+  repo.write('packages/b/src/y.ts', 'export const y = 2;\n');
+  repo.write(
+    'docs/guide.md',
+    'Code in `packages`, and `packages/*`; its test is `packages/a/src/x.test.ts`.\n',
+  );
+  repo.commit('init');
+  await repo.run(['suggest', '--write', 'docs/guide.md'], { expectExit: 0 });
+  await repo.snapFile('docs/guide.md');
+  const listed = await repo.run(['list-dependencies', '--json', 'docs/guide.md']);
+  expect(listed.json().files[0].dependencies).toEqual([
+    'packages',
+    '!packages/**/*.test.*',
+    'packages/a/src/x.test.ts',
+  ]);
+  expect(listed.json().files[0].resolvedFiles).toEqual([
+    'packages/a/src/x.test.ts',
+    'packages/a/src/x.ts',
+    'packages/b/src/y.ts',
+  ]);
+});
 
 scenario(
   '§13.10 a missing file, a directory and a binary file are E_UNREADABLE',

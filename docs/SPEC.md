@@ -1324,15 +1324,29 @@ prefix, before a `/`, of some path of *U*.
    `!`*d*`/**/__test__` and `!`*d*`/**/__tests__` that match (§8.3) at least one file of *U*, and
    none if some segment of *d* is `test`, `tests`, `spec`, `specs`, `__test__` or `__tests__`. Remove
    from *files* every file below a member *d* of *dirs* unless one of the exclusions of *d* matches it.
-10. *Order.* The Suggestions are, in path order of their pattern, the members of *files*, *dirs* and
-   *globs*, each with `[[Files]]` `Select(« pattern » and its exclusions, U)`, and each directory
-   directly followed by one Suggestion for each of its exclusions, with `[[Files]]` the files of *U*
-   that the exclusion matches.
+10. *Subsumption.* Let *reincluded* be the members of *files* below a member of *dirs* (those that
+   an exclusion matches, step 9), and *base* the other members of *files*, *dirs* and *globs*. Let
+   *sel*(*p*) be `Select(« p », U)`. Remove from *base* every *p* for which another member *q* of
+   *base* has *sel*(*p*) ⊆ *sel*(*q*), and either *sel*(*q*) ⊄ *sel*(*p*) or *q* precedes *p* in
+   path order; every *p* is tested against *base* as it was before this step. Let *cuts* be the
+   exclusions of every member of *dirs*, in path order of their directory and, for one directory,
+   in the order of step 9.
+11. *Order.* The Suggestions are, first, the members *p* of *base* in path order, each with
+   `[[Files]]` `Select(« p » followed by cuts, U)`; then
+   one Suggestion for each of *cuts* in order, with `[[Files]]` the files of *U* that it matches;
+   then the members *p* of *reincluded* in path order, each with `[[Files]]` « *p* ».
 
 NOTE: A proposal is the list one would write by hand from what the doc says, and it is a proposal
 only: nothing is read from the repository history, no pattern is judged too broad, and the doc is
 not evaluated. Every non-excluding Suggestion selects a file of *U*, so the list passes §8.5 step 3
-as written, and an exclusion matches a file of *U*, so it raises no `W_EMPTY_EXCLUSION`. A Suggestion
+as written, and an exclusion matches a file of *U*, so it raises no `W_EMPTY_EXCLUSION`. Under the
+last-match-wins rule of §8.4, an exclusion written before an inclusion that selects the same file
+would be cancelled by it; steps 10 and 11 write every exclusion after every inclusion, so the
+written list selects exactly the `[[Files]]` of its inclusions. The only patterns after the
+exclusions are the files of *reincluded*: a file the doc names that an exclusion matches, such as a
+test file it mentions, is named alone and selects only itself. Step 10 drops an inclusion that
+another one covers, such as `packages/*` under `packages`, so the list has no redundant pattern;
+of two that select the same files, the first in path order is kept. A Suggestion
 for an exclusion has no files of its own: its `[[Files]]` are the files it matches. A mention in a
 fenced block, in the inline block or of an ignored path is never proposed. A glob keeps a generic
 file it happens to select. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern

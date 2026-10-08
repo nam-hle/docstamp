@@ -1,0 +1,13 @@
+file: docs/guide.md
+--- content ---
+---
+docstamp:
+  dependencies:
+    - packages
+    - "!packages/**/*.test.*"
+---
+# Guide
+
+All code lives in `packages`. Each package has its own folder under `packages/*`.
+
+See `packages/a/src/x.ts` too.

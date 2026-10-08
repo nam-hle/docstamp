@@ -7,10 +7,10 @@ suggest docs/overview.md
   scripts/*.mjs                 2  0.2000
   src/cli                       3  0.2000
   src/engine                    3  0.2000
-  !src/engine/**/*.test.*      -1
-  !src/engine/**/__tests__     -1
   src/util                      4  0.0000
   tests/unit                    1  0.0000
+  !src/engine/**/*.test.*      -1
+  !src/engine/**/__tests__     -1
   ignored  build/output.js
 --- stderr ---
 --- setup: docs/overview.md ---

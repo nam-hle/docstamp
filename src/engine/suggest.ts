@@ -157,18 +157,36 @@ export function propose(
   }
 
   // §12.6 step 10
-  const positives = [...new Set([...kept, ...roots, ...globs])].sort(comparePaths);
-  const suggestions = positives.flatMap((source): Suggestion[] => {
-    const cuts = exclusions.get(source) ?? [];
-    const patterns = [source, ...cuts].map((s) => parsePattern(s)!);
-    const own: Suggestion = { pattern: source, files: select(patterns, files) };
-    return [
-      own,
-      ...cuts.map((cut) => ({
-        pattern: cut,
-        files: files.filter((path) => patternMatches(parsePattern(cut)!, path)),
-      })),
-    ];
-  });
+  const reincluded = sortPaths(
+    [...kept].filter((path) => roots.some((dir) => path.startsWith(`${dir}/`))),
+  );
+  const base = [...new Set([...kept, ...roots, ...globs])]
+    .filter((source) => !reincluded.includes(source))
+    .sort(comparePaths);
+  const selects = new Map(base.map((source) => [source, select([parsePattern(source)!], files)]));
+  const within = (a: string, b: string): boolean => {
+    const outer = new Set(selects.get(b));
+    return selects.get(a)!.every((path) => outer.has(path));
+  };
+  const subsumed = (p: string): boolean =>
+    base.some((q) => q !== p && within(p, q) && (!within(q, p) || comparePaths(q, p) < 0));
+  const cuts = [...roots].sort(comparePaths).flatMap((dir) => exclusions.get(dir)!);
+  const negations = cuts.map((cut) => parsePattern(cut)!);
+
+  // §12.6 step 11
+  const inclusions = base
+    .filter((source) => !subsumed(source))
+    .map((source) => ({
+      pattern: source,
+      files: select([parsePattern(source)!, ...negations], files),
+    }));
+  const suggestions: Suggestion[] = [
+    ...inclusions,
+    ...cuts.map((cut) => ({
+      pattern: cut,
+      files: files.filter((path) => patternMatches(parsePattern(cut)!, path)),
+    })),
+    ...reincluded.map((path) => ({ pattern: path, files: [path] })),
+  ];
   return { suggestions, ignored: sortPaths([...ignored]) };
 }
