@@ -737,11 +737,12 @@ describe('§14.5 JSON', () => {
 });
 
 describe('§14.9 suggest text', () => {
-  const entry = (file: string, rows: SuggestEntry['suggestions'], ignored: string[] = []) => ({
-    file,
-    suggestions: rows,
-    ignored,
-  });
+  const entry = (
+    file: string,
+    rows: SuggestEntry['suggestions'],
+    ignored: string[] = [],
+    declared: string[] | null = null,
+  ) => ({ file, suggestions: rows, ignored, declared });
   it('a header row and one row per Suggestion, rates with four decimals, n/a, blank for an exclusion', () => {
     expect(
       suggestText(
@@ -774,6 +775,26 @@ describe('§14.9 suggest text', () => {
       'suggest "my doc.md"\n  no paths found\n',
     );
   });
+  it('a declared file gets a status column and its only declared patterns', () => {
+    const rows = [
+      { pattern: 'src/cli', resolvedCount: 12, staleRate: 1234 },
+      { pattern: '!src/cli/**/*.test.*', resolvedCount: 3, staleRate: null },
+      { pattern: 'x.md', resolvedCount: 1, staleRate: null },
+    ];
+    const declared = ['src/cli', 'old dir', 'src/cli', '!src/cli/**/*.test.*'];
+    expect(suggestText([entry('README.md', rows, ['dist/out.js'], declared)], false)).toBe(
+      'suggest README.md\n' +
+        '  pattern               files   stale  status\n' +
+        '  src/cli                  12  0.1234  declared\n' +
+        '  !src/cli/**/*.test.*     -3          declared\n' +
+        '  x.md                      1     n/a  new\n' +
+        '  ignored  dist/out.js\n' +
+        '  only declared  "old dir"\n',
+    );
+    expect(suggestText([entry('a.md', [], [], ['src'])], false)).toBe(
+      'suggest a.md\n  no paths found\n  only declared  src\n',
+    );
+  });
   it('--write adds one line per file after the blocks', () => {
     const rows = [{ pattern: 'src', resolvedCount: 2, staleRate: null }];
     expect(
@@ -802,6 +823,7 @@ describe('§14.5 suggest JSON', () => {
           { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null },
         ],
         ignored: ['dist'],
+        declared: null,
         written: true,
       },
     ];
@@ -817,8 +839,18 @@ describe('§14.5 suggest JSON', () => {
         { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null },
       ],
       ignored: ['dist'],
+      declared: null,
       diagnostics: [],
     });
+    const declared = JSON.parse(
+      suggestJsonText({
+        exitCode: 0,
+        write: false,
+        files: [{ ...files[0]!, declared: ['src', 'lib'] }],
+        diagnostics: [],
+      }),
+    );
+    expect(declared.files[0].declared).toEqual(['src', 'lib']);
     const written = JSON.parse(
       suggestJsonText({ exitCode: 0, write: true, files, diagnostics: [] }),
     );
@@ -826,6 +858,7 @@ describe('§14.5 suggest JSON', () => {
       'file',
       'suggestions',
       'ignored',
+      'declared',
       'diagnostics',
       'written',
     ]);

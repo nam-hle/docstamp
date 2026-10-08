@@ -497,6 +497,21 @@ scenario(
   },
 );
 
+scenario('§9.3 NOTE near key: a mistyped key names the key it is close to', async (repo) => {
+  base(repo);
+  repo.write('docstamp.yaml', 'version: 2\nfile: {}\nfiles:\n  DOC.md:\n    dependecies: [src]\n');
+  const configured = await run(repo, 'a configuration file', [], 2, ['E_UNKNOWN_KEY', 'E_CONFIG']);
+  expect(configured.stderr).toContain('did you mean "files"?');
+  expect(configured.stderr).toContain('did you mean "dependencies"?');
+  repo.remove('docstamp.yaml');
+  repo.write('DOC.md', '---\ndocstamp:\n  dependecies: [src]\n---\n# doc\n');
+  const inline = await run(repo, 'an inline block', [], 2, ['E_UNKNOWN_KEY'], ['DOC.md']);
+  expect(inline.stderr).toContain(
+    'error: E_UNKNOWN_KEY: DOC.md: dependecies: Remove or correct the key; ' +
+      'did you mean "dependencies"?',
+  );
+});
+
 it('every diagnostic code of SPEC §15 is exercised through the CLI', () => {
   const spec = readFileSync(new URL('../../../docs/SPEC.md', import.meta.url), 'utf8');
   const table = spec.slice(spec.indexOf('## 15 Diagnostics'), spec.indexOf('## 16 Exit Codes'));

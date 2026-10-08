@@ -5,4 +5,5 @@ file  patterns  files  commits  days   stale   sweep
 B.md         1      2        4     4  0.8000  0.0000
 A.md         1      1        3     3  0.6000  0.0000
 window: 5 commits in the last 3650 days, 1 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
 --- stderr ---

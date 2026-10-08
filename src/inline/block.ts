@@ -1,5 +1,6 @@
 import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
 import { diag } from '../core/diagnostics.ts';
+import { unknownKeyMessage } from '../core/did-you-mean.ts';
 import type { Declaration, Diagnostic } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { hashOnLine, type Scan } from './frontmatter.ts';
@@ -53,7 +54,10 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
   const unknown = [...keys.keys()].filter(
     (key) => !(BLOCK_KEYS as readonly string[]).includes(key),
   );
-  for (const key of unknown) problems.push(diag('E_UNKNOWN_KEY', { file, subject: key }));
+  for (const key of unknown) {
+    const message = unknownKeyMessage(key, BLOCK_KEYS);
+    problems.push(diag('E_UNKNOWN_KEY', { file, subject: key, ...(message ? { message } : {}) }));
+  }
 
   const listed = keys.get('dependencies')?.value;
   const dependencies =

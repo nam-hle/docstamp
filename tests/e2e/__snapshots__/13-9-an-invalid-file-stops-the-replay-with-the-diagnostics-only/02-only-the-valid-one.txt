@@ -5,4 +5,5 @@ exit: 0
 file   patterns  files  commits  days   stale   sweep
 OK.md         1      1        0     0  0.0000  0.0000
 window: 0 commits in a822bf884eb54203ee7045710234d91dc9fd571b..HEAD, 0 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
 --- stderr ---

@@ -1,0 +1,13 @@
+# a configuration file
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNKNOWN_KEY: file: Remove or correct the key; did you mean "files"?
+error: E_CONFIG: DOC.md: The entry has no "dependencies" key; "dependecies" is not a key: did you mean "dependencies"?
+--- setup: docstamp.yaml ---
+version: 2
+file: {}
+files:
+  DOC.md:
+    dependecies: [src]

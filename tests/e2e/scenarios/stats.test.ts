@@ -8,6 +8,11 @@ const DOCS = {
   'BROAD.md': ['src'],
 };
 const HEADER = 'file       patterns  files  commits  days   stale   sweep\n';
+// SPEC §14.8: the legend line, written after the window line when there is a row
+const LEGEND =
+  'legend: patterns declared, files they select, commits and distinct days that would make ' +
+  'the file stale; stale = commits / window commits; sweep = share of those commits that ' +
+  'touch over 200 paths\n';
 
 // base, then six commits: two on day 2, one on day 3, 4 and two on day 5; two touch no file
 function timeline(repo: Repo): string {
@@ -47,7 +52,8 @@ scenario(
         'BROAD.md          1      4        4     3  0.6667  0.0000\n' +
         'MID.md            2      2        3     2  0.5000  0.0000\n' +
         'NARROW.md         1      1        2     2  0.3333  0.0000\n' +
-        `window: 6 commits in ${base}..HEAD, 2 make no file stale\n`,
+        `window: 6 commits in ${base}..HEAD, 2 make no file stale\n` +
+        LEGEND,
     );
     expect(text.stderr).toBe('');
 
@@ -121,7 +127,8 @@ scenario('§12.5 a sweep is a stale commit that touches more than 200 files', as
     HEADER +
       'BROAD.md          1    400        3     3  1.0000  0.3333\n' +
       'NARROW.md         1      1        3     3  1.0000  0.3333\n' +
-      `window: 3 commits in ${base}..HEAD, 0 make no file stale\n`,
+      `window: 3 commits in ${base}..HEAD, 0 make no file stale\n` +
+      LEGEND,
   );
   const json = await repo.run(['stats', '--json', '--from', base], { snapshot: false });
   expect(doc(json).files[1]).toMatchObject({ sweepCommits: 1, sweepShare: 0.3333 });
@@ -148,7 +155,8 @@ scenario('§12.4 --since <n>d is the last n days by committer time, from now', a
     'file  patterns  files  commits  days   stale   sweep\n' +
       'B.md         1      2        3     3  0.7500  0.0000\n' +
       'A.md         1      1        2     2  0.5000  0.0000\n' +
-      'window: 4 commits in the last 30 days, 1 make no file stale\n',
+      'window: 4 commits in the last 30 days, 1 make no file stale\n' +
+      LEGEND,
   );
   const implicit = await repo.run(['stats'], { label: 'the default is 30d' });
   expect(implicit.stdout).toBe(month.stdout);
@@ -221,7 +229,8 @@ scenario(
       HEADER +
         'MID.md            2      2        3     2  0.5000  0.0000\n' +
         'NARROW.md         1      1        2     2  0.3333  0.0000\n' +
-        `window: 6 commits in ${base}..HEAD, 3 make no file stale\n`,
+        `window: 6 commits in ${base}..HEAD, 3 make no file stale\n` +
+        LEGEND,
     );
     const unknown = await repo.run(['stats', '--from', base, 'nope.md', 'NARROW.md']);
     expect(unknown.exit).toBe(2);
@@ -254,7 +263,8 @@ scenario(
         'TO.md           1      2        1     1  1.0000  0.0000\n' +
         'ELSE.md         1      1        0     0  0.0000  0.0000\n' +
         'FROM.md         1      1        0     0  0.0000  0.0000\n' +
-        `window: 1 commits in ${base}..HEAD, 0 make no file stale\n`,
+        `window: 1 commits in ${base}..HEAD, 0 make no file stale\n` +
+        LEGEND,
     );
   },
 );
@@ -279,7 +289,8 @@ scenario('§13.9 inline and configured docs are measured together', async (repo)
     'file                patterns  files  commits  days   stale   sweep\n' +
       '"docs/big list.md"         1      2        2     2  1.0000  0.0000\n' +
       'README.md                  1      1        1     1  0.5000  0.0000\n' +
-      `window: 2 commits in ${base}..HEAD, 0 make no file stale\n`,
+      `window: 2 commits in ${base}..HEAD, 0 make no file stale\n` +
+      LEGEND,
   );
   const json = await repo.run(['stats', '--json', '--from', base]);
   expect(doc(json).files.map((f: { file: string }) => f.file)).toEqual([

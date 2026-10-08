@@ -10,6 +10,7 @@ exit: 0
       "file": "docs/nothing.md",
       "suggestions": [],
       "ignored": [],
+      "declared": null,
       "diagnostics": []
     }
   ],

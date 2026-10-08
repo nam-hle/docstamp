@@ -70,7 +70,7 @@ docstamp/
 │   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
 │   ├── engine/           # evaluation, presets, reverse lookup, stats, proposal; pure, no I/O (§8.6, §12, §12.5, §12.6, §13.8)
-│   ├── history/          # changed-file report (§12.3) and stats replay (§12.4), git, read-only
+│   ├── history/          # changed-file report (§12.3), stats replay (§12.4), renamed path (§12.7), git, read-only
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json and schema-frontmatter.json
 ├── tests/
@@ -132,7 +132,7 @@ Only what no test can check stays here.
   clock in `runStats` for `stats --since` and in `runSuggest` for its 30-day window. `git` is
   invoked only in `src/history/`, read-only, through `execFileSync` with an argument array (no
   shell), and never for the verdict, the Lockfile or the exit code of `check`, `update` or the list
-  commands. `stats` only reports (§13.9); `suggest` reads it for the stale rate alone, and never
+  commands; the renamed-path wording of `E_EMPTY_PATTERN` (§12.7) is a message, not a verdict. `stats` only reports (§13.9); `suggest` reads it for the stale rate alone, and never
   fails for want of it (§13.10).
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
 - **Nothing writes the Lockfile automatically.** Only `docstamp update` with named files or
@@ -205,7 +205,10 @@ asks "is this file invalid" reads `state`, never `diagnostics.length`.
 
 `Universe.ignored` lists the entries a rule skipped (SPEC §7.2 step 3.4). `isIgnoredPath` in
 `src/universe/walk.ts` uses it only to word `E_EMPTY_PATTERN` for a literal path that exists but is
-ignored (§8.5 NOTE): it never touches selection, codes or order, and never calls `git`.
+ignored (§8.5 NOTE): it never touches selection, codes or order, and never calls `git`. For a literal
+path that is not ignored, `renamedTo` (`src/history/renamed.ts`, §12.7) may name the path git shows
+it renamed to; the engine gets it as `EngineFs.renamedTo`, called only for a pattern that already
+raised `E_EMPTY_PATTERN`, and it changes nothing but that message.
 
 ## Text output order
 
@@ -215,7 +218,8 @@ writes them one by one, in that order: never all of stdout first. Each stream al
 §14.1 says; `tests/unit/run.test.ts` pins the interleaving. `reviewLine` (§14.3.4) only builds the
 text of a git command for the reader; `git` still runs in `src/history/` alone, read-only, and
 `isWhitespaceOnly` (§12.3 step 7) makes two more read-only calls there, `renamed` (step 8) three
-(`rev-parse`, `ls-tree`, `hash-object --stdin-paths`), and `editedCarrier` (step 1.4) one `git show`.
+(`rev-parse`, `ls-tree`, `hash-object --stdin-paths`), and `editedCarrier` (step 1.4) one `git show`;
+`renamedTo` (§12.7) uses `rev-parse`, `ls-tree`, `log -1` and `hash-object --stdin-paths`.
 Every one goes through `git` in `src/history/git.ts`, which applies step 1: no `GIT_*` variables,
 `GIT_OPTIONAL_LOCKS=0` and `-c core.autocrlf=false`.
 

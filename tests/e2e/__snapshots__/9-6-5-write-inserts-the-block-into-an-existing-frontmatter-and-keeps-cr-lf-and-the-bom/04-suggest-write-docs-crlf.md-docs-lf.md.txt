@@ -2,12 +2,12 @@ $ docstamp suggest --write docs/crlf.md docs/lf.md
 exit: 0
 --- stdout ---
 suggest docs/crlf.md
-  pattern          files  stale
-  scripts/*.mjs        2    n/a
-  src/cli/main.ts      1    n/a
+  pattern          files  stale  status
+  scripts/*.mjs        2    n/a  declared
+  src/cli/main.ts      1    n/a  declared
 suggest docs/lf.md
-  pattern          files  stale
-  src/cli/main.ts      1    n/a
+  pattern          files  stale  status
+  src/cli/main.ts      1    n/a  declared
 unchanged  docs/crlf.md
 unchanged  docs/lf.md
 --- stderr ---

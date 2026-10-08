@@ -297,6 +297,45 @@ describe('§8.5 NOTE E_EMPTY_PATTERN names an ignored path', () => {
   });
 });
 
+describe('§8.5 NOTE and §12.7 E_EMPTY_PATTERN names the path git shows a file renamed to', () => {
+  const asked: string[] = [];
+  const renames: Record<string, string> = { 'old.ts': 'src/a.ts', 'self.md': 'B.md' };
+  const withRenames: EngineFs = {
+    ...fs,
+    isIgnoredPath: (p) => p === '.npmrc',
+    renamedTo: (p) => {
+      asked.push(p);
+      return renames[p] ?? null;
+    },
+  };
+  const run = (patterns: string[], engine: EngineFs = withRenames) =>
+    evaluate(declare('B.md', patterns), universe, lockOf({}), [], engine);
+  it('names the new path, and only changes the message', () => {
+    const renamed = run(['src/**', 'old.ts']);
+    expect(renamed.diagnostics.map((d) => [d.code, d.subject, d.message])).toEqual([
+      [
+        'E_EMPTY_PATTERN',
+        'old.ts',
+        'Correct or remove the pattern; it matches no file: git shows it renamed to src/a.ts; ' +
+          'depend on the new path.',
+      ],
+    ]);
+    const plain = run(['src/**', 'old.ts'], fs);
+    expect([renamed.state, renamed.diagnostics.map((d) => [d.code, d.subject])]).toEqual([
+      plain.state,
+      plain.diagnostics.map((d) => [d.code, d.subject]),
+    ]);
+  });
+  it('asks only for a missing literal path that is not ignored, never for the file itself', () => {
+    asked.length = 0;
+    const r = run(['src/**', 'src/*.md', '.npmrc', 'missing.js', 'self.md']);
+    expect(asked).toEqual(['missing.js', 'self.md']);
+    const plain = 'Correct or remove the pattern; it matches no file.';
+    expect(r.diagnostics.find((d) => d.subject === 'self.md')?.message).toBe(plain);
+    expect(r.diagnostics.find((d) => d.subject === 'missing.js')?.message).toBe(plain);
+  });
+});
+
 describe('§12.1 evaluate', () => {
   const b = declare('B.md', ['src/**']);
   const current = hashOf(['src/a.ts', 'src/b.ts']);

@@ -14,6 +14,8 @@ export interface SuggestEntry {
   readonly file: string;
   readonly suggestions: readonly SuggestRow[];
   readonly ignored: readonly string[];
+  // SPEC §13.10 step 4: null when the file has no declaration
+  readonly declared: readonly string[] | null;
   readonly written?: boolean;
 }
 
@@ -22,17 +24,26 @@ const fixed4 = (tenThousandths: number): string =>
   `${Math.floor(tenThousandths / 10000)}.${String(tenThousandths % 10000).padStart(4, '0')}`;
 
 // SPEC §14.9
-function table(rows: readonly SuggestRow[]): string[] {
+function table(rows: readonly SuggestRow[], declared: readonly string[] | null): string[] {
   const cells = rows.map((row) => [
     shown(row.pattern),
     excludes(row) ? `-${row.resolvedCount}` : String(row.resolvedCount),
     excludes(row) ? '' : row.staleRate === null ? 'n/a' : fixed4(row.staleRate),
+    ...(declared === null ? [] : [declared.includes(row.pattern) ? 'declared' : 'new']),
   ]);
-  const all = [['pattern', 'files', 'stale'], ...cells];
-  const widths = [0, 1, 2].map((c) => Math.max(...all.map((row) => row[c]!.length)));
+  const header = ['pattern', 'files', 'stale', ...(declared === null ? [] : ['status'])];
+  const all = [header, ...cells];
+  const widths = header.map((_, c) => Math.max(...all.map((row) => row[c]!.length)));
+  const leftAligned = (c: number) => c === 0 || c === 3;
   return all.map((row) =>
-    `  ${row.map((cell, c) => (c === 0 ? cell.padEnd(widths[c]!) : cell.padStart(widths[c]!))).join('  ')}`.trimEnd(),
+    `  ${row.map((cell, c) => (leftAligned(c) ? cell.padEnd(widths[c]!) : cell.padStart(widths[c]!))).join('  ')}`.trimEnd(),
   );
+}
+
+// SPEC §14.9: the declared patterns that no Suggestion has
+function onlyDeclared(entry: SuggestEntry): string[] {
+  const proposed = new Set(entry.suggestions.map((row) => row.pattern));
+  return [...new Set(entry.declared ?? [])].filter((pattern) => !proposed.has(pattern));
 }
 
 export function suggestText(entries: readonly SuggestEntry[], write: boolean): string {
@@ -41,10 +52,11 @@ export function suggestText(entries: readonly SuggestEntry[], write: boolean): s
     out += `suggest ${shown(entry.file)}\n`;
     if (entry.suggestions.length === 0) out += '  no paths found\n';
     else
-      out += table(entry.suggestions)
+      out += table(entry.suggestions, entry.declared)
         .map((line) => `${line}\n`)
         .join('');
     for (const path of entry.ignored) out += `  ignored  ${shown(path)}\n`;
+    for (const pattern of onlyDeclared(entry)) out += `  only declared  ${shown(pattern)}\n`;
   }
   if (write) {
     for (const entry of entries) {
@@ -76,6 +88,7 @@ export function suggestJsonText(doc: SuggestJsonDoc): string {
         ),
       ],
       ['ignored', [...entry.ignored]],
+      ['declared', entry.declared === null ? null : [...entry.declared]],
       ['diagnostics', []],
     ];
     if (doc.write) members.push(['written', entry.written === true]);

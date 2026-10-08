@@ -16,6 +16,10 @@ exit: 0
         }
       ],
       "ignored": [],
+      "declared": [
+        "scripts",
+        "src/util"
+      ],
       "diagnostics": []
     }
   ],

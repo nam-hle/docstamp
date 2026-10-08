@@ -16,6 +16,7 @@ exit: 0
         }
       ],
       "ignored": [],
+      "declared": null,
       "diagnostics": []
     }
   ],

@@ -49,7 +49,8 @@ permitted variations are:
   time, and is *none* when the history cannot answer.
 
 A conforming implementation MUST NOT perform network access. It MAY invoke `git`, read-only, only
-to compute the changed-file report (§12.3) and the replay of `stats` and `suggest` (§12.4). The
+to compute the changed-file report (§12.3), the replay of `stats` and `suggest` (§12.4) and the
+renamed path named in the `[[Message]]` of `E_EMPTY_PATTERN` (§12.7). The
 verdict (states and reasons), the Lockfile and the exit code of every command MUST NOT depend on
 `git`, except that `stats` fails with exit 2 when the history it needs is missing (§12.4); `suggest`
 never fails for want of history. `stats` and `suggest` are the only places that read the wall-clock
@@ -546,8 +547,11 @@ only (no `*`, `?`, Class, Alternation or `**`); it denotes the String of those L
 resolved. It is *ignored* when it exists as an entry under Root (a file, link or directory, not
 followed) and either it or a directory above it is an ignored entry (§7.2 step 3.4), or an ignored
 entry is below it (a directory whose content is all ignored). This changes neither the selection,
-nor the Diagnostic code, nor the Diagnostic order, nor any verdict. `git` is not consulted, so a
-renamed file is not traced.
+nor the Diagnostic code, nor the Diagnostic order, nor any verdict. `git` is not consulted for it.
+Otherwise, for a literal path that is not ignored, the `[[Message]]` SHOULD name the path that
+`RenamedTo` (§12.7) returns, if it returns one other than `declaration.[[File]]`: `git shows it
+renamed to <path>`. That is the only use of `git` in §8.5, it is made only for a pattern that
+already raised `E_EMPTY_PATTERN`, and it changes nothing but that wording.
 
 NOTE: For the same reason, the `[[Message]]` of `E_EMPTY_PATTERN` SHOULD say that patterns use `/`
 as the separator and that `\` escapes the next character when the pattern holds a `\` followed by a
@@ -733,6 +737,16 @@ file that only sets `ignore` or `include` writes `files: {}`.
 
 NOTE: Steps 5 to 10 never see the Carrier. Key order in a Map is not significant: the Declarations are
 in path order (step 10).
+
+NOTE: The `[[Message]]` of `E_UNKNOWN_KEY` is informative (§5.5), and SHOULD name the *near key*
+of the unknown key when there is one: among the keys of its level, in the order listed by step 5
+(top level), step 8.3 (`dependencies`, `use`) or §9.6.2 step 5 (`dependencies`, `use`, `hash`),
+those whose edit distance to it is 1 or 2, the first one at the smallest distance. The edit
+distance is the least number of code points to insert, delete or replace. So `dependecies` names `dependencies`. The fixed
+messages for `dependents` and `covers` (§15) take precedence. Likewise the `[[Message]]` of the
+`E_CONFIG` of step 8.2, for an entry that is a Map without `dependencies`, SHOULD name a key of it
+whose edit distance to `dependencies` is 1 or 2. Neither changes a code, a `[[Subject]]` or the
+order of Diagnostics.
 
 ### 9.4 Stamped Files
 
@@ -1409,6 +1423,36 @@ fenced block, in the inline block or of an ignored path is never proposed. A glo
 file it happens to select. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern
 as written and is dropped.
 
+### 12.7 Renamed Path
+
+`RenamedTo(root, path, universe)`, for a literal path *path* (§8.5 NOTE) that is not in *universe*,
+returns the RepoPath of a file of *universe* that git shows *path* was renamed to, or *none*. It is
+used only to word the `[[Message]]` of `E_EMPTY_PATTERN` (§8.5 NOTE).
+
+1. Run `git` in Root as §12.3 step 1 does. If `git` is unavailable, Root is not inside a git work
+   tree, the repository is shallow (`git rev-parse --is-shallow-repository` prints anything but
+   `false`), or a command fails, return *none*. Every command that names *path* is run with
+   `--literal-pathspecs` before the subcommand.
+2. If `git ls-tree -z HEAD -- <path>` lists *path* with mode `100644` or `100755`, let *base* be
+   `HEAD` and *object* its object name: the rename is not committed yet.
+3. Otherwise let *C* be the output of `git log -1 --format=%H -- <path>` without its line end, the
+   last commit that changed *path*, which deleted it; if it is empty, return *none*. Let *base* be
+   `<C>^` and *object* the object name of *path* in `git ls-tree -z <C>^ -- <path>`, of mode
+   `100644` or `100755`; if there is none, return *none*.
+4. Let *tracked* be the paths of `git ls-tree -r -z <base>`, and *candidates* the files of
+   *universe* of kind *file*, in path order, that are not *path*, not in *tracked* and hold no LF.
+   If there is none, return *none*.
+5. Let *after* be the object names that `git hash-object --stdin-paths` prints for *candidates*,
+   given as in §12.3 step 8. Return the first of *candidates* whose object name is *object*, or
+   *none*.
+
+NOTE: As in §12.3 step 8, a file is renamed only when its content at the new path is exactly the
+content git stored at the old one, so the answer reads no similarity score and no git
+configuration of rename detection and is the same on every host with the same history and work
+tree. A renamed file that was also edited is not traced, nor one whose new path is ignored. The
+answer never changes the selection, a Diagnostic code, the Diagnostic order, a verdict or an exit
+code, and any failure is *none*, silently.
+
 ## 13 Command Line
 
 ### 13.1 Synopsis
@@ -1704,6 +1748,12 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
    (§9.6.1): a block in such a file would never be read. The message tells the user to edit the
    configuration by hand, or to name a file that `include` selects.
 4. Let (*suggestions*, *ignored*) be `Propose(path, text, universe, isIgnored)` (§12.6) for each *path*.
+   Let its *declared* be the `dependencies` of its configured Declaration (`[[Declarations]]` of
+   *config*) if it has one; otherwise, if *path* is a candidate (§9.6.1) and `ScanFrontmatter` of
+   its text is not *none*, the `[[Dependencies]]` of the Declaration that `ParseBlock` (§9.6.2)
+   returns, even when it raises (so « » when they are not a List of Strings); otherwise *none*.
+   *declared* is read from the text before step 7 writes, never expands Presets (§8.6), and
+   raises nothing.
 5. Let *window* be `Replay(root, days 30, now)` (§12.4), *now* being the wall-clock time; if it
    raises, or the Window has no Commit, let *window* be *none*: no Diagnostic is output for it.
 6. For each Suggestion of each file whose pattern has no Negation, let its *staleRate* be the
@@ -1713,8 +1763,8 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
    `? WriteBlock(text, patterns)` (§9.6.5), *patterns* being the patterns of *suggestions* in order.
    Only if no step has raised, replace each *path* whose *new* differs from its text atomically, as
    §9.6.4 step 3 does; it is then *written*, and every other file is not.
-8. Output the Suggestions, *ignored* and, with `--write`, which files were *written* (§14.9, §14.5),
-   and exit 0.
+8. Output the Suggestions, *ignored*, *declared* and, with `--write`, which files were *written*
+   (§14.9, §14.5), and exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2; with `--write` nothing was
 written then, except that a failure to replace a file (`E_UNREADABLE`) in step 7 leaves the files
@@ -1727,6 +1777,13 @@ reads the block). A file with no Suggestion is not written: a block needs a depe
 `staleRate` follows §12.5 with the caveat of its NOTE: dependencies are the ones of `HEAD`, and a
 proposal that names a file the window deleted cannot see it. A file literally named `suggest` is
 reached as `docstamp -- suggest` (§13.2).
+
+NOTE: *declared* makes a proposal for a file that already has a declaration read as a difference:
+a Suggestion whose pattern is in *declared* (String equality, §3.2) is already declared, any other
+is new, and a pattern of *declared* that no Suggestion has is only declared: the doc no longer
+mentions it, or mentions it in another form.
+Patterns are compared as written, so `src` and `src/**` differ even when they select the same
+files.
 
 ## 14 Output
 
@@ -2104,6 +2161,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
           { "pattern": "!src/cli/**/*.test.*", "resolvedCount": 3, "staleRate": null }
         ],
         "ignored": ["dist/index.js"],
+        "declared": null,
         "diagnostics": []
       }
     ],
@@ -2114,7 +2172,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   It has no `summary`, `state`, `reasons` or `changes`. `files` holds each named file in path order,
   with `suggestions` the Suggestions of §12.6 in their order: `pattern`, `resolvedCount` the number
   of `[[Files]]`, and `staleRate` the Number of §13.10 step 6 (as `stats` writes `staleRate`, §14.5
-  above) or `null`. `ignored` is the List of §12.6, `[]` when there is none. With `--write` each
+  above) or `null`. `ignored` is the List of §12.6, `[]` when there is none. `declared` follows
+  `ignored`: the List *declared* of §13.10 step 4, in its order, or `null` when it is *none*. With `--write` each
   element adds `"written": true|false` after `diagnostics`. The `diagnostics` of a file are always
   `[]`, kept for the shape of the other modes; the top-level `diagnostics` hold the raised
   Diagnostics, in which case `files` is empty.
@@ -2174,6 +2233,7 @@ file       patterns  files  commits  days   stale   sweep
 CLAUDE.md         8     53      129    36  0.3957  0.0310
 README.md         1      4        9     6  0.0276  0.0000
 window: 326 commits in the last 30 days, 91 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
 ```
 
 A header row, then one row per FileStats in the order of §12.5, when there is at least one. The
@@ -2186,9 +2246,11 @@ trailing space.
 
 Then the line `window: <n> commits <where>, <k> make no file stale`, always written (also with no
 row), where *n* is the number of Commits, *k* is *untouched*, and *where* is `in the last <N> days`
-for `--since` and `in <rev>..HEAD` for `--from`, with *rev* as given and written as in §14.2. When
-the command raised or a file was `invalid`, nothing is output on standard output. Diagnostics as in
-§14.3.
+for `--since` and `in <rev>..HEAD` for `--from`, with *rev* as given and written as in §14.2. Then,
+when there is at least one row, the *legend line*, the fixed text shown above, which explains the
+columns; the sweep size it names is the one of §12.5. The legend is text only: `--json` has no
+member for it (§14.5). When the command raised or a file was `invalid`, nothing is output on
+standard output. Diagnostics as in §14.3.
 
 ### 14.9 Suggest, Text Mode
 
@@ -2212,7 +2274,24 @@ on the left, each to the width of its longest cell, header included. `files` is 
 the `staleRate` with exactly four decimals as in §14.8, `n/a` when it is *none* for a pattern with no Negation,
 and empty for one with a Negation. A row has no trailing space. A file with no Suggestion has the
 single line `  no paths found`. Then one line `  ignored  <path>` per *ignored* path, as in §14.2,
-in path order. With `--write`, after all blocks, one line `written  <file>` or `unchanged  <file>`
+in path order.
+
+When *declared* (§13.10 step 4) is not *none*, the table has a fourth column, `status`, padded on
+the right like `pattern` (a row has still no trailing space): `declared` for a Suggestion whose
+pattern is in *declared*, else `new`. Then, after the `ignored` lines, one line
+`  only declared  <pattern>` per distinct pattern of *declared* that no Suggestion has, in the
+order of *declared*, written as in §14.2:
+
+```
+suggest docs/architecture.md
+  pattern               files   stale  status
+  src/server/handlers       4  0.2222  declared
+  src/server/router.ts      1  0.2222  new
+  only declared  src/legacy
+```
+
+When *declared* is *none*, the block is exactly as above, without the column and those lines.
+With `--write`, after all blocks, one line `written  <file>` or `unchanged  <file>`
 per file in path order. Diagnostics as in §14.3, and nothing is output on standard output when the
 command raised.
 
@@ -2226,13 +2305,13 @@ command raised.
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
 | `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file); for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
-| `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; attached to the file when it is a key of an inline block |
+| `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; otherwise its near key, if any (§9.3 NOTE: `did you mean "dependencies"?`); attached to the file when it is a key of an inline block |
 | `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1); for an empty pattern, write a path or glob or remove it; for a lone `!`, write the path to exclude after it or remove it |
 | `E_UNKNOWN_PRESET` | error | §8.6 | define the Preset under `presets` in the Configuration file, or correct the name in `use`; subject the name, attached to the file |
 | `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies`, `use` or `hash` |
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
-| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
+| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when git shows the path renamed (§12.7), depend on the new path, which the message names; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
 | `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3, §13.10 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
@@ -2310,7 +2389,9 @@ migration is to read `E_UNKNOWN_KEY` where a consumer looked for `E_BLOCK` with 
 The following are not breaking:
 
 - the wording of a Diagnostic `[[Message]]` (§5.5), which is informative; a test MAY snapshot it,
-  and then the snapshot is updated with the change;
+  and then the snapshot is updated with the change. This covers the near key named by
+  `E_UNKNOWN_KEY` and `E_CONFIG` (§9.3 NOTE), and the renamed path named by `E_EMPTY_PATTERN`
+  (§8.5 NOTE, §12.7), whose read of the history changes no verdict, code or exit code;
 - a new Diagnostic with severity `warning`, which never affects the exit code (§16);
 - a new command, or a new option that no existing command line uses: `stats` (§13.9), its options
   and the Diagnostic code `E_HISTORY`, which only it raises. The command has no option that sets an
@@ -2331,6 +2412,12 @@ The following are not breaking:
   command, and a file literally named `suggest` is reached with `--` (§13.2), as for every other
   command word. `--write` without `suggest` is still refused (§13.2);
 - a new member of the JSON output (§14.5: consumers ignore unknown members);
+- *declared* of `suggest` (§13.10 step 4): the `status` column and the `only declared` lines of
+  §14.9 for a file that already has a declaration, and the member `declared` of §14.5. A file
+  without one prints exactly what it printed; the proposal, `--write` and the exit code are
+  unchanged;
+- the legend line of `stats` in text mode (§14.8): a fixed line after the `window:` line; the rows,
+  the `window:` line and `--json` are unchanged, and `stats` still exits 0;
 - `[[Edited]]` (§5.4, §12.3 step 1.4): the edited line and the summary line of §14.3, and the
   member `dependenciesEdited` of §14.5. It is not a Reason, so `reasons` and every verdict are
   unchanged. `changes` may now be `[]` where it was `null`, for a file whose own list lost a

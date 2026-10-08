@@ -148,6 +148,19 @@ describe('§9.6.2 ParseBlock', () => {
   ])('%s', (_name, text, expected) => {
     expect(problems(text)).toEqual(expected);
   });
+  it('§9.3 NOTE: an unknown key of a block names its near key', () => {
+    const messages = (text: string) =>
+      parseBlock('d.md', scanOf(text)).problems.map((d) => [d.subject, d.message]);
+    expect(messages('---\ndocstamp:\n  dependecies: [src]\n---\n')).toEqual([
+      ['dependecies', 'Remove or correct the key; did you mean "dependencies"?'],
+    ]);
+    expect(messages(`---\n${BLOCK}\n  hsah: ${H}\n---\n`)).toEqual([
+      ['hsah', 'Remove or correct the key; did you mean "hash"?'],
+    ]);
+    expect(messages(`---\n${BLOCK}\n  extra: 1\n---\n`)).toEqual([
+      ['extra', 'Remove or correct the key.'],
+    ]);
+  });
   it('collects every problem of a block', () => {
     const text = '---\ndocstamp:\n  dependencies: ["/a", "/b"]\n  x: 1\n  hash: no\n---\n';
     expect(problems(text)).toEqual([

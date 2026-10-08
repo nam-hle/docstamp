@@ -1,0 +1,17 @@
+# a configured file
+$ docstamp suggest docs/configured.md
+exit: 0
+--- stdout ---
+suggest docs/configured.md
+  pattern          files  stale  status
+  src/cli/main.ts      1    n/a  declared
+  src/util             4    n/a  new
+  only declared  src/gone
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  docs/configured.md:
+    dependencies:
+      - src/cli/main.ts
+      - src/gone

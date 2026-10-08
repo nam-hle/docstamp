@@ -204,7 +204,10 @@ describe('§14.5 and §14.8 stats output', () => {
       'file       patterns  files  commits  days   stale   sweep\n' +
         'CLAUDE.md         1      1        2     2  0.6667  0.0000\n' +
         '"a b.md"          1      1        0     0  0.0000  0.0000\n' +
-        'window: 3 commits in the last 30 days, 1 make no file stale\n',
+        'window: 3 commits in the last 30 days, 1 make no file stale\n' +
+        'legend: patterns declared, files they select, commits and distinct days that would ' +
+        'make the file stale; stale = commits / window commits; sweep = share of those commits ' +
+        'that touch over 200 paths\n',
     );
   });
   it('names a revision window by its range', () => {

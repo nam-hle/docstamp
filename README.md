@@ -115,6 +115,20 @@ next: review each stale file against its dependencies, then run: docstamp update
 next: fix the configuration of each invalid file, then run: docstamp check docs/old.md
 ```
 
+When the pattern is a file path and git shows the file moved with its content unchanged (committed or not), the error names the new path:
+
+```console
+$ git mv src/lib/old-name.ts src/lib/new-name.ts
+$ docstamp docs/api.md
+INVALID  docs/api.md
+error: E_EMPTY_DEPENDENCIES: docs/api.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: docs/api.md: src/lib/old-name.ts: Correct or remove the pattern; it matches no file: git shows it renamed to src/lib/new-name.ts; depend on the new path.
+0 ok, 0 stale, 1 invalid
+next: fix the configuration of each invalid file, then run: docstamp check docs/api.md
+```
+
+That hint is wording only: it needs the full history, stays silent in a shallow clone or without git, and changes no verdict ([SPEC §12.7](docs/SPEC.md#127-renamed-path)).
+
 Each `next:` line names at most 10 files and ends with `  and <m> more` when there are more; update those and run `docstamp` again ([SPEC §14.3](docs/SPEC.md#143-check-text-mode)). A block of 5 or more changed files starts with a `changed` line that counts them by status. `--json` still lists every changed file.
 
 When the doc's own dependency list was edited since its last review (a pattern added, removed or reordered in `docstamp.yaml` or in its inline block), the block says so on an `edited` line and the `review:` line includes the file that holds the list. Below it, one `(selection)` line per file the edit brought into the selection (`added`) or dropped from it (`removed`), compared on the files present today, so a file deleted since the review is not among them; `--json` has them as `selection`. Here an exclusion `!src/c.ts` was added. The reason stays `content-changed`: the lock records a hash, not the patterns, so only git history can tell the two apart, and the verdict never depends on git.
@@ -206,7 +220,7 @@ Things to know:
   validate({ docstamp: { dependencies: ['src'] } }); // true
   validate({ docstamp: { dependancies: ['src'] } }); // false: no "dependencies"
   ```
-- **One typo, one diagnostic.** An unknown key in the block is reported once, as `E_UNKNOWN_KEY` for the file, and not also as `E_BLOCK` for the `dependencies` it replaced ([SPEC §9.6.2](docs/SPEC.md#962-parsing)).
+- **One typo, one diagnostic.** An unknown key in the block is reported once, as `E_UNKNOWN_KEY` for the file, and not also as `E_BLOCK` for the `dependencies` it replaced ([SPEC §9.6.2](docs/SPEC.md#962-parsing)). When the key is one or two edits from a real one, the message names it: `dependecies: Remove or correct the key; did you mean "dependencies"?` ([SPEC §9.3](docs/SPEC.md#93-reading)).
 - **Changed files.** The list of changed dependencies comes from git history of the doc's own `hash:` line, like the lock's history ([SPEC §12.3](docs/SPEC.md#123-changedsince)); a doc that was renamed since the review prints `depends` lines instead.
 
 ## Working with AI agents
@@ -407,7 +421,7 @@ STALE    docs/architecture.md  (unrecorded)
 next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
 ```
 
-The block is inserted into the frontmatter, indented like the first indented line already there (two spaces when there is none), or a minimal frontmatter is created; every other byte of the file stays (comments, the byte order mark, CR LF). Running it twice gives the same bytes. It never stamps, and it refuses to overwrite a block that records a `hash` or names presets with `use`, or a doc declared in the configuration file: edit those by hand. Read the proposal before you keep it: a bare directory mention can select hundreds of files, and a mention may be an illustration, not something the doc states. The extraction rules (what counts as a mention, the generic files that are dropped, when files collapse into their directory, which test exclusions are added) are in [SPEC §12.6](docs/SPEC.md#126-proposal); the command is [§13.10](docs/SPEC.md#1310-suggest).
+The block is inserted into the frontmatter, indented like the first indented line already there (two spaces when there is none), or a minimal frontmatter is created; every other byte of the file stays (comments, the byte order mark, CR LF). Running it twice gives the same bytes. It never stamps, and it refuses to overwrite a block that records a `hash` or names presets with `use`, or a doc declared in the configuration file: edit those by hand. For a doc that already declares its dependencies (in the configuration file or in its own block), the table gets a `status` column, `declared` or `new`, and each declared pattern that is not proposed is listed as `only declared  <pattern>`, so a proposal reads as a diff against what is there; `--json` has the declared list as `declared` (`null` for a doc with none). Read the proposal before you keep it: a bare directory mention can select hundreds of files, and a mention may be an illustration, not something the doc states. The extraction rules (what counts as a mention, the generic files that are dropped, when files collapse into their directory, which test exclusions are added) are in [SPEC §12.6](docs/SPEC.md#126-proposal); the command is [§13.10](docs/SPEC.md#1310-suggest).
 
 ## Measuring how noisy a list is
 
@@ -420,6 +434,7 @@ README.md            2      5        5     1  0.7143  0.0000
 CLAUDE.md            8     49        4     1  0.5714  0.0000
 docs/SPEC.md         1     33        3     1  0.4286  0.0000
 window: 7 commits in v0.3.1..HEAD, 1 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
 ```
 
 The last 30 days (the default, `--since 30d`) look the same way:
@@ -431,15 +446,16 @@ CLAUDE.md            8     49       41     2  0.6613  0.0244
 docs/SPEC.md         1     33       31     2  0.5000  0.0323
 README.md            2      5       26     2  0.4194  0.0385
 window: 62 commits in the last 30 days, 14 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
 ```
 
-One row per doc, the staleest first. `patterns` and `files` are the declared patterns and the files they resolve to. `commits` is how many commits of the window touched at least one of those files (each would have made the doc stale), `days` is on how many distinct days (UTC, by commit date), and `stale` is `commits` over all the commits in the window, to 4 decimals: the share of commits that would make the doc stale. `sweep` is the share of those commits that touched more than 200 files: a share near 1 means the noise is a few repository-wide commits, not the list. The last line counts the commits in the window and the ones that would make no listed doc stale. CI gating on these numbers is deliberately not offered yet.
+One row per doc, the staleest first. `patterns` and `files` are the declared patterns and the files they resolve to. `commits` is how many commits of the window touched at least one of those files (each would have made the doc stale), `days` is on how many distinct days (UTC, by commit date), and `stale` is `commits` over all the commits in the window, to 4 decimals: the share of commits that would make the doc stale. `sweep` is the share of those commits that touched more than 200 files: a share near 1 means the noise is a few repository-wide commits, not the list. The `window:` line counts the commits in the window and the ones that would make no listed doc stale, and the `legend:` line, printed under any table, sums up the columns (text only; `--json` is unchanged). CI gating on these numbers is deliberately not offered yet.
 
 - **The window.** `--since <n>d` is the last *n* days, written exactly like `30d` (1 to 3650; `30`, `30.days` and dates are refused). It is measured back from the moment you run it, by commit time, so it moves from day to day. `--from <rev>` is the commits of `<rev>..HEAD` and does not move; use it when you want the same answer twice. Giving both is an error, and a `--from` that names no commit is `E_HISTORY`. Merge commits are left out, and a rename counts as touching both paths.
 - **Resolved at HEAD.** The dependencies are the ones the lists select today, so a file that was deleted or renamed inside the window is not seen, and a window that crosses a reorganization understates how often a doc would have gone stale.
 - **Warnings.** Dependencies resolve exactly as in `list-dependencies`, so the same warnings (for example `W_EMPTY_EXCLUSION`) appear on stderr, or in the `diagnostics` of the file in `--json`.
 - **Needs full history.** A shallow clone, a directory that is not a git work tree and a repository with no commit are `E_HISTORY` (exit 2): fetch the history first (`fetch-depth: 0` in [GitHub Actions](#github-actions)).
-- **Named docs.** `docstamp stats docs/architecture.md` measures only that doc, and the last line then counts the commits that would have made none of the named docs stale. `--json` has the same numbers (`staleRate` and `sweepShare` as numbers):
+- **Named docs.** `docstamp stats docs/architecture.md` measures only that doc, and the `window:` line then counts the commits that would have made none of the named docs stale. `--json` has the same numbers (`staleRate` and `sweepShare` as numbers):
 
 ```json
 {

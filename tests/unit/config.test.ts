@@ -87,6 +87,34 @@ describe('§9.3 readConfig', () => {
       messages('version: 2\nfiles:\n  a.md:\n    dependencies: [x]\n    covers: [x]\n'),
     ).toEqual([['covers', 'Rename "covers" to "dependencies".']]);
   });
+  it('§9.3 NOTE: an unknown key names its near key', () => {
+    const messages = (yaml: string) => {
+      try {
+        read(yaml);
+      } catch (e) {
+        return (e as Raised).diagnostics.map((d) => [d.code, d.subject, d.message]);
+      }
+      return [];
+    };
+    expect(messages('version: 2\nfile: {}\nignores: []\nfiles: {}\n')).toEqual([
+      ['E_UNKNOWN_KEY', 'file', 'Remove or correct the key; did you mean "files"?'],
+      ['E_UNKNOWN_KEY', 'ignores', 'Remove or correct the key; did you mean "ignore"?'],
+    ]);
+    expect(
+      messages('version: 2\nfiles:\n  a.md:\n    dependencies: [x]\n    uses: [t]\n')[0],
+    ).toEqual(['E_UNKNOWN_KEY', 'uses', 'Remove or correct the key; did you mean "use"?']);
+    expect(messages('version: 2\nfiles:\n  a.md:\n    dependecies: [x]\n')).toEqual([
+      [
+        'E_CONFIG',
+        '',
+        'The entry has no "dependencies" key; "dependecies" is not a key: ' +
+          'did you mean "dependencies"?',
+      ],
+    ]);
+    expect(messages('version: 2\nzzzzzz: 1\nfiles: {}\n')).toEqual([
+      ['E_UNKNOWN_KEY', 'zzzzzz', 'Remove or correct the key.'],
+    ]);
+  });
   it('collects every structural error', () => {
     expect(
       codes('version: 2\nfoo: 1\ngitignore: yes-ish\nfiles:\n  a.md: {dependencies: []}\n'),
