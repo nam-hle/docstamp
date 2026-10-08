@@ -57,6 +57,7 @@ scenario('§13.11 a command with --help prints its page', { git: false }, async 
     const page = await repo.run(['help', command], { snapshot: false });
     for (const args of [
       [command, '--help'],
+      [command, '-h'],
       ['--json', command, '--bogus', '--help', 'x'],
     ]) {
       const same = await repo.run(args, { snapshot: false });

@@ -22,7 +22,7 @@ Options:
                 file, else with .git. File arguments are still resolved against the current
                 directory.
   <file>...     The stamped files you reviewed.
-  --help        Print this page.
+  -h, --help    Print this page.
 
 Reads:
   what check reads, without git.

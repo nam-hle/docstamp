@@ -1550,13 +1550,14 @@ docstamp --version
 
 The commands are `check` (§13.5), `update` (§13.6), `list-dependencies` (§13.7),
 `list-dependents` (§13.8), `stats` (§13.9), `suggest` (§13.10), `help` (§13.11) and `version`.
-`--help` is the same command as `help`, and `--version` the same as `version`.
+`--help` is the same command as `help`, and `--version` the same as `version`. `-h` is the same
+option as `--help`, wherever `--help` is written.
 
 ### 13.2 Parsing
 
 The command line is parsed before anything else.
 
-1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--write`, `--help`, `--version`, and the options with a value, each
+1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--write`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
    written `--name <value>` or `--name=<value>`: `--root`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
@@ -2590,6 +2591,8 @@ The following are not breaking:
   §14.3), and the wording of the `E_USAGE` and `E_CONFIG_MISSING` messages that name a help page;
 - `help diagnostics <code>` with a code in another letter case (§13.11 step 4): it was `E_USAGE`
   with exit 2 and now prints the entry and exits 0, which only a person reads;
+- `-h` (§13.1, §13.2): the same option as `--help`. It was an unknown option, `E_USAGE` with exit
+  2, so no command line that a release accepted changes meaning;
 - the warnings `W_DUPLICATE_PATTERN`, `W_SHADOWED_EXCLUSION` (§8.5) and `W_UNKNOWN_PATH` (§13.8): new, warning severity,
   no change to a verdict, a Hash, a selection or an exit code; `list-dependents` still exits 0
   for a path it does not know;

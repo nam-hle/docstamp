@@ -22,7 +22,7 @@ Options:
                 file, else with .git. File arguments are still resolved against the current
                 directory.
   <file>...     Check only these stamped files.
-  --help        Print this page.
+  -h, --help    Print this page.
 
 Reads:
   the configuration file, the docstamp blocks, every dependency, docstamp-lock.yaml; git history,

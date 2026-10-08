@@ -36,7 +36,7 @@ reviewed, and docstamp update <file> records the review. New here: docstamp help
 function commandText(name: Command): string {
   const page = COMMAND_PAGES[name];
   const options = [...page.options];
-  if (name !== 'help' && name !== 'version') options.push(['--help', 'Print this page.']);
+  if (name !== 'help' && name !== 'version') options.push(['-h, --help', 'Print this page.']);
   const related = page.related.map((r) => `docstamp help ${r}`).join(', ');
   return (
     `${prose(`docstamp ${name}: ${page.summary}`)}\n\n` +

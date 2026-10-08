@@ -28,7 +28,7 @@ Options:
                 left out. Refuses (E_USAGE) a block that has a hash, a file declared in the
                 configuration file, and a block with use that cannot be extended line by line.
   <file>...     The files to read. At least one.
-  --help        Print this page.
+  -h, --help    Print this page.
 
 Reads:
   the configuration file, the named files, the file tree and git history (stale rate).
