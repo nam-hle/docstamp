@@ -1,0 +1,13 @@
+version: 2
+presets:
+  tests:
+    - "!**/*.test.ts"
+    - "!**/__test__/**"
+  spec:
+    - docs/SPEC.md
+files:
+  CLAUDE.md:
+    dependencies:
+      - src
+    use:
+      - tests

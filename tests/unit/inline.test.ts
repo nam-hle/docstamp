@@ -106,6 +106,24 @@ describe('§9.6.2 ParseBlock', () => {
     ],
     ['an unknown key', `---\n${BLOCK}\n  extra: 1\n---\n`, [['E_UNKNOWN_KEY', 'extra']]],
     [
+      'a mistyped dependencies key is one diagnostic, not also E_BLOCK',
+      '---\ndocstamp:\n  dependancies: [src]\n---\n',
+      [['E_UNKNOWN_KEY', 'dependancies']],
+    ],
+    [
+      'a mistyped hash key is one diagnostic',
+      `---\n${BLOCK}\n  hsah: ${H}\n---\n`,
+      [['E_UNKNOWN_KEY', 'hsah']],
+    ],
+    [
+      'an unknown key beside a malformed dependencies is one diagnostic per fault',
+      '---\ndocstamp:\n  dependencies: []\n  extra: 1\n---\n',
+      [
+        ['E_UNKNOWN_KEY', 'extra'],
+        ['E_BLOCK', 'dependencies'],
+      ],
+    ],
+    [
       'an invalid pattern',
       '---\ndocstamp:\n  dependencies: ["/abs"]\n---\n',
       [['E_PATTERN', '/abs']],
@@ -341,10 +359,7 @@ describe('§12.2 loadWorkspace', () => {
       'src/a.ts': 'a\n',
     });
     expect(ws.declarations.map((d) => d.file)).toEqual(['a.md', 'b.md']);
-    expect(ws.attached.map((d) => [d.code, d.file])).toEqual([
-      ['E_UNKNOWN_KEY', 'a.md'],
-      ['E_BLOCK', 'a.md'],
-    ]);
+    expect(ws.attached.map((d) => [d.code, d.file])).toEqual([['E_UNKNOWN_KEY', 'a.md']]);
   });
   it('the marked files hold their hash lines for the hash rule', () => {
     const root = makeTree({

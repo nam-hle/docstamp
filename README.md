@@ -158,7 +158,19 @@ Things to know:
 - **With a configuration file.** Both kinds of file live side by side: `update --all` covers both, and the lock holds only the files of `files`. A file declared both ways is `E_DUPLICATE_DECLARATION`; nothing is merged. Every command, `--json` included, treats an inline doc like any other.
 - **A doc that depends on another inline doc.** When `docs/architecture.md` is re-stamped, `README.md` (which depends on it) stays `ok`: the `hash:` line of a doc is not part of its content when another doc hashes it. Its prose, its other frontmatter and its `dependencies` list still count, so editing any of them makes `README.md` stale ([SPEC §10.2](docs/SPEC.md#102-normalized-content)).
 - **Moving a doc.** Rename or move it freely: its declaration and hash travel with it. Dependencies that point at its old path need the new path.
-- **Formatters.** A formatter that reflows or re-quotes the frontmatter of a doc changes that doc's content, so every doc that depends on it becomes stale; one that rewrites the `hash:` line (quotes or wraps it) makes the doc `invalid`. Exclude the `docstamp` block from formatters, or run `docstamp update` after formatting.
+- **Formatters.** A formatter that reflows or re-quotes the frontmatter of a doc changes that doc's content, so every doc that depends on it becomes stale; one that rewrites the `hash:` line (quotes or wraps it) makes the doc `invalid`. Exclude the `docstamp` block from formatters, or run `docstamp update` after formatting. For now, the same holds for an edit that only changes a comment or whitespace inside the block: it counts as a change of that doc (changing that would change hashes, so it needs its own versioned decision, [SPEC §9.6.4](docs/SPEC.md#964-stamping)).
+- **A schema for the block.** The package ships `schema-frontmatter.json` (`docstamp/schema-frontmatter.json`), a JSON Schema (draft-07) for the frontmatter of a doc: the `docstamp` key takes `dependencies` (required, a non-empty list of strings), `use` (a list of preset names) and `hash` (64 lowercase hex digits), and nothing else, while other frontmatter keys stay free. A tool that validates frontmatter against a JSON Schema file can use it to catch a mistyped key before docstamp runs; point it at `node_modules/docstamp/schema-frontmatter.json` for the docs that carry a block. docstamp itself does not read the file, and checks the block as [SPEC §9.6.2](docs/SPEC.md#962-parsing) says. Checked with Ajv 8:
+
+  ```js
+  import { readFileSync } from 'node:fs';
+  import Ajv from 'ajv';
+
+  const schema = JSON.parse(readFileSync('node_modules/docstamp/schema-frontmatter.json', 'utf8'));
+  const validate = new Ajv().compile(schema);
+  validate({ docstamp: { dependencies: ['src'] } }); // true
+  validate({ docstamp: { dependancies: ['src'] } }); // false: no "dependencies"
+  ```
+- **One typo, one diagnostic.** An unknown key in the block is reported once, as `E_UNKNOWN_KEY` for the file, and not also as `E_BLOCK` for the `dependencies` it replaced ([SPEC §9.6.2](docs/SPEC.md#962-parsing)).
 - **Changed files.** The list of changed dependencies comes from git history of the doc's own `hash:` line, like the lock's history ([SPEC §12.3](docs/SPEC.md#123-changedsince)); a doc that was renamed since the review prints `depends` lines instead.
 
 ## Working with AI agents
@@ -188,6 +200,19 @@ src/core/hsh.ts
   (no dependents)
 warning: W_UNKNOWN_PATH: src/core/hsh.ts: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory).
 ```
+
+`list-dependents` is direct by default: a doc that depends on another doc is listed for the code the other doc covers only with `--transitive`, which shows the chain of docs that go stale one review round after another. A doc reached a second time is marked `(listed above)` and a cycle is marked `(cycle)`; neither is followed again, so the output is finite. Nothing about a verdict changes ([SPEC §13.8](docs/SPEC.md#138-listdependents)):
+
+```console
+$ docstamp list-dependents --transitive src/core/hash.ts
+src/core/hash.ts
+  docs/GUIDE.md   via src/core
+    README.md          via docs/GUIDE.md
+      docs/OVERVIEW.md   via README.md
+    docs/OVERVIEW.md   via docs/GUIDE.md (listed above)
+```
+
+With `--json` each dependent also has `dependents` (the same nodes, nested), `cycle` and `repeated`.
 
 `docstamp list-dependencies <doc>` shows what a doc depends on and which files the patterns select. It does not read the lock:
 
@@ -243,6 +268,53 @@ When git history cannot answer (no git, not a work tree, a shallow clone, or an 
 docstamp list-dependencies <doc>
 git diff <base> -- <files>
 ```
+
+## Sharing a list with presets
+
+When many docs repeat the same lines (the same test exclusions, one shared spec), define the lines once under `presets` in the configuration file and name them with `use` in a `files` entry or an inline block. Preset names are `[a-z][a-z0-9-]*`, each preset is a non-empty list of ordinary [patterns](docs/SPEC.md#81-syntax), and a preset cannot refer to another one:
+
+```yaml
+version: 2
+presets:
+  tests:
+    - "!**/*.test.ts"
+    - "!**/__test__/**"
+  spec:
+    - docs/SPEC.md
+files:
+  CLAUDE.md:
+    dependencies: [src]
+    use: [tests]
+```
+
+```md
+---
+title: Project README
+docstamp:
+  dependencies: [src/cli]
+  use: [tests, spec]
+---
+```
+
+A doc's patterns are its own `dependencies`, then the patterns of each preset in `use` order. The last matching pattern still wins, so an exclusion in a preset applies after the doc's own inclusions. The expansion is visible, and so is where each pattern comes from:
+
+```console
+$ docstamp list-dependencies README.md
+README.md
+  depends   src/cli
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  depends   docs/SPEC.md (preset spec)
+  resolved  docs/SPEC.md
+  resolved  src/cli/run.ts
+```
+
+With `--json`, a file that uses presets also has `use` and `origins` (one entry per pattern, `null` for the doc's own). Things to know:
+
+- **Presets are defined in the configuration file only.** An inline block that uses one needs a `docstamp.yaml` (or a script) that defines it. A name that is not defined, in a block or in `files`, makes only that file `invalid` with `E_UNKNOWN_PRESET`.
+- **The hash depends on the selected files only.** Editing a preset makes a file that uses it stale exactly when the edit changes which files it selects; reordering a preset's lines, or adding an exclusion that removes nothing, does not make a doc stale. Nothing in the lock or in an inline `hash:` mentions presets.
+- **Empty patterns.** An exclusion from a preset that matches no file raises no `W_EMPTY_EXCLUSION` (a doc that has nothing to exclude could not remove it); a preset pattern without `!` that matches nothing is `E_EMPTY_PATTERN`, and the message names the preset.
+- **`dependencies` stays required**, with at least one pattern of the doc's own, and `use` must be a non-empty list of distinct names. Details: [SPEC §8.6](docs/SPEC.md#86-presets).
 
 ## Measuring how noisy a list is
 
@@ -301,7 +373,7 @@ That is one entry of `files`; the report also has `version`, `mode`, `exitCode`,
 | `docstamp [check]` | The verdict. A bare `docstamp` is `check`. |
 | `docstamp update (--all \| <file>...)` | Record that you reviewed the named files, in the lock or, for an inline doc, in its own `hash:` line. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line. |
 | `docstamp list-dependencies [<file>...]` | Each file with its dependency patterns and the files they select. It does not read the lock. |
-| `docstamp list-dependents <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only, no lock. A path that exists nowhere gets a `W_UNKNOWN_PATH` warning and exit 0. |
+| `docstamp list-dependents [--transitive] <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only unless `--transitive`, which also lists the dependents of those dependents. No lock. A path that exists nowhere gets a `W_UNKNOWN_PATH` warning and exit 0. |
 | `docstamp stats [--since <n>d \| --from <rev>] [<file>...]` | Report how often each file's dependencies would have made it stale over the last `n` days or since `<rev>` ([Measuring how noisy a list is](#measuring-how-noisy-a-list-is)). Reads git history, never the lock. |
 | `docstamp help` | Usage. |
 | `docstamp version` | The installed version. |
@@ -321,7 +393,7 @@ Warnings never affect the exit code. Full table: [SPEC §16](docs/SPEC.md#16-exi
 
 ### Configuration
 
-Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
+Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules), `presets` ([shared lists](#sharing-a-list-with-presets)) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
 
 For editor completion and validation in YAML, point the language server at the schema, which the package ships as `schema.json`:
 

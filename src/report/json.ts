@@ -1,6 +1,6 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { quote } from '../core/quote.ts';
-import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
+import type { Diagnostic, Result, ReverseDependent, ReverseEntry } from '../core/types.ts';
 import type { FileStats } from '../engine/stats.ts';
 
 export interface JsonDoc {
@@ -100,14 +100,19 @@ export interface ListJsonDoc {
 
 // SPEC §14.5
 export function listJsonText(doc: ListJsonDoc): string {
-  const dependents = doc.selected.map((r) =>
-    obj([
+  const dependents = doc.selected.map((r) => {
+    const members: Array<[string, Json]> = [
       ['file', r.file],
       ['dependencies', [...r.dependencies]],
-      ['resolvedFiles', [...r.resolved]],
-      ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
-    ]),
-  );
+    ];
+    if ((r.use ?? []).length > 0) {
+      members.push(['use', [...r.use!]]);
+      members.push(['origins', r.dependencies.map((_, i) => r.origins?.[i] ?? null)]);
+    }
+    members.push(['resolvedFiles', [...r.resolved]]);
+    members.push(['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)]);
+    return obj(members);
+  });
   const top: Array<[string, Json]> = [
     ['version', 2],
     ['mode', 'list-dependencies'],
@@ -124,20 +129,25 @@ export interface ReverseJsonDoc {
   diagnostics: readonly Diagnostic[];
 }
 
+function dependentJson(d: ReverseDependent): JsonObject {
+  const members: Array<[string, Json]> = [
+    ['file', d.file],
+    ['via', [...d.via]],
+  ];
+  if (d.dependents !== undefined) {
+    members.push(['dependents', d.dependents.map(dependentJson)]);
+    members.push(['cycle', d.cycle === true]);
+    members.push(['repeated', d.repeated === true]);
+  }
+  return obj(members);
+}
+
 // SPEC §14.5
 export function reverseJsonText(doc: ReverseJsonDoc): string {
   const files = doc.entries.map((e) =>
     obj([
       ['file', e.file],
-      [
-        'dependents',
-        e.dependents.map((d) =>
-          obj([
-            ['file', d.file],
-            ['via', [...d.via]],
-          ]),
-        ),
-      ],
+      ['dependents', e.dependents.map(dependentJson)],
       ['diagnostics', sortDiagnostics(e.diagnostics).map(diagJson)],
     ]),
   );

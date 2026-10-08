@@ -1,0 +1,13 @@
+# an invalid pattern in a preset
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_PATTERN: /abs: Correct the pattern; patterns use "/" and "\" escapes.
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  a: ["/abs"]
+files:
+  CLAUDE.md:
+    dependencies: [src]

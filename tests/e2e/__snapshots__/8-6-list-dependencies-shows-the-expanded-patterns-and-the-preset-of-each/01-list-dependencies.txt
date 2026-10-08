@@ -1,0 +1,23 @@
+$ docstamp list-dependencies
+exit: 0
+--- stdout ---
+CLAUDE.md
+  depends   src
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  resolved  src/cli/run.ts
+  resolved  src/core/hash.ts
+  resolved  src/index.ts
+README.md
+  depends   src/cli
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  depends   docs/SPEC.md (preset spec)
+  resolved  docs/SPEC.md
+  resolved  src/cli/run.ts
+docs/GUIDE.md
+  depends   src/core
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  resolved  src/core/hash.ts
+--- stderr ---

@@ -1,0 +1,6 @@
+# check --transitive
+$ docstamp check --transitive
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --transitive: --transitive is only valid with "docstamp list-dependents".

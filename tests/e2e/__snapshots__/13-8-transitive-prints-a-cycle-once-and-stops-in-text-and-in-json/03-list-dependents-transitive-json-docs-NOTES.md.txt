@@ -1,0 +1,37 @@
+$ docstamp list-dependents --transitive --json docs/NOTES.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependents",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "docs/NOTES.md",
+      "dependents": [
+        {
+          "file": "docs/API.md",
+          "via": [
+            "docs/NOTES.md"
+          ],
+          "dependents": [
+            {
+              "file": "docs/NOTES.md",
+              "via": [
+                "docs/API.md"
+              ],
+              "dependents": [],
+              "cycle": true,
+              "repeated": false
+            }
+          ],
+          "cycle": false,
+          "repeated": false
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

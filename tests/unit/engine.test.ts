@@ -169,6 +169,13 @@ describe('§8.5 step 4 W_DUPLICATE_PATTERN', () => {
     );
     expect([r.state, r.diagnostics.map((d) => d.code)]).toEqual(['ok', ['W_DUPLICATE_PATTERN']]);
   });
+  it('counts only the own patterns of a file, not those a preset brings', () => {
+    const b = {
+      ...declare('B.md', ['src/**', 'src/**', 'src/**']),
+      origins: [null, 'code', 'code'],
+    };
+    expect(evaluate(b, universe, lockOf({}), [], fs).diagnostics).toEqual([]);
+  });
   it('is reported next to the errors of an invalid file', () => {
     const r = evaluate(declare('B.md', ['gone', 'gone']), universe, lockOf({}), [], fs);
     expect(r.diagnostics.map((d) => [d.code, d.subject])).toEqual([

@@ -138,7 +138,7 @@ export function computeUniverse(
   return universe;
 }
 
-// SPEC §13.8 step 4.3: an entry of any kind, found by exact name in each directory listing
+// SPEC §13.8 step 4.4: an entry of any kind, found by exact name in each directory listing
 export function existsUnderRoot(root: string, path: string): boolean {
   let dir = root;
   const segments = path.split('/');

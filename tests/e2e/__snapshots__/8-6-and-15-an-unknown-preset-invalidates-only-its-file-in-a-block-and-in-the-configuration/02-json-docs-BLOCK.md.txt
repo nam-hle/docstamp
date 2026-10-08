@@ -1,0 +1,42 @@
+$ docstamp --json docs/BLOCK.md
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "summary": {
+    "ok": 0,
+    "stale": 0,
+    "invalid": 1
+  },
+  "files": [
+    {
+      "file": "docs/BLOCK.md",
+      "state": "invalid",
+      "reasons": [],
+      "dependencies": [
+        "src/core"
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "E_UNKNOWN_PRESET",
+          "severity": "error",
+          "file": "docs/BLOCK.md",
+          "subject": "gone",
+          "message": "Define the preset under \"presets\" in the configuration file, or correct the name in \"use\"."
+        },
+        {
+          "code": "E_UNKNOWN_PRESET",
+          "severity": "error",
+          "file": "docs/BLOCK.md",
+          "subject": "nope",
+          "message": "Define the preset under \"presets\" in the configuration file, or correct the name in \"use\"."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

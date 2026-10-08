@@ -25,3 +25,22 @@ export function dependentsOf(
   }
   return found;
 }
+
+// SPEC §13.8 DependentTree
+export function dependentTree(
+  path: string,
+  declarations: readonly Declaration[],
+  universe: ReadonlySet<string>,
+  attached: readonly Diagnostic[],
+): ReverseDependent[] {
+  const expanded = new Set<string>();
+  const below = (current: string, chain: readonly string[]): ReverseDependent[] =>
+    dependentsOf(current, declarations, universe, attached).map((d) => {
+      if (chain.includes(d.file)) return { ...d, dependents: [], cycle: true, repeated: false };
+      if (expanded.has(d.file)) return { ...d, dependents: [], cycle: false, repeated: true };
+      expanded.add(d.file);
+      const dependents = below(d.file, [...chain, d.file]);
+      return { ...d, dependents, cycle: false, repeated: false };
+    });
+  return below(path, [path]);
+}

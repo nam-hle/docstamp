@@ -41,11 +41,13 @@
       "types": "./dist/lib.d.ts",
       "import": "./dist/lib.js"
     },
-    "./schema.json": "./schema.json"
+    "./schema.json": "./schema.json",
+    "./schema-frontmatter.json": "./schema-frontmatter.json"
   },
   "files": [
     "dist",
-    "schema.json"
+    "schema.json",
+    "schema-frontmatter.json"
   ],
   "engines": {
     "node": ">=24.0.0"

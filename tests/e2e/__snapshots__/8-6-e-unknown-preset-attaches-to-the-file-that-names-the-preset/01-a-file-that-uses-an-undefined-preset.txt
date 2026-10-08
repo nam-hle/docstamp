@@ -1,0 +1,14 @@
+# a file that uses an undefined preset
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  DOC.md
+0 ok, 0 stale, 1 invalid
+--- stderr ---
+error: E_UNKNOWN_PRESET: DOC.md: shared: Define the preset under "presets" in the configuration file, or correct the name in "use".
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  DOC.md:
+    dependencies: [src]
+    use: [shared]

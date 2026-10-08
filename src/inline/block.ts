@@ -3,9 +3,9 @@ import { diag } from '../core/diagnostics.ts';
 import type { Declaration, Diagnostic } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { hashOnLine, type Scan } from './frontmatter.ts';
+import { BLOCK_KEYS, HASH } from './keys.ts';
 
 const MARKER_REST = /^[ \t]*(?:#.*)?\r?\n?$/u;
-const HASH = /^[0-9a-f]{64}$/u;
 const isMap = (v: YamlValue | undefined): v is YamlMap =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -19,8 +19,12 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
   const problems: Diagnostic[] = [];
   const block = (subject: string, message: string) =>
     problems.push(diag('E_BLOCK', { file, subject, message }));
-  const done = (dependencies: readonly string[], recorded: string | null): ParsedBlock => ({
-    declaration: { file, dependencies, inline: { recorded } },
+  const done = (
+    dependencies: readonly string[],
+    recorded: string | null,
+    use: readonly string[] = [],
+  ): ParsedBlock => ({
+    declaration: { file, dependencies, ...(use.length > 0 ? { use } : {}), inline: { recorded } },
     problems,
   });
 
@@ -45,11 +49,10 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
     return done([], null);
   }
   const keys = entry.value.entries;
-  for (const key of keys.keys()) {
-    if (key !== 'dependencies' && key !== 'hash') {
-      problems.push(diag('E_UNKNOWN_KEY', { file, subject: key }));
-    }
-  }
+  const unknown = [...keys.keys()].filter(
+    (key) => !(BLOCK_KEYS as readonly string[]).includes(key),
+  );
+  for (const key of unknown) problems.push(diag('E_UNKNOWN_KEY', { file, subject: key }));
 
   const listed = keys.get('dependencies')?.value;
   const dependencies =
@@ -57,11 +60,25 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
       ? (listed as string[])
       : null;
   if (dependencies === null) {
-    block('dependencies', 'The dependencies key must hold a non-empty list of patterns.');
+    if (listed !== undefined || unknown.length === 0) {
+      block('dependencies', 'The dependencies key must hold a non-empty list of patterns.');
+    }
   } else {
     for (const pattern of dependencies) {
       if (!parsePattern(pattern)) problems.push(diag('E_PATTERN', { file, subject: pattern }));
     }
+  }
+
+  const used = keys.get('use')?.value;
+  const use =
+    Array.isArray(used) &&
+    used.length > 0 &&
+    used.every((name) => typeof name === 'string') &&
+    new Set(used).size === used.length
+      ? (used as string[])
+      : null;
+  if (used !== undefined && use === null) {
+    block('use', 'The use key must hold a non-empty list of distinct preset names.');
   }
 
   const hashNode = keys.get('hash');
@@ -75,5 +92,5 @@ export function parseBlock(file: string, scan: Scan): ParsedBlock {
   if (value !== undefined && !wellFormed) {
     block('hash', 'Write the hash as "hash:" and 64 lowercase hex digits on one line.');
   }
-  return done(dependencies ?? [], wellFormed ? (value as string) : null);
+  return done(dependencies ?? [], wellFormed ? (value as string) : null, use ?? []);
 }

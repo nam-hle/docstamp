@@ -7,6 +7,7 @@ export type Code =
   | 'E_CONFIG_VERSION'
   | 'E_UNKNOWN_KEY'
   | 'E_PATTERN'
+  | 'E_UNKNOWN_PRESET'
   | 'E_BLOCK'
   | 'E_DUPLICATE_DECLARATION'
   | 'E_FILE_MISSING'
@@ -32,10 +33,13 @@ export interface Diagnostic {
   readonly message: string;
 }
 
-// SPEC §5.1: `inline` is set for an inline Declaration, with its recorded Hash or null
+// SPEC §5.1: `inline` is set for an inline Declaration, with its recorded Hash or null.
+// SPEC §8.6: `use` names Presets; once expanded, `dependencies` holds the effective patterns.
 export interface Declaration {
   readonly file: string;
   readonly dependencies: readonly string[];
+  readonly use?: readonly string[];
+  readonly origins?: readonly (string | null)[];
   readonly inline?: { readonly recorded: string | null };
 }
 
@@ -44,6 +48,7 @@ export interface Config {
   readonly ignore: readonly string[];
   readonly useGitignore: boolean;
   readonly include: readonly string[];
+  readonly presets: ReadonlyMap<string, readonly string[]>;
   readonly declarations: readonly Declaration[];
 }
 
@@ -62,6 +67,8 @@ export interface Change {
 export interface Result {
   readonly file: string;
   readonly dependencies: readonly string[];
+  readonly use?: readonly string[];
+  readonly origins?: readonly (string | null)[];
   readonly state: State;
   readonly reasons: readonly Reason[];
   readonly resolved: readonly string[];
@@ -70,9 +77,13 @@ export interface Result {
   readonly changes?: readonly Change[] | null;
 }
 
+// SPEC §13.8: `dependents`, `cycle` and `repeated` are set only by --transitive
 export interface ReverseDependent {
   readonly file: string;
   readonly via: readonly string[];
+  readonly dependents?: readonly ReverseDependent[];
+  readonly cycle?: boolean;
+  readonly repeated?: boolean;
 }
 
 export interface ReverseEntry {

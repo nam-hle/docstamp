@@ -1,0 +1,9 @@
+$ docstamp list-dependents docs/SPEC.md src/cli/run.ts
+exit: 0
+--- stdout ---
+docs/SPEC.md
+  README.md   via docs/SPEC.md
+src/cli/run.ts
+  CLAUDE.md   via src
+  README.md   via src/cli
+--- stderr ---

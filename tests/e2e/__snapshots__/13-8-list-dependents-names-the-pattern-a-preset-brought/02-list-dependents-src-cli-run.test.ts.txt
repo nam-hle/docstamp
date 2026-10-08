@@ -1,0 +1,6 @@
+$ docstamp list-dependents src/cli/run.test.ts
+exit: 0
+--- stdout ---
+src/cli/run.test.ts
+  (no dependents)
+--- stderr ---

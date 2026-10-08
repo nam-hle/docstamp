@@ -16,11 +16,12 @@ INVALID  bad/quoted-hash.md
 INVALID  bad/scalar.md
 INVALID  bad/short-hash.md
 INVALID  bad/string-deps.md
+INVALID  bad/typo.md
 INVALID  bad/unknown-key.md
 INVALID  bad/wrong-prefix.md
 STALE    docs/GUIDE.md  (unrecorded)
   depends   src/core
-0 ok, 2 stale, 14 invalid
+0 ok, 2 stale, 15 invalid
 next: review each stale file against its dependencies, then run: docstamp update README.md docs/GUIDE.md
 --- stderr ---
 error: E_BLOCK: bad/anchor.md: frontmatter: The frontmatter of a file with a docstamp block must be strict YAML with one docstamp key.
@@ -36,5 +37,6 @@ error: E_BLOCK: bad/quoted-hash.md: hash: Write the hash as "hash:" and 64 lower
 error: E_BLOCK: bad/scalar.md: docstamp: Write the docstamp block as a block mapping, one key per line.
 error: E_BLOCK: bad/short-hash.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.
 error: E_BLOCK: bad/string-deps.md: dependencies: The dependencies key must hold a non-empty list of patterns.
+error: E_UNKNOWN_KEY: bad/typo.md: dependancies: Remove or correct the key.
 error: E_UNKNOWN_KEY: bad/unknown-key.md: covers: Remove or correct the key.
 error: E_BLOCK: bad/wrong-prefix.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.
