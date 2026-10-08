@@ -2,4 +2,4 @@ $ docstamp update --quiet --all
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: --quiet: --quiet is only valid with "docstamp check".
+error: E_USAGE: --quiet: --quiet is only valid with "docstamp check"; see docstamp help update.

@@ -9,4 +9,5 @@ STALE    docs/GUIDE.md  (content-changed)
   review: git diff -M 84384ea9830bbd1835771c8294c3638bac698f09 -- src/core/hash.ts
 1 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md docs/GUIDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

@@ -20,6 +20,7 @@ STALE    docs/GUIDE.md  (unrecorded)
   depends   !**/__test__/** (preset tests)
 0 ok, 3 stale, 4 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/GUIDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 next: fix the docstamp block of each invalid file, then run: docstamp check bad/duplicate.md bad/empty.md bad/only-use.md bad/scalar.md
 --- stderr ---
 error: E_BLOCK: bad/duplicate.md: use: The use key must hold a non-empty list of distinct preset names.

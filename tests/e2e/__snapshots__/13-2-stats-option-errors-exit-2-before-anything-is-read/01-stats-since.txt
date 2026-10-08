@@ -3,4 +3,4 @@ $ docstamp stats --since
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: --since: --since needs a number of days such as 30d.
+error: E_USAGE: --since: --since needs a number of days such as 30d; see docstamp help stats.

@@ -6,4 +6,5 @@ STALE    docs/guide.md  (unrecorded)
   depends   src
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update repo/docs/guide.md --root repo
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

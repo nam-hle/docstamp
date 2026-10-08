@@ -27,7 +27,7 @@ scenario(
     expect(stale.stdout).toContain('STALE    CLAUDE.md  (content-changed)\n  depends   src/**\n');
     expect(stale.stdout).toContain('2 ok, 1 stale, 0 invalid');
     expect(stale.stdout).toContain('next: review each stale file against its dependencies');
-    expect(stale.stdout.trimEnd().endsWith('docstamp update CLAUDE.md')).toBe(true);
+    expect(stale.stdout).toContain('docstamp update CLAUDE.md\n  run update only after the review');
 
     const rewritten = await repo.run(['update', 'CLAUDE.md']);
     expect(rewritten.stdout).toBe('written  CLAUDE.md\n');

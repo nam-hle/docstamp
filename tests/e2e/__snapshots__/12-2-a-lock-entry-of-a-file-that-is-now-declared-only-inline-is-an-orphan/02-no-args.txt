@@ -5,6 +5,7 @@ STALE    README.md  (unrecorded)
   depends   src/cli
 2 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update README.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 warning: W_ORPHAN: README.md: Run "docstamp update" on any file to remove the entry.
 --- setup: docstamp.yaml ---

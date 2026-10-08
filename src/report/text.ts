@@ -137,6 +137,10 @@ export function reviewLine(r: Result, rootArg?: string): string {
   return `${review}  untracked: ${git} add -N -- ${added}\n`;
 }
 
+// SPEC §14.3.3: the rule line follows the stale next: line
+const RULE_LINE =
+  '  run update only after the review, never --all just to pass; ' + 'see docstamp help agents\n';
+
 // SPEC §14.3.3
 function nextLine(lead: string, command: string, files: readonly string[], root: string): string {
   const listed = files.slice(0, NEXT_MAX).map(shown).join(' ');
@@ -186,7 +190,7 @@ export function checkChunks(
     const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
     if (stale.length > 0) {
       const lead = 'review each stale file against its dependencies';
-      emit('stdout', nextLine(lead, 'update', stale, root));
+      emit('stdout', nextLine(lead, 'update', stale, root) + RULE_LINE);
     }
     if (invalid.length > 0) {
       const invalidFiles = selected.filter((r) => r.state === 'invalid').map((r) => r.file);

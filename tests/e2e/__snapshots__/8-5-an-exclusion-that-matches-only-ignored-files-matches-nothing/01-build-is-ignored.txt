@@ -7,6 +7,7 @@ STALE    DOC.md  (unrecorded)
   depends   !build/out.js
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update DOC.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 warning: W_EMPTY_EXCLUSION: DOC.md: !build/out.js: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
 --- setup: docstamp.yaml ---

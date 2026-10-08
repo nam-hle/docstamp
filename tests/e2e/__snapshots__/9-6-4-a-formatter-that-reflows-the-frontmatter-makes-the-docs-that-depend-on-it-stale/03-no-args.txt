@@ -7,6 +7,7 @@ STALE    README.md  (content-changed)
 INVALID  docs/GUIDE.md
 0 ok, 1 stale, 1 invalid
 next: review each stale file against its dependencies, then run: docstamp update README.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 next: fix the docstamp block of each invalid file, then run: docstamp check docs/GUIDE.md
 --- stderr ---
 error: E_BLOCK: docs/GUIDE.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.

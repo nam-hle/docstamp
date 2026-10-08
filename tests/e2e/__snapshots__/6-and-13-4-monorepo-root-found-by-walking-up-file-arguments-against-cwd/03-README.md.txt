@@ -6,4 +6,5 @@ STALE    packages/a/README.md  (unrecorded)
   depends   packages/a/src/**
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update ../../packages/a/README.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

@@ -10,6 +10,7 @@ STALE    docs/negation.md  (unrecorded)
   depends   !src/**/*.test.ts
 0 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/all.md docs/negation.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 warning: W_EMPTY_EXCLUSION: docs/all.md: !src/**/__test__/**: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
 --- setup: docstamp.yaml ---

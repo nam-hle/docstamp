@@ -18,6 +18,7 @@ STALE    docs/GUIDE.md  (unrecorded)
 INVALID  docs/SPEC.md
 0 ok, 3 stale, 2 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/GUIDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 next: fix the configuration or docstamp block of each invalid file, then run: docstamp check docs/BLOCK.md docs/SPEC.md
 --- stderr ---
 error: E_UNKNOWN_PRESET: docs/BLOCK.md: gone: Define the preset under "presets" in the configuration file, or correct the name in "use".

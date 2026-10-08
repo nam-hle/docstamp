@@ -8,6 +8,7 @@ STALE    docs/guide.md  (content-changed)
   review: git diff -M 8d23b20ee993398f9e64f6b821d420b6642a8766 -- packages/b/y.test.ts docs/guide.md
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/guide.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 --- setup: docs/guide.md ---
 ---

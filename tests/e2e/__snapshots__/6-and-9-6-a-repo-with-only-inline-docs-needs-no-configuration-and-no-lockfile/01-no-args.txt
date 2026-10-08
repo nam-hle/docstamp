@@ -8,6 +8,7 @@ STALE    docs/GUIDE.md  (unrecorded)
   depends   src/core
 0 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update README.md docs/GUIDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 --- setup: README.md ---
 ---

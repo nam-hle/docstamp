@@ -2,4 +2,4 @@ $ docstamp update --all CLAUDE.md
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: --all: Pass either files or --all, not both.
+error: E_USAGE: --all: Pass either files or --all, not both; see docstamp help update.

@@ -3,4 +3,4 @@ $ docstamp --from v1
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: --from: --from is only valid with "docstamp stats".
+error: E_USAGE: --from: --from is only valid with "docstamp stats"; see docstamp help.

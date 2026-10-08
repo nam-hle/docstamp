@@ -6,6 +6,7 @@ STALE    GUIDE.md  (unrecorded)
   depends   src/**
 1 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update GUIDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 warning: W_ORPHAN: README.md: Run "docstamp update" on any file to remove the entry.
 --- setup: docstamp.yaml ---

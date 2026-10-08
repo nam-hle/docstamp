@@ -6,6 +6,7 @@ STALE    CLAUDE.md  (unrecorded)
   depends   src/**
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 --- setup: docstamp.config.js ---
 module.exports = { version: 2, files: { 'CLAUDE.md': { dependencies: ['src/**'] } } };

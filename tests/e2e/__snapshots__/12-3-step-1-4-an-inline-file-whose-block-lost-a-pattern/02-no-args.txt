@@ -7,4 +7,5 @@ STALE    guide.md  (content-changed)
   review: git diff -M 03d3f06b324b53387b06932bda92919e84e5975d -- guide.md
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update guide.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---

@@ -7,6 +7,7 @@ STALE    notes/NOTE.md  (unrecorded)
   depends   src/**
 0 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update DOC.md notes/NOTE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 --- setup: docstamp.yaml ---
 version: 2

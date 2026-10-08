@@ -24,6 +24,7 @@ STALE    PRESETS.md  (unrecorded)
   depends   src/sub (preset more-src)
 0 ok, 5 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update FIXED.md INLINE.md LITERAL.md OWN.md PRESETS.md
+  run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
 warning: W_SHADOWED_EXCLUSION: INLINE.md: !src/**/*.test.ts: A later pattern selects again files the exclusion matches: "src/sub"; move the exclusion after it, or narrow that pattern.
 warning: W_SHADOWED_EXCLUSION: OWN.md: !src/**/*.test.ts: A later pattern selects again files the exclusion matches: "src/sub"; move the exclusion after it, or narrow that pattern.

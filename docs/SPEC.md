@@ -2018,7 +2018,7 @@ next: review each stale file against its dependencies, then run: docstamp update
 followed, after its `and <m> more` line if any, by the *rule line*
 
 ```
-  update records a review: run it only after one, never --all to pass; see docstamp help agents
+  run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
 and then, if any selected Result is `invalid`, the line
