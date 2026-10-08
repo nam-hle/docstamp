@@ -3,6 +3,38 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0](https://github.com/nam-hle/docstamp/compare/v0.3.1...v0.4.0) (2026-10-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **inline:** for an inline block with an unknown key and no `dependencies`, the Diagnostic codes no longer include E_BLOCK with subject `dependencies`; the file is still invalid with exit code 2. Migration: a consumer that looked for E_BLOCK on `dependencies` for such a file should read E_UNKNOWN_KEY instead.
+* **patterns:** migrating from 0.3.x. A `!` exclusion that selects no file is no longer E_EMPTY_PATTERN (an error that made the file invalid and exited 2). It is now the warning W_EMPTY_EXCLUSION, attached to the file, shown on stderr and in the file's diagnostics in --json, and it never changes the file's state or the exit code, so a file that was invalid only for this reason is now ok or stale. Positive patterns keep E_EMPTY_PATTERN, and a file whose patterns together select no file stays E_EMPTY_DEPENDENCIES. Nothing in the configuration, the lock file or the inline hashes needs to change, and no hash value moves. If a CI relied on exit 2 to catch a mistyped exclusion, look for W_EMPTY_EXCLUSION in the output instead. The E_EMPTY_PATTERN message also now says when a literal path exists on disk but is ignored by .gitignore or the ignore list.
+
+### Features
+
+* add docstamp stats to measure how noisy a dependency list is ([#32](https://github.com/nam-hle/docstamp/issues/32)) ([d65f18a](https://github.com/nam-hle/docstamp/commit/d65f18a36a726c27da5c336e841c4045255608be))
+* add docstamp suggest to propose dependencies from the paths a doc mentions ([#35](https://github.com/nam-hle/docstamp/issues/35)) ([30cc8df](https://github.com/nam-hle/docstamp/commit/30cc8df4185198608d6390cee458ae224e1798af))
+* **check:** report edited dependency lists, change counts and renames ([#39](https://github.com/nam-hle/docstamp/issues/39)) ([5541bab](https://github.com/nam-hle/docstamp/commit/5541bab23aba494c041b6e3479534ba608271b38))
+* **check:** selection changes, untracked renames in the review command, output consistency ([#49](https://github.com/nam-hle/docstamp/issues/49)) ([c1f2880](https://github.com/nam-hle/docstamp/commit/c1f2880af6b85896848206d26d741852ccfb36d1))
+* **check:** shrink the report and make it a review aid ([#36](https://github.com/nam-hle/docstamp/issues/36)) ([9d7f821](https://github.com/nam-hle/docstamp/commit/9d7f821878dd98fe45b2366e4e6b3165deba48b3))
+* **inline:** report one diagnostic per unknown key in an inline block ([17fbe48](https://github.com/nam-hle/docstamp/commit/17fbe4854df74540e05a10e69321e73cf3d95398))
+* list the dependents of dependents with list-dependents --transitive ([17fbe48](https://github.com/nam-hle/docstamp/commit/17fbe4854df74540e05a10e69321e73cf3d95398))
+* make the CLI self-documenting with help pages and topics ([#54](https://github.com/nam-hle/docstamp/issues/54)) ([9a2ff13](https://github.com/nam-hle/docstamp/commit/9a2ff1370363d3697399ea04fd544b53844b7861))
+* pattern hygiene: shadowed exclusions, empty patterns, backslash hint ([#48](https://github.com/nam-hle/docstamp/issues/48)) ([3fcda97](https://github.com/nam-hle/docstamp/commit/3fcda97165737ef74b8d925cdd5f8dd77323c3e5))
+* **patterns:** warn instead of failing on an exclusion that matches nothing, and name ignored paths ([34b01ef](https://github.com/nam-hle/docstamp/commit/34b01ef5f1bfc5f1e4b0b06f8aa30629fa28768c))
+* share dependency lists across files with presets ([17fbe48](https://github.com/nam-hle/docstamp/commit/17fbe4854df74540e05a10e69321e73cf3d95398))
+* ship a JSON Schema for the inline block ([17fbe48](https://github.com/nam-hle/docstamp/commit/17fbe4854df74540e05a10e69321e73cf3d95398))
+* suggest diff, rename hint, stats legend, did-you-mean keys ([#50](https://github.com/nam-hle/docstamp/issues/50)) ([d3290e1](https://github.com/nam-hle/docstamp/commit/d3290e15748bcbc248809e1b742ab31e25a7fc5f))
+* warn on duplicate patterns and unknown list-dependents paths, and fix the help wording ([#33](https://github.com/nam-hle/docstamp/issues/33)) ([da69448](https://github.com/nam-hle/docstamp/commit/da69448fae76fc74c41c9334a910e1f6843ee5bb))
+
+
+### Bug Fixes
+
+* pin core.autocrlf=false for the changed-file report ([#38](https://github.com/nam-hle/docstamp/issues/38)) ([d21eeb3](https://github.com/nam-hle/docstamp/commit/d21eeb30387c47345b3267a4ded6ea591950e125))
+* suggest --write keeps declared patterns; covered status, glob test exclusions, config messages ([#55](https://github.com/nam-hle/docstamp/issues/55)) ([c6d8f78](https://github.com/nam-hle/docstamp/commit/c6d8f789a989c4cadc45057b255569a15a9ab667))
+* suggest order of exclusions and next-line hints that resolve from cwd ([#47](https://github.com/nam-hle/docstamp/issues/47)) ([24bbef8](https://github.com/nam-hle/docstamp/commit/24bbef84ca0c1b4a538998d58b993ec977782b23))
+
 ## [0.3.1](https://github.com/nam-hle/docstamp/compare/v0.3.0...v0.3.1) (2026-10-07)
 
 
