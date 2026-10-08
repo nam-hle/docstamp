@@ -23,6 +23,7 @@ export type Code =
   | 'W_ORPHAN'
   | 'W_EMPTY_EXCLUSION'
   | 'W_DUPLICATE_PATTERN'
+  | 'W_SHADOWED_EXCLUSION'
   | 'W_UNKNOWN_PATH';
 
 export interface Diagnostic {

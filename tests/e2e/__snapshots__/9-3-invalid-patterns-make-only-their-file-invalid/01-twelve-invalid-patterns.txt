@@ -21,18 +21,18 @@ next: review each stale file against its dependencies, then run: docstamp update
 next: fix the configuration of each invalid file, then run: docstamp check p01.md p02.md p03.md p04.md p05.md p06.md p07.md p08.md p09.md p10.md
   and 2 more
 --- stderr ---
-error: E_PATTERN: p01.md: src//a.ts: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p02.md: /src/a.ts: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p03.md: src/: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p04.md: src/../a.ts: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p05.md: src/**x: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p06.md: src/[z-a].ts: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p07.md: src/{a}.ts: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p08.md: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p09.md: !: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p10.md: src/[!].ts: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p11.md: src/./a.ts: Correct the pattern; patterns use "/" and "\" escapes.
-error: E_PATTERN: p12.md: é.md: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: p01.md: src//a.ts: Correct the pattern; "/" separates its segments and "\" escapes the next character.
+error: E_PATTERN: p02.md: /src/a.ts: Correct the pattern; "/" separates its segments and "\" escapes the next character.
+error: E_PATTERN: p03.md: src/: Correct the pattern; "/" separates its segments and "\" escapes the next character.
+error: E_PATTERN: p04.md: src/../a.ts: Correct the pattern; "/" separates its segments and "\" escapes the next character.
+error: E_PATTERN: p05.md: src/**x: Correct the pattern; "/" separates its segments and "\" escapes the next character.
+error: E_PATTERN: p06.md: src/[z-a].ts: Correct the pattern; "/" separates its segments and "\" escapes the next character.
+error: E_PATTERN: p07.md: src/{a}.ts: Correct the pattern; "/" separates its segments and "\" escapes the next character.
+error: E_PATTERN: p08.md: Write a path or a glob, or remove the pattern; it is empty.
+error: E_PATTERN: p09.md: !: Write the path to exclude after the "!", as in "!src/gen", or remove the pattern.
+error: E_PATTERN: p10.md: src/[!].ts: Correct the pattern; "/" separates its segments and "\" escapes the next character.
+error: E_PATTERN: p11.md: src/./a.ts: Correct the pattern; "/" separates its segments and "\" escapes the next character.
+error: E_PATTERN: p12.md: é.md: Correct the pattern; "/" separates its segments and "\" escapes the next character.
 --- setup: docstamp.yaml ---
 version: 2
 files:

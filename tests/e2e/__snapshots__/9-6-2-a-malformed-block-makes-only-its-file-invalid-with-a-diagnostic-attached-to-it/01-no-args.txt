@@ -27,7 +27,7 @@ next: fix the configuration of each invalid file, then run: docstamp check bad/a
   and 5 more
 --- stderr ---
 error: E_BLOCK: bad/anchor.md: frontmatter: The frontmatter of a file with a docstamp block must be strict YAML with one docstamp key.
-error: E_PATTERN: bad/bad-pattern.md: /src/core: Correct the pattern; patterns use "/" and "\" escapes.
+error: E_PATTERN: bad/bad-pattern.md: /src/core: Correct the pattern; "/" separates its segments and "\" escapes the next character.
 error: E_BLOCK: bad/duplicate.md: frontmatter: The frontmatter of a file with a docstamp block must be strict YAML with one docstamp key.
 error: E_BLOCK: bad/empty-deps.md: dependencies: The dependencies key must hold a non-empty list of patterns.
 error: E_BLOCK: bad/empty.md: docstamp: The docstamp key must hold a mapping with "dependencies" and "hash".

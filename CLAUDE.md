@@ -194,7 +194,7 @@ JSON render the same nodes (`reverseText`, `reverseJsonText`). It reads no verdi
 ## Pattern diagnostics
 
 `Result.diagnostics` holds the errors of an `invalid` file and the warnings of any file: an `ok` or
-`stale` file can carry `W_EMPTY_EXCLUSION` or `W_DUPLICATE_PATTERN` (SPEC §8.5, produced by
+`stale` file can carry `W_EMPTY_EXCLUSION`, `W_DUPLICATE_PATTERN` or `W_SHADOWED_EXCLUSION` (SPEC §8.5, produced by
 `resolveWithWarnings` in `src/engine/evaluate.ts`). `W_UNKNOWN_PATH` (§13.8) is the other warning:
 it rides on a `list-dependents` entry, not on a file, and is built in `reverseEntries`
 (`src/cli/run.ts`). A warning never changes a state, a hash or an exit code, so code that

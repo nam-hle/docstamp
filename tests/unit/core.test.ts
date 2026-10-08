@@ -55,6 +55,33 @@ describe('§5.5 diagnostic order', () => {
     expect(diag('W_EMPTY_EXCLUSION').severity).toBe('warning');
     expect(diag('W_DUPLICATE_PATTERN').severity).toBe('warning');
     expect(diag('W_UNKNOWN_PATH').severity).toBe('warning');
+    expect(diag('W_SHADOWED_EXCLUSION').severity).toBe('warning');
     expect(diag('E_LOCK').severity).toBe('error');
+  });
+});
+
+describe('§8.5 E_EMPTY_PATTERN message', () => {
+  it('names the separator when a backslash precedes a letter', () => {
+    expect(diag('E_EMPTY_PATTERN', { subject: 'src\\core' }).message).toContain(
+      'patterns use "/" as the separator',
+    );
+    expect(diag('E_EMPTY_PATTERN', { subject: 'src\\é' }).message).toContain('separator');
+  });
+  it('keeps the plain message otherwise, an escaped symbol included', () => {
+    const plain = 'Correct or remove the pattern; it matches no file.';
+    expect(diag('E_EMPTY_PATTERN', { subject: 'src/a\\*b' }).message).toBe(plain);
+    expect(diag('E_EMPTY_PATTERN', { subject: 'gone' }).message).toBe(plain);
+  });
+});
+
+describe('§15 E_PATTERN message', () => {
+  it('names an empty pattern and a lone "!" for what they are', () => {
+    expect(diag('E_PATTERN', { subject: '' }).message).toMatch(/^Write a path or a glob.*empty/);
+    expect(diag('E_PATTERN', { subject: '!' }).message).toContain('path to exclude after the "!"');
+  });
+  it('explains the separator and the escape for any other invalid pattern', () => {
+    expect(diag('E_PATTERN', { subject: 'src/' }).message).toBe(
+      'Correct the pattern; "/" separates its segments and "\\" escapes the next character.',
+    );
   });
 });

@@ -13,7 +13,7 @@ const FIX: Record<Code, string> = {
   E_CONFIG_VERSION:
     'Rename "dependents" to "files" and "covers" to "dependencies", set "version: 2".',
   E_UNKNOWN_KEY: 'Remove or correct the key.',
-  E_PATTERN: 'Correct the pattern; patterns use "/" and "\\" escapes.',
+  E_PATTERN: 'Correct the pattern; "/" separates its segments and "\\" escapes the next character.',
   E_UNKNOWN_PRESET:
     'Define the preset under "presets" in the configuration file, or correct the name in "use".',
   E_BLOCK:
@@ -43,22 +43,44 @@ const FIX: Record<Code, string> = {
   W_DUPLICATE_PATTERN:
     'The pattern is listed more than once; keep one copy, unless the order of the patterns needs ' +
     'both.',
+  W_SHADOWED_EXCLUSION:
+    'A later pattern selects again files the exclusion matches; move the exclusion after it, ' +
+    'or narrow that pattern.',
   W_UNKNOWN_PATH:
     'The path is neither tracked nor on disk, so nothing depends on it; check the spelling ' +
     '(arguments are resolved against the current directory).',
 };
+
+// SPEC §8.1, §15: the two invalid patterns that name nothing get a message of their own
+const PATTERN_FIX: Record<string, string> = {
+  '': 'Write a path or a glob, or remove the pattern; it is empty.',
+  '!': 'Write the path to exclude after the "!", as in "!src/gen", or remove the pattern.',
+};
+
+// SPEC §8.1 NOTE, §15: "src\cli" is the literal "srccli", the usual cause of a Windows path
+const SEPARATOR_HINT =
+  'Correct the pattern; it matches no file: patterns use "/" as the separator, and "\\" ' +
+  'escapes the next character.';
+const BACKSLASH_LETTER = /\\\p{L}/u;
+
+function defaultMessage(code: Code, subject: string): string {
+  if (code === 'E_PATTERN') return PATTERN_FIX[subject] ?? FIX[code];
+  if (code === 'E_EMPTY_PATTERN' && BACKSLASH_LETTER.test(subject)) return SEPARATOR_HINT;
+  return FIX[code];
+}
 
 // SPEC §5
 export function diag(
   code: Code,
   fields: { file?: string; subject?: string; message?: string } = {},
 ): Diagnostic {
+  const subject = fields.subject ?? '';
   return {
     code,
     severity: code.startsWith('W_') ? 'warning' : 'error',
     file: fields.file ?? '',
-    subject: fields.subject ?? '',
-    message: fields.message ?? FIX[code],
+    subject,
+    message: fields.message ?? defaultMessage(code, subject),
   };
 }
 

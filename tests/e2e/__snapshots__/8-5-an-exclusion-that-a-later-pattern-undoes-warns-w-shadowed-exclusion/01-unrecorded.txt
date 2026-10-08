@@ -1,0 +1,46 @@
+# unrecorded
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    FIXED.md  (unrecorded)
+  depends   src
+  depends   src/sub
+  depends   !**/*.test.ts
+STALE    INLINE.md  (unrecorded)
+  depends   src
+  depends   !src/**/*.test.ts
+  depends   src/sub
+STALE    LITERAL.md  (unrecorded)
+  depends   src
+  depends   !src/**/*.test.ts
+  depends   src/sub/b.test.ts
+STALE    OWN.md  (unrecorded)
+  depends   src
+  depends   !src/**/*.test.ts
+  depends   src/sub
+STALE    PRESETS.md  (unrecorded)
+  depends   src
+  depends   !**/*.test.ts
+  depends   src/sub
+0 ok, 5 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update FIXED.md INLINE.md LITERAL.md OWN.md PRESETS.md
+--- stderr ---
+warning: W_SHADOWED_EXCLUSION: INLINE.md: !src/**/*.test.ts: A later pattern selects again files the exclusion matches: "src/sub"; move the exclusion after it, or narrow that pattern.
+warning: W_SHADOWED_EXCLUSION: OWN.md: !src/**/*.test.ts: A later pattern selects again files the exclusion matches: "src/sub"; move the exclusion after it, or narrow that pattern.
+warning: W_SHADOWED_EXCLUSION: PRESETS.md: !**/*.test.ts: A later pattern selects again files the exclusion matches: "src/sub" (preset "more-src"); move the exclusion after it, or narrow that pattern.
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  no-tests: ["!**/*.test.ts"]
+  more-src: [src/sub]
+files:
+  OWN.md:
+    dependencies: [src, "!src/**/*.test.ts", src/sub]
+  PRESETS.md:
+    dependencies: [src]
+    use: [no-tests, more-src]
+  FIXED.md:
+    dependencies: [src]
+    use: [more-src, no-tests]
+  LITERAL.md:
+    dependencies: [src, "!src/**/*.test.ts", src/sub/b.test.ts]

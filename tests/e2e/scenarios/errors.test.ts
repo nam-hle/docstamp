@@ -212,6 +212,8 @@ scenario('§9.3 invalid patterns make only their file invalid', async (repo) => 
   expect(result.stdout).toContain('STALE    DOC.md  (unrecorded)');
   expect(result.stdout).toContain('0 ok, 1 stale, 12 invalid');
   expect(result.stdout).not.toContain('E_PATTERN');
+  expect(result.stderr).toContain('E_PATTERN: p08.md: Write a path or a glob');
+  expect(result.stderr).toContain('E_PATTERN: p09.md: !: Write the path to exclude after the "!"');
 });
 
 scenario('§9.4 and §12.1 E_FILE_MISSING', async (repo) => {
@@ -451,6 +453,14 @@ scenario('§15 W_DUPLICATE_PATTERN and W_UNKNOWN_PATH are warnings: exit 0', asy
     'W_UNKNOWN_PATH',
   ]);
   expect(unknown.stderr).toContain('warning: W_UNKNOWN_PATH: src/b.ts: ');
+});
+
+scenario('§15 W_SHADOWED_EXCLUSION is a warning: exit 0', async (repo) => {
+  base(repo);
+  repo.write('docstamp.yaml', config({ 'DOC.md': ['src/**', '!src/**', 'src'] }));
+  await repo.run(['update', 'DOC.md'], { expectExit: 0 });
+  const shadowed = await run(repo, 'an undone exclusion', [], 0, ['W_SHADOWED_EXCLUSION']);
+  expect(shadowed.stderr).toContain('warning: W_SHADOWED_EXCLUSION: DOC.md: !src/**: ');
 });
 
 scenario(

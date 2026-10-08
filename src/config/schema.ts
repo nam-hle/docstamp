@@ -1,4 +1,4 @@
-import { PRESET_NAME } from './value.ts';
+import { PATTERN_SCHEMA, PRESET_NAME } from './value.ts';
 
 // SPEC §9.3
 const configSchema = {
@@ -11,12 +11,12 @@ const configSchema = {
     version: { const: 2 },
     gitignore: { type: 'boolean', default: true },
     ignore: { type: 'array', items: { type: 'string' }, default: [] },
-    include: { type: 'array', minItems: 1, items: { type: 'string' }, default: ['**/*.md'] },
+    include: { type: 'array', minItems: 1, items: PATTERN_SCHEMA, default: ['**/*.md'] },
     presets: {
       type: 'object',
       additionalProperties: false,
       patternProperties: {
-        [PRESET_NAME.source]: { type: 'array', minItems: 1, items: { type: 'string' } },
+        [PRESET_NAME.source]: { type: 'array', minItems: 1, items: PATTERN_SCHEMA },
       },
     },
     files: {
@@ -26,7 +26,7 @@ const configSchema = {
         additionalProperties: false,
         required: ['dependencies'],
         properties: {
-          dependencies: { type: 'array', minItems: 1, items: { type: 'string' } },
+          dependencies: { type: 'array', minItems: 1, items: PATTERN_SCHEMA },
           use: { type: 'array', minItems: 1, uniqueItems: true, items: { type: 'string' } },
         },
       },

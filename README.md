@@ -264,7 +264,7 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
 ## Writing good dependencies
 
 - **Bind to the narrowest files that make the doc true.** A doc that depends on all of `src` goes stale on every commit, and people then stop reading the reports. `docs/architecture.md` should depend on `src/core`, not on the repository. Measure it with `docstamp stats` ([below](#measuring-how-noisy-a-list-is)).
-- **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns are in [SPEC §8](docs/SPEC.md#8-patterns).
+- **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns use `/` on every platform: `\` escapes the next character, so `src\core` is the literal `srccore`, and the `E_EMPTY_PATTERN` it gets says so. Patterns are in [SPEC §8](docs/SPEC.md#8-patterns).
 - **Exclude generated or noisy files with `!`.** The last matching pattern wins, so put exclusions after the pattern they cut from. A pattern without `!` must select at least one file, or it is an error (`E_EMPTY_PATTERN`). An exclusion that matches no file is only a warning (`W_EMPTY_EXCLUSION`), so a standard block such as `!src/core/**/__test__/**` can be copied into every doc before any test folder exists, and survives the deletion of the last test. The warning never changes the exit code or the verdict:
 
   ```
@@ -273,7 +273,7 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
   1 ok, 0 stale, 0 invalid
   ```
 
-  A doc whose patterns together select nothing is still an error (`E_EMPTY_DEPENDENCIES`).
+  A doc whose patterns together select nothing is still an error (`E_EMPTY_DEPENDENCIES`). An exclusion that a later pattern undoes, as in `src`, `!src/**/*.test.ts`, `src/sub` once a test exists under `src/sub/`, is a warning too (`W_SHADOWED_EXCLUSION`), naming the later pattern. A file named by its own path after the exclusion, such as `src/sub/keep.test.ts`, is taken as deliberate and not warned about ([SPEC §8.5](docs/SPEC.md#85-resolution)).
 - **List each pattern once.** The same pattern twice in one doc is a warning (`W_DUPLICATE_PATTERN`), once per repeated pattern. It changes nothing: the selection, the hash and the exit code stay as they were. Keep one copy, unless the order of the patterns needs both, because the last matching pattern wins:
 
   ```
@@ -350,6 +350,7 @@ With `--json`, a file that uses presets also has `use` and `origins` (one entry 
 - **Presets are defined in the configuration file only.** An inline block that uses one needs a `docstamp.yaml` (or a script) that defines it. A name that is not defined, in a block or in `files`, makes only that file `invalid` with `E_UNKNOWN_PRESET`.
 - **The hash depends on the selected files only.** Editing a preset makes a file that uses it stale exactly when the edit changes which files it selects; reordering a preset's lines, or adding an exclusion that removes nothing, does not make a doc stale. Nothing in the lock or in an inline `hash:` mentions presets.
 - **Empty patterns.** An exclusion from a preset that matches no file raises no `W_EMPTY_EXCLUSION` (a doc that has nothing to exclude could not remove it); a preset pattern without `!` that matches nothing is `E_EMPTY_PATTERN`, and the message names the preset.
+- **List exclusion presets last.** `use: [no-tests, more-src]` selects the tests again when `more-src` adds a directory after the exclusions of `no-tests`; the doc gets `W_SHADOWED_EXCLUSION`, naming the pattern and its preset. Write `use: [more-src, no-tests]`.
 - **`dependencies` stays required**, with at least one pattern of the doc's own, and `use` must be a non-empty list of distinct names. Details: [SPEC §8.6](docs/SPEC.md#86-presets).
 
 ## Proposing dependencies
