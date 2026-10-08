@@ -29,7 +29,7 @@ import {
 } from '../report/text.ts';
 import { determineRoot, existsUnderRoot, isIgnoredPath, type Universe } from '../universe/walk.ts';
 import { HELP, parseArgs, type Args } from './args.ts';
-import { resolveArgument, selectResults, toRepoPath } from './paths.ts';
+import { isAtOrUnderRoot, resolveArgument, selectResults, toRepoPath } from './paths.ts';
 import { runSuggest } from './suggest.ts';
 import { loadWorkspace } from './workspace.ts';
 
@@ -221,10 +221,9 @@ function reverseEntries(
     throw new Raised(
       outside.map((subject) => {
         const resolved = resolveArgument(subject, cwd);
-        const problem =
-          resolved === root || resolved.startsWith(`${root}/`)
-            ? `which does not name a file inside the root ${root}`
-            : `which is outside the root ${root}`;
+        const problem = isAtOrUnderRoot(resolved, root)
+          ? `which does not name a file inside the root ${root}`
+          : `which is outside the root ${root}`;
         const message =
           `The argument is resolved against the current directory (${cwd}) to ${resolved}, ` +
           `${problem}; name a file inside the root.`;

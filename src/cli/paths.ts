@@ -17,6 +17,18 @@ export function resolveArgument(
   return posix.normalize(absolute ? argument! : `${base}/${argument}`);
 }
 
+// SPEC §13.8 step 3: the resolved argument is the root itself or below it
+export function isAtOrUnderRoot(
+  resolved: string,
+  root: string,
+  windows: boolean = process.platform === 'win32',
+): boolean {
+  const rootDir = windows ? toPosix(root) : root;
+  return (
+    resolved === rootDir || resolved.startsWith(rootDir.endsWith('/') ? rootDir : `${rootDir}/`)
+  );
+}
+
 // SPEC §13.4
 export function toRepoPath(
   arg: string,
