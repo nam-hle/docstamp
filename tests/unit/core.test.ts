@@ -59,6 +59,20 @@ describe('§5.5 diagnostic order', () => {
   });
 });
 
+describe('§8.5 E_EMPTY_PATTERN message', () => {
+  it('names the separator when a backslash precedes a letter', () => {
+    expect(diag('E_EMPTY_PATTERN', { subject: 'src\\core' }).message).toContain(
+      'patterns use "/" as the separator',
+    );
+    expect(diag('E_EMPTY_PATTERN', { subject: 'src\\é' }).message).toContain('separator');
+  });
+  it('keeps the plain message otherwise, an escaped symbol included', () => {
+    const plain = 'Correct or remove the pattern; it matches no file.';
+    expect(diag('E_EMPTY_PATTERN', { subject: 'src/a\\*b' }).message).toBe(plain);
+    expect(diag('E_EMPTY_PATTERN', { subject: 'gone' }).message).toBe(plain);
+  });
+});
+
 describe('§15 E_PATTERN message', () => {
   it('names an empty pattern and a lone "!" for what they are', () => {
     expect(diag('E_PATTERN', { subject: '' }).message).toMatch(/^Write a path or a glob.*empty/);

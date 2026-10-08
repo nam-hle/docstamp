@@ -539,6 +539,14 @@ entry is below it (a directory whose content is all ignored). This changes neith
 nor the Diagnostic code, nor the Diagnostic order, nor any verdict. `git` is not consulted, so a
 renamed file is not traced.
 
+NOTE: For the same reason, the `[[Message]]` of `E_EMPTY_PATTERN` SHOULD say that patterns use `/`
+as the separator and that `\` escapes the next character when the pattern holds a `\` followed by a
+letter: `src\core` is the literal `srccore` (§8.1 NOTE), almost always a Windows path. When that
+pattern is the Declaration's only inclusion, `E_EMPTY_DEPENDENCIES` (step 6) is raised too: the two
+codes report two facts, the pattern that matches nothing and the Declaration that selects nothing,
+and a consumer may read either, so neither is dropped (§17.1); the hint is in the message of the
+first.
+
 NOTE: A pattern that comes from a Preset (§8.6) is reported like any other when it is not an
 exclusion: `E_EMPTY_PATTERN`, with the Preset named in the `[[Message]]`. An exclusion that comes
 from a Preset never gives `W_EMPTY_EXCLUSION`: a Preset is a standard block shared by many files,
@@ -2144,7 +2152,7 @@ command raised.
 | `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies`, `use` or `hash` |
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
-| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule |
+| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
 | `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3, §13.10 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |

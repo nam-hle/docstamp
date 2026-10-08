@@ -54,8 +54,15 @@ const PATTERN_FIX: Record<string, string> = {
   '!': 'Write the path to exclude after the "!", as in "!src/gen", or remove the pattern.',
 };
 
+// SPEC §8.1 NOTE, §15: "src\cli" is the literal "srccli", the usual cause of a Windows path
+const SEPARATOR_HINT =
+  'Correct the pattern; it matches no file: patterns use "/" as the separator, and "\\" ' +
+  'escapes the next character.';
+const BACKSLASH_LETTER = /\\\p{L}/u;
+
 function defaultMessage(code: Code, subject: string): string {
   if (code === 'E_PATTERN') return PATTERN_FIX[subject] ?? FIX[code];
+  if (code === 'E_EMPTY_PATTERN' && BACKSLASH_LETTER.test(subject)) return SEPARATOR_HINT;
   return FIX[code];
 }
 

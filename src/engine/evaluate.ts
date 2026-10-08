@@ -34,7 +34,7 @@ function resolveWithWarnings(
   const warnings: Diagnostic[] = [];
   patterns.forEach((pattern, i) => {
     if (candidates.some((path) => patternMatches(pattern, path))) return;
-    const subject = b.dependencies[i];
+    const subject = b.dependencies[i]!;
     const preset = b.origins?.[i] ?? null;
     if (pattern.negated) {
       if (preset === null) warnings.push(diag('W_EMPTY_EXCLUSION', { file: b.file, subject }));
@@ -43,7 +43,7 @@ function resolveWithWarnings(
     const literal = literalPath(pattern);
     const ignored = literal !== null && isIgnoredPath(literal);
     const from = preset === null ? '' : ` It comes from the preset "${preset}".`;
-    const message = ignored ? IGNORED_MESSAGE : diag('E_EMPTY_PATTERN').message;
+    const message = ignored ? IGNORED_MESSAGE : diag('E_EMPTY_PATTERN', { subject }).message;
     problems.push(
       diag('E_EMPTY_PATTERN', {
         file: b.file,

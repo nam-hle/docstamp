@@ -264,7 +264,7 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
 ## Writing good dependencies
 
 - **Bind to the narrowest files that make the doc true.** A doc that depends on all of `src` goes stale on every commit, and people then stop reading the reports. `docs/architecture.md` should depend on `src/core`, not on the repository. Measure it with `docstamp stats` ([below](#measuring-how-noisy-a-list-is)).
-- **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns are in [SPEC §8](docs/SPEC.md#8-patterns).
+- **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns use `/` on every platform: `\` escapes the next character, so `src\core` is the literal `srccore`, and the `E_EMPTY_PATTERN` it gets says so. Patterns are in [SPEC §8](docs/SPEC.md#8-patterns).
 - **Exclude generated or noisy files with `!`.** The last matching pattern wins, so put exclusions after the pattern they cut from. A pattern without `!` must select at least one file, or it is an error (`E_EMPTY_PATTERN`). An exclusion that matches no file is only a warning (`W_EMPTY_EXCLUSION`), so a standard block such as `!src/core/**/__test__/**` can be copied into every doc before any test folder exists, and survives the deletion of the last test. The warning never changes the exit code or the verdict:
 
   ```

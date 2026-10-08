@@ -373,6 +373,21 @@ scenario(
   },
 );
 
+scenario('§8.5 a backslash path is told that patterns use "/"', async (repo) => {
+  repo.write('src/core/a.ts', 'a\n');
+  repo.write('DOC.md', '# doc\n');
+  repo.write('MIXED.md', '# mixed\n');
+  repo.write('docstamp.yaml', config({ 'DOC.md': ['src\\core'], 'MIXED.md': ['src', 'src\\x'] }));
+  const result = await repo.run([], { show: ['docstamp.yaml'] });
+  expect(result.exit).toBe(2);
+  const hint = 'patterns use "/" as the separator, and "\\" escapes the next character.';
+  expect(result.stderr).toContain('error: E_EMPTY_PATTERN: DOC.md: "src\\\\core": ');
+  expect(result.stderr).toContain('error: E_EMPTY_PATTERN: MIXED.md: "src\\\\x": ');
+  expect(result.stderr.split(hint)).toHaveLength(3);
+  expect(result.stderr).toContain('error: E_EMPTY_DEPENDENCIES: DOC.md: ');
+  expect(result.stderr).not.toContain('E_EMPTY_DEPENDENCIES: MIXED.md');
+});
+
 scenario('§8.5 a duplicate is reported next to the errors of an invalid file', async (repo) => {
   repo.write('docstamp.yaml', config({ 'DOC.md': ['gone', 'gone'] }));
   repo.write('DOC.md', '# doc\n');
