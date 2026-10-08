@@ -5,7 +5,7 @@ exit: 1
 STALE    CLAUDE.md  (content-changed)
   edited    docstamp.yaml  (dependency list)
   modified  src/util.ts
-  review: git diff 6eff57282542cf9d373c2934764350e274eadf1a -- src/util.ts docstamp.yaml
+  review: git diff -M 6eff57282542cf9d373c2934764350e274eadf1a -- src/util.ts docstamp.yaml
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 --- stderr ---

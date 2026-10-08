@@ -117,17 +117,19 @@ function headLines(r: Result): string {
 export function reviewLine(r: Result, rootArg?: string): string {
   if (r.base === undefined || !r.changes) return '';
   if (r.changes.length === 0 && r.edited === undefined) return '';
-  const listed =
-    r.changes.length <= REVIEW_PATH_MAX
-      ? r.changes.map((c) => pathArg(c.path))
-      : pathspecsOf(r.dependencies);
+  const byPath = r.changes.length <= REVIEW_PATH_MAX;
+  const listed = byPath ? r.changes.map((c) => pathArg(c.path)) : pathspecsOf(r.dependencies);
   if (listed === null) return '';
   const { edited } = r;
   const extra =
     edited !== undefined && !r.changes.some((c) => c.path === edited) ? [pathArg(edited)] : [];
   const args = [...listed, ...extra];
   const git = rootArg === undefined ? 'git' : `git -C ${shellQuote(rootArg)}`;
-  return `  review: ${git} diff ${r.base} -- ${args.map(shellQuote).join(' ')}\n`;
+  const review = `  review: ${git} diff -M ${r.base} -- ${args.map(shellQuote).join(' ')}\n`;
+  const untracked = byPath ? r.changes.filter((c) => c.untracked === true) : [];
+  if (untracked.length === 0) return review;
+  const added = untracked.map((c) => shellQuote(pathArg(c.path))).join(' ');
+  return `${review}  untracked: ${git} add -N -- ${added}\n`;
 }
 
 // SPEC §14.3.3

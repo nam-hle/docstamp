@@ -71,14 +71,14 @@ describe('§14.3 check text', () => {
     expect(checkText([edited])).toContain(
       'STALE    a.md  (content-changed)\n  edited    docstamp.yaml  (dependency list)\n' +
         '  modified  src/a.ts\n' +
-        '  review: git diff c0ffee -- src/a.ts docstamp.yaml\n0 ok',
+        '  review: git diff -M c0ffee -- src/a.ts docstamp.yaml\n0 ok',
     );
   });
   it('an edited own list with no Change prints the edited line and its review line only', () => {
     const edited = res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee' });
     expect(checkText([edited])).toContain(
       'STALE    a.md  (content-changed)\n  edited    a.md  (dependency list)\n' +
-        '  review: git diff c0ffee -- a.md\n0 ok',
+        '  review: git diff -M c0ffee -- a.md\n0 ok',
     );
   });
   it('unknown or empty changes print depends lines', () => {
@@ -241,7 +241,7 @@ describe('§14.3.4 review line', () => {
     res('a.md', 'stale', { changes, dependencies, base: 'c0ffee' });
   it('names the base commit and every changed path, in path order', () => {
     const changes = [change('modified', 'src/a.ts'), change('deleted', 'src/b.ts')];
-    expect(reviewLine(stale(changes))).toBe('  review: git diff c0ffee -- src/a.ts src/b.ts\n');
+    expect(reviewLine(stale(changes))).toBe('  review: git diff -M c0ffee -- src/a.ts src/b.ts\n');
   });
   it('quotes for the shell, and reads a path with a wildcard or a colon literally', () => {
     const changes = [
@@ -251,14 +251,14 @@ describe('§14.3.4 review line', () => {
       change('added', ':odd.ts'),
     ];
     expect(reviewLine(stale(changes))).toBe(
-      "  review: git diff c0ffee -- 'src/it'\\''s.ts' 'src/my file.ts' " +
+      "  review: git diff -M c0ffee -- 'src/it'\\''s.ts' 'src/my file.ts' " +
         "':(literal)src/[id].ts' ':(literal):odd.ts'\n",
     );
   });
   it('--root becomes git -C', () => {
     const changes = [change('modified', 'src/a.ts')];
     expect(reviewLine(stale(changes), 'my dir')).toBe(
-      "  review: git -C 'my dir' diff c0ffee -- src/a.ts\n",
+      "  review: git -C 'my dir' diff -M c0ffee -- src/a.ts\n",
     );
   });
   it('up to 10 paths are listed, from 11 the patterns become pathspecs', () => {
@@ -266,7 +266,7 @@ describe('§14.3.4 review line', () => {
     expect(reviewLine(stale(ten))).toContain(' -- src/f0.ts src/f1.ts ');
     const eleven = [...ten, change('modified', 'src/f10.ts')];
     expect(reviewLine(stale(eleven, ['src/**', 'lib', '!src/**/*.test.ts', 'a.ts', 'x/*']))).toBe(
-      "  review: git diff c0ffee -- ':(glob)src/**' ':(glob)lib' " +
+      "  review: git diff -M c0ffee -- ':(glob)src/**' ':(glob)lib' " +
         "':(exclude,glob)src/**/*.test.ts' ':(exclude,glob)src/**/*.test.ts/**' " +
         "':(glob)a.ts' ':(glob)x/*' ':(glob)x/*/**'\n",
     );
@@ -283,7 +283,7 @@ describe('§14.3.4 review line', () => {
     );
     const listed = [change('modified', 'docstamp.yaml')];
     expect(reviewLine({ ...stale(listed), edited: 'docstamp.yaml' })).toBe(
-      '  review: git diff c0ffee -- docstamp.yaml\n',
+      '  review: git diff -M c0ffee -- docstamp.yaml\n',
     );
   });
   it('no line without a known base or changes', () => {
@@ -295,7 +295,21 @@ describe('§14.3.4 review line', () => {
     const changes = [change('modified', 'src/a.ts', { whitespaceOnly: true })];
     expect(checkText([stale(changes)])).toContain(
       'STALE    a.md  (content-changed)\n  modified  src/a.ts (whitespace only)\n' +
-        '  review: git diff c0ffee -- src/a.ts\n0 ok',
+        '  review: git diff -M c0ffee -- src/a.ts\n0 ok',
+    );
+  });
+  it('an untracked line follows for the untracked paths of the first form', () => {
+    const changes = [
+      change('added', 'src/my b.ts', { untracked: true }),
+      change('added', 'src/new/a.ts', { pair: 'src/old/a.ts', untracked: true }),
+      change('deleted', 'src/old/a.ts', { pair: 'src/new/a.ts' }),
+    ];
+    expect(reviewLine(stale(changes), 'r')).toBe(
+      "  review: git -C r diff -M c0ffee -- 'src/my b.ts' src/new/a.ts src/old/a.ts\n" +
+        "  untracked: git -C r add -N -- 'src/my b.ts' src/new/a.ts\n",
+    );
+    const many = Array.from({ length: 11 }, (_, i) =>
+      change('added', `src/f${i}.ts`, { untracked: true }),
     );
   });
 });
@@ -332,6 +346,7 @@ describe('§14.3.3 next lines', () => {
   });
   it('--root follows each list, and the cap applies to the invalid line too', () => {
     const invalid = Array.from({ length: 11 }, (_, i) =>
+    expect(reviewLine(stale(many))).not.toContain('untracked:');
       res(`i${String(i).padStart(2, '0')}.md`, 'invalid'),
     );
     const out = checkText(invalid, { root: 'sub' });

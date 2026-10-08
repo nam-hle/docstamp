@@ -174,7 +174,7 @@ describe('§12.3 ChangedSince: status mapping and filtering', () => {
       entry('added', 'src/a.ts'),
       entry('deleted', 'src/gone.ts'),
       entry('modified', 'src/m.ts'),
-      entry('added', 'src/new.ts'),
+      { ...entry('added', 'src/new.ts'), untracked: true },
       entry('modified', 'src/t.ts'),
     ]);
   });

@@ -56,14 +56,22 @@ export function buildChanges(
     if (mapped === undefined) return null;
     merged.set(path, mapped);
   }
+  const fromUntracked = new Set<string>();
   for (const path of untracked) {
+    if (!merged.has(path)) fromUntracked.add(path);
     merged.set(path, merged.get(path) === 'deleted' ? 'modified' : (merged.get(path) ?? 'added'));
   }
   return [...merged]
     .filter(([path, status]) =>
       status === 'deleted' ? keep.selectsDeleted(path) : keep.resolved.has(path),
     )
-    .map(([path, status]) => ({ status, path, via: keep.viaOf(path), whitespaceOnly: false }))
+    .map(([path, status]): Change => ({
+      status,
+      path,
+      via: keep.viaOf(path),
+      whitespaceOnly: false,
+      ...(fromUntracked.has(path) ? { untracked: true } : {}),
+    }))
     .sort((a, b) => comparePaths(a.path, b.path));
 }
 

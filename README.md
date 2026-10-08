@@ -89,15 +89,15 @@ STALE    CLAUDE.md  (content-changed)
   modified  src/cli/run.ts
   modified  src/core/generated/types.ts
   modified  src/index.ts (whitespace only)
-  review: git diff 260bd0a3cbed145f3afa9ec3db9c02f1d30f0360 -- src/cli/run.ts src/core/generated/types.ts src/index.ts
+  review: git diff -M 260bd0a3cbed145f3afa9ec3db9c02f1d30f0360 -- src/cli/run.ts src/core/generated/types.ts src/index.ts
 STALE    README.md  (content-changed)
   modified  src/cli/run.ts
-  review: git diff 260bd0a3cbed145f3afa9ec3db9c02f1d30f0360 -- src/cli/run.ts
+  review: git diff -M 260bd0a3cbed145f3afa9ec3db9c02f1d30f0360 -- src/cli/run.ts
 1 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
 ```
 
-The `review:` line is a read-only git command that shows the change since the last `update` (the work tree against that commit, so uncommitted edits are in it, but untracked files are not until `git add -N`). `(whitespace only)` is git's judgement that a modified file differs only in white space and blank lines, to help you skim; it never changes the verdict. With more than 10 changed files the `review:` line gives a pathspec of the patterns instead of the paths.
+The `review:` line is a read-only git command that shows the change since the last `update` (the work tree against that commit, so uncommitted edits are in it; `-M` shows a moved file as a rename). Untracked files are not in a git diff until `git add -N`, so when the report lists one, an `untracked: git add -N -- <path>` line follows; after a plain `mv`, run it and the `review:` line shows the rename instead of only the deletion. docstamp never runs it, since it changes the index. `(whitespace only)` is git's judgement that a modified file differs only in white space and blank lines, to help you skim; it never changes the verdict. With more than 10 changed files the `review:` line gives a pathspec of the patterns instead of the paths.
 
 When a directory moves, the report does not list every file twice. A file deleted at one path and added at another with exactly the same content is one `renamed  <old> -> <new>` line; five or more of them moved between the same two directories, or five or more `added` (or `deleted`) files directly in one directory, become one line. A moved file that was also edited stays an `added` and a `deleted` line. And a doc that became `invalid` keeps its errors right under its line on a terminal (each stream alone is unchanged: errors are still on standard error):
 
@@ -178,7 +178,7 @@ $ docstamp
 $ docstamp
 STALE    docs/architecture.md  (content-changed)
   modified  src/core/hash.ts
-  review: git diff 086c7e92ed3634dd8464f9ca9feccba0fa01c06a -- src/core/hash.ts
+  review: git diff -M 086c7e92ed3634dd8464f9ca9feccba0fa01c06a -- src/core/hash.ts
 1 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
 $ docstamp update docs/architecture.md

@@ -1862,12 +1862,13 @@ For a stale Result with a known `[[Changes]]` that is not empty, or with an `[[E
 not none, the block ends with one line:
 
 ```
-  review: git diff <C> -- <arg> <arg>
+  review: git diff -M <C> -- <arg> <arg>
 ```
 
 two spaces, `review: `, and a read-only git command that shows what changed: *C* is `[[Base]]`
 as git printed it, and each *arg* is written with `ShellQuote`. If `--root` was given, `git diff`
-is `git -C <root> diff`, *root* the value as given, written with `ShellQuote`. The *args* are:
+is `git -C <root> diff`, *root* the value as given, written with `ShellQuote`. `-M` lets git show a
+renamed file as one rename rather than a deletion and an addition. The *args* are:
 
 - if the Result has at most 10 Changes (the *path cap*): the `[[Path]]` of each Change in path
   order, written as `:(literal)<path>` when it starts with `:` or contains `*`, `?`, `[` or `\`,
@@ -1890,7 +1891,11 @@ an exclusion win over every selection where the last matching pattern wins (§8.
 alternation (hence no line), and a file that git tracks but an ignore rule removed from the
 Universe (§7.2) is in the diff. The second form may therefore list more files than the report. A
 file that git does not track (an `added` Change from `git ls-files --others`, §12.3 step 2) is not
-in the diff until `git add -N` names it.
+in the diff until `git add -N` names it, which is why the untracked line names them: after a plain
+`mv`, without it the review line shows only the deletion. With the second form the untracked files
+are not listed, since the patterns do not name them. Whether git pairs a rename with `-M` depends on
+its similarity score; the report's own pairing does not (§12.3 NOTE), and the lines stay the same on
+every host.
 
 ### 14.4 Update, Text Mode
 
@@ -1914,6 +1919,19 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   "files": [
     {
       "file": "CLAUDE.md",
+When the review line is output in the first form and some of its Change *args* are the path of an
+`added` Change that came from *untracked* (§12.3 step 2, not from *diff*), the review line is
+followed by one line:
+
+```
+  untracked: git add -N -- <arg> <arg>
+```
+
+two spaces, `untracked: ` and the git command that makes git show those paths in the diff: the
+same `git` or `git -C <root>` as the review line, then `add -N -- ` and those *args*, in path order,
+written as in the review line. It is a hint, not part of the review: it changes the index, and
+docstamp never runs it.
+
       "state": "stale",
       "reasons": ["content-changed"],
       "dependencies": ["src/**", "!src/**/*.test.ts", "package.json"],

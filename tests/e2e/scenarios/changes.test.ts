@@ -36,7 +36,8 @@ const expectedText = (base: string) =>
   '  added     src/new.ts\n' +
   '  added     src/untracked.ts\n' +
   '  modified  src/util.ts\n' +
-  `  review: git diff ${base} -- src/c.ts src/d.ts src/new.ts src/untracked.ts src/util.ts\n` +
+  `  review: git diff -M ${base} -- src/c.ts src/d.ts src/new.ts src/untracked.ts src/util.ts\n` +
+  '  untracked: git add -N -- src/untracked.ts\n' +
   '0 ok, 1 stale, 0 invalid\n';
 
 scenario(
@@ -421,13 +422,13 @@ scenario(
 
     const result = await repo.run([]);
     expect(result.stdout).toContain(
-      `  review: git diff ${base} -- ':(literal)src/[id].ts' src/d.ts 'src/my file.ts' src/util.ts\n`,
+      `  review: git diff -M ${base} -- ':(literal)src/[id].ts' src/d.ts 'src/my file.ts' src/util.ts\n`,
     );
     const shown = repo.git('diff', '--name-only', base, '--', 'src/d.ts', 'src/util.ts');
     expect(shown).toBe('src/d.ts\nsrc/util.ts\n');
 
     const rooted = await repo.run(['--root', repo.root]);
-    expect(rooted.stdout).toContain(`  review: git -C ${gitPath(repo.root)} diff ${base} -- `);
+    expect(rooted.stdout).toContain(`  review: git -C ${gitPath(repo.root)} diff -M ${base} -- `);
   },
 );
 
@@ -443,7 +444,7 @@ scenario(
     const result = await repo.run([]);
     expect(result.stdout).toContain('  added     src/gen/  (11 files)\n');
     expect(result.stdout).toContain(
-      `  review: git diff ${base} -- ':(glob)src/**' ':(exclude,glob)src/**/*.test.ts' ` +
+      `  review: git diff -M ${base} -- ':(glob)src/**' ':(exclude,glob)src/**/*.test.ts' ` +
         "':(exclude,glob)src/**/*.test.ts/**'\n",
     );
     const listed = repo.git(
@@ -491,7 +492,7 @@ scenario(
     expect(both.stdout).toContain(
       '  edited    docstamp.yaml  (dependency list)\n' +
         '  modified  src/util.ts\n' +
-        `  review: git diff ${base} -- src/util.ts docstamp.yaml\n`,
+        `  review: git diff -M ${base} -- src/util.ts docstamp.yaml\n`,
     );
 
     repo.write('docstamp.yaml', config(CLAUDE));

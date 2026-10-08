@@ -46,7 +46,7 @@ scenario(
     expect(stale.stdout.replace(/[0-9a-f]{40}/u, '<C>')).toBe(
       'STALE    README.md  (content-changed)\n' +
         '  modified  src/cli/run.ts\n' +
-        '  review: git diff <C> -- src/cli/run.ts\n' +
+        '  review: git diff -M <C> -- src/cli/run.ts\n' +
         '1 ok, 1 stale, 0 invalid\n' +
         'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
     );
@@ -518,7 +518,7 @@ scenario(
     expect(result.stdout.replace(/[0-9a-f]{40}/u, '<C>')).toBe(
       'STALE    README.md  (content-changed)\n' +
         '  modified  docs/GUIDE.md\n' +
-        '  review: git diff <C> -- docs/GUIDE.md\n' +
+        '  review: git diff -M <C> -- docs/GUIDE.md\n' +
         '1 ok, 1 stale, 0 invalid\n' +
         'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
     );
