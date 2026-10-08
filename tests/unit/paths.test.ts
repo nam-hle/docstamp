@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { resolveArgument, selectResults, toRepoPath } from '../../src/cli/paths.ts';
+import {
+  isAtOrUnderRoot,
+  resolveArgument,
+  selectResults,
+  toRepoPath,
+} from '../../src/cli/paths.ts';
 import type { Raised } from '../../src/core/diagnostics.ts';
 import type { Result } from '../../src/core/types.ts';
 
@@ -38,6 +43,20 @@ describe('§13.4 steps 1 and 2 resolveArgument', () => {
     expect(resolveArgument('/abs/../z', '/r')).toBe('/z');
     expect(resolveArgument('.', '/r', false)).toBe('/r');
     expect(resolveArgument('docs\\a.md', '/r', true)).toBe('/r/docs/a.md');
+  });
+});
+
+describe('§13.8 isAtOrUnderRoot', () => {
+  it('is the root itself or a path below it, not a sibling that shares a prefix', () => {
+    expect(isAtOrUnderRoot('/r', '/r', false)).toBe(true);
+    expect(isAtOrUnderRoot('/r/a/b', '/r', false)).toBe(true);
+    expect(isAtOrUnderRoot('/rx', '/r', false)).toBe(false);
+    expect(isAtOrUnderRoot('/elsewhere', '/r', false)).toBe(false);
+  });
+  it('compares a Windows root written with backslashes against a resolved path', () => {
+    expect(isAtOrUnderRoot('C:/w/repo', 'C:\\w\\repo', true)).toBe(true);
+    expect(isAtOrUnderRoot('C:/w/repo/docs', 'C:\\w\\repo', true)).toBe(true);
+    expect(isAtOrUnderRoot('C:/w/other', 'C:\\w\\repo', true)).toBe(false);
   });
 });
 

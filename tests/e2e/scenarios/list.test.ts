@@ -2,6 +2,9 @@ import { dirname } from 'node:path';
 import { expect } from 'vitest';
 import { config, scenario } from '../harness/index.ts';
 
+// Windows prints some of these paths with `\` and some with `/`; compare them alike.
+const slashes = (text: string): string => text.replaceAll('\\', '/');
+
 scenario(
   '§13.7 list-dependencies: text and JSON, no lock needed',
   { fixture: 'docs-site' },
@@ -165,10 +168,12 @@ scenario(
     const result = await repo.run(['list-dependents', '../outside.txt', 'src/util.ts']);
     expect(result.exit).toBe(2);
     expect(result.stdout).toBe('');
-    expect(result.stderr).toBe(
+    expect(slashes(result.stderr)).toBe(
       'error: E_USAGE: ../outside.txt: The argument is resolved against the current directory ' +
-        `(${repo.root}) to ${dirname(repo.root)}/outside.txt, which is outside the root ` +
-        `${repo.root}; name a file inside the root.\n`,
+        slashes(
+          `(${repo.root}) to ${dirname(repo.root)}/outside.txt, which is outside the root ` +
+            `${repo.root}; name a file inside the root.\n`,
+        ),
     );
 
     const json = await repo.run(['list-dependents', '--json', '/etc/hosts']);
@@ -273,16 +278,18 @@ scenario(
     const outside = await repo.run(['list-dependents', '../../outside.txt'], { cwd: 'docs' });
     expect(outside.exit).toBe(2);
     expect(outside.stdout).toBe('');
-    expect(outside.stderr).toBe(
+    expect(slashes(outside.stderr)).toBe(
       'error: E_USAGE: ../../outside.txt: The argument is resolved against the current ' +
-        `directory (${repo.root}/docs) to ${dirname(repo.root)}/outside.txt, which is outside ` +
-        `the root ${repo.root}; name a file inside the root.\n`,
+        slashes(
+          `directory (${repo.root}/docs) to ${dirname(repo.root)}/outside.txt, which is outside ` +
+            `the root ${repo.root}; name a file inside the root.\n`,
+        ),
     );
 
     const rootItself = await repo.run(['list-dependents', '.']);
     expect(rootItself.exit).toBe(2);
-    expect(rootItself.stderr).toContain(
-      `to ${repo.root}, which does not name a file inside the root ${repo.root};`,
+    expect(slashes(rootItself.stderr)).toContain(
+      slashes(`to ${repo.root}, which does not name a file inside the root ${repo.root};`),
     );
   },
 );

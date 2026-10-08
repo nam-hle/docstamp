@@ -15,9 +15,13 @@ concurrency:
 
 jobs:
   test:
-    name: Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -26,8 +30,26 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: Test
-        run: pnpm test
+      # The phases of `pnpm test` as separate steps, so one red phase does not hide the others.
+      - name: Format, lint, types, knip
+        run: pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip
+
+      - name: Build and self-check
+        if: ${{ !cancelled() }}
+        run: pnpm run build && node dist/index.js
+
+      - name: Unit tests
+        if: ${{ !cancelled() }}
+        run: pnpm run test:unit
+
+      - name: End-to-end tests
+        if: ${{ !cancelled() }}
+        run: pnpm run test:e2e
+
+      - name: Pack tests
+        if: ${{ !cancelled() }}
+        run: pnpm run test:pack
 
       - name: Check the package can be packed
+        if: ${{ !cancelled() }}
         run: npm pack --dry-run

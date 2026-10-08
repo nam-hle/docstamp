@@ -43,7 +43,7 @@ describe('§9.5 the packed tarball works from node_modules', () => {
     const pack = spawnSync(
       'npm',
       ['pack', '--ignore-scripts', '--json', '--pack-destination', tmp],
-      { cwd: REPO_DIR, encoding: 'utf8', env },
+      { cwd: REPO_DIR, encoding: 'utf8', env, shell: process.platform === 'win32' },
     );
     if (pack.status !== 0) throw new Error(`npm pack failed: ${pack.stderr}`);
     const [{ filename }] = JSON.parse(pack.stdout) as [{ filename: string }];
@@ -63,7 +63,8 @@ describe('§9.5 the packed tarball works from node_modules', () => {
 
     project = join(tmp, 'project');
     cpSync(join(E2E_DIR, 'fixtures', 'ts-config'), project, { recursive: true });
-  });
+    // `npm pack` through a shell takes longer than vitest's 10 s default on Windows.
+  }, 60_000);
 
   afterAll(() => {
     rmSync(tmp, { recursive: true, force: true });
