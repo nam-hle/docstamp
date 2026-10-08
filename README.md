@@ -376,6 +376,39 @@ README.md
 - **List exclusion presets last.** `use: [no-tests, more-src]` selects the tests again when `more-src` adds a directory after the exclusions of `no-tests`; the doc gets `W_SHADOWED_EXCLUSION`, naming the pattern and its preset. Write `use: [more-src, no-tests]`.
 - **`dependencies` stays required**, with at least one pattern of the doc's own, and `use` must be a non-empty list of distinct names. Details: [SPEC §8.6](docs/SPEC.md#86-presets).
 
+### Default presets
+
+A preset that nearly every doc needs, such as the test exclusions, can be named once under `default-presets`, next to `presets`:
+
+```yaml
+version: 2
+presets:
+  tests: ["!**/*.test.ts", "!**/__test__/**"]
+default-presets: [tests]
+files:
+  CLAUDE.md:
+    dependencies:
+      - src
+```
+
+Every doc without a `use` key of its own, in `files` or inline, then gets those presets last, after its own patterns:
+
+```console
+$ docstamp list-dependencies CLAUDE.md
+CLAUDE.md
+  depends   src
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  resolved  src/cli/run.ts
+  resolved  src/core/hash.ts
+  resolved  src/index.ts
+```
+
+- **An own `use` replaces them.** A doc with `use: [spec]` gets `spec` only; write `use: [spec, tests]` to keep both, or `use: []` for none. `use: []` is accepted only when `default-presets` exists.
+- **Inline docs see the root configuration.** A doc with an inline block gets the `default-presets` of the configuration file at the root; without a configuration file there are none.
+- **Errors stop the run.** A name in `default-presets` that `presets` does not define is a global `E_UNKNOWN_PRESET`, and a value that is not a non-empty list of distinct names is `E_CONFIG`.
+- **Same rules as any preset.** The warnings, the hash and `--json` treat them as presets the doc named itself: editing `default-presets` makes a doc stale only when its selected files change, and a doc that gets them has `"use": []` with the preset names in `origins`.
+
 ## Proposing dependencies
 
 A doc already says what it is about: the paths in backticks, the links, the globs in the prose. `docstamp suggest <file>...` reads the files you name and proposes their `dependencies` from the repository paths they mention, with the number of files each pattern selects and the share of the last 30 days' commits that would have made the doc stale. `docs/architecture.md` is a doc of a small service:
@@ -512,7 +545,7 @@ Warnings never affect the exit code. Full table: [SPEC §16](docs/SPEC.md#16-exi
 
 ### Configuration
 
-Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules), `presets` ([shared lists](#sharing-a-list-with-presets)) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
+Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules), `presets` ([shared lists](#sharing-a-list-with-presets)), `default-presets` ([presets for every doc](#default-presets)) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
 
 For editor completion and validation in YAML, point the language server at the schema, which the package ships as `schema.json`:
 

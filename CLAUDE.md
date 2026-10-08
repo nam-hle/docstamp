@@ -189,7 +189,9 @@ fixture. A behavior change that a page describes changes the page in the same ch
 
 ## Presets
 
-`presets` in the configuration and `use` on a file or block (SPEC §8.6). `loadWorkspace`
+`presets` and `default-presets` in the configuration and `use` on a file or block (SPEC §8.6).
+`default-presets` is `Config.defaultPresets`, checked in `readConfig`; a Declaration without a `use`
+key (`use` undefined, not `[]`) gets it. `loadWorkspace`
 (`src/cli/workspace.ts`) calls `expandPresets` (`src/engine/presets.ts`) once, so every command sees
 the effective patterns in `Declaration.dependencies` with `origins`; nothing downstream knows about
 presets except the `(preset <name>)` marker of `depends` lines (`dependsLines` in
