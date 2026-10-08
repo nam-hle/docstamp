@@ -1,13 +1,7 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
 import { needsQuoting, quote, shellQuote } from '../core/quote.ts';
-import type {
-  Change,
-  Diagnostic,
-  Result,
-  ReverseDependent,
-  ReverseEntry,
-} from '../core/types.ts';
+import type { Change, Diagnostic, Result, ReverseDependent, ReverseEntry } from '../core/types.ts';
 import type { FileStats } from '../engine/stats.ts';
 import type { StatsWindow } from './json.ts';
 
