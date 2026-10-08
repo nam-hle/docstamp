@@ -117,8 +117,8 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
   macOS and their snapshots come from a Linux run. Snapshots render CR as `␍` and the BOM as
   `<BOM>`: `.gitattributes` has `eol=lf`, so a raw CR would not survive a checkout.
 - **Other platforms are CI's job, not a local container.** `.github/workflows/ci.yml` runs
-  the `Test (<os>)` jobs on Linux (required), macOS (required) and Windows. Windows is
-  informational (`continue-on-error`) until its failures are fixed. Push and read the run instead of reproducing Linux in Docker: the container was slower, ran knip out of
+  the `Test (<os>)` jobs on Linux, macOS and Windows, and all three are required checks. Push and
+  read the run instead of reproducing Linux in Docker: the container was slower, ran knip out of
   memory, and checked less than CI does. A failure that only shows on one platform is a real
   portability bug: fix the code or the test, never skip it silently.
 - Tests are hermetic: no sleeps, no network, nothing outside the temp dir. Keep the suite near
