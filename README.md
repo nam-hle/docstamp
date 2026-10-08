@@ -341,6 +341,61 @@ With `--json`, a file that uses presets also has `use` and `origins` (one entry 
 - **Empty patterns.** An exclusion from a preset that matches no file raises no `W_EMPTY_EXCLUSION` (a doc that has nothing to exclude could not remove it); a preset pattern without `!` that matches nothing is `E_EMPTY_PATTERN`, and the message names the preset.
 - **`dependencies` stays required**, with at least one pattern of the doc's own, and `use` must be a non-empty list of distinct names. Details: [SPEC §8.6](docs/SPEC.md#86-presets).
 
+## Proposing dependencies
+
+A doc already says what it is about: the paths in backticks, the links, the globs in the prose. `docstamp suggest <file>...` reads the files you name and proposes their `dependencies` from the repository paths they mention, with the number of files each pattern selects and the share of the last 30 days' commits that would have made the doc stale. `docs/architecture.md` is a doc of a small service:
+
+```md
+# Architecture
+
+Requests enter through `src/server/router.ts`, are validated by the schemas in
+`src/server/schemas` and handled by `src/server/handlers/users.ts`,
+`src/server/handlers/orders.ts` and `src/server/handlers/billing.ts`. Storage goes
+through [the store](../src/store/index.ts) and is configured by `config/*.yaml`.
+The bundle lands in `dist/server.js` (not versioned); the scripts are in package.json.
+```
+
+```console
+$ docstamp suggest docs/architecture.md
+suggest docs/architecture.md
+  pattern                           files   stale
+  config/*.yaml                         2  0.1111
+  src/server/handlers                   4  0.2222
+  !src/server/handlers/**/*.test.*     -1
+  src/server/router.ts                  1  0.2222
+  src/server/schemas                    2  0.0000
+  src/store/index.ts                    1  0.0000
+  ignored  dist/server.js
+```
+
+Three files of one small directory became the directory, with an exclusion for the test file that is there. `package.json` is not proposed, because every dependency bump would make the doc stale, and `dist/server.js` is only a note, because it is ignored and so cannot be a dependency. `files` is how many files a pattern selects (`-1` is the one file an exclusion cuts), and `stale` is the share of the window's commits that touched any of them; it reads `n/a` when there is no usable git history, and the command never fails for that. `--write` records the proposal as an inline block with no `hash`, so the doc stays `unrecorded` until someone reviews it:
+
+```console
+$ docstamp suggest --write docs/architecture.md
+suggest docs/architecture.md
+  pattern                           files   stale
+  config/*.yaml                         2  0.1111
+  src/server/handlers                   4  0.2222
+  !src/server/handlers/**/*.test.*     -1
+  src/server/router.ts                  1  0.2222
+  src/server/schemas                    2  0.0000
+  src/store/index.ts                    1  0.0000
+  ignored  dist/server.js
+written  docs/architecture.md
+$ docstamp
+STALE    docs/architecture.md  (unrecorded)
+  depends   config/*.yaml
+  depends   src/server/handlers
+  depends   !src/server/handlers/**/*.test.*
+  depends   src/server/router.ts
+  depends   src/server/schemas
+  depends   src/store/index.ts
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
+```
+
+The block is inserted into the frontmatter, or a minimal frontmatter is created; every other byte of the file stays (comments, the byte order mark, CR LF). Running it twice gives the same bytes. It never stamps, and it refuses to overwrite a block that records a `hash` or names presets with `use`, or a doc declared in the configuration file: edit those by hand. Read the proposal before you keep it: a bare directory mention can select hundreds of files, and a mention may be an illustration, not something the doc states. The extraction rules (what counts as a mention, the generic files that are dropped, when files collapse into their directory, which test exclusions are added) are in [SPEC §12.6](docs/SPEC.md#126-proposal); the command is [§13.10](docs/SPEC.md#1310-suggest).
+
 ## Measuring how noisy a list is
 
 A broad list is the easy one to write and the one people stop reading: it goes stale on most commits. `docstamp stats` tells you before you commit to a list. It takes the files each doc resolves to today, replays the commits of a window against them, and counts the commits that would have made the doc stale. It only reports: it reads history, writes nothing, needs no lock, always exits 0 on success and leaves `check` unaffected. This is docstamp's own history since `v0.3.1`:
@@ -400,16 +455,17 @@ That is one entry of `files`; the report also has `version`, `mode`, `exitCode`,
 | `docstamp list-dependencies [<file>...]` | Each file with its dependency patterns and the files they select. It does not read the lock. |
 | `docstamp list-dependents [--transitive] <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only unless `--transitive`, which also lists the dependents of those dependents. No lock. A path that exists nowhere gets a `W_UNKNOWN_PATH` warning and exit 0. |
 | `docstamp stats [--since <n>d \| --from <rev>] [<file>...]` | Report how often each file's dependencies would have made it stale over the last `n` days or since `<rev>` ([Measuring how noisy a list is](#measuring-how-noisy-a-list-is)). Reads git history, never the lock. |
+| `docstamp suggest [--write] <file>...` | Propose each file's dependencies from the repository paths it mentions ([Proposing dependencies](#proposing-dependencies)). With `--write`, record them as an inline block without a hash. Never stamps. |
 | `docstamp help` | Usage. |
 | `docstamp version` | The installed version. |
 
-Every command except `help` and `version` takes `--json` and `--root <dir>`; `--root` needs a directory and never takes another option as its value. A command that fails before anything is evaluated (bad configuration, lock, root or file argument) prints only its diagnostics: no summary line, and `--json` omits `summary`. A file argument that is unknown or outside the root fails the whole command with only its diagnostics, never a partial report. The options `--write` and `--files` were replaced by `update` and `list-dependencies`. Command line: [SPEC §13](docs/SPEC.md#13-command-line).
+Every command except `help` and `version` takes `--json` and `--root <dir>`; `--root` needs a directory and never takes another option as its value. A command that fails before anything is evaluated (bad configuration, lock, root or file argument) prints only its diagnostics: no summary line, and `--json` omits `summary`. A file argument that is unknown or outside the root fails the whole command with only its diagnostics, never a partial report. `--write` is for `suggest` alone; `--files` and the old `--write` were replaced by `list-dependencies` and `update`. Command line: [SPEC §13](docs/SPEC.md#13-command-line).
 
 ### Exit codes
 
 | Code | Meaning |
 |---|---|
-| 0 | `check`: every selected file is `ok`. `update`, `list-*`, `stats`, `help`, `version`: success. |
+| 0 | `check`: every selected file is `ok`. `update`, `list-*`, `stats`, `suggest`, `help`, `version`: success. |
 | 1 | `check` only: a selected file is `stale`. |
 | 2 | An error, an `invalid` file, or a usage error. |
 | 70 | An unexpected internal failure. |

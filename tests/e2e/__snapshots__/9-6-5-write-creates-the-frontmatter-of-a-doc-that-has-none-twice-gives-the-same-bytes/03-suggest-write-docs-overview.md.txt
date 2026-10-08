@@ -1,0 +1,16 @@
+$ docstamp suggest --write docs/overview.md
+exit: 0
+--- stdout ---
+suggest docs/overview.md
+  pattern                   files  stale
+  docs/guide/setup.md           1    n/a
+  scripts/*.mjs                 2    n/a
+  src/cli                       3    n/a
+  src/engine                    3    n/a
+  !src/engine/**/*.test.*      -1
+  !src/engine/**/__tests__     -1
+  src/util                      4    n/a
+  tests/unit                    1    n/a
+  ignored  build/output.js
+unchanged  docs/overview.md
+--- stderr ---

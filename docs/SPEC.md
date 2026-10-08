@@ -44,13 +44,16 @@ permitted variations are:
 - the changed-file report (`[[Changes]]`, §5.4), which depends on the repository history available
   on the host, for example a shallow clone against a full clone;
 - the output of `stats` (§13.9), which depends on the repository history and, for `--since`, on the
-  wall-clock time.
+  wall-clock time;
+- the `staleRate` of `suggest` (§13.10), which depends on the repository history and the wall-clock
+  time, and is *none* when the history cannot answer.
 
 A conforming implementation MUST NOT perform network access. It MAY invoke `git`, read-only, only
-to compute the changed-file report (§12.3) and the replay of `stats` (§12.4). The verdict (states
-and reasons), the Lockfile and the exit code of every command MUST NOT depend on `git`, except that
-`stats` fails with exit 2 when the history it needs is missing (§12.4). `stats` is the only place
-that reads the wall-clock time, and only for `--since`.
+to compute the changed-file report (§12.3) and the replay of `stats` and `suggest` (§12.4). The
+verdict (states and reasons), the Lockfile and the exit code of every command MUST NOT depend on
+`git`, except that `stats` fails with exit 2 when the history it needs is missing (§12.4); `suggest`
+never fails for want of history. `stats` and `suggest` are the only places that read the wall-clock
+time: `stats` only for `--since`, `suggest` for its fixed window of 30 days.
 
 ## 3 Notational Conventions
 
@@ -849,6 +852,42 @@ hash input change, breaking (§17.2) and needing a deliberate decision and a Loc
 (§17.4). It is not part of this version; the issue that tracks it (nam-hle/docstamp#24) stays open
 for that part.
 
+#### 9.6.5 Writing a Block
+
+`WriteBlock(text, dependencies)` returns the text of a file with an inline block that declares
+*dependencies*, a non-empty List of patterns, and never a `hash` key, or raises `E_USAGE`. It is
+used only by `suggest --write` (§13.10); it never records a Review.
+
+1. Let *scan* be `ScanFrontmatter(text)`. Let *item*(*s*) be *s* if it matches
+   `^([A-Za-z_]|\.[A-Za-z_])[A-Za-z0-9_./@+=*?\[\]{},-]*$` and is none of `true`, `false`, `null`,
+   `y`, `n`, `yes`, `no`, `on`, `off`, `.inf`, `.nan` in any letter case, else `Quote(s)` (§3.4).
+2. If *scan* is not *none*:
+   1. If *hashLines* of *scan* is not empty, raise: a block that records a Hash is never
+      overwritten; its message tells the user to edit it by hand. Likewise raise if a line from
+      *marker* + 1 to *last* starts with *keyIndent* followed by `use:`: a block that names presets
+      (§8.6) is never overwritten, so its `use` is never lost.
+   2. If the marker line, after `docstamp:`, is not only blanks and an optional `#` comment, raise.
+   3. Let *indent* be *keyIndent*, or two U+0020 if it is *absent*, and *eol* the terminator of the
+      marker line. Replace the lines after *marker* up to and including *last* by the line *indent*
+      and `dependencies:`, and, for each pattern *s*, the line *indent*, two U+0020, `- `,
+      *item*(*s*), each followed by *eol*.
+3. Otherwise, if the first line of *text* (without a leading U+FEFF) and a later line are `---`
+   (§5.6 steps 2 and 3), insert before that later line the line `docstamp:` and, for the lines of
+   step 2.3 with *indent* two U+0020, each followed by the terminator of the first line.
+4. Otherwise let *text* start with the U+FEFF if it has one, then the lines `---`, `docstamp:` and
+   the lines of step 2.3 with *indent* two U+0020, then `---`, each followed by the terminator of
+   the first line of *text* (CR LF if it is CR LF, else LF), then the rest of *text*.
+5. Let *result* be the text so produced. If `ScanFrontmatter(result)` is *none*, if `ParseBlock`
+   (§9.6.2) of it raises, or if the dependencies it declares differ from *dependencies*, raise.
+   Otherwise return *result*.
+
+NOTE: Every byte of *text* outside the replaced lines survives: the other frontmatter, the byte
+order mark, the body and the line terminators of every line. The replaced lines are the ones of the
+block, so a comment inside a block without a `hash` is not kept; the marker line, with its own
+comment, is. Step 5 is the safety net: a frontmatter this clause cannot extend with certainty (for
+example one that is not strict YAML, §9.2, or already has a quoted `"docstamp"` key) is
+refused, never rewritten.
+
 ## 10 Hashing
 
 ### 10.1 Binary Content
@@ -1178,6 +1217,83 @@ NOTE: Dependencies are the ones resolved now, at `HEAD` (§12.1), not the ones o
 file deleted or renamed inside the Window is not a dependency any more and is not seen. A Window
 that crosses a reorganization therefore understates how often a list would have been stale.
 
+### 12.6 Proposal
+
+`Propose(doc, text, universe, isIgnored)` returns a List of *Suggestions* and a List of
+*ignored* RepoPaths, in path order. *text* is the text of the file *doc* (§9.6.1), *universe* the Universe
+(§7) and *isIgnored* the test of §8.5 NOTE. A *Suggestion* is { `[[Pattern]]`: a valid Pattern
+(§8.1), `[[Files]]`: the List of RepoPaths it contributes, in path order }. Let *U* be *universe*
+without *doc*. A *file* below is a member of *U*; a *directory* is a String that is a proper
+prefix, before a `/`, of some path of *U*.
+
+1. *Reading.* Let *lines* be the lines of *text* (§5.6). If `ScanFrontmatter(text)` is not *none*,
+   remove the lines from its *marker* through its *last*: the inline block is never read, so that
+   writing it (§9.6.5) cannot change a proposal. Remove the *fenced* lines: a line that, after at
+   most three U+0020, starts with three or more U+007E, or with three or more U+0060 and has no
+   other U+0060, opens a fence; the fence closes at the first later line that, after at most three U+0020, is only that
+   code point, at least as many times, and blanks; one that is not closed lasts to the end. The
+   opening, enclosed and closing lines are removed. Let *prose* be the other lines, joined.
+2. *Spans.* A *code span* is a run of *n* U+0060 with no U+0060 next to it, code points that are
+   not line terminators, and the next such run of exactly *n*. Collect, for each code span in
+   *prose* from left to right, its content without leading and trailing blanks if that has no
+   blank, a *span word*; replace the code span in *prose* by one U+0020.
+3. *Links.* A *link target* is, in *prose*: after `](` and blanks, either `<`, code points other than
+   `<`, `>` and line terminators, and `>`, or a run of code points other than whitespace, `(` and
+   `)`; or, in a line that after at most three U+0020 is `[`, code points other than `]`, `]:` and
+   blanks, the same two forms with a run of any non-whitespace code points. Collect each target
+   without its `<` and `>`, and replace it, with them, by one U+0020.
+4. *Words.* Split what remains of *prose* at whitespace and at each of U+0060, `(`, `)`, `<`, `>`,
+   `"`, `'`, `|` and `;`. A *bare word* is a part that contains a `/` and does not start with `*`.
+5. *Normalization.* `NormalizeWord(w)` returns a String or *none*: remove from the end of *w*, for a
+   bare word only, every `.`, `,`, `;`, `:` and `!`; then a final `:` and digits, or `:`, digits, `:`
+   and digits; cut *w* at its first `#`; remove every leading `./` and a leading `/`; remove every
+   trailing `/`. Return *none* if *w* is then empty, starts with a scheme (`[A-Za-z][A-Za-z0-9+.-]*:`)
+   or `!`, contains `\`, or has a segment that is empty, `.` or `..`. Otherwise return *w* in NFC.
+   `NormalizeLink(t)` for a link target *t*: cut *t* at its first `#` or `?`; return *none* if it is
+   then empty, starts with `//` or with a scheme; percent-decode it (a malformed escape leaves it
+   as it is); resolve it lexically against the directory of *doc* (a leading `/` makes it relative
+   to Root instead); return *none* if the result is empty or leaves Root; remove every trailing `/`;
+   return it in NFC. The *candidates* are the `NormalizeWord` of every span word and of every bare
+   word, and the `NormalizeLink` of every link target, that are not *none*, without duplicates.
+6. *Classification.* A candidate with none of `*`, `?`, `[`, `{` is *literal*; it is dropped unless
+   it is a valid Pattern without Negation that denotes itself (§8.5 NOTE). A literal candidate is a
+   *file* if it is in *U*, else a *directory* if it is one, else it is added to *ignored* if
+   *isIgnored* holds for it and it is not *doc*, else dropped. Any other candidate is a *glob*: it
+   is dropped unless it is a valid Pattern without Negation with a Literal in some segment (so `*` and
+   `**` are never proposed), and kept if `Select(« glob », U)` holds a file that is not *generic*.
+7. *Generic files.* A file is *generic* iff it has no `/` and it is one of: `package.json`,
+   `package-lock.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `yarn.lock`, `bun.lock`,
+   `bun.lockb`, `deno.json`, `deno.jsonc`, `pyproject.toml`, `requirements.txt`, `setup.py`,
+   `setup.cfg`, `poetry.lock`, `uv.lock`, `Cargo.toml`, `Cargo.lock`, `go.mod`, `go.sum`, `pom.xml`,
+   `Gemfile`, `Gemfile.lock`, `composer.json`, `composer.lock`, `build.gradle`, `build.gradle.kts`,
+   `settings.gradle`, `settings.gradle.kts`, `gradle.properties`, `Makefile`, `CMakeLists.txt`,
+   `LICENSE`, `LICENSE.md`, `LICENSE.txt`, `LICENCE`, `COPYING`, `CHANGELOG.md`, `.gitignore`,
+   `.gitattributes`, `docstamp.yaml`, `docstamp.config.ts`, `docstamp.config.mts`,
+   `docstamp.config.js`, `docstamp.config.mjs`, `docstamp-lock.yaml`, or matches `tsconfig*.json`.
+   Generic files are dropped from the *file* candidates.
+8. *Collapse.* Let *files*, *dirs* and *globs* be the candidates so classified. For each directory
+   *d* (never the empty String) with at least 3 of *files* directly in it, let *below* be the files
+   of *U* below *d*: if *below* has at most 5 files, or every file of *below* is in *files*, add *d*
+   to *dirs*.
+9. *Coverage.* Remove from *dirs* every *d* below another member of *dirs*. For each *d* of *dirs*
+   let its *exclusions* be, in this order, those of `!`*d*`/**/*.test.*`, `!`*d*`/**/*.spec.*`,
+   `!`*d*`/**/__test__` and `!`*d*`/**/__tests__` that match (§8.3) at least one file of *U*, and
+   none if some segment of *d* is `test`, `tests`, `spec`, `specs`, `__test__` or `__tests__`. Remove
+   from *files* every file below a member *d* of *dirs* unless one of the exclusions of *d* matches it.
+10. *Order.* The Suggestions are, in path order of their pattern, the members of *files*, *dirs* and
+   *globs*, each with `[[Files]]` `Select(« pattern » and its exclusions, U)`, and each directory
+   directly followed by one Suggestion for each of its exclusions, with `[[Files]]` the files of *U*
+   that the exclusion matches.
+
+NOTE: A proposal is the list one would write by hand from what the doc says, and it is a proposal
+only: nothing is read from the repository history, no pattern is judged too broad, and the doc is
+not evaluated. Every non-excluding Suggestion selects a file of *U*, so the list passes §8.5 step 3
+as written, and an exclusion matches a file of *U*, so it raises no `W_EMPTY_EXCLUSION`. A Suggestion
+for an exclusion has no files of its own: its `[[Files]]` are the files it matches. A mention in a
+fenced block, in the inline block or of an ignored path is never proposed. A glob keeps a generic
+file it happens to select. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern
+as written and is dropped.
+
 ## 13 Command Line
 
 ### 13.1 Synopsis
@@ -1188,6 +1304,7 @@ docstamp update [--json] [--root <dir>] (--all | <file>...)
 docstamp list-dependencies [--json] [--root <dir>] [<file>...]
 docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
 docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
+docstamp suggest [--json] [--root <dir>] [--write] <file>...
 docstamp help
 docstamp version
 docstamp --help
@@ -1195,18 +1312,18 @@ docstamp --version
 ```
 
 The commands are `check` (§13.5), `update` (§13.6), `list-dependencies` (§13.7),
-`list-dependents` (§13.8), `stats` (§13.9), `help` and `version`. `--help` is the same command as `help`, and `--version` the same as `version`.
+`list-dependents` (§13.8), `stats` (§13.9), `suggest` (§13.10), `help` and `version`. `--help` is the same command as `help`, and `--version` the same as `version`.
 
 ### 13.2 Parsing
 
 The command line is parsed before anything else.
 
-1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--help`, `--version`, and the options with a value, each
+1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--write`, `--help`, `--version`, and the options with a value, each
    written `--name <value>` or `--name=<value>`: `--root`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
-   `list-dependencies`, `list-dependents`, `stats`, `help` or `version`; it is then not a file argument. Otherwise, and when there
+   `list-dependencies`, `list-dependents`, `stats`, `suggest`, `help` or `version`; it is then not a file argument. Otherwise, and when there
    is none, the command is `check` and that argument stays a file argument. A command word in any
    later position, or after `--`, is a file argument. Options and file arguments may appear in
    any order.
@@ -1219,13 +1336,14 @@ Each message states the problem:
 
 - an unknown option, a missing value for an option with a value (none, empty, `--`, or a
   recognised option, so `--root --json` is an error), or an option given twice;
-- `--write` or `--files`, which were removed: the message names the replacement, `docstamp update`
-  for `--write` and `docstamp list-dependencies` for `--files`;
+- `--write` with any command but `suggest`, and `--files`, which were removed: the message names
+  the replacement, `docstamp update` for `--write` and `docstamp list-dependencies` for `--files`;
 - `--all` with any command but `update`;
 - `--transitive` with any command but `list-dependents`;
 - `--only-stale` or `--quiet` with any command but `check` (`[[Subject]]` the option);
 - `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both;
-- `list-dependents` with no file argument (`[[Subject]]` is `list-dependents`);
+- `list-dependents` with no file argument (`[[Subject]]` is `list-dependents`), or `suggest` with
+  none (`[[Subject]]` is `suggest`);
 - `--since` or `--from` with any command but `stats`; `--since` and `--from` together (`[[Subject]]`
   `--since`, the message names both);
 - a `--since` that is not a positive integer without leading zeros followed by `d` (`30d`), or is
@@ -1449,6 +1567,50 @@ work. `stats` shows how the lists of today would have behaved and never changes 
 `check`. The caveat of §12.5 applies: the dependencies are those of `HEAD`. A file named `stats` is
 reached as `docstamp -- stats` (§13.2).
 
+### 13.10 Suggest
+
+Proposes the `dependencies` of each named file from the paths it mentions (§12.6), with the files
+each pattern selects and how often it would have made the file stale over the last 30 days. With
+`--write` it records the proposal as an inline block without a `hash`, so the file stays
+`unrecorded` until a person reviews it and runs `update` (§13.6). The command never stamps, never
+reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 whatever it finds.
+
+1. Let *root* be `? DetermineRoot(cwd, --root)`, *config* be the Config of `? ReadConfig(root)`
+   (§9.3; a Root with no Configuration file and no inline block is not an error here) and *universe*
+   be `? ComputeUniverse(root, config)`.
+2. For each distinct file argument *arg*, in path order of its *path*: if `ToRepoPath(arg, cwd, root)`
+   (§13.4) fails, raise « `E_USAGE` with `[[Subject]]` *arg* », for each such *arg*. Otherwise, if *path*
+   is not an entry of kind *file*, or has no text (§9.6.1), raise « `E_UNREADABLE` » with
+   `[[Subject]]` *path*, for each such *path*.
+3. If `--write` is given, then for each *path*, raise « `E_USAGE` with `[[Subject]]` *path* » when
+   *path* has a configured Declaration (`[[Declarations]]` of *config*), or is not a candidate
+   (§9.6.1): a block in such a file would never be read. The message tells the user to edit the
+   configuration by hand, or to name a file that `include` selects.
+4. Let (*suggestions*, *ignored*) be `Propose(path, text, universe, isIgnored)` (§12.6) for each *path*.
+5. Let *window* be `Replay(root, days 30, now)` (§12.4), *now* being the wall-clock time; if it
+   raises, or the Window has no Commit, let *window* be *none*: no Diagnostic is output for it.
+6. For each Suggestion of each file whose pattern has no Negation, let its *staleRate* be the
+   `[[StaleRate]]` that `Statistics` (§12.5) gives it for the Result with `[[Resolved]]` its
+   `[[Files]]`, or *none* if *window* is *none*. The *staleRate* of every other Suggestion is *none*.
+7. If `--write` is given, let *new* be, for each *path* whose *suggestions* is not empty,
+   `? WriteBlock(text, patterns)` (§9.6.5), *patterns* being the patterns of *suggestions* in order.
+   Only if no step has raised, replace each *path* whose *new* differs from its text atomically, as
+   §9.6.4 step 3 does; it is then *written*, and every other file is not.
+8. Output the Suggestions, *ignored* and, with `--write`, which files were *written* (§14.9, §14.5),
+   and exit 0.
+
+If a step raises, output the raised Diagnostics as global and exit 2; with `--write` nothing was
+written then, except that a failure to replace a file (`E_UNREADABLE`) in step 7 leaves the files
+replaced before it replaced.
+
+NOTE: A block that records a `hash` is never overwritten by this command, nor is a configured
+Declaration: both are the result of a decision, and the message says to edit them by hand. A block
+without a `hash` is replaced, so `suggest --write` twice gives the same bytes (§12.6 step 1 never
+reads the block). A file with no Suggestion is not written: a block needs a dependency. The
+`staleRate` follows §12.5 with the caveat of its NOTE: dependencies are the ones of `HEAD`, and a
+proposal that names a file the window deleted cannot see it. A file literally named `suggest` is
+reached as `docstamp -- suggest` (§13.2).
+
 ## 14 Output
 
 ### 14.1 Streams and Encoding
@@ -1646,7 +1808,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 }
 ```
 
-- `mode` is `check`, `update`, `list-dependencies`, `list-dependents` or `stats`.
+- `mode` is `check`, `update`, `list-dependencies`, `list-dependents`, `stats` or `suggest`.
 - `files` holds every selected Result (check) or every target (update), in path order,
   including `ok` ones. With `check --only-stale` the `ok` ones are omitted, and `summary`
   still counts every selected Result (§13.5).
@@ -1751,6 +1913,35 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   file are the warnings of its Result; the top-level `diagnostics` hold the raised Diagnostics.
   `staleRate` and `sweepShare` are JSON numbers: the ten-thousandths of §12.5 divided by 10000,
   written as ECMAScript writes a Number (`0.3957`, `0.5`, `1`, `0`).
+- With `suggest` the document is instead (§13.10):
+
+  ```json
+  {
+    "version": 2,
+    "mode": "suggest",
+    "exitCode": 0,
+    "files": [
+      {
+        "file": "README.md",
+        "suggestions": [
+          { "pattern": "src/cli", "resolvedCount": 12, "staleRate": 0.1234 },
+          { "pattern": "!src/cli/**/*.test.*", "resolvedCount": 3, "staleRate": null }
+        ],
+        "ignored": ["dist/index.js"],
+        "diagnostics": []
+      }
+    ],
+    "diagnostics": []
+  }
+  ```
+
+  It has no `summary`, `state`, `reasons` or `changes`. `files` holds each named file in path order,
+  with `suggestions` the Suggestions of §12.6 in their order: `pattern`, `resolvedCount` the number
+  of `[[Files]]`, and `staleRate` the Number of §13.10 step 6 (as `stats` writes `staleRate`, §14.5
+  above) or `null`. `ignored` is the List of §12.6, `[]` when there is none. With `--write` each
+  element adds `"written": true|false` after `diagnostics`. The `diagnostics` of a file are always
+  `[]`, kept for the shape of the other modes; the top-level `diagnostics` hold the raised
+  Diagnostics, in which case `files` is empty.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
   empty `[[File]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
 - When a step raises before Results exist, `summary` is omitted (as it always is for
@@ -1823,11 +2014,37 @@ for `--since` and `in <rev>..HEAD` for `--from`, with *rev* as given and written
 the command raised or a file was `invalid`, nothing is output on standard output. Diagnostics as in
 §14.3.
 
+### 14.9 Suggest, Text Mode
+
+```
+suggest docs/architecture.md
+  pattern                           files   stale
+  config/*.yaml                         2  0.1111
+  src/server/handlers                   4  0.2222
+  !src/server/handlers/**/*.test.*     -1
+  src/store/index.ts                    1  0.0000
+  ignored  dist/server.js
+written  docs/architecture.md
+```
+
+One block per file, in path order. The first line is `suggest ` and the file as in §14.2. Then, when
+the file has at least one Suggestion, a header row and one row per Suggestion in order, with the
+columns `pattern`, `files` and `stale`, separated by two spaces and indented by two spaces. The
+`pattern` column is the pattern as in §14.2, padded with spaces on the right; the others are padded
+on the left, each to the width of its longest cell, header included. `files` is the number of
+`[[Files]]`, written with a leading `-` for a Suggestion whose pattern has a Negation. `stale` is
+the `staleRate` with exactly four decimals as in §14.8, `n/a` when it is *none* for a pattern with no Negation,
+and empty for one with a Negation. A row has no trailing space. A file with no Suggestion has the
+single line `  no paths found`. Then one line `  ignored  <path>` per *ignored* path, as in §14.2,
+in path order. With `--write`, after all blocks, one line `written  <file>` or `unchanged  <file>`
+per file in path order. Diagnostics as in §14.3, and nothing is output on standard output when the
+command raised.
+
 ## 15 Diagnostics
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2, §13.8 | correct the command line; for a removed option, use the command it names; for a file argument outside Root, name a path that resolves, against the current directory, inside Root |
+| `E_USAGE` | error | §13.2, §13.8, §13.10, §9.6.5 | correct the command line; for a removed option, use the command it names; for a file argument outside Root, name a path that resolves, against the current directory, inside Root |
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6) |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
@@ -1841,7 +2058,7 @@ the command raised or a file was `invalid`, nothing is output on standard output
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
-| `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3 | fix permissions, or make the Root writable |
+| `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3, §13.10 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |
@@ -1857,7 +2074,7 @@ the command raised or a file was `invalid`, nothing is output on standard output
 
 | Code | Meaning |
 |---|---|
-| 0 | check: every selected file is `ok`; update: the Lockfile was written or already current; list-dependencies, list-dependents: the answer was listed; stats: the statistics were listed; help, version |
+| 0 | check: every selected file is `ok`; update: the Lockfile was written or already current; list-dependencies, list-dependents: the answer was listed; stats: the statistics were listed; suggest: the proposal was listed, even when it is empty; help, version |
 | 1 | check only: a selected file is `stale`, none is `invalid`, no global error |
 | 2 | an error Diagnostic, an `invalid` file, or a usage error |
 | 70 | an uncaught internal fault of the runtime, reported on standard error as `internal error: ` and the stack; for example a failed write to standard output. No input produces it: every failure caused by the command line, the Root or the file system is a Diagnostic and exit 2 |
@@ -1931,6 +2148,11 @@ The following are not breaking:
   (§14.3.1, §14.3.4). A program reads the verdict from the exit
   code and from `--json` (§14.5), never from this layout. Standard error keeps every line and its
   order;
+- `suggest` (§13.10), its option `--write`, and the proposal rules of §12.6, §9.6.5 and §14.9. It
+  raises no new Diagnostic code, no command line that was accepted changes meaning, and no existing
+  command changes. A bare argument `suggest` used to be a file argument of `check`; it is now the
+  command, and a file literally named `suggest` is reached with `--` (§13.2), as for every other
+  command word. `--write` without `suggest` is still refused (§13.2);
 - a new member of the JSON output (§14.5: consumers ignore unknown members);
 - a change to the output of `--help`, `--version` or the changed-file report (§2); this includes
   the description of `update` in `--help`, reworded to hold for inline files too;

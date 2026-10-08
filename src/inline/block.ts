@@ -5,7 +5,8 @@ import { parsePattern } from '../pattern/parse.ts';
 import { hashOnLine, type Scan } from './frontmatter.ts';
 import { BLOCK_KEYS, HASH } from './keys.ts';
 
-const MARKER_REST = /^[ \t]*(?:#.*)?\r?\n?$/u;
+// SPEC §9.6.2 step 2
+export const MARKER_REST = /^[ \t]*(?:#.*)?\r?\n?$/u;
 const isMap = (v: YamlValue | undefined): v is YamlMap =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 

@@ -1,0 +1,8 @@
+$ docstamp check
+exit: 1
+--- stdout ---
+STALE    README.md  (unrecorded)
+  depends   docs/guide
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md
+--- stderr ---

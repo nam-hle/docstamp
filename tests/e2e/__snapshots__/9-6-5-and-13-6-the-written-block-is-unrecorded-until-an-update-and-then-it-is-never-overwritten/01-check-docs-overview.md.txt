@@ -1,0 +1,15 @@
+$ docstamp check docs/overview.md
+exit: 1
+--- stdout ---
+STALE    docs/overview.md  (unrecorded)
+  depends   docs/guide/setup.md
+  depends   scripts/*.mjs
+  depends   src/cli
+  depends   src/engine
+  depends   !src/engine/**/*.test.*
+  depends   !src/engine/**/__tests__
+  depends   src/util
+  depends   tests/unit
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/overview.md
+--- stderr ---

@@ -1,0 +1,24 @@
+$ docstamp suggest --json docs/inline.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "suggest",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "docs/inline.md",
+      "suggestions": [
+        {
+          "pattern": "src/cli",
+          "resolvedCount": 3,
+          "staleRate": null
+        }
+      ],
+      "ignored": [],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

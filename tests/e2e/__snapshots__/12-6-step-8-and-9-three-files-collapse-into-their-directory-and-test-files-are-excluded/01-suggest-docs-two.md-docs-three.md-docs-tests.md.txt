@@ -1,0 +1,23 @@
+$ docstamp suggest docs/two.md docs/three.md docs/tests.md
+exit: 0
+--- stdout ---
+suggest docs/tests.md
+  pattern                   files  stale
+  src/engine                    3    n/a
+  !src/engine/**/*.test.*      -1
+  !src/engine/**/__tests__     -1
+  src/engine/parse.test.ts      1    n/a
+suggest docs/three.md
+  pattern   files  stale
+  src/util      4    n/a
+suggest docs/two.md
+  pattern        files  stale
+  src/util/a.ts      1    n/a
+  src/util/b.ts      1    n/a
+--- stderr ---
+--- setup: docs/two.md ---
+Only `src/util/a.ts` and `src/util/b.ts`.
+--- setup: docs/three.md ---
+Now `src/util/a.ts`, `src/util/b.ts` and `src/util/c.ts`.
+--- setup: docs/tests.md ---
+Also `src/engine/parse.ts`, `src/engine/emit.ts` and `src/engine/parse.test.ts`.

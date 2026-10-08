@@ -1,0 +1,11 @@
+file: docs/block.md
+--- content ---
+---
+title: Block
+docstamp: # keep this comment
+  dependencies:
+    - src/cli
+    - src/engine/parse.ts
+author: me
+---
+See `src/cli` and `src/engine/parse.ts`.

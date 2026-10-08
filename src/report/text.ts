@@ -6,7 +6,7 @@ import type { FileStats } from '../engine/stats.ts';
 import type { StatsWindow } from './json.ts';
 
 // SPEC §14.2
-function shown(s: string): string {
+export function shown(s: string): string {
   return needsQuoting(s) || /[ ()]/u.test(s) ? quote(s) : s;
 }
 

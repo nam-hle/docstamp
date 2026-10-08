@@ -17,6 +17,9 @@ Usage:
   docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
       Report how often each file's dependencies would have made it stale over recent history:
       the last <n> days (default --since 30d), or the commits of <rev>..HEAD.
+  docstamp suggest [--json] [--root <dir>] [--write] <file>...
+      Propose dependencies from the paths each file mentions; --write records them as an inline
+      block without a hash.
   docstamp help
       Print this usage (also --help).
   docstamp version

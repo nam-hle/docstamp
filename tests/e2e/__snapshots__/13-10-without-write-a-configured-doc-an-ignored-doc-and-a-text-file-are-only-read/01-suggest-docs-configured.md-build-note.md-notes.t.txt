@@ -1,0 +1,15 @@
+$ docstamp suggest docs/configured.md build/note.md notes.txt
+exit: 0
+--- stdout ---
+suggest build/note.md
+  pattern  files  stale
+  src/cli      3    n/a
+suggest docs/configured.md
+  pattern          files  stale
+  src/cli/main.ts      1    n/a
+  src/util             4    n/a
+suggest notes.txt
+  pattern            files  stale
+  scripts/check.mjs      1    n/a
+  src/cli                3    n/a
+--- stderr ---

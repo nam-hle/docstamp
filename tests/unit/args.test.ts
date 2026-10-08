@@ -231,3 +231,53 @@ describe('§13.2 list-dependents', () => {
     expect(() => parseArgs(['list-dependents', 'a', '--transitive', '--transitive'])).toThrow();
   });
 });
+
+describe('§13.2 suggest', () => {
+  it('takes file arguments, --write and the common options', () => {
+    expect(parseArgs(['suggest', 'a.md'])).toEqual({
+      mode: 'suggest',
+      json: false,
+      paths: ['a.md'],
+      write: false,
+    });
+    expect(parseArgs(['--write', 'suggest', '--json', '--root', 'r', 'a.md', 'b.md'])).toEqual({
+      mode: 'suggest',
+      json: true,
+      root: 'r',
+      paths: ['a.md', 'b.md'],
+      write: true,
+    });
+  });
+  it('needs a file argument', () => {
+    expect(usage(['suggest'])).toBe('suggest');
+    expect(usage(['suggest', '--write', '--json'])).toBe('suggest');
+  });
+  it('--write is for suggest alone, the other commands still refuse it', () => {
+    for (const argv of [
+      ['--write'],
+      ['check', '--write'],
+      ['update', '--write', 'a'],
+      ['stats', '--write'],
+    ]) {
+      expect(usage(argv)).toBe('--write');
+      expect(failure(argv)?.message).toContain('docstamp update');
+    }
+    expect(usage(['suggest', '--write', '--write', 'a'])).toBe('--write');
+  });
+  it('--all, --since and --from are refused', () => {
+    expect(usage(['suggest', '--all', 'a'])).toBe('--all');
+    expect(usage(['suggest', '--since', '30d', 'a'])).toBe('--since');
+    expect(usage(['suggest', '--from', 'main', 'a'])).toBe('--from');
+  });
+  it('the word suggest is the command only first; a file named suggest is reached after --', () => {
+    expect(parseArgs(['--', 'suggest'])).toMatchObject({ mode: 'check', paths: ['suggest'] });
+    expect(parseArgs(['check', 'suggest'])).toMatchObject({ mode: 'check', paths: ['suggest'] });
+    expect(parseArgs(['suggest', 'suggest'])).toMatchObject({
+      mode: 'suggest',
+      paths: ['suggest'],
+    });
+  });
+  it('HELP names the command and its options', () => {
+    expect(HELP).toContain('docstamp suggest [--json] [--root <dir>] [--write] <file>...');
+  });
+});

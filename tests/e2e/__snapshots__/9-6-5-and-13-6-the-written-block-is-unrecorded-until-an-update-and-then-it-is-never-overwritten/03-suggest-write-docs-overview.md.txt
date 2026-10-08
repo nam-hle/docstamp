@@ -1,0 +1,5 @@
+$ docstamp suggest --write docs/overview.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: docs/overview.md: docs/overview.md records a hash; edit its docstamp block by hand.

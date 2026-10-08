@@ -62,14 +62,14 @@ docstamp/
 │   ├── index.ts          # entry; wires the CLI
 │   ├── lib.ts            # library entry: defineConfig, DocstampConfig (§9.5)
 │   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
-│   ├── cli/              # args, path resolution, workspace load, run; exit codes (§13, §16)
+│   ├── cli/              # args, path resolution, workspace load, run, suggest; exit codes (§13, §16)
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
-│   ├── inline/           # inline declarations: frontmatter scan, block parse, keys, schema, stamp (§5.6, §9.6)
+│   ├── inline/           # inline declarations: frontmatter scan, block parse, keys, schema, stamp, block write (§5.6, §9.6)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
-│   ├── engine/           # evaluation, presets, reverse lookup, stats; pure, no I/O (§8.6, §12, §12.5, §13.8)
+│   ├── engine/           # evaluation, presets, reverse lookup, stats, proposal; pure, no I/O (§8.6, §12, §12.5, §12.6, §13.8)
 │   ├── history/          # changed-file report (§12.3) and stats replay (§12.4), git, read-only
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json and schema-frontmatter.json
@@ -107,7 +107,7 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
 - **Fixture**: a plain tree under `tests/e2e/fixtures/<use case>/`; add one when a use case needs
   files the existing ones lack (cwd, nesting, ignore rules). Fixture sources are never formatted,
   linted, type-checked, collected by vitest or scanned by knip; a `docstamp.config.ts` there imports `docstamp` through
-  `linkLib: true`, which links the repo as `node_modules/docstamp`.
+  `linkLib: true`, which links the repo as `node_modules/docstamp`. A fixture file that the fixture's own `.gitignore` ignores (it is the point of the file) is added with `git add -f`, or a fresh `git archive` loses it.
 - **Snapshots**: only the temp root becomes `<root>`; hashes stay real, which pins hash
   stability. After a deliberate behavior change run `pnpm test:e2e -u`, then read every changed
   snapshot: a snapshot of a bug is not a test. Obsolete snapshots fail the run: a scenario
@@ -124,14 +124,17 @@ never the working tree: that is what CI sees.
 
 Only what no test can check stays here.
 
-- **No LLM call, no network, no clock** anywhere in `src/` (SPEC §2), except the one read of the
-  clock in `runStats` for `stats --since`. `git` is invoked only in `src/history/`, read-only,
-  through `execFileSync` with an argument array (no shell), and never for the verdict, the Lockfile
-  or the exit code of `check`, `update` or the list commands. `stats` only reports (§13.9).
+- **No LLM call, no network, no clock** anywhere in `src/` (SPEC §2), except the reads of the
+  clock in `runStats` for `stats --since` and in `runSuggest` for its 30-day window. `git` is
+  invoked only in `src/history/`, read-only, through `execFileSync` with an argument array (no
+  shell), and never for the verdict, the Lockfile or the exit code of `check`, `update` or the list
+  commands. `stats` only reports (§13.9); `suggest` reads it for the stale rate alone, and never
+  fails for want of it (§13.10).
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
 - **Nothing writes the Lockfile automatically.** Only `docstamp update` with named files or
   `--all` may write it, or the `hash:` line of an inline doc (§9.6.4); a Write is the record that a
-  review happened. `Stamp` changes no other byte of a doc.
+  review happened. `Stamp` changes no other byte of a doc. `suggest --write` writes an inline block
+  with no `hash`, never overwrites one that has it, and never stamps (§9.6.5, §13.10).
 - **The hash input rule has one exception.** A file with an inline block is hashed without its
   `hash:` line (§10.2 step 4); anything else about hashing is a breaking change (§17).
 
@@ -153,9 +156,20 @@ them right.
 A Markdown doc may declare its dependencies in its own frontmatter (SPEC §5.6, §9.6); every
 command treats it like a configured file. To change that behavior, touch `src/inline/`
 (`frontmatter.ts` is the lexical scan and the stamp rewrite, `block.ts` the strict parse,
-`read-inline.ts` the discovery and the atomic write), `src/cli/workspace.ts` (merge with `files`,
-duplicate check) and the `marked` hash rule in `src/hash/hash.ts`. Tests: `tests/unit/inline.test.ts`,
-`tests/e2e/scenarios/inline.test.ts` on the `inline-docs` fixture.
+`read-inline.ts` the discovery and the atomic write, `write-block.ts` the block `suggest --write`
+adds), `src/cli/workspace.ts` (merge with `files`, duplicate check) and the `marked` hash rule in
+`src/hash/hash.ts`. Tests: `tests/unit/inline.test.ts`, `tests/e2e/scenarios/inline.test.ts` on the
+`inline-docs` fixture.
+
+## Suggest
+
+`docstamp suggest` (SPEC §12.6, §13.10) proposes a doc's `dependencies` from the paths it mentions.
+The extraction is `src/engine/mentions.ts` (text to normalized candidates) and
+`src/engine/suggest.ts` (classification, the generic-file list, collapse, test exclusions; both
+pure), the command is `src/cli/suggest.ts` and its output `src/report/suggest.ts`. Tests:
+`tests/unit/suggest.test.ts`, `tests/unit/write-block.test.ts`,
+`tests/e2e/scenarios/suggest.test.ts` on the `suggest` fixture. Every rule is in the spec, so a
+change to the generic list, a threshold or a mention rule starts there.
 
 ## Presets
 

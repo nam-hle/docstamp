@@ -9,6 +9,7 @@ import {
   updateText,
 } from '../../src/report/text.ts';
 import { jsonText, listJsonText } from '../../src/report/json.ts';
+import { suggestJsonText, suggestText, type SuggestEntry } from '../../src/report/suggest.ts';
 import { diag } from '../../src/core/diagnostics.ts';
 import type { Change, Result } from '../../src/core/types.ts';
 
@@ -514,5 +515,114 @@ describe('§14.5 JSON', () => {
     });
     const [file] = JSON.parse(out).files;
     expect([file.use, file.origins]).toEqual([['tests'], [null, 'tests']]);
+  });
+});
+
+describe('§14.9 suggest text', () => {
+  const entry = (file: string, rows: SuggestEntry['suggestions'], ignored: string[] = []) => ({
+    file,
+    suggestions: rows,
+    ignored,
+  });
+  it('a header row and one row per Suggestion, rates with four decimals, n/a, blank for an exclusion', () => {
+    expect(
+      suggestText(
+        [
+          entry(
+            'README.md',
+            [
+              { pattern: 'src/cli', resolvedCount: 12, staleRate: 1234 },
+              { pattern: '!src/cli/**/*.test.*', resolvedCount: 3, staleRate: null },
+              { pattern: 'docs', resolvedCount: 140, staleRate: null },
+              { pattern: 'x.md', resolvedCount: 1, staleRate: 10000 },
+            ],
+            ['dist/out.js'],
+          ),
+        ],
+        false,
+      ),
+    ).toBe(
+      'suggest README.md\n' +
+        '  pattern               files   stale\n' +
+        '  src/cli                  12  0.1234\n' +
+        '  !src/cli/**/*.test.*     -3\n' +
+        '  docs                    140     n/a\n' +
+        '  x.md                      1  1.0000\n' +
+        '  ignored  dist/out.js\n',
+    );
+  });
+  it('says so when nothing was found, and quotes a file with a space', () => {
+    expect(suggestText([entry('my doc.md', [])], false)).toBe(
+      'suggest "my doc.md"\n  no paths found\n',
+    );
+  });
+  it('--write adds one line per file after the blocks', () => {
+    const rows = [{ pattern: 'src', resolvedCount: 2, staleRate: null }];
+    expect(
+      suggestText(
+        [
+          { ...entry('a.md', rows), written: true },
+          { ...entry('b.md', []), written: false },
+        ],
+        true,
+      ),
+    ).toBe(
+      'suggest a.md\n  pattern  files  stale\n  src          2    n/a\n' +
+        'suggest b.md\n  no paths found\n' +
+        'written  a.md\nunchanged  b.md\n',
+    );
+  });
+});
+
+describe('§14.5 suggest JSON', () => {
+  it('has the documented members in order, and written only with --write', () => {
+    const files = [
+      {
+        file: 'a.md',
+        suggestions: [
+          { pattern: 'src', resolvedCount: 2, staleRate: 1234 },
+          { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null },
+        ],
+        ignored: ['dist'],
+        written: true,
+      },
+    ];
+    const plain = JSON.parse(
+      suggestJsonText({ exitCode: 0, write: false, files, diagnostics: [] }),
+    );
+    expect(Object.keys(plain)).toEqual(['version', 'mode', 'exitCode', 'files', 'diagnostics']);
+    expect(plain).toMatchObject({ version: 2, mode: 'suggest', exitCode: 0 });
+    expect(plain.files[0]).toEqual({
+      file: 'a.md',
+      suggestions: [
+        { pattern: 'src', resolvedCount: 2, staleRate: 0.1234 },
+        { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null },
+      ],
+      ignored: ['dist'],
+      diagnostics: [],
+    });
+    const written = JSON.parse(
+      suggestJsonText({ exitCode: 0, write: true, files, diagnostics: [] }),
+    );
+    expect(Object.keys(written.files[0])).toEqual([
+      'file',
+      'suggestions',
+      'ignored',
+      'diagnostics',
+      'written',
+    ]);
+    expect(written.files[0].written).toBe(true);
+  });
+  it('a raised run has no files and the diagnostics', () => {
+    const doc = JSON.parse(
+      suggestJsonText({
+        exitCode: 2,
+        write: false,
+        files: [],
+        diagnostics: [diag('E_USAGE', { subject: 'x' })],
+      }),
+    );
+    expect(doc.files).toEqual([]);
+    expect(doc.diagnostics[0]).toMatchObject({ code: 'E_USAGE', subject: 'x' });
   });
 });

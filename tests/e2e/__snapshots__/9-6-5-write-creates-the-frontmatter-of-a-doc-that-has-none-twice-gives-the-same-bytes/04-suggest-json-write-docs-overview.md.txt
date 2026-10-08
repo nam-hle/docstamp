@@ -1,0 +1,62 @@
+$ docstamp suggest --json --write docs/overview.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "suggest",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "docs/overview.md",
+      "suggestions": [
+        {
+          "pattern": "docs/guide/setup.md",
+          "resolvedCount": 1,
+          "staleRate": null
+        },
+        {
+          "pattern": "scripts/*.mjs",
+          "resolvedCount": 2,
+          "staleRate": null
+        },
+        {
+          "pattern": "src/cli",
+          "resolvedCount": 3,
+          "staleRate": null
+        },
+        {
+          "pattern": "src/engine",
+          "resolvedCount": 3,
+          "staleRate": null
+        },
+        {
+          "pattern": "!src/engine/**/*.test.*",
+          "resolvedCount": 1,
+          "staleRate": null
+        },
+        {
+          "pattern": "!src/engine/**/__tests__",
+          "resolvedCount": 1,
+          "staleRate": null
+        },
+        {
+          "pattern": "src/util",
+          "resolvedCount": 4,
+          "staleRate": null
+        },
+        {
+          "pattern": "tests/unit",
+          "resolvedCount": 1,
+          "staleRate": null
+        }
+      ],
+      "ignored": [
+        "build/output.js"
+      ],
+      "diagnostics": [],
+      "written": false
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---
