@@ -288,8 +288,8 @@ scenario(
 
     const rootItself = await repo.run(['list-dependents', '.']);
     expect(rootItself.exit).toBe(2);
-    expect(rootItself.stderr).toContain(
-      `to ${repo.root}, which does not name a file inside the root ${repo.root};`,
+    expect(slashes(rootItself.stderr)).toContain(
+      slashes(`to ${repo.root}, which does not name a file inside the root ${repo.root};`),
     );
   },
 );
