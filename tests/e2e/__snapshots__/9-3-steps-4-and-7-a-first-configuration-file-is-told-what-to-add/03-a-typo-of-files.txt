@@ -1,0 +1,10 @@
+# a typo of files
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: files: "files" is required; the unknown key "fils" (E_UNKNOWN_KEY) looks like it: did you mean "files"?
+error: E_UNKNOWN_KEY: fils: Remove or correct the key; did you mean "files"?
+--- setup: docstamp.yaml ---
+version: 2
+fils: {}

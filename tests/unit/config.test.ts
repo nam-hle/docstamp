@@ -63,6 +63,36 @@ describe('§9.3 readConfig', () => {
       expect(message).toContain('set "version: 2"');
     }
   });
+  it('a first configuration file without version is told to add it, not to migrate', () => {
+    const message = (text: string) => {
+      try {
+        read(text);
+      } catch (e) {
+        return (e as Raised).diagnostics.map((d) => [d.code, d.subject, d.message]);
+      }
+      throw new Error('not raised');
+    };
+    expect(message('presets:\n  t: ["!**/*.test.*"]\nfiles: {}\n')).toEqual([
+      ['E_CONFIG_VERSION', '', 'Add "version: 2" to the configuration file.'],
+    ]);
+    expect(message('dependents: {}\n')[0]![2]).toContain('Rename "dependents" to "files"');
+    expect(message('version: 3\nfiles: {}\n')[0]![2]).toContain('set "version: 2"');
+    expect(message('version: 2\n')).toEqual([
+      ['E_CONFIG', 'files', '"files" is required; write "files: {}" for none.'],
+    ]);
+    expect(message('version: 2\nfils: {}\n')).toEqual([
+      ['E_UNKNOWN_KEY', 'fils', 'Remove or correct the key; did you mean "files"?'],
+      [
+        'E_CONFIG',
+        'files',
+        '"files" is required; the unknown key "fils" (E_UNKNOWN_KEY) looks like it: ' +
+          'did you mean "files"?',
+      ],
+    ]);
+    expect(message('version: 2\nfiles: []\n')[0]![2]).toBe(
+      'Fix the configuration file; the key named, if any, is the problem.',
+    );
+  });
   it('the version 1 keys in a version 2 file are E_UNKNOWN_KEY', () => {
     expect(codes('version: 2\ndependents:\n  a.md:\n    covers: [x]\n')).toEqual([
       'E_UNKNOWN_KEY',

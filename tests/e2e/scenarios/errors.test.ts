@@ -520,3 +520,20 @@ it('every diagnostic code of SPEC §15 is exercised through the CLI', () => {
   const missing = codes.filter((code) => !seen.has(code) && !unreachable.has(code));
   expect(missing).toEqual([]);
 });
+
+scenario('§9.3 steps 4 and 7 a first configuration file is told what to add', async (repo) => {
+  base(repo);
+  repo.write('docstamp.yaml', 'presets:\n  tests:\n    - "!**/*.test.*"\nfiles: {}\n');
+  const noVersion = await run(repo, 'presets without version', [], 2, ['E_CONFIG_VERSION']);
+  expect(noVersion.stderr).toBe(
+    'error: E_CONFIG_VERSION: Add "version: 2" to the configuration file.\n',
+  );
+  repo.write('docstamp.yaml', 'version: 2\n');
+  const noFiles = await run(repo, 'version without files', [], 2, ['E_CONFIG']);
+  expect(noFiles.stderr).toBe(
+    'error: E_CONFIG: files: "files" is required; write "files: {}" for none.\n',
+  );
+  repo.write('docstamp.yaml', 'version: 2\nfils: {}\n');
+  const typo = await run(repo, 'a typo of files', [], 2, ['E_UNKNOWN_KEY', 'E_CONFIG']);
+  expect(typo.stderr).toContain('"fils" (E_UNKNOWN_KEY)');
+});

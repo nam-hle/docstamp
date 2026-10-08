@@ -1,4 +1,4 @@
-# files is absent
+# version without files
 $ docstamp
 exit: 2
 --- stdout ---

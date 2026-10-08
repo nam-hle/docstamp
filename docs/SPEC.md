@@ -695,7 +695,8 @@ raises:
 3. Let *value* be the normalized value of that file: under §9.2 for `docstamp.yaml`, under §9.5
    for any other name. On failure, or if *value* is not a Map, raise « `E_CONFIG` ».
 4. If the key `version` is absent, or its value is not the Number 2, raise « `E_CONFIG_VERSION` »,
-   whose message names the migration from version 1.
+   whose message names the migration from version 1 when *value* has the key `version` or
+   `dependents`, and otherwise (a first configuration file) says to add `version: 2`.
 5. For each key of *value* other than `version`, `gitignore`, `ignore`, `include`, `presets` and
    `files`, collect `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` the key.
 6. If `gitignore` is present and not a Boolean, or `ignore` is present and not a List of
@@ -709,7 +710,9 @@ raises:
    string *s* of *list* that is not a valid Pattern (§8.1), collect `E_PATTERN` into *fatal*,
    `[[Subject]]` *s*.
 7. If `files` is absent, or not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]`
-   `files`.
+   `files`. When it is absent, the message says that `files` is required and to write `files: {}`
+   for none; when a key of step 5 has `files` as its near key (NOTE below), it names that key
+   and its `E_UNKNOWN_KEY` instead, so one typo reads as one problem.
 8. Otherwise, for each (*key*, *value*) of `files`:
    1. If *key* is not a RepoPath, collect `E_CONFIG` into *fatal*, `[[Subject]]` *key*, and
       continue.
@@ -2366,8 +2369,8 @@ command raised.
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6) |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
-| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file); for a module without a default export, `export default` the value |
-| `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2` |
+| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file); for a missing `files`, write `files: {}` for none, or correct the unknown key that stands for it; for a module without a default export, `export default` the value |
+| `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2`; for a file with neither `version` nor `dependents`, add `version: 2` |
 | `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; otherwise its near key, if any (§9.3 NOTE: `did you mean "dependencies"?`); attached to the file when it is a key of an inline block |
 | `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1); for an empty pattern, write a path or glob or remove it; for a lone `!`, write the path to exclude after it or remove it |
 | `E_UNKNOWN_PRESET` | error | §8.6 | define the Preset under `presets` in the Configuration file, or correct the name in `use`; subject the name, attached to the file |
@@ -2453,7 +2456,9 @@ The following are not breaking:
 
 - the wording of a Diagnostic `[[Message]]` (§5.5), which is informative; a test MAY snapshot it,
   and then the snapshot is updated with the change. This covers the near key named by
-  `E_UNKNOWN_KEY` and `E_CONFIG` (§9.3 NOTE), and the renamed path named by `E_EMPTY_PATTERN`
+  `E_UNKNOWN_KEY` and `E_CONFIG` (§9.3 NOTE), the messages of `E_CONFIG_VERSION` for a first
+  configuration file and of `E_CONFIG` for a missing `files` (§9.3 steps 4 and 7), which change
+  no code and no Diagnostic order, and the renamed path named by `E_EMPTY_PATTERN`
   (§8.5 NOTE, §12.7), whose read of the history changes no verdict, code or exit code;
 - a new Diagnostic with severity `warning`, which never affects the exit code (§16);
 - a new command, or a new option that no existing command line uses: `stats` (§13.9), its options
