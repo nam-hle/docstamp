@@ -66,14 +66,33 @@ function pathspecsOf(dependencies: readonly string[]): string[] | null {
   });
 }
 
+const pathArg = (path: string): string => (LITERAL_NEEDED.test(path) ? `:(literal)${path}` : path);
+
+// SPEC §14.3: the edited line and the summary line
+function headLines(r: Result): string {
+  const changes = r.changes ?? [];
+  const edited =
+    r.edited === undefined ? '' : `  edited    ${shown(r.edited)}  (dependency list)\n`;
+  const counts = (['modified', 'added', 'deleted'] as const)
+    .map((status) => ({ status, n: changes.filter((c) => c.status === status).length }))
+    .filter(({ n }) => n > 0)
+    .map(({ status, n }) => `${n} ${status}`);
+  return changes.length < GROUP_MIN ? edited : `${edited}  changed   ${counts.join(', ')}\n`;
+}
+
 // SPEC §14.3.4
 export function reviewLine(r: Result, rootArg?: string): string {
-  if (r.base === undefined || !r.changes || r.changes.length === 0) return '';
-  const args =
+  if (r.base === undefined || !r.changes) return '';
+  if (r.changes.length === 0 && r.edited === undefined) return '';
+  const listed =
     r.changes.length <= REVIEW_PATH_MAX
-      ? r.changes.map((c) => (LITERAL_NEEDED.test(c.path) ? `:(literal)${c.path}` : c.path))
+      ? r.changes.map((c) => pathArg(c.path))
       : pathspecsOf(r.dependencies);
-  if (args === null) return '';
+  if (listed === null) return '';
+  const { edited } = r;
+  const extra =
+    edited !== undefined && !r.changes.some((c) => c.path === edited) ? [pathArg(edited)] : [];
+  const args = [...listed, ...extra];
   const git = rootArg === undefined ? 'git' : `git -C ${shellQuote(rootArg)}`;
   return `  review: ${git} diff ${r.base} -- ${args.map(shellQuote).join(' ')}\n`;
 }
@@ -101,8 +120,8 @@ export function checkChunks(
       let block = `${LABEL[r.state].padEnd(9)}${shown(r.file)}`;
       block += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
       if (r.state === 'stale') {
-        if (r.changes && r.changes.length > 0) {
-          block += changeLines(r.changes).join('') + reviewLine(r, rootArg);
+        if (r.changes && (r.changes.length > 0 || r.edited !== undefined)) {
+          block += headLines(r) + changeLines(r.changes).join('') + reviewLine(r, rootArg);
         } else for (const c of r.dependencies) block += `  depends   ${shown(c)}\n`;
       }
       emit('stdout', block);

@@ -1,7 +1,9 @@
 import { comparePaths } from '../core/order.ts';
 import type { Change, Result } from '../core/types.ts';
 import { git } from './git.ts';
-import { recordedHash as inlineHash } from '../inline/frontmatter.ts';
+import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
+import { parseBlock } from '../inline/block.ts';
+import { recordedHash as inlineHash, scanFrontmatter } from '../inline/frontmatter.ts';
 import { parseLock } from '../lock/lock.ts';
 import { select, viaOf } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
@@ -95,6 +97,64 @@ function reviewCommit(root: string, file: string, hash: string, inline: boolean)
   return null;
 }
 
+interface OwnList {
+  readonly dependencies: readonly string[];
+  readonly use: readonly string[];
+}
+
+const isYamlMap = (v: YamlValue | undefined): v is YamlMap =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const strings = (v: YamlValue | undefined): string[] | null =>
+  Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : null;
+
+// SPEC §12.3 step 1.4: the own list of `file` in a docstamp.yaml text, null when unknown
+export function configuredOwnList(text: string, file: string): OwnList | null {
+  const top = parseStrictYaml(text)?.value;
+  const files = isYamlMap(top) ? top.entries.get('files')?.value : undefined;
+  const entry = isYamlMap(files) ? files.entries.get(file)?.value : undefined;
+  if (!isYamlMap(entry)) return null;
+  const dependencies = strings(entry.entries.get('dependencies')?.value);
+  if (dependencies === null || dependencies.length === 0) return null;
+  return { dependencies, use: strings(entry.entries.get('use')?.value) ?? [] };
+}
+
+// SPEC §12.3 step 1.4: the own list of an inline file's text, null when unknown
+export function inlineOwnList(text: string, file: string): OwnList | null {
+  const scan = scanFrontmatter(text);
+  if (scan === null) return null;
+  const { declaration } = parseBlock(file, scan);
+  if (declaration.dependencies.length === 0) return null;
+  return { dependencies: declaration.dependencies, use: declaration.use ?? [] };
+}
+
+// SPEC §12.3 step 1.4: the own list now, without the patterns a Preset brought
+export function ownListOf(result: Result): OwnList {
+  return {
+    dependencies: result.dependencies.filter((_, i) => (result.origins?.[i] ?? null) === null),
+    use: result.use ?? [],
+  };
+}
+
+const sameList = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((x, i) => x === b[i]);
+
+// SPEC §12.3 step 1.4: the carrier when the own list is known at `rev` and differs, else null
+function editedCarrier(root: string, rev: string, result: Result, inline: boolean): string | null {
+  const carrier = inline ? result.file : 'docstamp.yaml';
+  let then: OwnList | null;
+  try {
+    const text = git(root, ['show', `${rev}:./${carrier}`]);
+    then = inline ? inlineOwnList(text, result.file) : configuredOwnList(text, result.file);
+  } catch {
+    return null;
+  }
+  if (then === null) return null;
+  const now = ownListOf(result);
+  const same = sameList(then.dependencies, now.dependencies) && sameList(then.use, now.use);
+  return same ? null : carrier;
+}
+
 const MODES = /^:(\d+) (\d+) /u;
 
 // SPEC §12.3 step 7
@@ -113,6 +173,7 @@ export function isWhitespaceOnly(root: string, commit: string, path: string): bo
 export interface ChangedReport {
   readonly changes: readonly Change[];
   readonly base: string;
+  readonly edited?: string;
 }
 
 // SPEC §12.3; `entry` is the LockEntry, or the recorded Hash of an inline file; `whitespace`
@@ -143,7 +204,9 @@ export function changedSince(
       selectsDeleted: (path) => path !== result.file && select(parsed, [path]).length === 1,
       viaOf: (path) => viaOf(result.dependencies, parsed, path),
     });
-    if (changes === null || changes.length === 0) return null;
+    if (changes === null) return null;
+    const edited = editedCarrier(root, id, result, inline);
+    if (changes.length === 0 && edited === null) return null;
     const whitespaceOnly = (path: string): boolean => {
       const key = `${id}\0${path}`;
       const known = whitespace.get(key) ?? isWhitespaceOnly(root, id, path);
@@ -155,6 +218,7 @@ export function changedSince(
         c.status === 'modified' && whitespaceOnly(c.path) ? { ...c, whitespaceOnly: true } : c,
       ),
       base: id,
+      ...(edited === null ? {} : { edited }),
     };
   } catch {
     return null;

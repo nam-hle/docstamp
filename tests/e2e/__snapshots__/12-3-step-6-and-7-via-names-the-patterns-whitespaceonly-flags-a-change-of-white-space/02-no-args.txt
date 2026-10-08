@@ -2,6 +2,7 @@ $ docstamp
 exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
+  changed   5 modified
   modified  src/c.ts (whitespace only)
   modified  src/crlf.txt (whitespace only)
   modified  src/d.ts

@@ -56,6 +56,31 @@ describe('§14.3 check text', () => {
         '  modified  src/a.ts\n  deleted   src/c.ts\n  added     "src/my b.ts"\n0 ok',
     );
   });
+  it('from 5 Changes a summary line counts each status that occurs, in a fixed order', () => {
+    const changes = [...many('deleted', 'src/old/', 4), change('added', 'src/z.ts')];
+    expect(checkText([res('a.md', 'stale', { changes })])).toContain(
+      'STALE    a.md  (content-changed)\n  changed   1 added, 4 deleted\n  deleted   src/old/f00',
+    );
+    expect(checkText([res('a.md', 'stale', { changes: changes.slice(1) })])).not.toContain(
+      'changed ',
+    );
+  });
+  it('an edited own list is its own line, before the summary line', () => {
+    const changes = [change('modified', 'src/a.ts')];
+    const edited = res('a.md', 'stale', { changes, edited: 'docstamp.yaml', base: 'c0ffee' });
+    expect(checkText([edited])).toContain(
+      'STALE    a.md  (content-changed)\n  edited    docstamp.yaml  (dependency list)\n' +
+        '  modified  src/a.ts\n' +
+        '  review: git diff c0ffee -- src/a.ts docstamp.yaml\n0 ok',
+    );
+  });
+  it('an edited own list with no Change prints the edited line and its review line only', () => {
+    const edited = res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee' });
+    expect(checkText([edited])).toContain(
+      'STALE    a.md  (content-changed)\n  edited    a.md  (dependency list)\n' +
+        '  review: git diff c0ffee -- a.md\n0 ok',
+    );
+  });
   it('unknown or empty changes print depends lines', () => {
     const dependencies = 'STALE    a.md  (content-changed)\n  depends   src/**\n';
     expect(checkText([res('a.md', 'stale', { changes: null })])).toContain(dependencies);
@@ -147,7 +172,8 @@ describe('§14.3.1 change lines', () => {
   it('is part of the block of a stale file', () => {
     const changes = [...many('deleted', 'src/old/', 5), change('modified', 'src/m.ts')];
     expect(checkText([res('a.md', 'stale', { changes })])).toContain(
-      'STALE    a.md  (content-changed)\n  modified  src/m.ts\n  deleted   src/old/  (5 files)\n0 ok',
+      'STALE    a.md  (content-changed)\n  changed   1 modified, 5 deleted\n' +
+        '  modified  src/m.ts\n  deleted   src/old/  (5 files)\n0 ok',
     );
   });
 });
@@ -206,6 +232,16 @@ describe('§14.3.4 review line', () => {
     const eleven = Array.from({ length: 11 }, (_, i) => change('modified', `src/f${i}.ts`));
     expect(reviewLine(stale(eleven, ['src/**/*.{ts,js}']))).toBe('');
     expect(checkText([stale(eleven, ['src/**/*.{ts,js}'])])).not.toContain('review:');
+  });
+  it('names the carrier of an edited own list once, outside the path cap', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => change('modified', `src/f${i}.ts`));
+    expect(reviewLine({ ...stale(ten), edited: 'docstamp.yaml' })).toMatch(
+      / src\/f9\.ts docstamp\.yaml\n$/u,
+    );
+    const listed = [change('modified', 'docstamp.yaml')];
+    expect(reviewLine({ ...stale(listed), edited: 'docstamp.yaml' })).toBe(
+      '  review: git diff c0ffee -- docstamp.yaml\n',
+    );
   });
   it('no line without a known base or changes', () => {
     expect(reviewLine(res('a.md', 'stale', { changes: [change('added', 'x')] }))).toBe('');
@@ -395,6 +431,30 @@ describe('§14.5 JSON', () => {
     expect(doc.files[0].changes).toEqual([{ status: 'added', path: 'src/b.ts', via: ['src/**'] }]);
     expect(doc.files[1].changes).toBeNull();
     expect(doc.files[2].changes).toBeNull();
+  });
+  it('dependenciesEdited follows changes only when the own list was edited', () => {
+    const doc = JSON.parse(
+      jsonText({
+        mode: 'check',
+        exitCode: 1,
+        selected: [
+          res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee' }),
+          res('b.md', 'stale', { changes: null }),
+        ],
+        diagnostics: [],
+      }),
+    );
+    expect(Object.keys(doc.files[0])).toEqual([
+      'file',
+      'state',
+      'reasons',
+      'dependencies',
+      'changes',
+      'dependenciesEdited',
+      'diagnostics',
+    ]);
+    expect(doc.files[0]).toMatchObject({ reasons: ['content-changed'], dependenciesEdited: true });
+    expect(doc.files[1]).not.toHaveProperty('dependenciesEdited');
   });
   it('a change has via, and whitespaceOnly only when true, in this order', () => {
     const changes = [

@@ -4,7 +4,10 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildChanges,
+  configuredOwnList,
+  inlineOwnList,
   isWhitespaceOnly,
+  ownListOf,
   parseNameList,
   parseNameStatus,
 } from '../../src/history/changes.ts';
@@ -29,6 +32,45 @@ const entry = (status: string, path: string) => ({
 afterEach(() => {
   cleanupTrees();
   vi.unstubAllEnvs();
+});
+
+describe('§12.3 step 1.4: own list', () => {
+  const yaml = (body: string) => `version: 2\nfiles:\n${body}`;
+  it('reads a configured file from docstamp.yaml, use included', () => {
+    const text = yaml('  a.md:\n    dependencies: [src, "!src/x"]\n    use: [tests]\n');
+    expect(configuredOwnList(text, 'a.md')).toEqual({
+      dependencies: ['src', '!src/x'],
+      use: ['tests'],
+    });
+    expect(configuredOwnList(yaml('  a.md:\n    dependencies: [src]\n'), 'a.md')).toEqual({
+      dependencies: ['src'],
+      use: [],
+    });
+  });
+  it('is unknown for a missing key, an empty list or a text that does not parse', () => {
+    expect(configuredOwnList(yaml('  b.md:\n    dependencies: [src]\n'), 'a.md')).toBeNull();
+    expect(configuredOwnList(yaml('  a.md:\n    dependencies: []\n'), 'a.md')).toBeNull();
+    expect(configuredOwnList('files: [', 'a.md')).toBeNull();
+  });
+  it('reads an inline block, and is unknown without one', () => {
+    const text = '---\ndocstamp:\n  dependencies:\n    - src\n  hash: x\n---\n# A\n';
+    expect(inlineOwnList(text, 'a.md')).toEqual({ dependencies: ['src'], use: [] });
+    expect(inlineOwnList('# A\n', 'a.md')).toBeNull();
+  });
+  it('the own list now leaves out the patterns of a Preset', () => {
+    const result = {
+      file: 'a.md',
+      dependencies: ['src', 'tests/**', 'lib'],
+      origins: [null, 'tests', null],
+      use: ['tests'],
+      state: 'stale' as const,
+      reasons: [],
+      resolved: [],
+      current: '',
+      diagnostics: [],
+    };
+    expect(ownListOf(result)).toEqual({ dependencies: ['src', 'lib'], use: ['tests'] });
+  });
 });
 
 describe('§12.3 ChangedSince: git output parsing', () => {

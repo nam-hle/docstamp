@@ -13,50 +13,62 @@ INVALID  docs/invalid-09.md
 INVALID  docs/invalid-10.md
 INVALID  docs/invalid-11.md
 STALE    docs/stale-01.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-02.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-03.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-04.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-05.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-06.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-07.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-08.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-09.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-10.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-11.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
 STALE    docs/stale-12.md  (content-changed)
+  changed   13 added, 13 deleted
   added     src/new/  (13 files)
   deleted   src/old/  (13 files)
   review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'

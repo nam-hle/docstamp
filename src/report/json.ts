@@ -69,6 +69,7 @@ export function jsonText(doc: JsonDoc): string {
             )
           : null,
       ],
+      ...(r.edited === undefined ? [] : [['dependenciesEdited', true] as [string, Json]]),
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ];
     if (doc.mode === 'update') members.push(['written', doc.written?.has(r.file) ?? false]);

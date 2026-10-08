@@ -112,6 +112,7 @@ scenario(
     expect(text.stdout.match(/^INVALID {2}/gmu)).toHaveLength(11);
     expect(text.stdout).toContain(
       'STALE    docs/stale-01.md  (content-changed)\n' +
+        '  changed   13 added, 13 deleted\n' +
         '  added     src/new/  (13 files)\n' +
         '  deleted   src/old/  (13 files)\n',
     );

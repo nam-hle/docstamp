@@ -78,6 +78,7 @@ export interface Result {
   readonly diagnostics: readonly Diagnostic[];
   readonly changes?: readonly Change[] | null;
   readonly base?: string;
+  readonly edited?: string;
 }
 
 // SPEC §13.8: `dependents`, `cycle` and `repeated` are set only by --transitive
