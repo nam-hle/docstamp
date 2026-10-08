@@ -258,7 +258,7 @@ export class Repo {
       const text = body === '' ? '(empty)\n' : body;
       return `--- setup: ${path} ---\n${text}${text.endsWith('\n') ? '' : '\n(no final newline)\n'}`;
     });
-    const line = ['docstamp', ...args].map(shellQuote).join(' ');
+    const line = ['docstamp', ...args].map((arg) => shellQuote(this.normalize(arg))).join(' ');
     return (
       `${label}$ ${line}\n${cwd}${env.join('')}exit: ${result.exit}\n` +
       `--- stdout ---\n${result.stdout}--- stderr ---\n${result.stderr}${shown.join('')}`
@@ -266,7 +266,12 @@ export class Repo {
   }
 
   private normalize(text: string): string {
-    return text.replaceAll(this.root, '<root>').replaceAll(this.session.base, '<tmp>');
+    const mapped = text.replaceAll(this.root, '<root>').replaceAll(this.session.base, '<tmp>');
+    if (process.platform !== 'win32') return mapped;
+    return mapped.replace(
+      /(<root>|<tmp>)([^\s'"]*)/gu,
+      (_, token: string, tail: string) => token + tail.replaceAll('\\', '/'),
+    );
   }
 
   private async snapshot(name: string, text: string): Promise<void> {

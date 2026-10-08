@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { expect, it } from 'vitest';
 import { config, scenario, type Repo, type RunResult } from '../harness/index.ts';
 
@@ -461,7 +462,7 @@ scenario(
       'inject.mjs',
       "process.stdout.write = () => {\n  throw new Error('injected');\n};\n",
     );
-    const env = { NODE_OPTIONS: `--import=${injected.path('inject.mjs')}` };
+    const env = { NODE_OPTIONS: `--import=${pathToFileURL(injected.path('inject.mjs')).href}` };
     const result = await repo.run([], { env, snapshot: false });
     expect(result.exit).toBe(70);
     expect(result.stdout).toBe('');

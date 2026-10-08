@@ -113,7 +113,10 @@ scenario('§8.4 the last matching pattern wins, so a later pattern re-selects', 
   ]);
 });
 
-scenario('§8.1 escapes make special characters literal', async (repo) => {
+// Windows forbids `*`, `"` and a tab in file names.
+const onWindows = process.platform === 'win32';
+
+scenario('§8.1 escapes make special characters literal', { skipIf: onWindows }, async (repo) => {
   repo.write('DOC.md', '# doc\n');
   repo.write('src/a*b.ts', 'star\n');
   repo.write('src/axb.ts', 'x\n');
@@ -123,26 +126,30 @@ scenario('§8.1 escapes make special characters literal', async (repo) => {
   expect(result.json().files[0].resolvedFiles).toEqual(['src/[id].ts', 'src/a*b.ts']);
 });
 
-scenario('§14.2 paths with special characters are quoted in text and in lists', async (repo) => {
-  repo.write('DOC.md', '# doc\n');
-  repo.write('src/with space.ts', 's\n');
-  repo.write('src/paren(1).ts', 'p\n');
-  repo.write('src/tab\there.ts', 't\n');
-  repo.write('src/quote"d.ts', 'q\n');
-  repo.write('src/plain.ts', 'plain\n');
-  repo.write('src/ünï.ts', 'unicode\n');
-  repo.write('docstamp.yaml', config({ 'DOC.md': ['src/**'] }));
-  const result = await repo.run(['list-dependencies'], { show: ['docstamp.yaml'] });
-  expect(result.stdout).toContain('  resolved  "src/with space.ts"\n');
-  expect(result.stdout).toContain('  resolved  "src/paren(1).ts"\n');
-  expect(result.stdout).toContain('  resolved  "src/tab\\there.ts"\n');
-  expect(result.stdout).toContain('  resolved  "src/quote\\"d.ts"\n');
-  expect(result.stdout).toContain('  resolved  src/plain.ts\n');
-  expect(result.stdout).toContain('  resolved  src/ünï.ts\n');
-  const json = await repo.run(['list-dependencies', '--json']);
-  expect(json.stdout).toContain('"src/tab\\there.ts"');
-  expect(json.json().files[0].resolvedFiles).toContain('src/quote"d.ts');
-});
+scenario(
+  '§14.2 paths with special characters are quoted in text and in lists',
+  { skipIf: onWindows },
+  async (repo) => {
+    repo.write('DOC.md', '# doc\n');
+    repo.write('src/with space.ts', 's\n');
+    repo.write('src/paren(1).ts', 'p\n');
+    repo.write('src/tab\there.ts', 't\n');
+    repo.write('src/quote"d.ts', 'q\n');
+    repo.write('src/plain.ts', 'plain\n');
+    repo.write('src/ünï.ts', 'unicode\n');
+    repo.write('docstamp.yaml', config({ 'DOC.md': ['src/**'] }));
+    const result = await repo.run(['list-dependencies'], { show: ['docstamp.yaml'] });
+    expect(result.stdout).toContain('  resolved  "src/with space.ts"\n');
+    expect(result.stdout).toContain('  resolved  "src/paren(1).ts"\n');
+    expect(result.stdout).toContain('  resolved  "src/tab\\there.ts"\n');
+    expect(result.stdout).toContain('  resolved  "src/quote\\"d.ts"\n');
+    expect(result.stdout).toContain('  resolved  src/plain.ts\n');
+    expect(result.stdout).toContain('  resolved  src/ünï.ts\n');
+    const json = await repo.run(['list-dependencies', '--json']);
+    expect(json.stdout).toContain('"src/tab\\there.ts"');
+    expect(json.json().files[0].resolvedFiles).toContain('src/quote"d.ts');
+  },
+);
 
 scenario('§3.3 path order is by UTF-16 code unit, not by locale', async (repo) => {
   repo.write('DOC.md', '# doc\n');
