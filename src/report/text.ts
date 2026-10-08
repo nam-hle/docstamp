@@ -293,6 +293,12 @@ const fixed4 = (tenThousandths: number): string =>
   `${Math.floor(tenThousandths / 10000)}.${String(tenThousandths % 10000).padStart(4, '0')}`;
 
 // SPEC §14.8
+// SPEC §14.8: the legend line
+const STATS_LEGEND =
+  'legend: patterns declared, files they select, commits and distinct days that would make ' +
+  'the file stale; stale = commits / window commits; sweep = share of those commits that ' +
+  'touch over 200 paths';
+
 export function statsText(files: readonly FileStats[], window: StatsWindow): string {
   const rows = files.map((f) => [
     shown(f.file),
@@ -324,5 +330,6 @@ export function statsText(files: readonly FileStats[], window: StatsWindow): str
       ? `in the last ${window.value.slice(0, -1)} days`
       : `in ${shown(`${window.value}..HEAD`)}`;
   out += `window: ${window.commits} commits ${where}, ${window.untouched} make no file stale\n`;
+  if (files.length > 0) out += `${STATS_LEGEND}\n`;
   return out;
 }

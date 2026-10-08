@@ -6,4 +6,5 @@ BROAD.md          1      4        4     3  0.6667  0.0000
 MID.md            2      2        3     2  0.5000  0.0000
 NARROW.md         1      1        2     2  0.3333  0.0000
 window: 6 commits in 9e560eb5fc98fdfb970c22644e9499528f682c97..HEAD, 2 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
 --- stderr ---

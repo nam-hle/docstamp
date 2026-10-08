@@ -2184,6 +2184,7 @@ file       patterns  files  commits  days   stale   sweep
 CLAUDE.md         8     53      129    36  0.3957  0.0310
 README.md         1      4        9     6  0.0276  0.0000
 window: 326 commits in the last 30 days, 91 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
 ```
 
 A header row, then one row per FileStats in the order of §12.5, when there is at least one. The
@@ -2196,9 +2197,11 @@ trailing space.
 
 Then the line `window: <n> commits <where>, <k> make no file stale`, always written (also with no
 row), where *n* is the number of Commits, *k* is *untouched*, and *where* is `in the last <N> days`
-for `--since` and `in <rev>..HEAD` for `--from`, with *rev* as given and written as in §14.2. When
-the command raised or a file was `invalid`, nothing is output on standard output. Diagnostics as in
-§14.3.
+for `--since` and `in <rev>..HEAD` for `--from`, with *rev* as given and written as in §14.2. Then,
+when there is at least one row, the *legend line*, the fixed text shown above, which explains the
+columns; the sweep size it names is the one of §12.5. The legend is text only: `--json` has no
+member for it (§14.5). When the command raised or a file was `invalid`, nothing is output on
+standard output. Diagnostics as in §14.3.
 
 ### 14.9 Suggest, Text Mode
 
@@ -2342,6 +2345,8 @@ The following are not breaking:
   command, and a file literally named `suggest` is reached with `--` (§13.2), as for every other
   command word. `--write` without `suggest` is still refused (§13.2);
 - a new member of the JSON output (§14.5: consumers ignore unknown members);
+- the legend line of `stats` in text mode (§14.8): a fixed line after the `window:` line; the rows,
+  the `window:` line and `--json` are unchanged, and `stats` still exits 0;
 - `[[Edited]]` (§5.4, §12.3 step 1.4): the edited line and the summary line of §14.3, and the
   member `dependenciesEdited` of §14.5. It is not a Reason, so `reasons` and every verdict are
   unchanged. `changes` may now be `[]` where it was `null`, for a file whose own list lost a
