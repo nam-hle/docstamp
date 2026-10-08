@@ -265,6 +265,14 @@ describe('§12.3 step 7: whitespace only', () => {
     expect(gitRun(root, ['diff', '--name-status', '--no-renames', base, '--'])).toBe('M\ta.ts\n');
     expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(true);
   });
+  it('step 8: a user core.autocrlf=true does not pair a file whose line endings changed', () => {
+    const { root, base } = committed({ 'a.ts': 'one\ntwo\n' });
+    writeFileSync(join(process.env['HOME'] ?? '', '.gitconfig'), '[core]\n\tautocrlf = true\n');
+    writeFileSync(join(root, 'b.ts'), 'one\r\ntwo\r\n');
+    const before = parseTree(gitRun(root, ['ls-tree', '-r', '-z', base]));
+    const after = gitRun(root, ['hash-object', '--stdin-paths'], {}, 'b.ts\n').trim();
+    expect(after).not.toBe(before.get('a.ts'));
+  });
   it('reads the path literally, not as a pattern', () => {
     const { root, base } = committed({ '[id].ts': 'a\n', 'i.ts': 'b\n' });
     writeFileSync(join(root, '[id].ts'), ' a\n');

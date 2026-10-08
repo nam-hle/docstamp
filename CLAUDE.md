@@ -213,6 +213,8 @@ writes them one by one, in that order: never all of stdout first. Each stream al
 text of a git command for the reader; `git` still runs in `src/history/` alone, read-only, and
 `isWhitespaceOnly` (§12.3 step 7) makes two more read-only calls there, `renamed` (step 8) three
 (`rev-parse`, `ls-tree`, `hash-object --stdin-paths`), and `editedCarrier` (step 1.4) one `git show`.
+Every one goes through `git` in `src/history/git.ts`, which applies step 1: no `GIT_*` variables,
+`GIT_OPTIONAL_LOCKS=0` and `-c core.autocrlf=false`.
 
 ## Compatibility guard
 

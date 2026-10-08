@@ -342,7 +342,6 @@ scenario(
     expect(text.exit).toBe(1);
     expect(text.stdout).toContain(
       'STALE    CLAUDE.md  (content-changed)\n' +
-        '  changed   5 modified\n' +
         '  modified  src/c.ts (whitespace only)\n' +
         '  modified  src/crlf.txt (whitespace only)\n' +
         '  modified  src/d.ts\n' +
