@@ -186,7 +186,15 @@ export function propose(
 
   // §12.6 step 10
   const ordered = scoped.sort((a, b) => comparePaths(a.scope, b.scope) || a.rank - b.rank);
-  const cuts = [...new Set(ordered.map(({ source }) => source))];
+  // a scoped exclusion is redundant next to the unscoped one of the same shape
+  const unscoped = new Set(ordered.filter(({ scope }) => scope === '').map(({ rank }) => rank));
+  const cuts = [
+    ...new Set(
+      ordered
+        .filter(({ scope, rank }) => scope === '' || !unscoped.has(rank))
+        .map(({ source }) => source),
+    ),
+  ];
   const negations = cuts.map((cut) => parsePattern(cut)!);
   const reincluded = sortPaths(
     [...kept].filter((path) => negations.some((cut) => patternMatches(cut, path))),

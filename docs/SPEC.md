@@ -1465,7 +1465,9 @@ prefix, before a `/`, of some path of *U*.
    them (a glob that selects only test files).
 10. *Subsumption.* Let *cuts* be the exclusions of every member of *dirs* and of *globs*, ordered
    by the path order of the directory or scope they come from and, for one, in the order of step 9,
-   without duplicates. Let *reincluded* be the members of *files* that a member of *cuts* matches
+   without duplicates, and without `!`*s*`/`*t* for a non-empty *s* when `!`*t* is also one of
+   them, *t* being one of `**/*.test.*`, `**/*.spec.*`, `**/__test__` and `**/__tests__`:
+   `!**/*.test.*` already matches every file that `!packages/**/*.test.*` matches. Let *reincluded* be the members of *files* that a member of *cuts* matches
    (with step 9, the files below a member of *dirs* that remain), and *base* the other members of
    *files*, *dirs* and *globs*. Let
    *sel*(*p*) be `Select(« p », U)`. Remove from *base* every *p* for which another member *q* of
@@ -2643,6 +2645,8 @@ The following are not breaking:
   (§14.5), new members;
 - the test exclusions of a glob in a proposal (§12.6 step 9): a proposal rule of §12.6, like the
   directory exclusions; `suggest` prints and `--write` writes them, and nothing else reads them;
+  so is dropping a scoped test exclusion that the same unscoped one makes redundant (§12.6 step 10):
+  the written list selects the same files;
 - `suggest --write` on a block without a `hash` that declares patterns (§9.6.5 steps 2.3 to 2.5,
   §13.10 step 7): it used to replace the list by the proposal, dropping every declared pattern the
   proposal lacked; it now keeps the declared patterns first and adds only `new` ones that leave

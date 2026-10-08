@@ -609,3 +609,17 @@ describe('§12.6 step 9 test exclusions of a glob', () => {
     ).toEqual(['pkg', '!pkg/**/*.test.*']);
   });
 });
+
+describe('§12.6 step 10 a scoped exclusion next to the unscoped one', () => {
+  it('is dropped, and the exclusions still follow every inclusion', () => {
+    const universe = tree('README.md', 'pkg/a.ts', 'pkg/b.ts', 'pkg/c.ts', 'pkg/c.test.ts');
+    expect(
+      patterns('See `pkg/a.ts`, `pkg/b.ts`, `pkg/c.ts` and `**/*.ts`.\n', { universe }),
+    ).toEqual(['**/*.ts', '!**/*.test.*']);
+    expect(patterns('Code in `pkg/*.ts` and `**/*.ts`.\n')).toEqual([
+      '**/*.ts',
+      '!**/*.test.*',
+      '!**/__tests__',
+    ]);
+  });
+});
