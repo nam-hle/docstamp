@@ -19,7 +19,8 @@ import {
   type StatsWindow,
 } from '../report/json.ts';
 import {
-  checkText,
+  checkChunks,
+  type Chunk,
   diagnosticsText,
   listText,
   reverseText,
@@ -117,13 +118,21 @@ function listAll(root: string): Result[] {
 }
 
 // SPEC §12.3
-function withChanges(root: string, result: Result, evaluated: Evaluated): Result {
+function withChanges(
+  root: string,
+  result: Result,
+  evaluated: Evaluated,
+  whitespace: Map<string, boolean>,
+): Result {
   const inline = evaluated.declarations.find((b) => b.file === result.file)?.inline;
   const entry = inline ? inline.recorded : evaluated.lock.entries.get(result.file);
   if (result.state !== 'stale' || !result.reasons.includes('content-changed') || !entry) {
     return result;
   }
-  return { ...result, changes: changedSince(root, result, entry, inline !== undefined) };
+  const report = changedSince(root, result, entry, inline !== undefined, whitespace);
+  return report === null
+    ? { ...result, changes: null }
+    : { ...result, changes: report.changes, base: report.base };
 }
 
 const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'error');
@@ -132,10 +141,12 @@ interface Output {
   json: boolean;
   mode: 'check' | 'update';
   evaluated: boolean;
+  onlyStale?: boolean;
   exitCode: number;
   selected: Result[];
   global: Diagnostic[];
   text: string;
+  chunks?: Chunk[];
   written?: Set<string>;
   removed?: string[];
 }
@@ -146,6 +157,7 @@ function emit(io: Io, o: Output): number {
       jsonText({
         mode: o.mode,
         evaluated: o.evaluated,
+        onlyStale: o.onlyStale === true,
         exitCode: o.exitCode,
         selected: o.selected,
         diagnostics: o.global,
@@ -154,8 +166,14 @@ function emit(io: Io, o: Output): number {
       }),
     );
   } else {
-    io.stdout(o.text);
-    io.stderr(diagnosticsText([...o.global, ...o.selected.flatMap((r) => r.diagnostics)]));
+    const chunks = o.chunks ?? [
+      { stream: 'stdout' as const, text: o.text },
+      {
+        stream: 'stderr' as const,
+        text: diagnosticsText([...o.global, ...o.selected.flatMap((r) => r.diagnostics)]),
+      },
+    ];
+    for (const { stream, text } of chunks) io[stream](text);
   }
   return o.exitCode;
 }
@@ -346,13 +364,22 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     if (mode === 'check') {
       const stale = selected.some((r) => r.state === 'stale');
       const exitCode = refused ? 2 : stale ? 1 : 0;
-      const reported = selected.map((r) => withChanges(root, r, evaluated));
-      const text = checkText(reported, args.root);
-      return emit(io, { ...empty, evaluated: true, exitCode, selected: reported, global, text });
+      const whitespace = new Map<string, boolean>();
+      const reported = selected.map((r) => withChanges(root, r, evaluated, whitespace));
+      const chunks = checkChunks(reported, global, { root: args.root, quiet: args.quiet });
+      return emit(io, {
+        ...empty,
+        evaluated: true,
+        onlyStale: args.onlyStale,
+        exitCode,
+        selected: reported,
+        global,
+        chunks,
+      });
     }
     if (refused) {
-      const text = checkText(selected, args.root, false);
-      return emit(io, { ...empty, evaluated: true, selected, global, text });
+      const chunks = checkChunks(selected, global, { root: args.root, next: false });
+      return emit(io, { ...empty, evaluated: true, selected, global, chunks });
     }
     const inlineFiles = new Map(
       evaluated.declarations.filter((b) => b.inline).map((b) => [b.file, b.inline!.recorded]),

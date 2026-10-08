@@ -1,0 +1,15 @@
+# two files named
+$ docstamp docs/stale-01.md docs/invalid-01.md
+exit: 2
+--- stdout ---
+INVALID  docs/invalid-01.md
+STALE    docs/stale-01.md  (content-changed)
+  added     src/new/  (13 files)
+  deleted   src/old/  (13 files)
+  review: git diff b9e2276aa88019dc3fc39b59627faae1b9f11e10 -- ':(glob)src'
+0 ok, 1 stale, 1 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/stale-01.md
+next: fix the configuration of each invalid file, then run: docstamp check docs/invalid-01.md
+--- stderr ---
+error: E_EMPTY_DEPENDENCIES: docs/invalid-01.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: docs/invalid-01.md: src/old: Correct or remove the pattern; it matches no file.

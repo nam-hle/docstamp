@@ -25,7 +25,10 @@ exit: 1
       "changes": [
         {
           "status": "modified",
-          "path": "src/util.ts"
+          "path": "src/util.ts",
+          "via": [
+            "src/**"
+          ]
         }
       ],
       "diagnostics": []

@@ -5,7 +5,7 @@ import { config, scenario, type Repo } from '../harness/index.ts';
 const fixture = 'docs-site';
 const CLAUDE = { 'CLAUDE.md': ['src/**', '!src/**/*.test.ts'] };
 
-async function reviewedRepo(repo: Repo): Promise<void> {
+async function reviewedRepo(repo: Repo): Promise<string> {
   repo.write('docstamp.yaml', config(CLAUDE));
   repo.remove('README.md');
   repo.remove('docs/guide.md');
@@ -13,7 +13,7 @@ async function reviewedRepo(repo: Repo): Promise<void> {
   repo.write('src/d.ts', 'd\n');
   repo.commit('initial');
   await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
-  repo.commit('review');
+  return repo.commit('review');
 }
 
 function changeEverything(repo: Repo): void {
@@ -25,37 +25,38 @@ function changeEverything(repo: Repo): void {
   repo.write('src/untracked.ts', 'u\n');
 }
 
-const EXPECTED_TEXT =
+const expectedText = (base: string) =>
   'STALE    CLAUDE.md  (content-changed)\n' +
   '  deleted   src/c.ts\n' +
   '  modified  src/d.ts\n' +
   '  added     src/new.ts\n' +
   '  added     src/untracked.ts\n' +
   '  modified  src/util.ts\n' +
+  `  review: git diff ${base} -- src/c.ts src/d.ts src/new.ts src/untracked.ts src/util.ts\n` +
   '0 ok, 1 stale, 0 invalid\n';
 
 scenario(
   '§12.3 ChangedSince lists modified, added and deleted files, committed or not',
   { fixture },
   async (repo) => {
-    await reviewedRepo(repo);
+    const base = await reviewedRepo(repo);
     const index = readFileSync(repo.path('.git/index'));
     changeEverything(repo);
     const indexBefore = readFileSync(repo.path('.git/index'));
 
     const text = await repo.run([]);
     expect(text.exit).toBe(1);
-    expect(text.stdout.startsWith(EXPECTED_TEXT)).toBe(true);
+    expect(text.stdout.startsWith(expectedText(base))).toBe(true);
     expect(text.stdout).not.toContain('depends');
     expect(text.stderr).toBe('');
 
     const json = await repo.run(['--json']);
     expect(json.json().files[0].changes).toEqual([
-      { status: 'deleted', path: 'src/c.ts' },
-      { status: 'modified', path: 'src/d.ts' },
-      { status: 'added', path: 'src/new.ts' },
-      { status: 'added', path: 'src/untracked.ts' },
-      { status: 'modified', path: 'src/util.ts' },
+      { status: 'deleted', path: 'src/c.ts', via: ['src/**'] },
+      { status: 'modified', path: 'src/d.ts', via: ['src/**'] },
+      { status: 'added', path: 'src/new.ts', via: ['src/**'] },
+      { status: 'added', path: 'src/untracked.ts', via: ['src/**'] },
+      { status: 'modified', path: 'src/util.ts', via: ['src/**'] },
     ]);
     expect('resolvedFiles' in json.json().files[0]).toBe(false);
     expect(readFileSync(repo.path('.git/index')).equals(indexBefore)).toBe(true);
@@ -108,7 +109,7 @@ scenario(
     const result = await repo.run([]);
     expect(result.exit).toBe(1);
     expect(result.stdout).toContain(
-      'STALE    CLAUDE.md  (content-changed)\n  modified  src/d.ts\n0 ok',
+      'STALE    CLAUDE.md  (content-changed)\n  modified  src/d.ts\n  review: git diff',
     );
     expect(result.stdout).not.toContain('src/util.ts');
   },
@@ -128,7 +129,7 @@ scenario('§12.3 Root below the top level of the work tree', { git: false }, asy
   top.append('outside.txt', 'more\n');
   const result = await repo.run([]);
   expect(result.stdout).toContain(
-    'STALE    CLAUDE.md  (content-changed)\n  modified  src/a.ts\n0 ok',
+    'STALE    CLAUDE.md  (content-changed)\n  modified  src/a.ts\n  review: git diff',
   );
 });
 
@@ -200,9 +201,9 @@ scenario(
     const doc = (await repo.run(['--json'])).json();
     const claude = doc.files.find((f: { file: string }) => f.file === 'CLAUDE.md');
     expect(claude.changes).toEqual([
-      { status: 'modified', path: 'src/index.ts' },
-      { status: 'modified', path: 'src/util.ts' },
-      { status: 'added', path: 'src/z.ts' },
+      { status: 'modified', path: 'src/index.ts', via: ['src/**'] },
+      { status: 'modified', path: 'src/util.ts', via: ['src/**'] },
+      { status: 'added', path: 'src/z.ts', via: ['src/**'] },
     ]);
   },
 );
@@ -235,7 +236,9 @@ scenario('§12.3 an inherited GIT_DIR selects no repository', { fixture }, async
   foreign.commit('foreign');
   repo.append('src/util.ts', 'more\n');
   const result = await repo.run(['--json'], { env: { GIT_DIR: foreign.path('.git') } });
-  expect(result.json().files[0].changes).toEqual([{ status: 'modified', path: 'src/util.ts' }]);
+  expect(result.json().files[0].changes).toEqual([
+    { status: 'modified', path: 'src/util.ts', via: ['src/**'] },
+  ]);
 });
 
 scenario(
@@ -299,5 +302,123 @@ scenario(
     repo.git('revert', '--no-edit', 'HEAD');
     const reverted = await repo.run([], { label: 'edit reverted' });
     expect(reverted).toMatchObject({ exit: 0, stdout: '1 ok, 0 stale, 0 invalid\n', stderr: '' });
+  },
+);
+
+scenario(
+  '§12.3 step 6 and 7: via names the patterns, whitespaceOnly flags a change of white space',
+  { fixture },
+  async (repo) => {
+    repo.write(
+      'docstamp.yaml',
+      config({ ...CLAUDE, 'NOTES.md': ['src', 'src/d.ts', '!src/c.ts'] }),
+    );
+    repo.write('NOTES.md', '# notes\n');
+    repo.remove('README.md');
+    repo.remove('docs/guide.md');
+    repo.write('src/c.ts', 'c\n');
+    repo.write('src/d.ts', 'd\n');
+    repo.write('src/e.ts', 'let e = 1;\nlet f = 2;\n');
+    repo.write('src/mode.sh', 'echo\n');
+    repo.write('src/crlf.txt', 'one\ntwo\n');
+    repo.commit('initial');
+    await repo.run(['update', '--all'], { expectExit: 0 });
+    repo.commit('review');
+
+    repo.write('src/e.ts', '  let e = 1;   \n\n\n\tlet f = 2;\n');
+    repo.write('src/crlf.txt', 'one\r\ntwo\r\n');
+    repo.append('src/d.ts', 'more\n');
+    repo.chmod('src/mode.sh', 0o755);
+    repo.write('src/c.ts', 'c\n\n');
+    const text = await repo.run([]);
+    expect(text.exit).toBe(1);
+    expect(text.stdout).toContain(
+      'STALE    CLAUDE.md  (content-changed)\n' +
+        '  modified  src/c.ts (whitespace only)\n' +
+        '  modified  src/crlf.txt (whitespace only)\n' +
+        '  modified  src/d.ts\n' +
+        '  modified  src/e.ts (whitespace only)\n' +
+        '  modified  src/mode.sh\n',
+    );
+    expect(text.stdout).toContain(
+      'STALE    NOTES.md  (content-changed)\n' +
+        '  modified  src/crlf.txt (whitespace only)\n' +
+        '  modified  src/d.ts\n' +
+        '  modified  src/e.ts (whitespace only)\n' +
+        '  modified  src/mode.sh\n',
+    );
+    expect(text.stdout).not.toContain('via');
+
+    const doc = (await repo.run(['--json'])).json();
+    const byFile = (file: string) => doc.files.find((f: { file: string }) => f.file === file);
+    expect(byFile('CLAUDE.md').changes).toEqual([
+      { status: 'modified', path: 'src/c.ts', via: ['src/**'], whitespaceOnly: true },
+      { status: 'modified', path: 'src/crlf.txt', via: ['src/**'], whitespaceOnly: true },
+      { status: 'modified', path: 'src/d.ts', via: ['src/**'] },
+      { status: 'modified', path: 'src/e.ts', via: ['src/**'], whitespaceOnly: true },
+      { status: 'modified', path: 'src/mode.sh', via: ['src/**'] },
+    ]);
+    expect(byFile('NOTES.md').changes).toEqual([
+      { status: 'modified', path: 'src/crlf.txt', via: ['src'], whitespaceOnly: true },
+      { status: 'modified', path: 'src/d.ts', via: ['src', 'src/d.ts'] },
+      { status: 'modified', path: 'src/e.ts', via: ['src'], whitespaceOnly: true },
+      { status: 'modified', path: 'src/mode.sh', via: ['src'] },
+    ]);
+  },
+);
+
+scenario(
+  '§14.3.4 the review line is a git command that shows what the report lists',
+  { fixture },
+  async (repo) => {
+    await reviewedRepo(repo);
+    const base = repo.git('rev-parse', 'HEAD').trim();
+    repo.append('src/util.ts', 'committed\n');
+    repo.commit('edit');
+    repo.append('src/d.ts', 'not committed\n');
+    repo.write('src/my file.ts', 'spaced\n');
+    repo.write('src/[id].ts', 'bracket\n');
+
+    const result = await repo.run([]);
+    expect(result.stdout).toContain(
+      `  review: git diff ${base} -- ':(literal)src/[id].ts' src/d.ts 'src/my file.ts' src/util.ts\n`,
+    );
+    const shown = repo.git('diff', '--name-only', base, '--', 'src/d.ts', 'src/util.ts');
+    expect(shown).toBe('src/d.ts\nsrc/util.ts\n');
+
+    const rooted = await repo.run(['--root', repo.root]);
+    expect(rooted.stdout).toContain(`  review: git -C ${repo.root} diff ${base} -- `);
+  },
+);
+
+scenario(
+  '§14.3.4 above 10 changed files the review line is a pathspec of the patterns',
+  { fixture },
+  async (repo) => {
+    await reviewedRepo(repo);
+    const base = repo.git('rev-parse', 'HEAD').trim();
+    for (let i = 0; i < 11; i++) repo.write(`src/gen/g${String(i).padStart(2, '0')}.ts`, `${i}\n`);
+    repo.append('src/util.test.ts', 'excluded by the negation\n');
+    repo.append('src/util.ts', 'changed\n');
+    const result = await repo.run([]);
+    expect(result.stdout).toContain('  added     src/gen/  (11 files)\n');
+    expect(result.stdout).toContain(
+      `  review: git diff ${base} -- ':(glob)src/**' ':(exclude,glob)src/**/*.test.ts' ` +
+        "':(exclude,glob)src/**/*.test.ts/**'\n",
+    );
+    const listed = repo.git(
+      'diff',
+      '--name-only',
+      base,
+      '--',
+      ':(glob)src/**',
+      ':(exclude,glob)src/**/*.test.ts',
+    );
+    expect(listed).toBe('src/util.ts\n');
+
+    repo.write('docstamp.yaml', config({ 'CLAUDE.md': ['src/**/*.{ts,js}'] }));
+    const braces = await repo.run([], { label: 'alternation in a pattern' });
+    expect(braces.stdout).toContain('  added     src/gen/  (11 files)\n');
+    expect(braces.stdout).not.toContain('review:');
   },
 );

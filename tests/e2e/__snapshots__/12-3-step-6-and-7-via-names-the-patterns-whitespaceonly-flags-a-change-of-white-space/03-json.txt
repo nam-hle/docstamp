@@ -1,0 +1,115 @@
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 0,
+    "stale": 2,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/**",
+        "!src/**/*.test.ts"
+      ],
+      "changes": [
+        {
+          "status": "modified",
+          "path": "src/c.ts",
+          "via": [
+            "src/**"
+          ],
+          "whitespaceOnly": true
+        },
+        {
+          "status": "modified",
+          "path": "src/crlf.txt",
+          "via": [
+            "src/**"
+          ],
+          "whitespaceOnly": true
+        },
+        {
+          "status": "modified",
+          "path": "src/d.ts",
+          "via": [
+            "src/**"
+          ]
+        },
+        {
+          "status": "modified",
+          "path": "src/e.ts",
+          "via": [
+            "src/**"
+          ],
+          "whitespaceOnly": true
+        },
+        {
+          "status": "modified",
+          "path": "src/mode.sh",
+          "via": [
+            "src/**"
+          ]
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "NOTES.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src",
+        "src/d.ts",
+        "!src/c.ts"
+      ],
+      "changes": [
+        {
+          "status": "modified",
+          "path": "src/crlf.txt",
+          "via": [
+            "src"
+          ],
+          "whitespaceOnly": true
+        },
+        {
+          "status": "modified",
+          "path": "src/d.ts",
+          "via": [
+            "src",
+            "src/d.ts"
+          ]
+        },
+        {
+          "status": "modified",
+          "path": "src/e.ts",
+          "via": [
+            "src"
+          ],
+          "whitespaceOnly": true
+        },
+        {
+          "status": "modified",
+          "path": "src/mode.sh",
+          "via": [
+            "src"
+          ]
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

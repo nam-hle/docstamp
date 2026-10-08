@@ -1,0 +1,212 @@
+$ docstamp --json docs/stale-01.md
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 0,
+    "stale": 1,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "docs/stale-01.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src"
+      ],
+      "changes": [
+        {
+          "status": "added",
+          "path": "src/new/file-01.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-02.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-03.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-04.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-05.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-06.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-07.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-08.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-09.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-10.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-11.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-12.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "added",
+          "path": "src/new/file-13.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-01.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-02.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-03.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-04.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-05.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-06.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-07.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-08.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-09.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-10.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-11.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-12.ts",
+          "via": [
+            "src"
+          ]
+        },
+        {
+          "status": "deleted",
+          "path": "src/old/file-13.ts",
+          "via": [
+            "src"
+          ]
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

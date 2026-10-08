@@ -1,0 +1,52 @@
+# quiet has no effect on json
+$ docstamp --json --quiet
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 2,
+    "stale": 1,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/**",
+        "!src/**/*.test.ts"
+      ],
+      "changes": null,
+      "diagnostics": []
+    },
+    {
+      "file": "README.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/index.ts",
+        "docs/guide.md"
+      ],
+      "changes": null,
+      "diagnostics": []
+    },
+    {
+      "file": "docs/guide.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/cli"
+      ],
+      "changes": null,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

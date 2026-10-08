@@ -24,7 +24,10 @@ exit: 1
       "changes": [
         {
           "status": "modified",
-          "path": "src/cli/run.ts"
+          "path": "src/cli/run.ts",
+          "via": [
+            "src/cli"
+          ]
         }
       ],
       "diagnostics": []

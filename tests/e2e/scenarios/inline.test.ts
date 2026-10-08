@@ -43,9 +43,10 @@ scenario(
     repo.commit('edit a dependency');
     const stale = await repo.run([]);
     expect(stale.exit).toBe(1);
-    expect(stale.stdout).toBe(
+    expect(stale.stdout.replace(/[0-9a-f]{40}/u, '<C>')).toBe(
       'STALE    README.md  (content-changed)\n' +
         '  modified  src/cli/run.ts\n' +
+        '  review: git diff <C> -- src/cli/run.ts\n' +
         '1 ok, 1 stale, 0 invalid\n' +
         'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
     );
@@ -313,7 +314,8 @@ scenario(
         'STALE    docs/GUIDE.md  (unrecorded)\n' +
         '  depends   src/core\n' +
         '0 ok, 1 stale, 1 invalid\n' +
-        'next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md\n',
+        'next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md\n' +
+        'next: fix the configuration of each invalid file, then run: docstamp check README.md\n',
     );
     expect(check.stderr).toContain('error: E_DUPLICATE_DECLARATION: README.md: ');
     const before = repo.read('README.md');
@@ -513,9 +515,10 @@ scenario(
     repo.write('docs/GUIDE.md', reflowed);
     const result = await repo.run([], { show: ['docs/GUIDE.md'] });
     expect(result.exit).toBe(1);
-    expect(result.stdout).toBe(
+    expect(result.stdout.replace(/[0-9a-f]{40}/u, '<C>')).toBe(
       'STALE    README.md  (content-changed)\n' +
         '  modified  docs/GUIDE.md\n' +
+        '  review: git diff <C> -- docs/GUIDE.md\n' +
         '1 ok, 1 stale, 0 invalid\n' +
         'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
     );
@@ -540,8 +543,8 @@ scenario(
     repo.write('src/cli/added.ts', 'export const b = 2;\n');
     const result = await repo.run(['--json']);
     expect(result.json().files[0].changes).toEqual([
-      { status: 'added', path: 'src/cli/added.ts' },
-      { status: 'modified', path: 'src/cli/run.ts' },
+      { status: 'added', path: 'src/cli/added.ts', via: ['src/cli'] },
+      { status: 'modified', path: 'src/cli/run.ts', via: ['src/cli'] },
     ]);
     const shallow = repo.shallowClone('clone');
     const text = await shallow.run([], { label: 'a shallow clone cannot tell' });

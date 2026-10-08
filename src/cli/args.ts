@@ -8,7 +8,7 @@ export type Args =
   | { mode: 'help' }
   | { mode: 'version' }
   | {
-      mode: 'check' | 'list-dependencies';
+      mode: 'list-dependencies';
       json: boolean;
       root?: string;
       paths: string[];
@@ -21,6 +21,14 @@ export type Args =
       transitive: boolean;
     }
   | {
+      mode: 'check';
+      json: boolean;
+      onlyStale: boolean;
+      quiet: boolean;
+      root?: string;
+      paths: string[];
+    }
+  | {
       mode: 'stats';
       json: boolean;
       root?: string;
@@ -30,9 +38,10 @@ export type Args =
   | { mode: 'update'; all: boolean; json: boolean; root?: string; paths: string[] };
 
 export const HELP = `Usage:
-  docstamp check [--json] [--root <dir>] [<file>...]
+  docstamp check [--json] [--only-stale] [--quiet] [--root <dir>] [<file>...]
       Check that each file's dependencies are unchanged since its last review.
       The default command: a bare docstamp is docstamp check.
+      --only-stale leaves the ok files out of the --json list; --quiet prints nothing on success.
   docstamp update [--json] [--root <dir>] (--all | <file>...)
       Record that you reviewed the named files against their dependencies (in each file's
       docstamp block, or in docstamp-lock.yaml for files declared in the configuration).
@@ -59,7 +68,15 @@ const COMMANDS = new Set([
   'help',
   'version',
 ]);
-const FLAGS = new Set(['--json', '--all', '--transitive', '--version', '--help']);
+const FLAGS = new Set([
+  '--json',
+  '--all',
+  '--transitive',
+  '--only-stale',
+  '--quiet',
+  '--version',
+  '--help',
+]);
 const REMOVED: Record<string, string> = {
   '--write': 'docstamp update',
   '--files': 'docstamp list-dependencies',
@@ -75,6 +92,7 @@ const isOption = (arg: string) =>
   arg === '--' || valuedName(arg) !== undefined || FLAGS.has(arg) || arg in REMOVED;
 const DEFAULT_SINCE = '30d';
 const STATS_ONLY = ['--since', '--from'];
+const CHECK_ONLY = ['--only-stale', '--quiet'];
 const MAX_DAYS = 3650;
 const DAYS = /^([1-9][0-9]{0,3})d$/u;
 const usage = (subject: string, message?: string) =>
@@ -143,6 +161,11 @@ export function parseArgs(argv: readonly string[]): Args {
   if (seen.has('--transitive') && mode !== 'list-dependents') {
     fail('--transitive', '--transitive is only valid with "docstamp list-dependents".');
   }
+  if (mode !== 'check') {
+    for (const option of CHECK_ONLY) {
+      if (seen.has(option)) fail(option, `${option} is only valid with "docstamp check".`);
+    }
+  }
   if (mode === 'list-dependents' && paths.length === 0) {
     fail('list-dependents', 'Name the files whose dependents you want to list.');
   }
@@ -178,6 +201,10 @@ export function parseArgs(argv: readonly string[]): Args {
   }
   if (mode === 'list-dependents') {
     return { mode, json, ...rootOpt, paths, transitive: seen.has('--transitive') };
+  }
+  if (mode === 'check') {
+    const onlyStale = seen.has('--only-stale');
+    return { mode, json, onlyStale, quiet: seen.has('--quiet'), ...rootOpt, paths };
   }
   return mode === 'update'
     ? { mode, all, json, ...rootOpt, paths }

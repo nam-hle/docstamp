@@ -1,0 +1,31 @@
+# only stale, one stale
+$ docstamp --json --only-stale
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 2,
+    "stale": 1,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/**",
+        "!src/**/*.test.ts"
+      ],
+      "changes": null,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

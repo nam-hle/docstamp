@@ -178,7 +178,10 @@ scenario('§8.6 E_UNKNOWN_PRESET attaches to the file that names the preset', as
     'E_UNKNOWN_PRESET',
   ]);
   expect(result.stderr).toContain('E_UNKNOWN_PRESET: DOC.md: shared: ');
-  expect(result.stdout).toBe('INVALID  DOC.md\n0 ok, 0 stale, 1 invalid\n');
+  expect(result.stdout).toBe(
+    'INVALID  DOC.md\n0 ok, 0 stale, 1 invalid\n' +
+      'next: fix the configuration of each invalid file, then run: docstamp check DOC.md\n',
+  );
 });
 
 scenario('§9.3 invalid patterns make only their file invalid', async (repo) => {

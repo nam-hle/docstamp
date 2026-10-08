@@ -24,11 +24,17 @@ exit: 1
       "changes": [
         {
           "status": "added",
-          "path": "src/cli/added.ts"
+          "path": "src/cli/added.ts",
+          "via": [
+            "src/cli"
+          ]
         },
         {
           "status": "modified",
-          "path": "src/cli/run.ts"
+          "path": "src/cli/run.ts",
+          "via": [
+            "src/cli"
+          ]
         }
       ],
       "diagnostics": []

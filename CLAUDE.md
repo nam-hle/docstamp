@@ -186,6 +186,15 @@ asks "is this file invalid" reads `state`, never `diagnostics.length`.
 `src/universe/walk.ts` uses it only to word `E_EMPTY_PATTERN` for a literal path that exists but is
 ignored (§8.5 NOTE): it never touches selection, codes or order, and never calls `git`.
 
+## Text output order
+
+`checkChunks` in `src/report/text.ts` returns the check report as a List of stdout and stderr writes
+in the order of SPEC §14.3.2 (an `INVALID` line, then its Diagnostics). `emit` in `src/cli/run.ts`
+writes them one by one, in that order: never all of stdout first. Each stream alone must stay what
+§14.1 says; `tests/unit/run.test.ts` pins the interleaving. `reviewLine` (§14.3.4) only builds the
+text of a git command for the reader; `git` still runs in `src/history/` alone, read-only, and
+`isWhitespaceOnly` (§12.3 step 7) makes two more read-only calls there.
+
 ## Compatibility guard
 
 `tests/unit/golden.test.ts` pins exact file hashes, Dependency Hashes and selected file lists for

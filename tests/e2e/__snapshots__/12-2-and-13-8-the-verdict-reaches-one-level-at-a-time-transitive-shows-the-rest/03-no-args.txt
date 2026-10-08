@@ -3,6 +3,7 @@ exit: 1
 --- stdout ---
 STALE    docs/GUIDE.md  (content-changed)
   modified  src/core/hash.ts
+  review: git diff 6498f5f57e389b2b95d85dadcce94e04d7d73694 -- src/core/hash.ts
 4 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/GUIDE.md
 --- stderr ---

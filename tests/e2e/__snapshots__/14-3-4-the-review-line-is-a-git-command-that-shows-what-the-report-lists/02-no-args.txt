@@ -1,0 +1,12 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (content-changed)
+  added     src/[id].ts
+  modified  src/d.ts
+  added     "src/my file.ts"
+  modified  src/util.ts
+  review: git diff 6eff57282542cf9d373c2934764350e274eadf1a -- ':(literal)src/[id].ts' src/d.ts 'src/my file.ts' src/util.ts
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+--- stderr ---

@@ -24,23 +24,38 @@ exit: 1
       "changes": [
         {
           "status": "deleted",
-          "path": "src/c.ts"
+          "path": "src/c.ts",
+          "via": [
+            "src/**"
+          ]
         },
         {
           "status": "modified",
-          "path": "src/d.ts"
+          "path": "src/d.ts",
+          "via": [
+            "src/**"
+          ]
         },
         {
           "status": "added",
-          "path": "src/new.ts"
+          "path": "src/new.ts",
+          "via": [
+            "src/**"
+          ]
         },
         {
           "status": "added",
-          "path": "src/untracked.ts"
+          "path": "src/untracked.ts",
+          "via": [
+            "src/**"
+          ]
         },
         {
           "status": "modified",
-          "path": "src/util.ts"
+          "path": "src/util.ts",
+          "via": [
+            "src/**"
+          ]
         }
       ],
       "diagnostics": []

@@ -2,9 +2,10 @@ $ docstamp help
 exit: 0
 --- stdout ---
 Usage:
-  docstamp check [--json] [--root <dir>] [<file>...]
+  docstamp check [--json] [--only-stale] [--quiet] [--root <dir>] [<file>...]
       Check that each file's dependencies are unchanged since its last review.
       The default command: a bare docstamp is docstamp check.
+      --only-stale leaves the ok files out of the --json list; --quiet prints nothing on success.
   docstamp update [--json] [--root <dir>] (--all | <file>...)
       Record that you reviewed the named files against their dependencies (in each file's
       docstamp block, or in docstamp-lock.yaml for files declared in the configuration).

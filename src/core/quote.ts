@@ -31,3 +31,10 @@ export function quote(s: string): string {
 export function needsQuoting(s: string): boolean {
   return quote(s) !== `"${s}"`;
 }
+
+const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/u;
+
+// SPEC §14.3.4
+export function shellQuote(s: string): string {
+  return SHELL_SAFE.test(s) ? s : `'${s.replaceAll("'", "'\\''")}'`;
+}

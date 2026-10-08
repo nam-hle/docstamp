@@ -81,18 +81,41 @@ $ docstamp
 3 ok, 0 stale, 0 invalid
 ```
 
-Later, a commit changes `src/cli/run.ts` and `src/core/generated/types.ts`. CI fails and names the docs and the files that changed (`docs/architecture.md` stays `ok`: the only core file that changed is excluded):
+Later, a commit changes `src/cli/run.ts` and `src/core/generated/types.ts`, and reformats `src/index.ts`. CI fails and names the docs and the files that changed (`docs/architecture.md` stays `ok`: the only core file that changed is excluded):
 
 ```console
 $ docstamp
 STALE    CLAUDE.md  (content-changed)
   modified  src/cli/run.ts
   modified  src/core/generated/types.ts
+  modified  src/index.ts (whitespace only)
+  review: git diff 260bd0a3cbed145f3afa9ec3db9c02f1d30f0360 -- src/cli/run.ts src/core/generated/types.ts src/index.ts
 STALE    README.md  (content-changed)
   modified  src/cli/run.ts
+  review: git diff 260bd0a3cbed145f3afa9ec3db9c02f1d30f0360 -- src/cli/run.ts
 1 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
 ```
+
+The `review:` line is a read-only git command that shows the change since the last `update` (the work tree against that commit, so uncommitted edits are in it, but untracked files are not until `git add -N`). `(whitespace only)` is git's judgement that a modified file differs only in white space and blank lines, to help you skim; it never changes the verdict. With more than 10 changed files the `review:` line gives a pathspec of the patterns instead of the paths.
+
+When a directory moves, the report does not list every file twice. Five or more `added` (or `deleted`) files directly in one directory become one line, and a doc that became `invalid` keeps its errors right under its line on a terminal (each stream alone is unchanged: errors are still on standard error):
+
+```console
+$ git mv src/old src/new
+$ docstamp docs/api.md docs/old.md
+STALE    docs/api.md  (content-changed)
+  added     src/new/  (13 files)
+  deleted   src/old/  (13 files)
+INVALID  docs/old.md
+error: E_EMPTY_DEPENDENCIES: docs/old.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: docs/old.md: src/old: Correct or remove the pattern; it matches no file.
+0 ok, 1 stale, 1 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/api.md
+next: fix the configuration of each invalid file, then run: docstamp check docs/old.md
+```
+
+Each `next:` line names at most 10 files and ends with `  and <m> more` when there are more; update those and run `docstamp` again ([SPEC §14.3](docs/SPEC.md#143-check-text-mode)). `--json` still lists every changed file.
 
 Review each stale doc against the listed files, fix what is no longer true, then record the review and commit the lock:
 
@@ -144,6 +167,7 @@ $ docstamp
 $ docstamp
 STALE    docs/architecture.md  (content-changed)
   modified  src/core/hash.ts
+  review: git diff 086c7e92ed3634dd8464f9ca9feccba0fa01c06a -- src/core/hash.ts
 1 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
 $ docstamp update docs/architecture.md
@@ -234,8 +258,8 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
 
   ```
   $ docstamp
-  1 ok, 0 stale, 0 invalid
   warning: W_EMPTY_EXCLUSION: docs/architecture.md: !src/core/**/__test__/**: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
+  1 ok, 0 stale, 0 invalid
   ```
 
   A doc whose patterns together select nothing is still an error (`E_EMPTY_DEPENDENCIES`).
@@ -251,9 +275,10 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
   ```
   $ docstamp
   INVALID  docs/output.md
-  0 ok, 0 stale, 1 invalid
   error: E_EMPTY_DEPENDENCIES: docs/output.md: Correct the patterns in "dependencies"; together they select no file.
   error: E_EMPTY_PATTERN: docs/output.md: build/output/index.js: Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore or the ignore list; depend on its source, or remove that rule (gitignore: false skips .gitignore files).
+  0 ok, 0 stale, 1 invalid
+  next: fix the configuration of each invalid file, then run: docstamp check docs/output.md
   ```
 
   Name the files that produce `build/output/index.js` instead. `gitignore: false` ends the exclusion for every `.gitignore` in the repository, not for one path. Only a literal path (no `*`, `?`, `[`, `{`) gets this hint, and the selection never changes. docstamp does not trace a renamed file, because that needs git history ([SPEC §8.5](docs/SPEC.md#85-resolution)).
@@ -370,7 +395,7 @@ That is one entry of `files`; the report also has `version`, `mode`, `exitCode`,
 
 | Command | What it does |
 |---|---|
-| `docstamp [check]` | The verdict. A bare `docstamp` is `check`. |
+| `docstamp [check] [--only-stale] [--quiet]` | The verdict. A bare `docstamp` is `check`. `--quiet` prints nothing when every file is `ok` (the exit code still says it) and the report as usual otherwise; `--only-stale` leaves the `ok` files out of the `--json` list while `summary` still counts them. Neither is accepted by the other commands. |
 | `docstamp update (--all \| <file>...)` | Record that you reviewed the named files, in the lock or, for an inline doc, in its own `hash:` line. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line. |
 | `docstamp list-dependencies [<file>...]` | Each file with its dependency patterns and the files they select. It does not read the lock. |
 | `docstamp list-dependents [--transitive] <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only unless `--transitive`, which also lists the dependents of those dependents. No lock. A path that exists nowhere gets a `W_UNKNOWN_PATH` warning and exit 0. |
@@ -407,7 +432,7 @@ A script must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carrie
 
 ### JSON output
 
-`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)). Here is the stale `README.md` from the example above, with `changes` listing the changed dependencies (`null` when git history cannot answer):
+`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)). Here is the stale `README.md` from the example above, with `changes` listing the changed dependencies (`null` when git history cannot answer). `via` names the patterns that select each path, and `"whitespaceOnly": true` appears on a modified file whose change is white space only:
 
 ```json
 {
@@ -415,12 +440,12 @@ A script must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carrie
   "state": "stale",
   "reasons": ["content-changed"],
   "dependencies": ["src/cli"],
-  "changes": [{ "status": "modified", "path": "src/cli/run.ts" }],
+  "changes": [{ "status": "modified", "path": "src/cli/run.ts", "via": ["src/cli"] }],
   "diagnostics": []
 }
 ```
 
-This is one entry of `files`; the report also has `version`, `mode`, `exitCode`, `summary` and top-level `diagnostics`.
+This is one entry of `files`; the report also has `version`, `mode`, `exitCode`, `summary` and top-level `diagnostics`. `docstamp --json --only-stale` leaves the `ok` files out of `files` and keeps counting them in `summary`.
 
 ### GitHub Actions
 

@@ -62,6 +62,8 @@ export type Reason = 'unrecorded' | 'content-changed';
 export interface Change {
   readonly status: 'modified' | 'added' | 'deleted';
   readonly path: string;
+  readonly via: readonly string[];
+  readonly whitespaceOnly: boolean;
 }
 
 export interface Result {
@@ -75,6 +77,7 @@ export interface Result {
   readonly current: string;
   readonly diagnostics: readonly Diagnostic[];
   readonly changes?: readonly Change[] | null;
+  readonly base?: string;
 }
 
 // SPEC §13.8: `dependents`, `cycle` and `repeated` are set only by --transitive

@@ -6,6 +6,7 @@ import type { FileStats } from '../engine/stats.ts';
 export interface JsonDoc {
   mode: 'check' | 'update';
   evaluated?: boolean;
+  onlyStale?: boolean;
   exitCode: number;
   selected: readonly Result[];
   diagnostics: readonly Diagnostic[];
@@ -47,7 +48,9 @@ const diagJson = (d: Diagnostic): JsonObject =>
 // SPEC §14.5
 export function jsonText(doc: JsonDoc): string {
   const count = (s: Result['state']) => doc.selected.filter((r) => r.state === s).length;
-  const dependents = doc.selected.map((r) => {
+  const listed =
+    doc.onlyStale === true ? doc.selected.filter((r) => r.state !== 'ok') : doc.selected;
+  const dependents = listed.map((r) => {
     const members: Array<[string, Json]> = [
       ['file', r.file],
       ['state', r.state],
@@ -60,6 +63,8 @@ export function jsonText(doc: JsonDoc): string {
               obj([
                 ['status', c.status],
                 ['path', c.path],
+                ['via', [...c.via]],
+                ...(c.whitespaceOnly ? [['whitespaceOnly', true] as [string, Json]] : []),
               ]),
             )
           : null,

@@ -3,7 +3,7 @@ import type { Change, Result } from '../core/types.ts';
 import { git } from './git.ts';
 import { recordedHash as inlineHash } from '../inline/frontmatter.ts';
 import { parseLock } from '../lock/lock.ts';
-import { select } from '../pattern/match.ts';
+import { select, viaOf } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 
 export interface RawChange {
@@ -14,6 +14,7 @@ export interface RawChange {
 export interface Keep {
   readonly resolved: ReadonlySet<string>;
   readonly selectsDeleted: (path: string) => boolean;
+  readonly viaOf: (path: string) => string[];
 }
 
 const STATUS = { M: 'modified', T: 'modified', A: 'added', D: 'deleted' } as const;
@@ -60,7 +61,7 @@ export function buildChanges(
     .filter(([path, status]) =>
       status === 'deleted' ? keep.selectsDeleted(path) : keep.resolved.has(path),
     )
-    .map(([path, status]) => ({ status, path }))
+    .map(([path, status]) => ({ status, path, via: keep.viaOf(path), whitespaceOnly: false }))
     .sort((a, b) => comparePaths(a.path, b.path));
 }
 
@@ -94,13 +95,35 @@ function reviewCommit(root: string, file: string, hash: string, inline: boolean)
   return null;
 }
 
-// SPEC §12.3; `entry` is the LockEntry, or the recorded Hash of an inline file
+const MODES = /^:(\d+) (\d+) /u;
+
+// SPEC §12.3 step 7
+export function isWhitespaceOnly(root: string, commit: string, path: string): boolean {
+  const diff = (...options: string[]) =>
+    git(root, ['--literal-pathspecs', 'diff', ...options, commit, '--', path]);
+  try {
+    diff('--ignore-all-space', '--ignore-blank-lines', '--quiet');
+    const modes = MODES.exec(diff('--raw', '--no-renames'));
+    return modes === null || modes[1] === modes[2];
+  } catch {
+    return false;
+  }
+}
+
+export interface ChangedReport {
+  readonly changes: readonly Change[];
+  readonly base: string;
+}
+
+// SPEC §12.3; `entry` is the LockEntry, or the recorded Hash of an inline file; `whitespace`
+// remembers the answers of step 7 across the Results of one run
 export function changedSince(
   root: string,
   result: Result,
   entry: string,
   inline = false,
-): readonly Change[] | null {
+  whitespace: Map<string, boolean> = new Map(),
+): ChangedReport | null {
   try {
     if (git(root, ['rev-parse', '--is-shallow-repository']).trim() !== 'false') return null;
     const id = reviewCommit(root, result.file, entry, inline);
@@ -114,12 +137,25 @@ export function changedSince(
     );
     const patterns = result.dependencies.map((c) => parsePattern(c));
     if (patterns.some((p) => p === null)) return null;
+    const parsed = patterns as ParsedPattern[];
     const changes = buildChanges(diff, untracked, {
       resolved: new Set(result.resolved),
-      selectsDeleted: (path) =>
-        path !== result.file && select(patterns as ParsedPattern[], [path]).length === 1,
+      selectsDeleted: (path) => path !== result.file && select(parsed, [path]).length === 1,
+      viaOf: (path) => viaOf(result.dependencies, parsed, path),
     });
-    return changes === null || changes.length === 0 ? null : changes;
+    if (changes === null || changes.length === 0) return null;
+    const whitespaceOnly = (path: string): boolean => {
+      const key = `${id}\0${path}`;
+      const known = whitespace.get(key) ?? isWhitespaceOnly(root, id, path);
+      whitespace.set(key, known);
+      return known;
+    };
+    return {
+      changes: changes.map((c) =>
+        c.status === 'modified' && whitespaceOnly(c.path) ? { ...c, whitespaceOnly: true } : c,
+      ),
+      base: id,
+    };
   } catch {
     return null;
   }

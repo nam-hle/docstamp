@@ -89,6 +89,29 @@ describe('§13.5 check', () => {
     expect(r.err).toBe('');
     expect(JSON.parse(r.out).diagnostics[0].code).toBe('E_UNKNOWN_FILE');
   });
+  it('§14.3.2 writes the Diagnostics of an invalid file right after its line', () => {
+    const root = makeTree({
+      'docstamp.yaml': `${CONFIG}  gone.md:\n    dependencies: [src/**]\n`,
+      'doc.md': 'x',
+      'src/a.ts': 'a',
+    });
+    const calls: string[] = [];
+    const io: Io = {
+      stdout: (s) => calls.push(`out: ${s.split('\n')[0]}`),
+      stderr: (s) => calls.push(`err: ${s.split(':').slice(0, 3).join(':')}`),
+      isTty: false,
+      env: {},
+    };
+    expect(run([], root, io)).toBe(2);
+    expect(calls).toEqual([
+      'out: STALE    doc.md  (unrecorded)',
+      'out: INVALID  gone.md',
+      'err: error: E_FILE_MISSING: gone.md',
+      'out: 0 ok, 1 stale, 1 invalid',
+      'out: next: review each stale file against its dependencies, then run: docstamp update doc.md',
+      'out: next: fix the configuration of each invalid file, then run: docstamp check gone.md',
+    ]);
+  });
   it('a symlinked file is invalid', () => {
     const root = makeTree({
       'docstamp.yaml': CONFIG,

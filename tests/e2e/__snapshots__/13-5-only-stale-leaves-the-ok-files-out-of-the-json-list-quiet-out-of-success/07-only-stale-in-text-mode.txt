@@ -1,0 +1,10 @@
+# only stale in text mode
+$ docstamp --only-stale
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (content-changed)
+  depends   src/**
+  depends   !src/**/*.test.ts
+2 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+--- stderr ---

@@ -3,5 +3,6 @@ exit: 2
 --- stdout ---
 INVALID  README.md
 1 ok, 0 stale, 1 invalid
+next: fix the configuration of each invalid file, then run: docstamp check README.md
 --- stderr ---
 error: E_FILE_MISSING: README.md: Rename the key under "files" in the configuration file or restore the file.
