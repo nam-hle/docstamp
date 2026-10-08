@@ -1,0 +1,8 @@
+$ docstamp suggest --write docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern   files  stale
+  src/x.ts      1    n/a
+written  docs/guide.md
+--- stderr ---

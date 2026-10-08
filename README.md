@@ -345,7 +345,7 @@ README.md
   resolved  src/cli/run.ts
 ```
 
-With `--json`, a file that uses presets also has `use` and `origins` (one entry per pattern, `null` for the doc's own). Things to know:
+`docstamp` (check) marks the preset patterns of a stale doc the same way. With `--json`, a file that uses presets also has `use` and `origins` (one entry per pattern, `null` for the doc's own), in `list-dependencies`, `check` and `update`. Things to know:
 
 - **Presets are defined in the configuration file only.** An inline block that uses one needs a `docstamp.yaml` (or a script) that defines it. A name that is not defined, in a block or in `files`, makes only that file `invalid` with `E_UNKNOWN_PRESET`.
 - **The hash depends on the selected files only.** Editing a preset makes a file that uses it stale exactly when the edit changes which files it selects; reordering a preset's lines, or adding an exclusion that removes nothing, does not make a doc stale. Nothing in the lock or in an inline `hash:` mentions presets.
@@ -406,7 +406,7 @@ STALE    docs/architecture.md  (unrecorded)
 next: review each stale file against its dependencies, then run: docstamp update docs/architecture.md
 ```
 
-The block is inserted into the frontmatter, or a minimal frontmatter is created; every other byte of the file stays (comments, the byte order mark, CR LF). Running it twice gives the same bytes. It never stamps, and it refuses to overwrite a block that records a `hash` or names presets with `use`, or a doc declared in the configuration file: edit those by hand. Read the proposal before you keep it: a bare directory mention can select hundreds of files, and a mention may be an illustration, not something the doc states. The extraction rules (what counts as a mention, the generic files that are dropped, when files collapse into their directory, which test exclusions are added) are in [SPEC §12.6](docs/SPEC.md#126-proposal); the command is [§13.10](docs/SPEC.md#1310-suggest).
+The block is inserted into the frontmatter, indented like the first indented line already there (two spaces when there is none), or a minimal frontmatter is created; every other byte of the file stays (comments, the byte order mark, CR LF). Running it twice gives the same bytes. It never stamps, and it refuses to overwrite a block that records a `hash` or names presets with `use`, or a doc declared in the configuration file: edit those by hand. Read the proposal before you keep it: a bare directory mention can select hundreds of files, and a mention may be an illustration, not something the doc states. The extraction rules (what counts as a mention, the generic files that are dropped, when files collapse into their directory, which test exclusions are added) are in [SPEC §12.6](docs/SPEC.md#126-proposal); the command is [§13.10](docs/SPEC.md#1310-suggest).
 
 ## Measuring how noisy a list is
 
@@ -462,7 +462,7 @@ That is one entry of `files`; the report also has `version`, `mode`, `exitCode`,
 
 | Command | What it does |
 |---|---|
-| `docstamp [check] [--only-stale] [--quiet]` | The verdict. A bare `docstamp` is `check`. `--quiet` prints nothing when every file is `ok` (the exit code still says it) and the report as usual otherwise; `--only-stale` leaves the `ok` files out of the `--json` list while `summary` still counts them. Neither is accepted by the other commands. |
+| `docstamp [check] [--only-stale] [--quiet]` | The verdict. A bare `docstamp` is `check`. `--quiet` prints nothing when every file is `ok` (the exit code still says it) and the report as usual otherwise; `--only-stale` leaves the `ok` files out of the `--json` list while `summary` still counts them; without `--json` it changes nothing, since the text report has no line for an `ok` file. Neither is accepted by the other commands. |
 | `docstamp update (--all \| <file>...)` | Record that you reviewed the named files, in the lock or, for an inline doc, in its own `hash:` line. It prints `written` for a file whose recorded hash changed and `unchanged` for one already recorded. In `--json`, both report `state: "ok"`, with `written` true or false. A refused update prints only the findings, never a `next:` line. |
 | `docstamp list-dependencies [<file>...]` | Each file with its dependency patterns and the files they select. It does not read the lock. |
 | `docstamp list-dependents [--transitive] <file>...` | The reverse query: for each named file (any file in the repository), the files that depend on it and the patterns that select it. Direct only unless `--transitive`, which also lists the dependents of those dependents. No lock. A path that exists nowhere gets a `W_UNKNOWN_PATH` warning and exit 0. |

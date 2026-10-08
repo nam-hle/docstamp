@@ -911,8 +911,11 @@ used only by `suggest --write` (§13.10); it never records a Review.
       and `dependencies:`, and, for each pattern *s*, the line *indent*, two U+0020, `- `,
       *item*(*s*), each followed by *eol*.
 3. Otherwise, if the first line of *text* (without a leading U+FEFF) and a later line are `---`
-   (§5.6 steps 2 and 3), insert before that later line the line `docstamp:` and, for the lines of
-   step 2.3 with *indent* two U+0020, each followed by the terminator of the first line.
+   (§5.6 steps 2 and 3), insert before that later line the line `docstamp:` and the lines of
+   step 2.3, each followed by the terminator of the first line, with *indent* the U+0020 characters
+   that start the first line between the two that starts with U+0020 followed by a character other
+   than U+0020, a tab or a line terminator, or two U+0020 if there is no such line. The block then
+   follows the indentation the frontmatter already uses.
 4. Otherwise let *text* start with the U+FEFF if it has one, then the lines `---`, `docstamp:` and
    the lines of step 2.3 with *indent* two U+0020, then `---`, each followed by the terminator of
    the first line of *text* (CR LF if it is CR LF, else LF), then the rest of *text*.
@@ -1754,7 +1757,8 @@ STALE    <file>  (<reason>, <reason>)
   - the *change lines* of §14.3.1. Each is two spaces, the status padded with spaces to 8
     characters, two spaces, and the path as in §14.2 (`  modified  <path>`, `  added     <path>`,
     `  deleted   <path>`, `  renamed   <from> -> <to>`), or a group line.
-- For any other `stale`: one `depends` line per pattern, in declaration order.
+- For any other `stale`: one `depends` line per pattern, in declaration order, with the
+  `(preset <name>)` marker of §14.6 for a pattern that comes from a Preset.
 
 Then one summary line:
 
@@ -1868,6 +1872,10 @@ not none, the block ends with one line:
 two spaces, `review: `, and a read-only git command that shows what changed: *C* is `[[Base]]`
 as git printed it, and each *arg* is written with `ShellQuote`. If `--root` was given, `git diff`
 is `git -C <root> diff`, *root* the value as given, written with `ShellQuote`. `-M` lets git show a
+where `the configuration` reads `the docstamp block` when the Declaration of every invalid selected
+Result is inline (§5.6), and `the configuration or docstamp block` when some are inline and some
+configured.
+
 renamed file as one rename rather than a deletion and an addition. The *args* are:
 
 - if the Result has at most 10 Changes (the *path cap*): the `[[Path]]` of each Change in path
@@ -1988,7 +1996,7 @@ docstamp never runs it.
   `[[Use]]` has the members `use` (its `[[Use]]`) and `origins` (its `[[Origins]]`: one element per
   element of `dependencies`, `null` for none) between `dependencies` and `resolvedFiles`; any other
   entry is as it was before Presets. In every other mode `dependencies` is likewise the effective
-  patterns, and `use` and `origins` are not output.
+  patterns; `check` and `update` output `use` and `origins` as above, and the other modes do not.
 - With `list-dependents` the document is instead (§13.8):
 
   ```json

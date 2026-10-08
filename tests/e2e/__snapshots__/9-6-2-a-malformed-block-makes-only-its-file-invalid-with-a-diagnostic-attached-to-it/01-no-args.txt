@@ -23,7 +23,7 @@ STALE    docs/GUIDE.md  (unrecorded)
   depends   src/core
 0 ok, 2 stale, 15 invalid
 next: review each stale file against its dependencies, then run: docstamp update README.md docs/GUIDE.md
-next: fix the configuration of each invalid file, then run: docstamp check bad/anchor.md bad/bad-pattern.md bad/duplicate.md bad/empty-deps.md bad/empty.md bad/flow.md bad/no-deps.md bad/no-match.md bad/quoted-hash.md bad/scalar.md
+next: fix the docstamp block of each invalid file, then run: docstamp check bad/anchor.md bad/bad-pattern.md bad/duplicate.md bad/empty-deps.md bad/empty.md bad/flow.md bad/no-deps.md bad/no-match.md bad/quoted-hash.md bad/scalar.md
   and 5 more
 --- stderr ---
 error: E_BLOCK: bad/anchor.md: frontmatter: The frontmatter of a file with a docstamp block must be strict YAML with one docstamp key.

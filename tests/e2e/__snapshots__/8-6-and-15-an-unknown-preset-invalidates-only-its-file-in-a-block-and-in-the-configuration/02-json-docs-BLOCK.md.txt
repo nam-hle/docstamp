@@ -18,6 +18,14 @@ exit: 2
       "dependencies": [
         "src/core"
       ],
+      "use": [
+        "nope",
+        "tests",
+        "gone"
+      ],
+      "origins": [
+        null
+      ],
       "changes": null,
       "diagnostics": [
         {

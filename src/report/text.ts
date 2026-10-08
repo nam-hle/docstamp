@@ -21,6 +21,8 @@ export interface CheckTextOptions {
   next?: boolean;
   quiet?: boolean;
   rootFromCwd?: string;
+  // SPEC §14.3.3: the files whose Declaration is inline
+  inline?: ReadonlySet<string>;
 }
 
 export interface Chunk {
@@ -143,7 +145,13 @@ function nextLine(lead: string, command: string, files: readonly string[], root:
 export function checkChunks(
   selected: readonly Result[],
   global: readonly Diagnostic[],
-  { root: rootArg, next: withNext = true, quiet = false, rootFromCwd = '' }: CheckTextOptions = {},
+  {
+    root: rootArg,
+    next: withNext = true,
+    quiet = false,
+    rootFromCwd = '',
+    inline = new Set<string>(),
+  }: CheckTextOptions = {},
 ): Chunk[] {
   const chunks: Chunk[] = [];
   const emit = (stream: Chunk['stream'], text: string) => {
@@ -157,7 +165,7 @@ export function checkChunks(
       if (r.state === 'stale') {
         if (r.changes && (r.changes.length > 0 || r.edited !== undefined)) {
           block += headLines(r) + changeLines(r.changes).join('') + reviewLine(r, rootArg);
-        } else for (const c of r.dependencies) block += `  depends   ${shown(c)}\n`;
+        } else block += dependsLines(r);
       }
       emit('stdout', block);
     }
@@ -178,10 +186,15 @@ export function checkChunks(
       emit('stdout', nextLine(lead, 'update', stale, root));
     }
     if (invalid.length > 0) {
-      emit(
-        'stdout',
-        nextLine('fix the configuration of each invalid file', 'check', invalid, root),
-      );
+      const invalidFiles = selected.filter((r) => r.state === 'invalid').map((r) => r.file);
+      const inlineCount = invalidFiles.filter((file) => inline.has(file)).length;
+      const what =
+        inlineCount === 0
+          ? 'the configuration'
+          : inlineCount === invalidFiles.length
+            ? 'the docstamp block'
+            : 'the configuration or docstamp block';
+      emit('stdout', nextLine(`fix ${what} of each invalid file`, 'check', invalid, root));
     }
   }
   return chunks;
@@ -198,13 +211,20 @@ export function checkText(selected: readonly Result[], options: CheckTextOptions
 // SPEC §14.6
 export function listText(selected: readonly Result[]): string {
   let out = '';
+// SPEC §14.3, §14.6: one depends line per effective pattern, with its Preset
+function dependsLines(r: Result): string {
+  return r.dependencies
+    .map((c, i) => {
+      const preset = r.origins?.[i] ?? null;
+      return `  depends   ${shown(c)}${preset === null ? '' : ` (preset ${shown(preset)})`}\n`;
+    })
+    .join('');
+}
+
   for (const r of selected) {
     out += `${shown(r.file)}\n`;
     if (r.state === 'invalid') continue;
-    r.dependencies.forEach((c, i) => {
-      const preset = r.origins?.[i] ?? null;
-      out += `  depends   ${shown(c)}${preset === null ? '' : ` (preset ${shown(preset)})`}\n`;
-    });
+    out += dependsLines(r);
     for (const f of r.resolved) out += `  resolved  ${shown(f)}\n`;
   }
   return out;

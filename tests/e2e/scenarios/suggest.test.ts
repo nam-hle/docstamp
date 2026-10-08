@@ -474,6 +474,18 @@ scenario('§12.6 step 11 a test file the doc names is listed after the exclusion
   ]);
 });
 
+scenario('§9.6.5 step 3 the block follows the indent of the frontmatter', async (repo) => {
+  repo.write('src/x.ts', 'export const x = 1;\n');
+  repo.write('docs/guide.md', '---\nmeta:\n    owner: me\n---\nSee `src/x.ts`.\n');
+  repo.commit('init');
+  await repo.run(['suggest', '--write', 'docs/guide.md'], { expectExit: 0 });
+  await repo.snapFile('docs/guide.md');
+  expect(repo.read('docs/guide.md')).toBe(
+    '---\nmeta:\n    owner: me\ndocstamp:\n    dependencies:\n      - src/x.ts\n---\nSee `src/x.ts`.\n',
+  );
+  expect((await repo.run(['list-dependencies', 'docs/guide.md'])).exit).toBe(0);
+});
+
 scenario(
   '§13.10 a missing file, a directory and a binary file are E_UNREADABLE',
   { fixture: 'suggest' },

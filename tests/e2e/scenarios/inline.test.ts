@@ -303,6 +303,19 @@ scenario(
 );
 
 scenario(
+  '§14.3.3 the next line of an invalid inline file names the docstamp block',
+  { fixture },
+  async (repo) => {
+    repo.write('docs/GUIDE.md', repo.read('docs/GUIDE.md').replace('src/core', 'src/missing'));
+    const check = await repo.run(['docs/GUIDE.md'], { show: ['docs/GUIDE.md'] });
+    expect(check.exit).toBe(2);
+    expect(check.stdout).toContain(
+      'next: fix the docstamp block of each invalid file, then run: docstamp check docs/GUIDE.md\n',
+    );
+  },
+);
+
+scenario(
   '§12.2 a file declared inline and under files is E_DUPLICATE_DECLARATION and is not merged',
   { fixture },
   async (repo) => {

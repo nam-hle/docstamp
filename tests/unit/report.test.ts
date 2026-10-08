@@ -115,6 +115,18 @@ const many = (status: Change['status'], dir: string, count: number): Change[] =>
   Array.from({ length: count }, (_, i) =>
     change(status, `${dir}f${String(i).padStart(2, '0')}.ts`),
   );
+  it('the invalid next line names the docstamp block for inline files (§14.3.3)', () => {
+    const both = [res('a.md', 'invalid'), res('b.md', 'invalid')];
+    expect(checkText(both, { inline: new Set(['a.md', 'b.md']) })).toContain(
+      'next: fix the docstamp block of each invalid file, then run: docstamp check a.md b.md\n',
+    );
+    expect(checkText(both, { inline: new Set(['a.md']) })).toContain(
+      'next: fix the configuration or docstamp block of each invalid file, then run:',
+    );
+    expect(checkText(both, { inline: new Set(['c.md']) })).toContain(
+      'next: fix the configuration of each invalid file, then run:',
+    );
+  });
 
 describe('§14.3.1 change lines', () => {
   it('a run of 5 or more added or deleted files in one directory is one group line', () => {

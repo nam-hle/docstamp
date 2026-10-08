@@ -52,6 +52,33 @@ scenario(
   },
 );
 
+scenario('§14.3 §14.5 check shows the preset of each pattern', { fixture }, async (repo) => {
+  const text = await repo.run(['README.md']);
+  expect(text.exit).toBe(1);
+  expect(text.stdout).toContain(
+    'STALE    README.md  (unrecorded)\n' +
+      '  depends   src/cli\n' +
+      '  depends   !**/*.test.ts (preset tests)\n' +
+      '  depends   !**/__test__/** (preset tests)\n' +
+      '  depends   docs/SPEC.md (preset spec)\n',
+  );
+  const file = (await repo.run(['--json', 'README.md'])).json().files[0];
+  expect(Object.keys(file)).toEqual([
+    'file',
+    'state',
+    'reasons',
+    'dependencies',
+    'use',
+    'origins',
+    'changes',
+    'diagnostics',
+  ]);
+  expect(file).toMatchObject({
+    use: ['tests', 'spec'],
+    origins: [null, 'tests', 'tests', 'spec'],
+  });
+});
+
 scenario(
   '§8.6 a file hashes the files its presets select, nothing else',
   { fixture },
@@ -97,7 +124,7 @@ scenario(
     expect(widened.stdout).toContain('STALE    CLAUDE.md  (content-changed)\n');
     expect(widened.stdout).toContain('STALE    README.md  (content-changed)\n');
     expect(widened.stdout).not.toContain('docs/GUIDE.md');
-    expect(widened.stdout).toContain('  depends   !**/*.test.ts\n');
+    expect(widened.stdout).toContain('  depends   !**/*.test.ts (preset tests)\n');
     expect(widened.stdout).not.toContain('__test__');
   },
 );

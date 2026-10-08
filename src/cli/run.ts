@@ -377,6 +377,7 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
         exitCode,
         selected: reported,
         global,
+        inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
         chunks,
       });
     }
