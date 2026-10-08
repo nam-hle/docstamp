@@ -1,0 +1,43 @@
+# renamed and committed
+$ docstamp --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "summary": {
+    "ok": 0,
+    "stale": 0,
+    "invalid": 1
+  },
+  "files": [
+    {
+      "file": "docs/api.md",
+      "state": "invalid",
+      "reasons": [],
+      "dependencies": [
+        "src/lib/old-name.ts"
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "E_EMPTY_DEPENDENCIES",
+          "severity": "error",
+          "file": "docs/api.md",
+          "subject": null,
+          "message": "Correct the patterns in \"dependencies\"; together they select no file."
+        },
+        {
+          "code": "E_EMPTY_PATTERN",
+          "severity": "error",
+          "file": "docs/api.md",
+          "subject": "src/lib/old-name.ts",
+          "message": "Correct or remove the pattern; it matches no file: git shows it renamed to src/lib/new-name.ts; depend on the new path."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

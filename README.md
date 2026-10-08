@@ -115,6 +115,20 @@ next: review each stale file against its dependencies, then run: docstamp update
 next: fix the configuration of each invalid file, then run: docstamp check docs/old.md
 ```
 
+When the pattern is a file path and git shows the file moved with its content unchanged (committed or not), the error names the new path:
+
+```console
+$ git mv src/lib/old-name.ts src/lib/new-name.ts
+$ docstamp docs/api.md
+INVALID  docs/api.md
+error: E_EMPTY_DEPENDENCIES: docs/api.md: Correct the patterns in "dependencies"; together they select no file.
+error: E_EMPTY_PATTERN: docs/api.md: src/lib/old-name.ts: Correct or remove the pattern; it matches no file: git shows it renamed to src/lib/new-name.ts; depend on the new path.
+0 ok, 0 stale, 1 invalid
+next: fix the configuration of each invalid file, then run: docstamp check docs/api.md
+```
+
+That hint is wording only: it needs the full history, stays silent in a shallow clone or without git, and changes no verdict ([SPEC §12.7](docs/SPEC.md#127-renamed-path)).
+
 Each `next:` line names at most 10 files and ends with `  and <m> more` when there are more; update those and run `docstamp` again ([SPEC §14.3](docs/SPEC.md#143-check-text-mode)). A block of 5 or more changed files starts with a `changed` line that counts them by status. `--json` still lists every changed file.
 
 When the doc's own dependency list was edited since its last review (a pattern added, removed or reordered in `docstamp.yaml` or in its inline block), the block says so on an `edited` line and the `review:` line includes the file that holds the list. Below it, one `(selection)` line per file the edit brought into the selection (`added`) or dropped from it (`removed`), compared on the files present today, so a file deleted since the review is not among them; `--json` has them as `selection`. Here an exclusion `!src/c.ts` was added. The reason stays `content-changed`: the lock records a hash, not the patterns, so only git history can tell the two apart, and the verdict never depends on git.

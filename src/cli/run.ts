@@ -9,6 +9,7 @@ import { selectionChanges } from '../engine/selection.ts';
 import { statistics, type FileStats } from '../engine/stats.ts';
 import { fileHash } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
+import { renamedTo } from '../history/renamed.ts';
 import { replay } from '../history/replay.ts';
 import { stampFile } from '../inline/read-inline.ts';
 import { lockExists, readLock, writeLock } from '../lock/lock.ts';
@@ -84,9 +85,14 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
 function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: boolean) {
   const { universe, declarations, attached, presets } = loadWorkspace(root);
   const lock = readLockFor();
+  const renames = new Map<string, string | null>();
   const fs: EngineFs = {
     isStampedFile: (p) => isStampedFile(root, p),
     isIgnoredPath: (p) => isIgnoredPath(root, universe, p),
+    renamedTo: (p) => {
+      if (!renames.has(p)) renames.set(p, renamedTo(root, universe, p));
+      return renames.get(p)!;
+    },
     fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
   };
   const results = declarations.map((b) =>

@@ -10,12 +10,18 @@ export interface EngineFs {
   fileHash(path: string): string;
   // SPEC §8.5 NOTE: the path exists under Root but §7.3 keeps it out of the Universe
   isIgnoredPath?(path: string): boolean;
+  // SPEC §12.7: the path git shows a missing literal path renamed to, or null
+  renamedTo?(path: string): string | null;
 }
 
 const IGNORED_MESSAGE =
   'Correct or remove the pattern; it matches no file: it exists but is ignored by .gitignore ' +
   'or the ignore list; depend on its source, or remove that rule (gitignore: false skips ' +
   '.gitignore files).';
+
+// SPEC §8.5 NOTE, §12.7
+const RENAMED_MESSAGE =
+  'Correct or remove the pattern; it matches no file: git shows it renamed to';
 
 // SPEC §8.5 step 7
 function shadowedExclusions(
@@ -52,6 +58,7 @@ function resolveWithWarnings(
   b: Declaration,
   universe: readonly string[],
   isIgnoredPath: (path: string) => boolean = () => false,
+  renamedTo: (path: string) => string | null = () => null,
 ): { resolved: string[]; warnings: Diagnostic[] } {
   const parsed = b.dependencies.map((source) => parsePattern(source));
   const invalid = b.dependencies.filter((_, i) => parsed[i] === null);
@@ -72,13 +79,19 @@ function resolveWithWarnings(
     }
     const literal = literalPath(pattern);
     const ignored = literal !== null && isIgnoredPath(literal);
+    const target = literal === null || ignored ? null : renamedTo(literal);
+    const renamed = target !== null && target !== b.file ? target : null;
     const from = preset === null ? '' : ` It comes from the preset "${preset}".`;
-    const message = ignored ? IGNORED_MESSAGE : diag('E_EMPTY_PATTERN', { subject }).message;
+    const message = ignored
+      ? IGNORED_MESSAGE
+      : renamed !== null
+        ? `${RENAMED_MESSAGE} ${renamed}; depend on the new path.`
+        : diag('E_EMPTY_PATTERN', { subject }).message;
     problems.push(
       diag('E_EMPTY_PATTERN', {
         file: b.file,
         subject,
-        ...(ignored || preset !== null ? { message: `${message}${from}` } : {}),
+        ...(ignored || renamed !== null || preset !== null ? { message: `${message}${from}` } : {}),
       }),
     );
   });
@@ -145,7 +158,8 @@ export function evaluate(
   let warnings: Diagnostic[] = [];
   if (attached.length === 0) {
     const ignored = (path: string) => fs.isIgnoredPath?.(path) ?? false;
-    collect(() => ({ resolved, warnings } = resolveWithWarnings(b, universe, ignored)));
+    const renamed = (path: string) => fs.renamedTo?.(path) ?? null;
+    collect(() => ({ resolved, warnings } = resolveWithWarnings(b, universe, ignored, renamed)));
   }
   let current = '';
   if (problems.length === 0) collect(() => (current = dependencyHash(resolved, fs)));

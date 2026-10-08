@@ -6,4 +6,4 @@ INVALID  docs/OVERVIEW.md
 1 ok, 0 stale, 1 invalid
 next: fix the docstamp block of each invalid file, then run: docstamp check docs/OVERVIEW.md
 --- stderr ---
-error: E_EMPTY_PATTERN: docs/OVERVIEW.md: docs/GUIDE.md: Correct or remove the pattern; it matches no file.
+error: E_EMPTY_PATTERN: docs/OVERVIEW.md: docs/GUIDE.md: Correct or remove the pattern; it matches no file: git shows it renamed to docs/guide-core.md; depend on the new path.

@@ -49,7 +49,8 @@ permitted variations are:
   time, and is *none* when the history cannot answer.
 
 A conforming implementation MUST NOT perform network access. It MAY invoke `git`, read-only, only
-to compute the changed-file report (§12.3) and the replay of `stats` and `suggest` (§12.4). The
+to compute the changed-file report (§12.3), the replay of `stats` and `suggest` (§12.4) and the
+renamed path named in the `[[Message]]` of `E_EMPTY_PATTERN` (§12.7). The
 verdict (states and reasons), the Lockfile and the exit code of every command MUST NOT depend on
 `git`, except that `stats` fails with exit 2 when the history it needs is missing (§12.4); `suggest`
 never fails for want of history. `stats` and `suggest` are the only places that read the wall-clock
@@ -546,8 +547,11 @@ only (no `*`, `?`, Class, Alternation or `**`); it denotes the String of those L
 resolved. It is *ignored* when it exists as an entry under Root (a file, link or directory, not
 followed) and either it or a directory above it is an ignored entry (§7.2 step 3.4), or an ignored
 entry is below it (a directory whose content is all ignored). This changes neither the selection,
-nor the Diagnostic code, nor the Diagnostic order, nor any verdict. `git` is not consulted, so a
-renamed file is not traced.
+nor the Diagnostic code, nor the Diagnostic order, nor any verdict. `git` is not consulted for it.
+Otherwise, for a literal path that is not ignored, the `[[Message]]` SHOULD name the path that
+`RenamedTo` (§12.7) returns, if it returns one other than `declaration.[[File]]`: `git shows it
+renamed to <path>`. That is the only use of `git` in §8.5, it is made only for a pattern that
+already raised `E_EMPTY_PATTERN`, and it changes nothing but that wording.
 
 NOTE: For the same reason, the `[[Message]]` of `E_EMPTY_PATTERN` SHOULD say that patterns use `/`
 as the separator and that `\` escapes the next character when the pattern holds a `\` followed by a
@@ -1419,6 +1423,36 @@ fenced block, in the inline block or of an ignored path is never proposed. A glo
 file it happens to select. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern
 as written and is dropped.
 
+### 12.7 Renamed Path
+
+`RenamedTo(root, path, universe)`, for a literal path *path* (§8.5 NOTE) that is not in *universe*,
+returns the RepoPath of a file of *universe* that git shows *path* was renamed to, or *none*. It is
+used only to word the `[[Message]]` of `E_EMPTY_PATTERN` (§8.5 NOTE).
+
+1. Run `git` in Root as §12.3 step 1 does. If `git` is unavailable, Root is not inside a git work
+   tree, the repository is shallow (`git rev-parse --is-shallow-repository` prints anything but
+   `false`), or a command fails, return *none*. Every command that names *path* is run with
+   `--literal-pathspecs` before the subcommand.
+2. If `git ls-tree -z HEAD -- <path>` lists *path* with mode `100644` or `100755`, let *base* be
+   `HEAD` and *object* its object name: the rename is not committed yet.
+3. Otherwise let *C* be the output of `git log -1 --format=%H -- <path>` without its line end, the
+   last commit that changed *path*, which deleted it; if it is empty, return *none*. Let *base* be
+   `<C>^` and *object* the object name of *path* in `git ls-tree -z <C>^ -- <path>`, of mode
+   `100644` or `100755`; if there is none, return *none*.
+4. Let *tracked* be the paths of `git ls-tree -r -z <base>`, and *candidates* the files of
+   *universe* of kind *file*, in path order, that are not *path*, not in *tracked* and hold no LF.
+   If there is none, return *none*.
+5. Let *after* be the object names that `git hash-object --stdin-paths` prints for *candidates*,
+   given as in §12.3 step 8. Return the first of *candidates* whose object name is *object*, or
+   *none*.
+
+NOTE: As in §12.3 step 8, a file is renamed only when its content at the new path is exactly the
+content git stored at the old one, so the answer reads no similarity score and no git
+configuration of rename detection and is the same on every host with the same history and work
+tree. A renamed file that was also edited is not traced, nor one whose new path is ignored. The
+answer never changes the selection, a Diagnostic code, the Diagnostic order, a verdict or an exit
+code, and any failure is *none*, silently.
+
 ## 13 Command Line
 
 ### 13.1 Synopsis
@@ -2277,7 +2311,7 @@ command raised.
 | `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies`, `use` or `hash` |
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
-| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
+| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when git shows the path renamed (§12.7), depend on the new path, which the message names; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
 | `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3, §13.10 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
@@ -2356,7 +2390,8 @@ The following are not breaking:
 
 - the wording of a Diagnostic `[[Message]]` (§5.5), which is informative; a test MAY snapshot it,
   and then the snapshot is updated with the change. This covers the near key named by
-  `E_UNKNOWN_KEY` and `E_CONFIG` (§9.3 NOTE);
+  `E_UNKNOWN_KEY` and `E_CONFIG` (§9.3 NOTE), and the renamed path named by `E_EMPTY_PATTERN`
+  (§8.5 NOTE, §12.7), whose read of the history changes no verdict, code or exit code;
 - a new Diagnostic with severity `warning`, which never affects the exit code (§16);
 - a new command, or a new option that no existing command line uses: `stats` (§13.9), its options
   and the Diagnostic code `E_HISTORY`, which only it raises. The command has no option that sets an
