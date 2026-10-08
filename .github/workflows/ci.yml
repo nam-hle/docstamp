@@ -31,3 +31,28 @@ jobs:
 
       - name: Check the package can be packed
         run: npm pack --dry-run
+
+  # The same suite on the other platforms. The job above stays the one `Test` check that a ruleset
+  # can require. Windows is informational until its failures are fixed, then it joins macOS.
+  platforms:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            experimental: false
+          - os: windows-latest
+            experimental: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+
+      - name: Test
+        run: pnpm test
