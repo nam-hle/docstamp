@@ -3,10 +3,10 @@ exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
   modified  src/cli/run.ts
-  review: git diff 5343f6d4192ab959ab0f7a73ea2935ce020e2bf3 -- src/cli/run.ts
+  review: git diff -M 5343f6d4192ab959ab0f7a73ea2935ce020e2bf3 -- src/cli/run.ts
 STALE    README.md  (content-changed)
   modified  src/cli/run.ts
-  review: git diff 5343f6d4192ab959ab0f7a73ea2935ce020e2bf3 -- src/cli/run.ts
+  review: git diff -M 5343f6d4192ab959ab0f7a73ea2935ce020e2bf3 -- src/cli/run.ts
 1 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
 --- stderr ---

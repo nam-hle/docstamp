@@ -4,7 +4,7 @@ exit: 2
 INVALID  README.md
 INVALID  docs/GUIDE.md
 0 ok, 0 stale, 2 invalid
-next: fix the configuration of each invalid file, then run: docstamp check README.md docs/GUIDE.md
+next: fix the docstamp block of each invalid file, then run: docstamp check README.md docs/GUIDE.md
 --- stderr ---
 error: E_UNKNOWN_PRESET: README.md: spec: There is no configuration file, and presets are defined only there: add docstamp.yaml with a "presets" mapping, or remove the name from "use".
 error: E_UNKNOWN_PRESET: README.md: tests: There is no configuration file, and presets are defined only there: add docstamp.yaml with a "presets" mapping, or remove the name from "use".

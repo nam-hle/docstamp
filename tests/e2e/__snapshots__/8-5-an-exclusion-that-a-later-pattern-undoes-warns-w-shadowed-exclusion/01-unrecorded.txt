@@ -4,8 +4,8 @@ exit: 1
 --- stdout ---
 STALE    FIXED.md  (unrecorded)
   depends   src
-  depends   src/sub
-  depends   !**/*.test.ts
+  depends   src/sub (preset more-src)
+  depends   !**/*.test.ts (preset no-tests)
 STALE    INLINE.md  (unrecorded)
   depends   src
   depends   !src/**/*.test.ts
@@ -20,8 +20,8 @@ STALE    OWN.md  (unrecorded)
   depends   src/sub
 STALE    PRESETS.md  (unrecorded)
   depends   src
-  depends   !**/*.test.ts
-  depends   src/sub
+  depends   !**/*.test.ts (preset no-tests)
+  depends   src/sub (preset more-src)
 0 ok, 5 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update FIXED.md INLINE.md LITERAL.md OWN.md PRESETS.md
 --- stderr ---

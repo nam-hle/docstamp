@@ -71,6 +71,18 @@ describe('§9.6.5 Writing a Block', () => {
         '---\ntitle: x\ndocstamp:\n  dependencies:\n    - src\n---',
       );
     });
+    it('follows the indent of the first indented line of the frontmatter', () => {
+      const text = '---\ntitle: x\nmeta:\n    owner: me\n    tags:\n        - a\n---\nbody\n';
+      expect(writeBlock('d.md', text, DEPS)).toBe(
+        `---\ntitle: x\nmeta:\n    owner: me\n    tags:\n        - a\n${BLOCK('\n', '    ')}---\nbody\n`,
+      );
+    });
+    it('ignores blank and tab-led lines when it looks for the indent', () => {
+      const text = '---\ntitle: x\n   \nmeta:\n   owner: me\n---\n';
+      expect(writeBlock('d.md', text, ['src'])).toBe(
+        '---\ntitle: x\n   \nmeta:\n   owner: me\ndocstamp:\n   dependencies:\n     - src\n---\n',
+      );
+    });
   });
 
   describe('step 2 a block without a hash', () => {

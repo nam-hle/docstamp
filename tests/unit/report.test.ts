@@ -71,14 +71,14 @@ describe('§14.3 check text', () => {
     expect(checkText([edited])).toContain(
       'STALE    a.md  (content-changed)\n  edited    docstamp.yaml  (dependency list)\n' +
         '  modified  src/a.ts\n' +
-        '  review: git diff c0ffee -- src/a.ts docstamp.yaml\n0 ok',
+        '  review: git diff -M c0ffee -- src/a.ts docstamp.yaml\n0 ok',
     );
   });
   it('an edited own list with no Change prints the edited line and its review line only', () => {
     const edited = res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee' });
     expect(checkText([edited])).toContain(
       'STALE    a.md  (content-changed)\n  edited    a.md  (dependency list)\n' +
-        '  review: git diff c0ffee -- a.md\n0 ok',
+        '  review: git diff -M c0ffee -- a.md\n0 ok',
     );
   });
   it('unknown or empty changes print depends lines', () => {
@@ -86,10 +86,45 @@ describe('§14.3 check text', () => {
     expect(checkText([res('a.md', 'stale', { changes: null })])).toContain(dependencies);
     expect(checkText([res('a.md', 'stale', { changes: [] })])).toContain(dependencies);
   });
+  it('selection lines follow the edited line, in order, ungrouped and uncounted', () => {
+    const selection = [
+      { status: 'added' as const, path: 'src/x.test.ts' },
+      { status: 'removed' as const, path: 'src/y.ts' },
+    ];
+    const r = res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee', selection });
+    expect(checkText([r])).toContain(
+      '  edited    a.md  (dependency list)\n' +
+        '  added     src/x.test.ts  (selection)\n' +
+        '  removed   src/y.ts  (selection)\n' +
+        '  review: git diff -M c0ffee -- a.md\n',
+    );
+  });
+  it('a depends line names the Preset of its pattern', () => {
+    const r = res('a.md', 'stale', {
+      dependencies: ['src/**', '!**/*.test.*'],
+      use: ['tests'],
+      origins: [null, 'tests'],
+    });
+    expect(checkText([r])).toContain(
+      '  depends   src/**\n  depends   !**/*.test.* (preset tests)\n',
+    );
+  });
   it('invalid prints a bare line and counts', () => {
     expect(checkText([res('a.md', 'invalid')])).toBe(
       'INVALID  a.md\n0 ok, 0 stale, 1 invalid\n' +
         'next: fix the configuration of each invalid file, then run: docstamp check a.md\n',
+    );
+  });
+  it('the invalid next line names the docstamp block for inline files (§14.3.3)', () => {
+    const both = [res('a.md', 'invalid'), res('b.md', 'invalid')];
+    expect(checkText(both, { inline: new Set(['a.md', 'b.md']) })).toContain(
+      'next: fix the docstamp block of each invalid file, then run: docstamp check a.md b.md\n',
+    );
+    expect(checkText(both, { inline: new Set(['a.md']) })).toContain(
+      'next: fix the configuration or docstamp block of each invalid file, then run:',
+    );
+    expect(checkText(both, { inline: new Set(['c.md']) })).toContain(
+      'next: fix the configuration of each invalid file, then run:',
     );
   });
   it('next line carries --root', () => {
@@ -241,7 +276,7 @@ describe('§14.3.4 review line', () => {
     res('a.md', 'stale', { changes, dependencies, base: 'c0ffee' });
   it('names the base commit and every changed path, in path order', () => {
     const changes = [change('modified', 'src/a.ts'), change('deleted', 'src/b.ts')];
-    expect(reviewLine(stale(changes))).toBe('  review: git diff c0ffee -- src/a.ts src/b.ts\n');
+    expect(reviewLine(stale(changes))).toBe('  review: git diff -M c0ffee -- src/a.ts src/b.ts\n');
   });
   it('quotes for the shell, and reads a path with a wildcard or a colon literally', () => {
     const changes = [
@@ -251,14 +286,14 @@ describe('§14.3.4 review line', () => {
       change('added', ':odd.ts'),
     ];
     expect(reviewLine(stale(changes))).toBe(
-      "  review: git diff c0ffee -- 'src/it'\\''s.ts' 'src/my file.ts' " +
+      "  review: git diff -M c0ffee -- 'src/it'\\''s.ts' 'src/my file.ts' " +
         "':(literal)src/[id].ts' ':(literal):odd.ts'\n",
     );
   });
   it('--root becomes git -C', () => {
     const changes = [change('modified', 'src/a.ts')];
     expect(reviewLine(stale(changes), 'my dir')).toBe(
-      "  review: git -C 'my dir' diff c0ffee -- src/a.ts\n",
+      "  review: git -C 'my dir' diff -M c0ffee -- src/a.ts\n",
     );
   });
   it('up to 10 paths are listed, from 11 the patterns become pathspecs', () => {
@@ -266,7 +301,7 @@ describe('§14.3.4 review line', () => {
     expect(reviewLine(stale(ten))).toContain(' -- src/f0.ts src/f1.ts ');
     const eleven = [...ten, change('modified', 'src/f10.ts')];
     expect(reviewLine(stale(eleven, ['src/**', 'lib', '!src/**/*.test.ts', 'a.ts', 'x/*']))).toBe(
-      "  review: git diff c0ffee -- ':(glob)src/**' ':(glob)lib' " +
+      "  review: git diff -M c0ffee -- ':(glob)src/**' ':(glob)lib' " +
         "':(exclude,glob)src/**/*.test.ts' ':(exclude,glob)src/**/*.test.ts/**' " +
         "':(glob)a.ts' ':(glob)x/*' ':(glob)x/*/**'\n",
     );
@@ -283,7 +318,7 @@ describe('§14.3.4 review line', () => {
     );
     const listed = [change('modified', 'docstamp.yaml')];
     expect(reviewLine({ ...stale(listed), edited: 'docstamp.yaml' })).toBe(
-      '  review: git diff c0ffee -- docstamp.yaml\n',
+      '  review: git diff -M c0ffee -- docstamp.yaml\n',
     );
   });
   it('no line without a known base or changes', () => {
@@ -295,8 +330,23 @@ describe('§14.3.4 review line', () => {
     const changes = [change('modified', 'src/a.ts', { whitespaceOnly: true })];
     expect(checkText([stale(changes)])).toContain(
       'STALE    a.md  (content-changed)\n  modified  src/a.ts (whitespace only)\n' +
-        '  review: git diff c0ffee -- src/a.ts\n0 ok',
+        '  review: git diff -M c0ffee -- src/a.ts\n0 ok',
     );
+  });
+  it('an untracked line follows for the untracked paths of the first form', () => {
+    const changes = [
+      change('added', 'src/my b.ts', { untracked: true }),
+      change('added', 'src/new/a.ts', { pair: 'src/old/a.ts', untracked: true }),
+      change('deleted', 'src/old/a.ts', { pair: 'src/new/a.ts' }),
+    ];
+    expect(reviewLine(stale(changes), 'r')).toBe(
+      "  review: git -C r diff -M c0ffee -- 'src/my b.ts' src/new/a.ts src/old/a.ts\n" +
+        "  untracked: git -C r add -N -- 'src/my b.ts' src/new/a.ts\n",
+    );
+    const many = Array.from({ length: 11 }, (_, i) =>
+      change('added', `src/f${i}.ts`, { untracked: true }),
+    );
+    expect(reviewLine(stale(many))).not.toContain('untracked:');
   });
 });
 
@@ -508,6 +558,43 @@ describe('§14.5 JSON', () => {
     ]);
     expect(doc.files[0]).toMatchObject({ reasons: ['content-changed'], dependenciesEdited: true });
     expect(doc.files[1]).not.toHaveProperty('dependenciesEdited');
+  });
+  it('selection follows dependenciesEdited, and use and origins follow dependencies', () => {
+    const selection = [{ status: 'added' as const, path: 'src/x.test.ts' }];
+    const doc = JSON.parse(
+      jsonText({
+        mode: 'check',
+        exitCode: 1,
+        selected: [
+          res('a.md', 'stale', {
+            dependencies: ['src/**', '!**/*.test.*'],
+            use: ['tests'],
+            origins: [null, 'tests'],
+            changes: [],
+            edited: 'a.md',
+            base: 'c0ffee',
+            selection,
+          }),
+          res('b.md', 'stale', { changes: [], edited: 'b.md', base: 'c0ffee' }),
+        ],
+        diagnostics: [],
+      }),
+    );
+    expect(Object.keys(doc.files[0])).toEqual([
+      'file',
+      'state',
+      'reasons',
+      'dependencies',
+      'use',
+      'origins',
+      'changes',
+      'dependenciesEdited',
+      'selection',
+      'diagnostics',
+    ]);
+    expect(doc.files[0]).toMatchObject({ origins: [null, 'tests'], selection });
+    expect(doc.files[1]).not.toHaveProperty('selection');
+    expect(doc.files[1]).not.toHaveProperty('use');
   });
   it('a change has via, and whitespaceOnly only when true, in this order', () => {
     const changes = [

@@ -3,22 +3,22 @@ exit: 2
 --- stdout ---
 STALE    CLAUDE.md  (unrecorded)
   depends   src
-  depends   !**/*.test.ts
-  depends   !**/__test__/**
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
 STALE    README.md  (unrecorded)
   depends   src/cli
-  depends   !**/*.test.ts
-  depends   !**/__test__/**
-  depends   docs/SPEC.md
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  depends   docs/SPEC.md (preset spec)
 INVALID  docs/BLOCK.md
 STALE    docs/GUIDE.md  (unrecorded)
   depends   src/core
-  depends   !**/*.test.ts
-  depends   !**/__test__/**
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
 INVALID  docs/SPEC.md
 0 ok, 3 stale, 2 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md docs/GUIDE.md
-next: fix the configuration of each invalid file, then run: docstamp check docs/BLOCK.md docs/SPEC.md
+next: fix the configuration or docstamp block of each invalid file, then run: docstamp check docs/BLOCK.md docs/SPEC.md
 --- stderr ---
 error: E_UNKNOWN_PRESET: docs/BLOCK.md: gone: Define the preset under "presets" in the configuration file, or correct the name in "use".
 error: E_UNKNOWN_PRESET: docs/BLOCK.md: nope: Define the preset under "presets" in the configuration file, or correct the name in "use".

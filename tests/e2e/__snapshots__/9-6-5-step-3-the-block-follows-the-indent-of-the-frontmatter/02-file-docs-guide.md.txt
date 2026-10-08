@@ -1,0 +1,10 @@
+file: docs/guide.md
+--- content ---
+---
+meta:
+    owner: me
+docstamp:
+    dependencies:
+      - src/x.ts
+---
+See `src/x.ts`.

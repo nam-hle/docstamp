@@ -66,6 +66,14 @@ export interface Change {
   readonly via: readonly string[];
   readonly whitespaceOnly: boolean;
   readonly pair?: string;
+  // SPEC §12.3 step 2: an added path git does not track; text only (§14.3.4)
+  readonly untracked?: boolean;
+}
+
+// SPEC §5.4
+export interface SelectionChange {
+  readonly status: 'added' | 'removed';
+  readonly path: string;
 }
 
 export interface Result {
@@ -81,6 +89,7 @@ export interface Result {
   readonly changes?: readonly Change[] | null;
   readonly base?: string;
   readonly edited?: string;
+  readonly selection?: readonly SelectionChange[];
 }
 
 // SPEC §13.8: `dependents`, `cycle` and `repeated` are set only by --transitive

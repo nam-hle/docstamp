@@ -36,7 +36,8 @@ const expectedText = (base: string) =>
   '  added     src/new.ts\n' +
   '  added     src/untracked.ts\n' +
   '  modified  src/util.ts\n' +
-  `  review: git diff ${base} -- src/c.ts src/d.ts src/new.ts src/untracked.ts src/util.ts\n` +
+  `  review: git diff -M ${base} -- src/c.ts src/d.ts src/new.ts src/untracked.ts src/util.ts\n` +
+  '  untracked: git add -N -- src/untracked.ts\n' +
   '0 ok, 1 stale, 0 invalid\n';
 
 scenario(
@@ -421,13 +422,13 @@ scenario(
 
     const result = await repo.run([]);
     expect(result.stdout).toContain(
-      `  review: git diff ${base} -- ':(literal)src/[id].ts' src/d.ts 'src/my file.ts' src/util.ts\n`,
+      `  review: git diff -M ${base} -- ':(literal)src/[id].ts' src/d.ts 'src/my file.ts' src/util.ts\n`,
     );
     const shown = repo.git('diff', '--name-only', base, '--', 'src/d.ts', 'src/util.ts');
     expect(shown).toBe('src/d.ts\nsrc/util.ts\n');
 
     const rooted = await repo.run(['--root', repo.root]);
-    expect(rooted.stdout).toContain(`  review: git -C ${gitPath(repo.root)} diff ${base} -- `);
+    expect(rooted.stdout).toContain(`  review: git -C ${gitPath(repo.root)} diff -M ${base} -- `);
   },
 );
 
@@ -443,7 +444,7 @@ scenario(
     const result = await repo.run([]);
     expect(result.stdout).toContain('  added     src/gen/  (11 files)\n');
     expect(result.stdout).toContain(
-      `  review: git diff ${base} -- ':(glob)src/**' ':(exclude,glob)src/**/*.test.ts' ` +
+      `  review: git diff -M ${base} -- ':(glob)src/**' ':(exclude,glob)src/**/*.test.ts' ` +
         "':(exclude,glob)src/**/*.test.ts/**'\n",
     );
     const listed = repo.git(
@@ -477,21 +478,24 @@ scenario(
     expect(removed.stdout).toContain(
       'STALE    CLAUDE.md  (content-changed)\n' +
         '  edited    docstamp.yaml  (dependency list)\n' +
-        `  review: git diff ${base} -- docstamp.yaml\n`,
+        '  removed   src/c.ts  (selection)\n' +
+        `  review: git diff -M ${base} -- docstamp.yaml\n`,
     );
     const json = (await repo.run(['--json'])).json().files[0];
     expect(json).toMatchObject({
       reasons: ['content-changed'],
       changes: [],
       dependenciesEdited: true,
+      selection: [{ status: 'removed', path: 'src/c.ts' }],
     });
 
     repo.append('src/util.ts', 'more\n');
     const both = await repo.run([], { label: 'and a dependency changed' });
     expect(both.stdout).toContain(
       '  edited    docstamp.yaml  (dependency list)\n' +
+        '  removed   src/c.ts  (selection)\n' +
         '  modified  src/util.ts\n' +
-        `  review: git diff ${base} -- src/util.ts docstamp.yaml\n`,
+        `  review: git diff -M ${base} -- src/util.ts docstamp.yaml\n`,
     );
 
     repo.write('docstamp.yaml', config(CLAUDE));
@@ -515,6 +519,78 @@ scenario('§12.3 step 1.4 an inline file whose block lost a pattern', async (rep
   expect(result.stdout).toContain(
     'STALE    guide.md  (content-changed)\n' +
       '  edited    guide.md  (dependency list)\n' +
-      `  review: git diff ${base} -- guide.md\n`,
+      '  removed   src/b.ts  (selection)\n' +
+      `  review: git diff -M ${base} -- guide.md\n`,
   );
 });
+
+scenario(
+  '§12.3 step 10 a dropped exclusion lists the files that entered the selection',
+  async (repo) => {
+    const exclusion = '    - "!**/*.test.ts"\n';
+    repo.write('packages/a/src/x.ts', 'x\n');
+    repo.write('packages/a/src/x.test.ts', 'x test\n');
+    repo.write('packages/b/y.test.ts', 'y test\n');
+    repo.write(
+      'docs/guide.md',
+      `---\ndocstamp:\n  dependencies:\n    - packages\n${exclusion}---\n# Guide\n`,
+    );
+    repo.commit('initial');
+    await repo.run(['update', 'docs/guide.md'], { expectExit: 0 });
+    const base = repo.commit('review');
+    repo.write('docs/guide.md', repo.read('docs/guide.md').replace(exclusion, ''));
+    repo.remove('packages/b/y.test.ts');
+    const text = await repo.run([], { show: ['docs/guide.md'] });
+    expect(text.exit).toBe(1);
+    expect(text.stdout).toContain(
+      'STALE    docs/guide.md  (content-changed)\n' +
+        '  edited    docs/guide.md  (dependency list)\n' +
+        '  added     packages/a/src/x.test.ts  (selection)\n' +
+        '  deleted   packages/b/y.test.ts\n' +
+        `  review: git diff -M ${base} -- packages/b/y.test.ts docs/guide.md\n`,
+    );
+    const json = (await repo.run(['--json'])).json().files[0];
+    expect(json.changes).toEqual([
+      { status: 'deleted', path: 'packages/b/y.test.ts', via: ['packages'] },
+    ]);
+    // a deleted file cannot be resolved against the Universe of now (§12.3 step 10 NOTE)
+    expect(json.selection).toEqual([{ status: 'added', path: 'packages/a/src/x.test.ts' }]);
+  },
+);
+
+scenario(
+  '§14.3.4 a plain mv: the review line uses -M and names the untracked path to add',
+  { fixture: 'renames' },
+  async (repo) => {
+    repo.commit('initial');
+    await repo.run(['update', '--all'], { expectExit: 0 });
+    const base = repo.commit('review');
+    repo.rename('src/lib/old-name.ts', 'src/lib/new-name.ts');
+    const text = await repo.run(['README.md']);
+    expect(text.exit).toBe(1);
+    expect(text.stdout).toContain(
+      '  renamed   src/lib/old-name.ts -> src/lib/new-name.ts\n' +
+        `  review: git diff -M ${base} -- src/lib/new-name.ts src/lib/old-name.ts\n` +
+        '  untracked: git add -N -- src/lib/new-name.ts\n',
+    );
+    const shown = (): string =>
+      repo.git(
+        '-c',
+        'core.autocrlf=false',
+        'diff',
+        '-M',
+        '--name-status',
+        base,
+        '--',
+        'src/lib/new-name.ts',
+        'src/lib/old-name.ts',
+      );
+    expect(shown()).toBe('D\tsrc/lib/old-name.ts\n');
+    repo.git('add', '-N', '--', 'src/lib/new-name.ts');
+    expect(shown()).toMatch(/^R\d+\tsrc\/lib\/old-name\.ts\tsrc\/lib\/new-name\.ts\n$/u);
+    const added = await repo.run(['README.md'], { label: 'after git add -N' });
+    expect(added.stdout).toContain(
+      `  review: git diff -M ${base} -- src/lib/new-name.ts src/lib/old-name.ts\n0 ok`,
+    );
+  },
+);

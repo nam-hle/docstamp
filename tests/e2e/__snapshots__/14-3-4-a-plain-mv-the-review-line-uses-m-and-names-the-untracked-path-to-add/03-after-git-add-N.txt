@@ -1,0 +1,10 @@
+# after git add -N
+$ docstamp README.md
+exit: 1
+--- stdout ---
+STALE    README.md  (content-changed)
+  renamed   src/lib/old-name.ts -> src/lib/new-name.ts
+  review: git diff -M 8571bff27092ea6ffa40d48c4a471897c6ea9052 -- src/lib/new-name.ts src/lib/old-name.ts
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md
+--- stderr ---

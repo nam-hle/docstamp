@@ -21,6 +21,8 @@ export interface CheckTextOptions {
   next?: boolean;
   quiet?: boolean;
   rootFromCwd?: string;
+  // SPEC §14.3.3: the files whose Declaration is inline
+  inline?: ReadonlySet<string>;
 }
 
 export interface Chunk {
@@ -100,11 +102,14 @@ function pathspecsOf(dependencies: readonly string[]): string[] | null {
 
 const pathArg = (path: string): string => (LITERAL_NEEDED.test(path) ? `:(literal)${path}` : path);
 
-// SPEC §14.3: the edited line and the summary line
+// SPEC §14.3: the edited line, the selection lines and the summary line
 function headLines(r: Result): string {
   const changes = r.changes ?? [];
   const edited =
-    r.edited === undefined ? '' : `  edited    ${shown(r.edited)}  (dependency list)\n`;
+    (r.edited === undefined ? '' : `  edited    ${shown(r.edited)}  (dependency list)\n`) +
+    (r.selection ?? [])
+      .map((s) => `  ${s.status.padEnd(8)}  ${shown(s.path)}  (selection)\n`)
+      .join('');
   const entries = entriesOf(changes);
   const counts = (['modified', 'added', 'deleted', 'renamed'] as const)
     .map((status) => ({ status, n: entries.filter((e) => e.status === status).length }))
@@ -117,17 +122,19 @@ function headLines(r: Result): string {
 export function reviewLine(r: Result, rootArg?: string): string {
   if (r.base === undefined || !r.changes) return '';
   if (r.changes.length === 0 && r.edited === undefined) return '';
-  const listed =
-    r.changes.length <= REVIEW_PATH_MAX
-      ? r.changes.map((c) => pathArg(c.path))
-      : pathspecsOf(r.dependencies);
+  const byPath = r.changes.length <= REVIEW_PATH_MAX;
+  const listed = byPath ? r.changes.map((c) => pathArg(c.path)) : pathspecsOf(r.dependencies);
   if (listed === null) return '';
   const { edited } = r;
   const extra =
     edited !== undefined && !r.changes.some((c) => c.path === edited) ? [pathArg(edited)] : [];
   const args = [...listed, ...extra];
   const git = rootArg === undefined ? 'git' : `git -C ${shellQuote(rootArg)}`;
-  return `  review: ${git} diff ${r.base} -- ${args.map(shellQuote).join(' ')}\n`;
+  const review = `  review: ${git} diff -M ${r.base} -- ${args.map(shellQuote).join(' ')}\n`;
+  const untracked = byPath ? r.changes.filter((c) => c.untracked === true) : [];
+  if (untracked.length === 0) return review;
+  const added = untracked.map((c) => shellQuote(pathArg(c.path))).join(' ');
+  return `${review}  untracked: ${git} add -N -- ${added}\n`;
 }
 
 // SPEC §14.3.3
@@ -141,7 +148,13 @@ function nextLine(lead: string, command: string, files: readonly string[], root:
 export function checkChunks(
   selected: readonly Result[],
   global: readonly Diagnostic[],
-  { root: rootArg, next: withNext = true, quiet = false, rootFromCwd = '' }: CheckTextOptions = {},
+  {
+    root: rootArg,
+    next: withNext = true,
+    quiet = false,
+    rootFromCwd = '',
+    inline = new Set<string>(),
+  }: CheckTextOptions = {},
 ): Chunk[] {
   const chunks: Chunk[] = [];
   const emit = (stream: Chunk['stream'], text: string) => {
@@ -155,7 +168,7 @@ export function checkChunks(
       if (r.state === 'stale') {
         if (r.changes && (r.changes.length > 0 || r.edited !== undefined)) {
           block += headLines(r) + changeLines(r.changes).join('') + reviewLine(r, rootArg);
-        } else for (const c of r.dependencies) block += `  depends   ${shown(c)}\n`;
+        } else block += dependsLines(r);
       }
       emit('stdout', block);
     }
@@ -176,10 +189,15 @@ export function checkChunks(
       emit('stdout', nextLine(lead, 'update', stale, root));
     }
     if (invalid.length > 0) {
-      emit(
-        'stdout',
-        nextLine('fix the configuration of each invalid file', 'check', invalid, root),
-      );
+      const invalidFiles = selected.filter((r) => r.state === 'invalid').map((r) => r.file);
+      const inlineCount = invalidFiles.filter((file) => inline.has(file)).length;
+      const what =
+        inlineCount === 0
+          ? 'the configuration'
+          : inlineCount === invalidFiles.length
+            ? 'the docstamp block'
+            : 'the configuration or docstamp block';
+      emit('stdout', nextLine(`fix ${what} of each invalid file`, 'check', invalid, root));
     }
   }
   return chunks;
@@ -193,16 +211,23 @@ export function checkText(selected: readonly Result[], options: CheckTextOptions
     .join('');
 }
 
+// SPEC §14.3, §14.6: one depends line per effective pattern, with its Preset
+function dependsLines(r: Result): string {
+  return r.dependencies
+    .map((c, i) => {
+      const preset = r.origins?.[i] ?? null;
+      return `  depends   ${shown(c)}${preset === null ? '' : ` (preset ${shown(preset)})`}\n`;
+    })
+    .join('');
+}
+
 // SPEC §14.6
 export function listText(selected: readonly Result[]): string {
   let out = '';
   for (const r of selected) {
     out += `${shown(r.file)}\n`;
     if (r.state === 'invalid') continue;
-    r.dependencies.forEach((c, i) => {
-      const preset = r.origins?.[i] ?? null;
-      out += `  depends   ${shown(c)}${preset === null ? '' : ` (preset ${shown(preset)})`}\n`;
-    });
+    out += dependsLines(r);
     for (const f of r.resolved) out += `  resolved  ${shown(f)}\n`;
   }
   return out;

@@ -6,12 +6,12 @@ STALE    CLAUDE.md  (content-changed)
   modified  src/crlf.txt (whitespace only)
   modified  src/d.ts
   modified  src/e.ts (whitespace only)
-  review: git diff 38b7ec120c696d0cf816f366c2c78efbd78c3158 -- src/c.ts src/crlf.txt src/d.ts src/e.ts
+  review: git diff -M 38b7ec120c696d0cf816f366c2c78efbd78c3158 -- src/c.ts src/crlf.txt src/d.ts src/e.ts
 STALE    NOTES.md  (content-changed)
   modified  src/crlf.txt (whitespace only)
   modified  src/d.ts
   modified  src/e.ts (whitespace only)
-  review: git diff 38b7ec120c696d0cf816f366c2c78efbd78c3158 -- src/crlf.txt src/d.ts src/e.ts
+  review: git diff -M 38b7ec120c696d0cf816f366c2c78efbd78c3158 -- src/crlf.txt src/d.ts src/e.ts
 0 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md NOTES.md
 --- stderr ---

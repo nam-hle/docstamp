@@ -24,6 +24,12 @@ exit: 1
       ],
       "changes": [],
       "dependenciesEdited": true,
+      "selection": [
+        {
+          "status": "removed",
+          "path": "src/c.ts"
+        }
+      ],
       "diagnostics": []
     }
   ],

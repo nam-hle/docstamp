@@ -46,7 +46,7 @@ scenario(
     expect(stale.stdout.replace(/[0-9a-f]{40}/u, '<C>')).toBe(
       'STALE    README.md  (content-changed)\n' +
         '  modified  src/cli/run.ts\n' +
-        '  review: git diff <C> -- src/cli/run.ts\n' +
+        '  review: git diff -M <C> -- src/cli/run.ts\n' +
         '1 ok, 1 stale, 0 invalid\n' +
         'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
     );
@@ -303,6 +303,19 @@ scenario(
 );
 
 scenario(
+  '§14.3.3 the next line of an invalid inline file names the docstamp block',
+  { fixture },
+  async (repo) => {
+    repo.write('docs/GUIDE.md', repo.read('docs/GUIDE.md').replace('src/core', 'src/missing'));
+    const check = await repo.run(['docs/GUIDE.md'], { show: ['docs/GUIDE.md'] });
+    expect(check.exit).toBe(2);
+    expect(check.stdout).toContain(
+      'next: fix the docstamp block of each invalid file, then run: docstamp check docs/GUIDE.md\n',
+    );
+  },
+);
+
+scenario(
   '§12.2 a file declared inline and under files is E_DUPLICATE_DECLARATION and is not merged',
   { fixture },
   async (repo) => {
@@ -518,7 +531,7 @@ scenario(
     expect(result.stdout.replace(/[0-9a-f]{40}/u, '<C>')).toBe(
       'STALE    README.md  (content-changed)\n' +
         '  modified  docs/GUIDE.md\n' +
-        '  review: git diff <C> -- docs/GUIDE.md\n' +
+        '  review: git diff -M <C> -- docs/GUIDE.md\n' +
         '1 ok, 1 stale, 0 invalid\n' +
         'next: review each stale file against its dependencies, then run: docstamp update README.md\n',
     );

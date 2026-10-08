@@ -16,6 +16,17 @@ const body = (dependencies: readonly string[], indent: string, eol: string): str
   ...dependencies.map((pattern) => `${indent}  - ${item(pattern)}${eol}`),
 ];
 
+const INDENTED = /^( +)[^ \t\r\n]/u;
+
+// SPEC §9.6.5 step 3: the indent the frontmatter already uses, else two spaces
+function frontmatterIndent(lines: readonly string[]): string {
+  for (const line of lines) {
+    const match = INDENTED.exec(line);
+    if (match) return match[1]!;
+  }
+  return '  ';
+}
+
 // SPEC §9.6.5
 export function writeBlock(file: string, text: string, dependencies: readonly string[]): string {
   const refuse = (message: string) => new Raised([diag('E_USAGE', { subject: file, message })]);
@@ -47,7 +58,8 @@ export function writeBlock(file: string, text: string, dependencies: readonly st
     if (split !== null) {
       const eol = eolOf(split.lines[0]!);
       const lines = [...split.lines];
-      lines.splice(split.close, 0, `docstamp:${eol}`, ...body(dependencies, '  ', eol));
+      const indent = frontmatterIndent(split.lines.slice(1, split.close));
+      lines.splice(split.close, 0, `docstamp:${eol}`, ...body(dependencies, indent, eol));
       result = split.bom + lines.join('');
     } else {
       const bom = text.startsWith('﻿') ? '﻿' : '';

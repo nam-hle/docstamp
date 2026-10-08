@@ -45,6 +45,15 @@ export const diagJson = (d: Diagnostic): JsonObject =>
     ['message', d.message],
   ]);
 
+// SPEC §14.5: `use` and `origins`, only for a file that uses a Preset
+function presetMembers(r: Result): Array<[string, Json]> {
+  if ((r.use ?? []).length === 0) return [];
+  return [
+    ['use', [...r.use!]],
+    ['origins', r.dependencies.map((_, i) => r.origins?.[i] ?? null)],
+  ];
+}
+
 // SPEC §14.5
 export function jsonText(doc: JsonDoc): string {
   const count = (s: Result['state']) => doc.selected.filter((r) => r.state === s).length;
@@ -56,6 +65,7 @@ export function jsonText(doc: JsonDoc): string {
       ['state', r.state],
       ['reasons', [...r.reasons]],
       ['dependencies', [...r.dependencies]],
+      ...presetMembers(r),
       [
         'changes',
         r.changes
@@ -71,6 +81,19 @@ export function jsonText(doc: JsonDoc): string {
           : null,
       ],
       ...(r.edited === undefined ? [] : [['dependenciesEdited', true] as [string, Json]]),
+      ...(r.selection === undefined
+        ? []
+        : [
+            [
+              'selection',
+              r.selection.map((s) =>
+                obj([
+                  ['status', s.status],
+                  ['path', s.path],
+                ]),
+              ),
+            ] as [string, Json],
+          ]),
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ];
     if (doc.mode === 'update') members.push(['written', doc.written?.has(r.file) ?? false]);
@@ -112,10 +135,7 @@ export function listJsonText(doc: ListJsonDoc): string {
       ['file', r.file],
       ['dependencies', [...r.dependencies]],
     ];
-    if ((r.use ?? []).length > 0) {
-      members.push(['use', [...r.use!]]);
-      members.push(['origins', r.dependencies.map((_, i) => r.origins?.[i] ?? null)]);
-    }
+    members.push(...presetMembers(r));
     members.push(['resolvedFiles', [...r.resolved]]);
     members.push(['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)]);
     return obj(members);

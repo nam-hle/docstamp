@@ -3,11 +3,11 @@ exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
   depends   src
-  depends   !**/*.test.ts
+  depends   !**/*.test.ts (preset tests)
 STALE    README.md  (content-changed)
   depends   src/cli
-  depends   !**/*.test.ts
-  depends   docs/SPEC.md
+  depends   !**/*.test.ts (preset tests)
+  depends   docs/SPEC.md (preset spec)
 1 ok, 2 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md README.md
 --- stderr ---

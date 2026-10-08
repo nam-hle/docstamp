@@ -1,0 +1,19 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    docs/guide.md  (content-changed)
+  edited    docs/guide.md  (dependency list)
+  added     packages/a/src/x.test.ts  (selection)
+  deleted   packages/b/y.test.ts
+  review: git diff -M 8d23b20ee993398f9e64f6b821d420b6642a8766 -- packages/b/y.test.ts docs/guide.md
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/guide.md
+--- stderr ---
+--- setup: docs/guide.md ---
+---
+docstamp:
+  dependencies:
+    - packages
+  hash: f14a9745f8ae3b761cb1bbb6a027df9366396bbca0ee06b18239a742bac7b9dd
+---
+# Guide

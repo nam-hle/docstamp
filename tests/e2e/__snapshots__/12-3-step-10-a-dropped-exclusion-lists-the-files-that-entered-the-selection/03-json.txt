@@ -1,0 +1,44 @@
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 0,
+    "stale": 1,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "docs/guide.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "packages"
+      ],
+      "changes": [
+        {
+          "status": "deleted",
+          "path": "packages/b/y.test.ts",
+          "via": [
+            "packages"
+          ]
+        }
+      ],
+      "dependenciesEdited": true,
+      "selection": [
+        {
+          "status": "added",
+          "path": "packages/a/src/x.test.ts"
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

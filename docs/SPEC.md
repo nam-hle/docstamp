@@ -207,6 +207,7 @@ identical needs no Review (Principle 4).
 | `[[Changes]]` | List of Change in path order, or *unknown* | known only as defined in §12.3 |
 | `[[Base]]` | a commit Id, or none | the commit *C* of §12.3 when `[[Changes]]` is known, else none |
 | `[[Edited]]` | RepoPath, or none | the *carrier* of §12.3 step 1.4 when `[[Changes]]` is known and that step found the Declaration's own list edited since *C*, else none |
+| `[[Selection]]` | List of SelectionChange in path order, or none | the files that entered or left the selection with that edit (§12.3 step 10), when `[[Edited]]` is not none and it is known, else none |
 
 A *Reason* is `unrecorded` or `content-changed`; exactly one applies to a `stale` Result.
 
@@ -218,6 +219,9 @@ report instead.
 A *Change* is { `[[Status]]`: `modified`, `added` or `deleted`, `[[Path]]`: RepoPath, `[[Via]]`: a
 non-empty List of String, `[[WhitespaceOnly]]`: Boolean, `[[Pair]]`: RepoPath or none }.
 `[[Pair]]` links a `deleted` and an `added` Change with the same content (§12.3 step 8).
+
+A *SelectionChange* is { `[[Status]]`: `added` or `removed`, `[[Path]]`: RepoPath }: a file that the
+edited own list selects and the own list at *C* did not (`added`), or the reverse (`removed`).
 
 NOTE: The Lockfile keeps one Hash per file, so a Declaration over thousands of files costs one
 entry and the verdict cannot say which dependencies changed. `[[Changes]]` is a best-effort report
@@ -911,8 +915,11 @@ used only by `suggest --write` (§13.10); it never records a Review.
       and `dependencies:`, and, for each pattern *s*, the line *indent*, two U+0020, `- `,
       *item*(*s*), each followed by *eol*.
 3. Otherwise, if the first line of *text* (without a leading U+FEFF) and a later line are `---`
-   (§5.6 steps 2 and 3), insert before that later line the line `docstamp:` and, for the lines of
-   step 2.3 with *indent* two U+0020, each followed by the terminator of the first line.
+   (§5.6 steps 2 and 3), insert before that later line the line `docstamp:` and the lines of
+   step 2.3, each followed by the terminator of the first line, with *indent* the U+0020 characters
+   that start the first line between the two that starts with U+0020 followed by a character other
+   than U+0020, a tab or a line terminator, or two U+0020 if there is no such line. The block then
+   follows the indentation the frontmatter already uses.
 4. Otherwise let *text* start with the U+FEFF if it has one, then the lines `---`, `docstamp:` and
    the lines of step 2.3 with *indent* two U+0020, then `---`, each followed by the terminator of
    the first line of *text* (CR LF if it is CR LF, else LF), then the rest of *text*.
@@ -1118,8 +1125,8 @@ without changing any verdict.
 
 ### 12.3 ChangedSince
 
-`ChangedSince(root, result, entry)` returns a List of Change, the commit *C* below and the
-`[[Edited]]` of step 9, or *unknown*. It is
+`ChangedSince(root, result, entry)` returns a List of Change, the commit *C* below, and the
+`[[Edited]]` and `[[Selection]]` of step 9, or *unknown*. It is
 run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
 contain `content-changed`, and whose file has a LockEntry *entry*, or an inline `[[Recorded]]`
 Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
@@ -1182,8 +1189,24 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
    Change in path order that is not yet paired and whose path has the same object name in
    *after*; if there is one, set `[[Pair]]` of *d* to the path of *a* and `[[Pair]]` of *a* to the
    path of *d*. Every other Change has `[[Pair]]` none.
-9. Return the Changes in path order, *C*, which is `[[Base]]` of the Result, and the carrier if
-   *edited* is true, else none, which is its `[[Edited]]`.
+9. Return the Changes in path order, *C*, which is `[[Base]]` of the Result, the carrier if
+   *edited* is true, else none, which is its `[[Edited]]`, and the selection of step 10, which is
+   its `[[Selection]]`.
+10. If *edited* is false, the selection is none. Otherwise let *old* be the effective patterns
+    (§8.6) of the own list as of *C*, its `use` expanded with the Presets of the Configuration now;
+    if a name of that `use` is not a Preset now, or a pattern of *old* does not parse (§8.1), the
+    selection is none. Otherwise let *before* be `Select(old, U)` and *after* be
+    `result.[[Resolved]]`, where *U* is the Universe now (§7) without `result.[[File]]`. The
+    selection is, in path order, a SelectionChange `added` for each path of *after* that is not in
+    *before*, and `removed` for each path of *before* that is not in *after*.
+
+NOTE: Step 10 resolves the old list against the Universe of now, not of *C*: a file deleted since
+*C* cannot be resolved, so it is never in the selection (it is a `deleted` Change when the edited
+list still selects it, step 4), and a file added since *C* that both lists select is in neither
+side. The selection reads no history beyond the own list at *C* and no file content: it answers
+"which files does this list edit add or drop today", which an `added` or `deleted` Change does not,
+since a file that entered the selection unchanged is no Change. A path can be both a Change and a
+SelectionChange.
 
 NOTE: Two paths are paired only when the file was deleted at one and added at the other with
 exactly the same content, as git stores it: a renamed file that was also edited stays a `deleted`
@@ -1737,6 +1760,7 @@ or, for a stale Result with a known `[[Changes]]`:
 ```
 STALE    <file>  (<reason>, <reason>)
   edited    <carrier>  (dependency list)
+  added     <path>  (selection)
   changed   1 modified, 1 added, 5 deleted
   modified  <path>
   added     <path>
@@ -1748,13 +1772,18 @@ STALE    <file>  (<reason>, <reason>)
 - For `stale` with a known `[[Changes]]`, instead of the `depends` lines:
   - if `[[Edited]]` is not none, the *edited line*: `  edited    `, `[[Edited]]` as in §14.2, and
     `  (dependency list)`;
+  - if `[[Selection]]` is not none, one *selection line* per SelectionChange in order: two spaces,
+    the status padded with spaces to 8 characters, two spaces, the path as in §14.2, and
+    `  (selection)` (`  added     <path>  (selection)`, `  removed   <path>  (selection)`). They
+    are not grouped and not counted by the summary line;
   - if `[[Changes]]` has at least 5 Changes, the *summary line*: `  changed   ` and, for each status
     in the order `modified`, `added`, `deleted`, `renamed` that at least one entry of §14.3.1 has,
     `<n> <status>` with *n* the number of entries of that status, separated by `, `;
   - the *change lines* of §14.3.1. Each is two spaces, the status padded with spaces to 8
     characters, two spaces, and the path as in §14.2 (`  modified  <path>`, `  added     <path>`,
     `  deleted   <path>`, `  renamed   <from> -> <to>`), or a group line.
-- For any other `stale`: one `depends` line per pattern, in declaration order.
+- For any other `stale`: one `depends` line per pattern, in declaration order, with the
+  `(preset <name>)` marker of §14.6 for a pattern that comes from a Preset.
 
 Then one summary line:
 
@@ -1843,6 +1872,10 @@ and then, if any selected Result is `invalid`, the line
 next: fix the configuration of each invalid file, then run: docstamp check <file> <file>
 ```
 
+where `the configuration` reads `the docstamp block` when the Declaration of every invalid selected
+Result is inline (§5.6), and `the configuration or docstamp block` when some are inline and some
+configured.
+
 Each lists the files of its state in path order, each written as in §14.2 as a file argument that
 §13.4 resolves, from the current directory, to that file: its RepoPath when the current directory
 is Root, else the relative path from the current directory to Root, `/`, and its RepoPath, with
@@ -1862,12 +1895,13 @@ For a stale Result with a known `[[Changes]]` that is not empty, or with an `[[E
 not none, the block ends with one line:
 
 ```
-  review: git diff <C> -- <arg> <arg>
+  review: git diff -M <C> -- <arg> <arg>
 ```
 
 two spaces, `review: `, and a read-only git command that shows what changed: *C* is `[[Base]]`
 as git printed it, and each *arg* is written with `ShellQuote`. If `--root` was given, `git diff`
-is `git -C <root> diff`, *root* the value as given, written with `ShellQuote`. The *args* are:
+is `git -C <root> diff`, *root* the value as given, written with `ShellQuote`. `-M` lets git show a
+renamed file as one rename rather than a deletion and an addition. The *args* are:
 
 - if the Result has at most 10 Changes (the *path cap*): the `[[Path]]` of each Change in path
   order, written as `:(literal)<path>` when it starts with `:` or contains `*`, `?`, `[` or `\`,
@@ -1881,6 +1915,19 @@ is `git -C <root> diff`, *root* the value as given, written with `ShellQuote`. T
 When `[[Edited]]` is not none and no Change has its path, that path follows the other *args*,
 written as a Change's path is in the first form; it does not count toward the path cap.
 
+When the review line is output in the first form and some of its Change *args* are the path of an
+`added` Change that came from *untracked* (§12.3 step 2, not from *diff*), the review line is
+followed by one line:
+
+```
+  untracked: git add -N -- <arg> <arg>
+```
+
+two spaces, `untracked: ` and the git command that makes git show those paths in the diff: the
+same `git` or `git -C <root>` as the review line, then `add -N -- ` and those *args*, in path order,
+written as in the review line. It is a hint, not part of the review: it changes the index, and
+docstamp never runs it.
+
 `ShellQuote(s)` is *s* if it is not empty and each of its code points is one of `A-Z`, `a-z`,
 `0-9` and `_@%+=:,./-`; otherwise `'`, *s* with each `'` replaced by `'\''`, then `'`.
 
@@ -1890,7 +1937,11 @@ an exclusion win over every selection where the last matching pattern wins (§8.
 alternation (hence no line), and a file that git tracks but an ignore rule removed from the
 Universe (§7.2) is in the diff. The second form may therefore list more files than the report. A
 file that git does not track (an `added` Change from `git ls-files --others`, §12.3 step 2) is not
-in the diff until `git add -N` names it.
+in the diff until `git add -N` names it, which is why the untracked line names them: after a plain
+`mv`, without it the review line shows only the deletion. With the second form the untracked files
+are not listed, since the patterns do not name them. Whether git pairs a rename with `-M` depends on
+its similarity score; the report's own pairing does not (§12.3 NOTE), and the lines stay the same on
+every host.
 
 ### 14.4 Update, Text Mode
 
@@ -1937,6 +1988,11 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   none (§12.3 step 8), and is absent otherwise; both Changes of a pair stay in the List.
 - `"dependenciesEdited": true` follows `changes` when the Result's `[[Edited]]` is not none, and
   is absent otherwise. The summary line of §14.3 is text only: its counts follow from `changes`.
+- `"selection"` follows `dependenciesEdited` when the Result's `[[Selection]]` is not none, and is
+  absent otherwise: a List of `{ "status", "path" }`, `status` being `added` or `removed`, in path
+  order (§12.3 step 10).
+- An element of `files` whose Result has a non-empty `[[Use]]` has the members `use` and `origins`
+  between `dependencies` and `changes`, as `list-dependencies` has them (below).
 - With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (true only when it was written, §13.6 step 10; false when it was unchanged or when
   step 5 of §13.6 refused), and the top level adds `"removed"`, a
@@ -1970,7 +2026,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   `[[Use]]` has the members `use` (its `[[Use]]`) and `origins` (its `[[Origins]]`: one element per
   element of `dependencies`, `null` for none) between `dependencies` and `resolvedFiles`; any other
   entry is as it was before Presets. In every other mode `dependencies` is likewise the effective
-  patterns, and `use` and `origins` are not output.
+  patterns; `check` and `update` output `use` and `origins` as above, and the other modes do not.
 - With `list-dependents` the document is instead (§13.8):
 
   ```json
@@ -2319,6 +2375,15 @@ The following are not breaking:
   frontmatter, which no earlier release gave a meaning; it can opt out with `include`. This is
   also why §10.2 step 4 does not change a Hash for a file with no inline block, and for one with an
   inline block that has no `hash` line.
+- `[[Selection]]` (§5.4, §12.3 step 10): the selection lines of §14.3 and the member `selection` of
+  §14.5, part of the changed-file report; no `changes`, verdict or exit code changes;
+- the `-M` of the review line and the untracked line (§14.3.4), the `(preset <name>)` marker on a
+  `depends` line of `check` (§14.3) and the wording of the second `next:` line for inline files
+  (§14.3.3): text layout of §14.3; and the members `use` and `origins` in `check` and `update`
+  (§14.5), new members;
+- the indent of a block that `suggest --write` adds to an existing frontmatter (§9.6.5 step 3): it
+  writes a file that was not stamped, the block declares the same patterns, and §9.6.5 step 5 still
+  checks it.
 
 ### 17.4 The Hash Guarantee
 
