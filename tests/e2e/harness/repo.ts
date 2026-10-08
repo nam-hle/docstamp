@@ -271,7 +271,9 @@ export class Repo {
     // docstamp prints paths with `/`, so map the forward-slash spelling of the same paths too.
     const slashed = mapped
       .replaceAll(this.root.replaceAll('\\', '/'), '<root>')
-      .replaceAll(this.session.base.replaceAll('\\', '/'), '<tmp>');
+      .replaceAll(this.session.base.replaceAll('\\', '/'), '<tmp>')
+      .replaceAll(this.root.replaceAll('\\', '\\\\'), '<root>')
+      .replace(/(['"])(<root>|<tmp>)([^\s'"]*)\1/gu, '$2$3');
     return slashed.replace(
       /(<root>|<tmp>)([^\s'"]*)/gu,
       (_, token: string, tail: string) => token + tail.replaceAll('\\', '/'),

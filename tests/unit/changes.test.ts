@@ -148,12 +148,16 @@ describe('§12.3 step 7: whitespace only', () => {
     writeFileSync(join(root, 'a.ts'), ' one\ntwo2\n');
     expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(false);
   });
-  it('is false for a change of file mode and for a bad commit', () => {
-    const { root, base } = committed({ 'a.ts': 'one\n' });
-    chmodSync(join(root, 'a.ts'), 0o755);
-    expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(false);
-    expect(isWhitespaceOnly(root, 'not-a-commit', 'a.ts')).toBe(false);
-  });
+  // Windows has no POSIX mode bits, so chmod changes nothing there.
+  it.skipIf(process.platform === 'win32')(
+    'is false for a change of file mode and for a bad commit',
+    () => {
+      const { root, base } = committed({ 'a.ts': 'one\n' });
+      chmodSync(join(root, 'a.ts'), 0o755);
+      expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(false);
+      expect(isWhitespaceOnly(root, 'not-a-commit', 'a.ts')).toBe(false);
+    },
+  );
   it('reads the path literally, not as a pattern', () => {
     const { root, base } = committed({ '[id].ts': 'a\n', 'i.ts': 'b\n' });
     writeFileSync(join(root, '[id].ts'), ' a\n');
