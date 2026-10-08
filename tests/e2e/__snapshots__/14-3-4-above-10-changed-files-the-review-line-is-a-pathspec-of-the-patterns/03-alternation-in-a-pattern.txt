@@ -4,6 +4,7 @@ exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
   edited    docstamp.yaml  (dependency list)
+  added     src/util.test.ts  (selection)
   changed   2 modified, 11 added
   added     src/gen/  (11 files)
   modified  src/util.test.ts

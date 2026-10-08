@@ -10,6 +10,7 @@ export interface Workspace {
   universe: Universe;
   declarations: Declaration[];
   attached: Diagnostic[];
+  presets: ReadonlyMap<string, readonly string[]>;
 }
 
 // SPEC §12.2 steps 1 to 5: configured and inline Declarations over one Universe
@@ -40,6 +41,7 @@ export function loadWorkspace(root: string): Workspace {
   });
   return {
     universe,
+    presets: config.presets,
     declarations,
     attached: [
       ...attached,

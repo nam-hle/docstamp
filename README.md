@@ -117,13 +117,14 @@ next: fix the configuration of each invalid file, then run: docstamp check docs/
 
 Each `next:` line names at most 10 files and ends with `  and <m> more` when there are more; update those and run `docstamp` again ([SPEC §14.3](docs/SPEC.md#143-check-text-mode)). A block of 5 or more changed files starts with a `changed` line that counts them by status. `--json` still lists every changed file.
 
-When the doc's own dependency list was edited since its last review (a pattern added, removed or reordered in `docstamp.yaml` or in its inline block), the block says so on an `edited` line and the `review:` line includes the file that holds the list. The reason stays `content-changed`: the lock records a hash, not the patterns, so only git history can tell the two apart, and the verdict never depends on git.
+When the doc's own dependency list was edited since its last review (a pattern added, removed or reordered in `docstamp.yaml` or in its inline block), the block says so on an `edited` line and the `review:` line includes the file that holds the list. Below it, one `(selection)` line per file the edit brought into the selection (`added`) or dropped from it (`removed`), compared on the files present today, so a file deleted since the review is not among them; `--json` has them as `selection`. Here an exclusion `!src/c.ts` was added. The reason stays `content-changed`: the lock records a hash, not the patterns, so only git history can tell the two apart, and the verdict never depends on git.
 
 ```console
 $ docstamp
 STALE    CLAUDE.md  (content-changed)
   edited    docstamp.yaml  (dependency list)
-  review: git diff 6eff57282542cf9d373c2934764350e274eadf1a -- docstamp.yaml
+  removed   src/c.ts  (selection)
+  review: git diff -M 6eff57282542cf9d373c2934764350e274eadf1a -- docstamp.yaml
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 ```
@@ -500,7 +501,7 @@ A script must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carrie
 
 ### JSON output
 
-`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)). Here is the stale `README.md` from the example above, with `changes` listing the changed dependencies (`null` when git history cannot answer). `via` names the patterns that select each path, and `"whitespaceOnly": true` appears on a modified file whose change is white space only. `"pair"` links a deleted and an added file with the same content (both stay listed). `"dependenciesEdited": true` follows `changes` when the doc's own dependency list was edited:
+`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)). Here is the stale `README.md` from the example above, with `changes` listing the changed dependencies (`null` when git history cannot answer). `via` names the patterns that select each path, and `"whitespaceOnly": true` appears on a modified file whose change is white space only. `"pair"` links a deleted and an added file with the same content (both stay listed). `"dependenciesEdited": true` follows `changes` when the doc's own dependency list was edited, then `"selection"`, the files that edit added to or removed from the selection (`{ "status": "added" | "removed", "path" }`):
 
 ```json
 {

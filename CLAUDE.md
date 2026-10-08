@@ -180,8 +180,11 @@ change to the generic list, a threshold or a mention rule starts there.
 `presets` in the configuration and `use` on a file or block (SPEC §8.6). `loadWorkspace`
 (`src/cli/workspace.ts`) calls `expandPresets` (`src/engine/presets.ts`) once, so every command sees
 the effective patterns in `Declaration.dependencies` with `origins`; nothing downstream knows about
-presets except the `(preset <name>)` marker in `listText` and the `use`/`origins` members of
-`listJsonText`. The pattern dialect, the hash and the Lockfile never change for them. Tests:
+presets except the `(preset <name>)` marker of `depends` lines (`dependsLines` in
+`src/report/text.ts`, for `listText` and check), the `use`/`origins` members (`presetMembers` in
+`src/report/json.ts`), and `selectionChanges` (`src/engine/selection.ts`, §12.3 step 10), which
+expands the own list at the review commit with the Presets of now. The pattern dialect, the hash
+and the Lockfile never change for them. Tests:
 `tests/unit/presets.test.ts`, `tests/e2e/scenarios/presets.test.ts` on the `presets` fixture.
 
 ## Transitive dependents

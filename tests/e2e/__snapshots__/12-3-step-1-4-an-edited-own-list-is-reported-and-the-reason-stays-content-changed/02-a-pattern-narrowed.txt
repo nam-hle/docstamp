@@ -4,7 +4,8 @@ exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
   edited    docstamp.yaml  (dependency list)
-  review: git diff 6eff57282542cf9d373c2934764350e274eadf1a -- docstamp.yaml
+  removed   src/c.ts  (selection)
+  review: git diff -M 6eff57282542cf9d373c2934764350e274eadf1a -- docstamp.yaml
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 --- stderr ---

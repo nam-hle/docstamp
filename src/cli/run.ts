@@ -5,6 +5,7 @@ import { sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
 import { dependentTree, dependentsOf } from '../engine/reverse.ts';
+import { selectionChanges } from '../engine/selection.ts';
 import { statistics, type FileStats } from '../engine/stats.ts';
 import { fileHash } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
@@ -57,6 +58,7 @@ interface Evaluated {
   results: Result[];
   declarations: Declaration[];
   universe: Universe;
+  presets: ReadonlyMap<string, readonly string[]>;
   lock: Lock;
   global: Diagnostic[];
 }
@@ -80,7 +82,7 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
 }
 
 function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: boolean) {
-  const { universe, declarations, attached } = loadWorkspace(root);
+  const { universe, declarations, attached, presets } = loadWorkspace(root);
   const lock = readLockFor();
   const fs: EngineFs = {
     isStampedFile: (p) => isStampedFile(root, p),
@@ -96,7 +98,7 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
       fs,
     ),
   );
-  return { declarations, universe, results, lock };
+  return { declarations, universe, presets, results, lock };
 }
 
 // SPEC §12.2
@@ -109,8 +111,8 @@ function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evalua
       return { entries: new Map() };
     }
   };
-  const { declarations, universe, results, lock } = evaluateDeclarations(root, readLockFor, true);
-  return { results, declarations, universe, lock, global: orphans(declarations, lock) };
+  const evaluated = evaluateDeclarations(root, readLockFor, true);
+  return { ...evaluated, global: orphans(evaluated.declarations, evaluated.lock) };
 }
 
 // SPEC §13.7
@@ -131,14 +133,20 @@ function withChanges(
     return result;
   }
   const report = changedSince(root, result, entry, inline !== undefined, whitespace);
-  return report === null
-    ? { ...result, changes: null }
-    : {
-        ...result,
-        changes: report.changes,
-        base: report.base,
-        ...(report.edited === undefined ? {} : { edited: report.edited }),
-      };
+  if (report === null) return { ...result, changes: null };
+  const { universe, presets } = evaluated;
+  const { ownThen } = report;
+  const selection =
+    ownThen === undefined
+      ? null
+      : selectionChanges(result.file, ownThen, presets, universe.paths, result.resolved);
+  return {
+    ...result,
+    changes: report.changes,
+    base: report.base,
+    ...(report.edited === undefined ? {} : { edited: report.edited }),
+    ...(selection === null ? {} : { selection }),
+  };
 }
 
 const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'error');
@@ -369,6 +377,7 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
         root: args.root,
         quiet: args.quiet,
         rootFromCwd: rootFromCwd(cwd, root),
+        inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
       });
       return emit(io, {
         ...empty,
@@ -377,7 +386,6 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
         exitCode,
         selected: reported,
         global,
-        inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
         chunks,
       });
     }

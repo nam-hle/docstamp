@@ -14,6 +14,7 @@ import {
   parseNameStatus,
 } from '../../src/history/changes.ts';
 import type { Change } from '../../src/core/types.ts';
+import { selectionChanges } from '../../src/engine/selection.ts';
 import { git as gitRun } from '../../src/history/git.ts';
 import { viaOf } from '../../src/pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
@@ -153,6 +154,38 @@ describe('§12.3 ChangedSince: git output parsing', () => {
   });
   it('parses NUL separated name lists', () => {
     expect(parseNameList('a\0b c\0')).toEqual(['a', 'b c']);
+  });
+});
+
+describe('§12.3 step 10 selection', () => {
+  const universe = ['docs/a.md', 'src/a.ts', 'src/a.test.ts', 'src/b.ts', 'lib/c.ts'];
+  const presets = new Map([['tests', ['!**/*.test.ts']]]);
+  it('lists the files that entered and left, in path order', () => {
+    const then = { dependencies: ['src/**', '!**/*.test.ts', 'lib/**'], use: [] };
+    expect(
+      selectionChanges('docs/a.md', then, presets, universe, [
+        'src/a.test.ts',
+        'src/a.ts',
+        'src/b.ts',
+      ]),
+    ).toEqual([
+      { status: 'removed', path: 'lib/c.ts' },
+      { status: 'added', path: 'src/a.test.ts' },
+    ]);
+  });
+  it('expands the old use with the Presets of now, and never selects the file itself', () => {
+    const then = { dependencies: ['**'], use: ['tests'] };
+    expect(
+      selectionChanges('docs/a.md', then, presets, universe, ['lib/c.ts', 'src/a.ts', 'src/b.ts']),
+    ).toEqual([]);
+  });
+  it('is unknown when a Preset is gone or a pattern does not parse', () => {
+    expect(
+      selectionChanges('docs/a.md', { dependencies: ['src'], use: ['x'] }, presets, universe, []),
+    ).toBeNull();
+    expect(
+      selectionChanges('docs/a.md', { dependencies: ['src/{'], use: [] }, presets, universe, []),
+    ).toBeNull();
   });
 });
 

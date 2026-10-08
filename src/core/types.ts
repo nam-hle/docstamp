@@ -89,6 +89,7 @@ export interface Result {
   readonly changes?: readonly Change[] | null;
   readonly base?: string;
   readonly edited?: string;
+  readonly selection?: readonly SelectionChange[];
 }
 
 // SPEC §13.8: `dependents`, `cycle` and `repeated` are set only by --transitive

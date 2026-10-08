@@ -1,0 +1,5 @@
+$ docstamp update docs/guide.md
+exit: 0
+--- stdout ---
+written  docs/guide.md
+--- stderr ---

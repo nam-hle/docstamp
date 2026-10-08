@@ -102,11 +102,14 @@ function pathspecsOf(dependencies: readonly string[]): string[] | null {
 
 const pathArg = (path: string): string => (LITERAL_NEEDED.test(path) ? `:(literal)${path}` : path);
 
-// SPEC §14.3: the edited line and the summary line
+// SPEC §14.3: the edited line, the selection lines and the summary line
 function headLines(r: Result): string {
   const changes = r.changes ?? [];
   const edited =
-    r.edited === undefined ? '' : `  edited    ${shown(r.edited)}  (dependency list)\n`;
+    (r.edited === undefined ? '' : `  edited    ${shown(r.edited)}  (dependency list)\n`) +
+    (r.selection ?? [])
+      .map((s) => `  ${s.status.padEnd(8)}  ${shown(s.path)}  (selection)\n`)
+      .join('');
   const entries = entriesOf(changes);
   const counts = (['modified', 'added', 'deleted', 'renamed'] as const)
     .map((status) => ({ status, n: entries.filter((e) => e.status === status).length }))
@@ -208,9 +211,6 @@ export function checkText(selected: readonly Result[], options: CheckTextOptions
     .join('');
 }
 
-// SPEC §14.6
-export function listText(selected: readonly Result[]): string {
-  let out = '';
 // SPEC §14.3, §14.6: one depends line per effective pattern, with its Preset
 function dependsLines(r: Result): string {
   return r.dependencies
@@ -221,6 +221,9 @@ function dependsLines(r: Result): string {
     .join('');
 }
 
+// SPEC §14.6
+export function listText(selected: readonly Result[]): string {
+  let out = '';
   for (const r of selected) {
     out += `${shown(r.file)}\n`;
     if (r.state === 'invalid') continue;

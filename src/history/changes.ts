@@ -105,7 +105,7 @@ function reviewCommit(root: string, file: string, hash: string, inline: boolean)
   return null;
 }
 
-interface OwnList {
+export interface OwnList {
   readonly dependencies: readonly string[];
   readonly use: readonly string[];
 }
@@ -147,8 +147,13 @@ export function ownListOf(result: Result): OwnList {
 const sameList = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && a.every((x, i) => x === b[i]);
 
-// SPEC §12.3 step 1.4: the carrier when the own list is known at `rev` and differs, else null
-function editedCarrier(root: string, rev: string, result: Result, inline: boolean): string | null {
+// SPEC §12.3 step 1.4: the carrier and the own list at `rev` when it is known and differs
+function editedCarrier(
+  root: string,
+  rev: string,
+  result: Result,
+  inline: boolean,
+): { carrier: string; ownThen: OwnList } | null {
   const carrier = inline ? result.file : 'docstamp.yaml';
   let then: OwnList | null;
   try {
@@ -160,7 +165,7 @@ function editedCarrier(root: string, rev: string, result: Result, inline: boolea
   if (then === null) return null;
   const now = ownListOf(result);
   const same = sameList(then.dependencies, now.dependencies) && sameList(then.use, now.use);
-  return same ? null : carrier;
+  return same ? null : { carrier, ownThen: then };
 }
 
 const MODES = /^:(\d+) (\d+) /u;
@@ -228,6 +233,8 @@ export interface ChangedReport {
   readonly changes: readonly Change[];
   readonly base: string;
   readonly edited?: string;
+  // SPEC §12.3 step 10: the own list at the base commit, when it was edited since
+  readonly ownThen?: OwnList;
 }
 
 // SPEC §12.3; `entry` is the LockEntry, or the recorded Hash of an inline file; `whitespace`
@@ -273,7 +280,7 @@ export function changedSince(
     return {
       changes: renamed(root, id, marked),
       base: id,
-      ...(edited === null ? {} : { edited }),
+      ...(edited === null ? {} : { edited: edited.carrier, ownThen: edited.ownThen }),
     };
   } catch {
     return null;

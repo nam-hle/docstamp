@@ -86,10 +86,45 @@ describe('§14.3 check text', () => {
     expect(checkText([res('a.md', 'stale', { changes: null })])).toContain(dependencies);
     expect(checkText([res('a.md', 'stale', { changes: [] })])).toContain(dependencies);
   });
+  it('selection lines follow the edited line, in order, ungrouped and uncounted', () => {
+    const selection = [
+      { status: 'added' as const, path: 'src/x.test.ts' },
+      { status: 'removed' as const, path: 'src/y.ts' },
+    ];
+    const r = res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee', selection });
+    expect(checkText([r])).toContain(
+      '  edited    a.md  (dependency list)\n' +
+        '  added     src/x.test.ts  (selection)\n' +
+        '  removed   src/y.ts  (selection)\n' +
+        '  review: git diff -M c0ffee -- a.md\n',
+    );
+  });
+  it('a depends line names the Preset of its pattern', () => {
+    const r = res('a.md', 'stale', {
+      dependencies: ['src/**', '!**/*.test.*'],
+      use: ['tests'],
+      origins: [null, 'tests'],
+    });
+    expect(checkText([r])).toContain(
+      '  depends   src/**\n  depends   !**/*.test.* (preset tests)\n',
+    );
+  });
   it('invalid prints a bare line and counts', () => {
     expect(checkText([res('a.md', 'invalid')])).toBe(
       'INVALID  a.md\n0 ok, 0 stale, 1 invalid\n' +
         'next: fix the configuration of each invalid file, then run: docstamp check a.md\n',
+    );
+  });
+  it('the invalid next line names the docstamp block for inline files (§14.3.3)', () => {
+    const both = [res('a.md', 'invalid'), res('b.md', 'invalid')];
+    expect(checkText(both, { inline: new Set(['a.md', 'b.md']) })).toContain(
+      'next: fix the docstamp block of each invalid file, then run: docstamp check a.md b.md\n',
+    );
+    expect(checkText(both, { inline: new Set(['a.md']) })).toContain(
+      'next: fix the configuration or docstamp block of each invalid file, then run:',
+    );
+    expect(checkText(both, { inline: new Set(['c.md']) })).toContain(
+      'next: fix the configuration of each invalid file, then run:',
     );
   });
   it('next line carries --root', () => {
@@ -115,18 +150,6 @@ const many = (status: Change['status'], dir: string, count: number): Change[] =>
   Array.from({ length: count }, (_, i) =>
     change(status, `${dir}f${String(i).padStart(2, '0')}.ts`),
   );
-  it('the invalid next line names the docstamp block for inline files (§14.3.3)', () => {
-    const both = [res('a.md', 'invalid'), res('b.md', 'invalid')];
-    expect(checkText(both, { inline: new Set(['a.md', 'b.md']) })).toContain(
-      'next: fix the docstamp block of each invalid file, then run: docstamp check a.md b.md\n',
-    );
-    expect(checkText(both, { inline: new Set(['a.md']) })).toContain(
-      'next: fix the configuration or docstamp block of each invalid file, then run:',
-    );
-    expect(checkText(both, { inline: new Set(['c.md']) })).toContain(
-      'next: fix the configuration of each invalid file, then run:',
-    );
-  });
 
 describe('§14.3.1 change lines', () => {
   it('a run of 5 or more added or deleted files in one directory is one group line', () => {
@@ -323,6 +346,7 @@ describe('§14.3.4 review line', () => {
     const many = Array.from({ length: 11 }, (_, i) =>
       change('added', `src/f${i}.ts`, { untracked: true }),
     );
+    expect(reviewLine(stale(many))).not.toContain('untracked:');
   });
 });
 
@@ -358,7 +382,6 @@ describe('§14.3.3 next lines', () => {
   });
   it('--root follows each list, and the cap applies to the invalid line too', () => {
     const invalid = Array.from({ length: 11 }, (_, i) =>
-    expect(reviewLine(stale(many))).not.toContain('untracked:');
       res(`i${String(i).padStart(2, '0')}.md`, 'invalid'),
     );
     const out = checkText(invalid, { root: 'sub' });
@@ -535,6 +558,43 @@ describe('§14.5 JSON', () => {
     ]);
     expect(doc.files[0]).toMatchObject({ reasons: ['content-changed'], dependenciesEdited: true });
     expect(doc.files[1]).not.toHaveProperty('dependenciesEdited');
+  });
+  it('selection follows dependenciesEdited, and use and origins follow dependencies', () => {
+    const selection = [{ status: 'added' as const, path: 'src/x.test.ts' }];
+    const doc = JSON.parse(
+      jsonText({
+        mode: 'check',
+        exitCode: 1,
+        selected: [
+          res('a.md', 'stale', {
+            dependencies: ['src/**', '!**/*.test.*'],
+            use: ['tests'],
+            origins: [null, 'tests'],
+            changes: [],
+            edited: 'a.md',
+            base: 'c0ffee',
+            selection,
+          }),
+          res('b.md', 'stale', { changes: [], edited: 'b.md', base: 'c0ffee' }),
+        ],
+        diagnostics: [],
+      }),
+    );
+    expect(Object.keys(doc.files[0])).toEqual([
+      'file',
+      'state',
+      'reasons',
+      'dependencies',
+      'use',
+      'origins',
+      'changes',
+      'dependenciesEdited',
+      'selection',
+      'diagnostics',
+    ]);
+    expect(doc.files[0]).toMatchObject({ origins: [null, 'tests'], selection });
+    expect(doc.files[1]).not.toHaveProperty('selection');
+    expect(doc.files[1]).not.toHaveProperty('use');
   });
   it('a change has via, and whitespaceOnly only when true, in this order', () => {
     const changes = [
