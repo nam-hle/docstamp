@@ -53,6 +53,16 @@ exit: 0
       "ignored": [
         "build/output.js"
       ],
+      "declared": [
+        "docs/guide/setup.md",
+        "scripts/*.mjs",
+        "src/cli",
+        "src/engine",
+        "src/util",
+        "tests/unit",
+        "!src/engine/**/*.test.*",
+        "!src/engine/**/__tests__"
+      ],
       "diagnostics": [],
       "written": false
     }

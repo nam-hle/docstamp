@@ -1714,6 +1714,12 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
    (§9.6.1): a block in such a file would never be read. The message tells the user to edit the
    configuration by hand, or to name a file that `include` selects.
 4. Let (*suggestions*, *ignored*) be `Propose(path, text, universe, isIgnored)` (§12.6) for each *path*.
+   Let its *declared* be the `dependencies` of its configured Declaration (`[[Declarations]]` of
+   *config*) if it has one; otherwise, if *path* is a candidate (§9.6.1) and `ScanFrontmatter` of
+   its text is not *none*, the `[[Dependencies]]` of the Declaration that `ParseBlock` (§9.6.2)
+   returns, even when it raises (so « » when they are not a List of Strings); otherwise *none*.
+   *declared* is read from the text before step 7 writes, never expands Presets (§8.6), and
+   raises nothing.
 5. Let *window* be `Replay(root, days 30, now)` (§12.4), *now* being the wall-clock time; if it
    raises, or the Window has no Commit, let *window* be *none*: no Diagnostic is output for it.
 6. For each Suggestion of each file whose pattern has no Negation, let its *staleRate* be the
@@ -1723,8 +1729,8 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
    `? WriteBlock(text, patterns)` (§9.6.5), *patterns* being the patterns of *suggestions* in order.
    Only if no step has raised, replace each *path* whose *new* differs from its text atomically, as
    §9.6.4 step 3 does; it is then *written*, and every other file is not.
-8. Output the Suggestions, *ignored* and, with `--write`, which files were *written* (§14.9, §14.5),
-   and exit 0.
+8. Output the Suggestions, *ignored*, *declared* and, with `--write`, which files were *written*
+   (§14.9, §14.5), and exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2; with `--write` nothing was
 written then, except that a failure to replace a file (`E_UNREADABLE`) in step 7 leaves the files
@@ -1737,6 +1743,13 @@ reads the block). A file with no Suggestion is not written: a block needs a depe
 `staleRate` follows §12.5 with the caveat of its NOTE: dependencies are the ones of `HEAD`, and a
 proposal that names a file the window deleted cannot see it. A file literally named `suggest` is
 reached as `docstamp -- suggest` (§13.2).
+
+NOTE: *declared* makes a proposal for a file that already has a declaration read as a difference:
+a Suggestion whose pattern is in *declared* (String equality, §3.2) is already declared, any other
+is new, and a pattern of *declared* that no Suggestion has is only declared: the doc no longer
+mentions it, or mentions it in another form.
+Patterns are compared as written, so `src` and `src/**` differ even when they select the same
+files.
 
 ## 14 Output
 
@@ -2114,6 +2127,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
           { "pattern": "!src/cli/**/*.test.*", "resolvedCount": 3, "staleRate": null }
         ],
         "ignored": ["dist/index.js"],
+        "declared": null,
         "diagnostics": []
       }
     ],
@@ -2124,7 +2138,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   It has no `summary`, `state`, `reasons` or `changes`. `files` holds each named file in path order,
   with `suggestions` the Suggestions of §12.6 in their order: `pattern`, `resolvedCount` the number
   of `[[Files]]`, and `staleRate` the Number of §13.10 step 6 (as `stats` writes `staleRate`, §14.5
-  above) or `null`. `ignored` is the List of §12.6, `[]` when there is none. With `--write` each
+  above) or `null`. `ignored` is the List of §12.6, `[]` when there is none. `declared` follows
+  `ignored`: the List *declared* of §13.10 step 4, in its order, or `null` when it is *none*. With `--write` each
   element adds `"written": true|false` after `diagnostics`. The `diagnostics` of a file are always
   `[]`, kept for the shape of the other modes; the top-level `diagnostics` hold the raised
   Diagnostics, in which case `files` is empty.
@@ -2225,7 +2240,24 @@ on the left, each to the width of its longest cell, header included. `files` is 
 the `staleRate` with exactly four decimals as in §14.8, `n/a` when it is *none* for a pattern with no Negation,
 and empty for one with a Negation. A row has no trailing space. A file with no Suggestion has the
 single line `  no paths found`. Then one line `  ignored  <path>` per *ignored* path, as in §14.2,
-in path order. With `--write`, after all blocks, one line `written  <file>` or `unchanged  <file>`
+in path order.
+
+When *declared* (§13.10 step 4) is not *none*, the table has a fourth column, `status`, padded on
+the right like `pattern` (a row has still no trailing space): `declared` for a Suggestion whose
+pattern is in *declared*, else `new`. Then, after the `ignored` lines, one line
+`  only declared  <pattern>` per distinct pattern of *declared* that no Suggestion has, in the
+order of *declared*, written as in §14.2:
+
+```
+suggest docs/architecture.md
+  pattern               files   stale  status
+  src/server/handlers       4  0.2222  declared
+  src/server/router.ts      1  0.2222  new
+  only declared  src/legacy
+```
+
+When *declared* is *none*, the block is exactly as above, without the column and those lines.
+With `--write`, after all blocks, one line `written  <file>` or `unchanged  <file>`
 per file in path order. Diagnostics as in §14.3, and nothing is output on standard output when the
 command raised.
 
@@ -2345,6 +2377,10 @@ The following are not breaking:
   command, and a file literally named `suggest` is reached with `--` (§13.2), as for every other
   command word. `--write` without `suggest` is still refused (§13.2);
 - a new member of the JSON output (§14.5: consumers ignore unknown members);
+- *declared* of `suggest` (§13.10 step 4): the `status` column and the `only declared` lines of
+  §14.9 for a file that already has a declaration, and the member `declared` of §14.5. A file
+  without one prints exactly what it printed; the proposal, `--write` and the exit code are
+  unchanged;
 - the legend line of `stats` in text mode (§14.8): a fixed line after the `window:` line; the rows,
   the `window:` line and `--json` are unchanged, and `stats` still exits 0;
 - `[[Edited]]` (§5.4, §12.3 step 1.4): the edited line and the summary line of §14.3, and the

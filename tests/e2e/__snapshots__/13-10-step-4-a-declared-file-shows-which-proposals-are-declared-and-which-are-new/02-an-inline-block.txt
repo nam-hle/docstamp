@@ -1,0 +1,17 @@
+# an inline block
+$ docstamp suggest docs/overview.md
+exit: 0
+--- stdout ---
+suggest docs/overview.md
+  pattern                   files  stale  status
+  docs/guide/setup.md           1    n/a  new
+  scripts/*.mjs                 2    n/a  new
+  src/cli                       3    n/a  declared
+  src/engine                    3    n/a  new
+  src/util                      4    n/a  new
+  tests/unit                    1    n/a  new
+  !src/engine/**/*.test.*      -1         new
+  !src/engine/**/__tests__     -1         new
+  ignored  build/output.js
+  only declared  old/dir
+--- stderr ---

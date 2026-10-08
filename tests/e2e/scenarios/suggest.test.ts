@@ -77,6 +77,7 @@ scenario(
             { pattern: '!src/engine/**/__tests__', resolvedCount: 1, staleRate: null },
           ],
           ignored: ['build/output.js'],
+          declared: null,
           diagnostics: [],
         },
       ],
@@ -192,6 +193,7 @@ scenario('§13.10 no paths found is a success', { fixture: 'suggest' }, async (r
     file: 'docs/nothing.md',
     suggestions: [],
     ignored: [],
+    declared: null,
     diagnostics: [],
   });
   const written = await repo.run(['suggest', '--write', 'docs/nothing.md'], {
@@ -542,5 +544,46 @@ scenario(
     expect(asCommand.stderr).toContain('E_USAGE');
     const asFile = await repo.run(['--', 'suggest'], { expectExit: 2 });
     expect(asFile.stderr).toContain('E_UNKNOWN_FILE: suggest');
+  },
+);
+
+scenario(
+  '§13.10 step 4 a declared file shows which proposals are declared and which are new',
+  { fixture: 'suggest' },
+  async (repo) => {
+    repo.write(
+      'docstamp.yaml',
+      'version: 2\nfiles:\n  docs/configured.md:\n    dependencies:\n' +
+        '      - src/cli/main.ts\n      - src/gone\n',
+    );
+    const configured = await repo.run(['suggest', 'docs/configured.md'], {
+      label: 'a configured file',
+      show: ['docstamp.yaml'],
+    });
+    expect(configured.exit).toBe(0);
+    expect(configured.stdout).toBe(
+      'suggest docs/configured.md\n' +
+        '  pattern          files  stale  status\n' +
+        '  src/cli/main.ts      1    n/a  declared\n' +
+        '  src/util             4    n/a  new\n' +
+        '  only declared  src/gone\n',
+    );
+    const json = await repo.run(['suggest', '--json', 'docs/configured.md'], { snapshot: false });
+    expect(json.json().files[0].declared).toEqual(['src/cli/main.ts', 'src/gone']);
+
+    const text = repo.read(OVERVIEW);
+    repo.write(
+      OVERVIEW,
+      `---\ndocstamp:\n  dependencies:\n    - src/cli\n    - old/dir\n---\n${text}`,
+    );
+    const inline = await repo.run(['suggest', OVERVIEW], { label: 'an inline block' });
+    expect(inline.exit).toBe(0);
+    expect(inline.stdout).toContain('  src/cli                       3    n/a  declared\n');
+    expect(inline.stdout).toContain('  src/engine                    3    n/a  new\n');
+    expect(inline.stdout).toContain('  only declared  old/dir\n');
+    const written = await repo.run(['suggest', '--write', OVERVIEW], { snapshot: false });
+    expect(written.stdout).toContain('  only declared  old/dir\n');
+    const again = await repo.run(['suggest', '--json', OVERVIEW], { snapshot: false });
+    expect(again.json().files[0].declared).toEqual(patterns(again.json()));
   },
 );

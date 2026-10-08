@@ -7,6 +7,8 @@ import type { Diagnostic } from '../core/types.ts';
 import { propose, type Suggestion } from '../engine/suggest.ts';
 import { statistics } from '../engine/stats.ts';
 import { replay } from '../history/replay.ts';
+import { parseBlock } from '../inline/block.ts';
+import { scanFrontmatter } from '../inline/frontmatter.ts';
 import { replaceFile, textOf } from '../inline/read-inline.ts';
 import { writeBlock } from '../inline/write-block.ts';
 import { select } from '../pattern/match.ts';
@@ -75,9 +77,9 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
   if (problems.length > 0) throw new Raised(problems);
   const names = sortPaths([...texts.keys()]);
 
+  const include = config.include.map((source) => parsePattern(source) as ParsedPattern);
   if (args.write) {
     const configured = new Set(config.declarations.map((d) => d.file));
-    const include = config.include.map((source) => parsePattern(source) as ParsedPattern);
     for (const path of names) {
       if (configured.has(path)) {
         const message = `${path} is declared in the configuration file; edit it there by hand.`;
@@ -92,6 +94,14 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
     if (problems.length > 0) throw new Raised(problems);
   }
 
+  // SPEC §13.10 step 4: the own patterns already declared for the file, from the unwritten text
+  const declaredOf = (path: string): readonly string[] | null => {
+    const configured = config.declarations.find((d) => d.file === path);
+    if (configured !== undefined) return configured.dependencies;
+    if (universe.kinds.get(path) !== 'file' || select(include, [path]).length === 0) return null;
+    const scan = scanFrontmatter(texts.get(path)!);
+    return scan === null ? null : parseBlock(path, scan).declaration.dependencies;
+  };
   const isIgnored = (path: string) => isIgnoredPath(root, universe, path);
   const proposals = new Map(
     names.map((path) => [path, propose(path, texts.get(path)!, universe.paths, isIgnored)]),
@@ -125,6 +135,7 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
         staleRate: s.pattern.startsWith('!') ? null : (rates.get(`${path}\0${s.pattern}`) ?? null),
       })),
       ignored,
+      declared: declaredOf(path),
       written: rewritten.has(path),
     };
   });

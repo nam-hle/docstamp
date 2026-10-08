@@ -53,6 +53,7 @@ exit: 0
       "ignored": [
         "build/output.js"
       ],
+      "declared": null,
       "diagnostics": []
     }
   ],
