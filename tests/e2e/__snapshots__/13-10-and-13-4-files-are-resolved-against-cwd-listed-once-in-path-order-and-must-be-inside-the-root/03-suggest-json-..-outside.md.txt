@@ -12,7 +12,7 @@ exit: 2
       "severity": "error",
       "file": null,
       "subject": "../outside.md",
-      "message": "Name a file inside the root."
+      "message": "The argument is resolved against the current directory (<root>) to <tmp>/outside.md, which is outside the root <root>; name a file inside the root."
     }
   ]
 }

@@ -1,0 +1,6 @@
+$ docstamp check docs/guide.md --root repo
+cwd: ..
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNKNOWN_FILE: docs/guide.md: The argument is resolved against the current directory (<tmp>) to <tmp>/docs/guide.md, which is outside the root <root>; name a file inside the root.

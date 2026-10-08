@@ -1,4 +1,5 @@
 import { statSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { expect } from 'vitest';
 import { scenario, type Repo } from '../harness/index.ts';
 
@@ -403,7 +404,13 @@ scenario(
     const outside = await repo.run(['suggest', '../outside.md', 'docs/nothing.md']);
     expect(outside.exit).toBe(2);
     expect(outside.stdout).toBe('');
-    expect(outside.stderr).toBe('error: E_USAGE: ../outside.md: Name a file inside the root.\n');
+    expect(outside.stderr.replaceAll('\\', '/')).toBe(
+      (
+        'error: E_USAGE: ../outside.md: The argument is resolved against the current directory ' +
+        `(${repo.root}) to ${dirname(repo.root)}/outside.md, which is outside the root ` +
+        `${repo.root}; name a file inside the root.\n`
+      ).replaceAll('\\', '/'),
+    );
     const json = await repo.run(['suggest', '--json', '../outside.md']);
     expect(json.json().files).toEqual([]);
     expect(json.stderr).toBe('');

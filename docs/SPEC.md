@@ -242,8 +242,9 @@ duplicates (all fields equal) removed.
 
 `[[Message]]` is one sentence naming the problem and its fix. It MUST NOT contain operating system
 error text, parser error text, or absolute paths; it MAY contain an error code name such as
-`EACCES`. The one exception is the `E_USAGE` of a file argument outside Root (§13.8 step 3), which
-names the current directory and Root, because that is what explains the failure.
+`EACCES`. The one exception is a file argument that does not resolve inside Root: the `E_USAGE` of
+§13.8 step 3 and §13.10 step 2, and the `E_UNKNOWN_FILE` of §13.3 step 2, name the current
+directory, the resolved path and Root, because that is what explains the failure.
 
 ### 5.6 Inline Block
 
@@ -1419,7 +1420,8 @@ command is reached as `docstamp check -- check`, `docstamp -- check` or `docstam
 1. If *args* is empty, return *results*.
 2. Let *problems* be an empty List. For each *arg*: let *path* be `ToRepoPath(arg, cwd, root)`.
    If that fails, or no Result has `[[File]]` equal to *path*, collect `E_UNKNOWN_FILE` with
-   `[[Subject]]` *arg* into *problems*.
+   `[[Subject]]` *arg* into *problems*. When `ToRepoPath` failed, its `[[Message]]` says how *arg*
+   was resolved, as §13.8 step 3 does.
 3. If *problems* is not empty, raise *problems*.
 4. Return the Results whose `[[File]]` was named, in path order without duplicates.
 
@@ -1637,7 +1639,8 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
    (§9.3; a Root with no Configuration file and no inline block is not an error here) and *universe*
    be `? ComputeUniverse(root, config)`.
 2. For each distinct file argument *arg*, in path order of its *path*: if `ToRepoPath(arg, cwd, root)`
-   (§13.4) fails, raise « `E_USAGE` with `[[Subject]]` *arg* », for each such *arg*. Otherwise, if *path*
+   (§13.4) fails, raise « `E_USAGE` with `[[Subject]]` *arg* », for each such *arg*, its
+   `[[Message]]` as in §13.8 step 3. Otherwise, if *path*
    is not an entry of kind *file*, or has no text (§9.6.1), raise « `E_UNREADABLE` » with
    `[[Subject]]` *path*, for each such *path*.
 3. If `--write` is given, then for each *path*, raise « `E_USAGE` with `[[Subject]]` *path* » when
@@ -1807,8 +1810,12 @@ and then, if any selected Result is `invalid`, the line
 next: fix the configuration of each invalid file, then run: docstamp check <file> <file>
 ```
 
-Each lists the files of its state in path order, each written as in §14.2, followed by ` --root `
-and the `--root` value as given, if one was given. At most 10 files are listed. When there are
+Each lists the files of its state in path order, each written as in §14.2 as a file argument that
+§13.4 resolves, from the current directory, to that file: its RepoPath when the current directory
+is Root, else the relative path from the current directory to Root, `/`, and its RepoPath, with
+`/` as the separator on every platform (`../repo/docs/a.md`). When no relative path exists, as for
+another drive on Windows, the RepoPath is written. The list is followed by ` --root ` and the
+`--root` value as given, if one was given. At most 10 files are listed. When there are
 more, the line lists the first 10 and is followed by the line `  and <m> more`, two spaces, with
 *m* the number of files not listed. There is no `next:` line for a state that no selected Result
 has, and none when §13.6 step 5 refused an update (§14.4).
@@ -2143,7 +2150,7 @@ command raised.
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |
 | `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 Lockfile, `docstamp update --all` rewrites it as version 3 (hashes are unchanged); otherwise as `E_LOCK` |
-| `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block |
+| `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block; for a file argument outside Root, name a path that resolves, against the current directory, inside Root |
 | `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; for `--from`, name a commit |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 | `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
@@ -2248,7 +2255,11 @@ The following are not breaking:
   no change to a verdict, a Hash, a selection or an exit code; `list-dependents` still exits 0
   for a path it does not know;
 - the `[[Message]]` of the `E_USAGE` of §13.8 step 3 now names the directory and Root it was
-  resolved against; the code, the exit code and the resolution of §13.4 are unchanged;
+  resolved against; the code, the exit code and the resolution of §13.4 are unchanged; so does
+  the `[[Message]]` of the `E_UNKNOWN_FILE` of §13.3 and of the `E_USAGE` of §13.10 for an argument
+  that does not resolve inside Root, with the same code and exit code;
+- the files of a `next:` line (§14.3.3) written relative to the current directory when it is not
+  Root, so that the command shown runs as printed; it is part of the text layout of §14.3;
 - `--transitive` (§13.2, §13.8): a new option of `list-dependents` that no existing command line uses;
   without it the output is unchanged;
 - a new file shipped in the package, such as `schema-frontmatter.json` (§5.6), which no command reads;

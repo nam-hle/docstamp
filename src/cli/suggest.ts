@@ -15,7 +15,7 @@ import { suggestJsonText, suggestText, type SuggestEntry } from '../report/sugge
 import { diagnosticsText } from '../report/text.ts';
 import { computeUniverse, determineRoot, isIgnoredPath } from '../universe/walk.ts';
 import type { Args } from './args.ts';
-import { toRepoPath } from './paths.ts';
+import { resolutionMessage, toRepoPath } from './paths.ts';
 import type { Io } from './run.ts';
 
 const WINDOW_DAYS = 30;
@@ -58,7 +58,7 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
   for (const arg of args.paths) {
     const path = toRepoPath(arg, cwd, root);
     if (path === null) {
-      problems.push(usage(arg, 'Name a file inside the root.'));
+      problems.push(usage(arg, resolutionMessage(arg, cwd, root)));
       continue;
     }
     let text: string | null = null;

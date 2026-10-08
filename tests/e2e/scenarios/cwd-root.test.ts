@@ -1,3 +1,4 @@
+import { dirname } from 'node:path';
 import { expect } from 'vitest';
 import { config, scenario } from '../harness/index.ts';
 
@@ -9,7 +10,12 @@ scenario(
     expect(fromRoot.stdout).toContain('0 ok, 3 stale, 0 invalid');
 
     const fromPackage = await repo.run([], { cwd: 'packages/a' });
-    expect(fromPackage.stdout).toBe(fromRoot.stdout);
+    const withoutNext = (text: string) => text.replace(/^next: .*\n/mu, '');
+    expect(withoutNext(fromPackage.stdout)).toBe(withoutNext(fromRoot.stdout));
+    expect(fromPackage.stdout).toContain(
+      'then run: docstamp update ../../ROOT.md ../../packages/a/README.md ' +
+        '../../packages/b/README.md\n',
+    );
 
     const named = await repo.run(['README.md'], { cwd: 'packages/a' });
     expect(named.stdout).toContain('STALE    packages/a/README.md  (unrecorded)');
@@ -86,7 +92,7 @@ scenario(
     const withFile = await repo.run(['--root=../..', '../../ROOT.md'], { cwd: 'packages/a' });
     expect(withFile.stdout).toContain('1 stale');
     expect(withFile.stdout).toContain(
-      'next: review each stale file against its dependencies, then run: docstamp update ROOT.md --root ../..\n',
+      'next: review each stale file against its dependencies, then run: docstamp update ../../ROOT.md --root ../..\n',
     );
 
     const absolute = await repo.run(['--root', repo.root, 'update', 'ROOT.md'], {
@@ -107,6 +113,70 @@ scenario(
       'packages/b/README.md',
     ]);
     expect(repo.exists('docstamp-lock.yaml')).toBe(true);
+  },
+);
+
+const slashes = (text: string): string => text.replaceAll('\\', '/');
+const GUIDE = '---\ndocstamp:\n  dependencies:\n    - src\n---\n# Guide\n';
+
+scenario(
+  '§14.3.3 check --root from another directory prints a next line that runs from there',
+  async (repo) => {
+    repo.write('src/x.ts', 'export const x = 1;\n');
+    repo.write('docs/guide.md', GUIDE);
+    repo.commit('init');
+    const check = await repo.run(['check', '--root', 'repo'], { cwd: '..', expectExit: 1 });
+    expect(check.stdout).toContain(
+      'next: review each stale file against its dependencies, then run: ' +
+        'docstamp update repo/docs/guide.md --root repo\n',
+    );
+    const update = await repo.run(['update', 'repo/docs/guide.md', '--root', 'repo'], {
+      cwd: '..',
+      expectExit: 0,
+    });
+    expect(update.stdout).toBe('written  docs/guide.md\n');
+    await repo.run(['check', '--root', 'repo'], { cwd: '..', expectExit: 0 });
+
+    repo.append('src/x.ts', '// changed\n');
+    const fromSrc = await repo.run(['check'], { cwd: 'src', expectExit: 1 });
+    expect(fromSrc.stdout).toContain('then run: docstamp update ../docs/guide.md\n');
+    const fromRoot = await repo.run(['check'], { expectExit: 1 });
+    expect(fromRoot.stdout).toContain('then run: docstamp update docs/guide.md\n');
+  },
+);
+
+scenario(
+  '§13.3 update from another directory says how a file argument outside the root was resolved',
+  async (repo) => {
+    repo.write('src/x.ts', 'export const x = 1;\n');
+    repo.write('docs/guide.md', GUIDE);
+    repo.commit('init');
+    const update = await repo.run(['update', 'docs/guide.md', '--root', 'repo'], {
+      cwd: '..',
+      expectExit: 2,
+    });
+    expect(update.stdout).toBe('');
+    const base = dirname(repo.root);
+    expect(slashes(update.stderr)).toBe(
+      slashes(
+        'error: E_UNKNOWN_FILE: docs/guide.md: The argument is resolved against the current ' +
+          `directory (${base}) to ${base}/docs/guide.md, which is outside the root ` +
+          `${repo.root}; name a file inside the root.\n`,
+      ),
+    );
+    const check = await repo.run(['check', 'docs/guide.md', '--root', 'repo'], {
+      cwd: '..',
+      expectExit: 2,
+    });
+    expect(check.stderr).toContain('E_UNKNOWN_FILE: docs/guide.md: The argument is resolved');
+    const unknown = await repo.run(['update', 'repo/src/x.ts', '--root', 'repo'], {
+      cwd: '..',
+      expectExit: 2,
+    });
+    expect(unknown.stderr).toBe(
+      'error: E_UNKNOWN_FILE: repo/src/x.ts: Name a file listed under "files" in the ' +
+        'configuration file, or one with a docstamp block.\n',
+    );
   },
 );
 

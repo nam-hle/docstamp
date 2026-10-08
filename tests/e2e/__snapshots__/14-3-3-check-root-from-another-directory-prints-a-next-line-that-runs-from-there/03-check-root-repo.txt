@@ -1,0 +1,6 @@
+$ docstamp check --root repo
+cwd: ..
+exit: 0
+--- stdout ---
+1 ok, 0 stale, 0 invalid
+--- stderr ---
