@@ -105,9 +105,10 @@ function reviewCommit(root: string, file: string, hash: string, inline: boolean)
   return null;
 }
 
+// SPEC §12.3 step 1.4: `use` is undefined when the list has no `use` key (§8.6)
 export interface OwnList {
   readonly dependencies: readonly string[];
-  readonly use: readonly string[];
+  readonly use: readonly string[] | undefined;
 }
 
 const isYamlMap = (v: YamlValue | undefined): v is YamlMap =>
@@ -124,28 +125,31 @@ export function configuredOwnList(text: string, file: string): OwnList | null {
   if (!isYamlMap(entry)) return null;
   const dependencies = strings(entry.entries.get('dependencies')?.value);
   if (dependencies === null || dependencies.length === 0) return null;
-  return { dependencies, use: strings(entry.entries.get('use')?.value) ?? [] };
+  const use = entry.entries.get('use');
+  return { dependencies, use: use === undefined ? undefined : (strings(use.value) ?? []) };
 }
 
 // SPEC §12.3 step 1.4: the own list of an inline file's text, null when unknown
 export function inlineOwnList(text: string, file: string): OwnList | null {
   const scan = scanFrontmatter(text);
   if (scan === null) return null;
-  const { declaration } = parseBlock(file, scan);
+  const { declaration } = parseBlock(file, scan, true);
   if (declaration.dependencies.length === 0) return null;
-  return { dependencies: declaration.dependencies, use: declaration.use ?? [] };
+  return { dependencies: declaration.dependencies, use: declaration.use };
 }
 
 // SPEC §12.3 step 1.4: the own list now, without the patterns a Preset brought
 export function ownListOf(result: Result): OwnList {
   return {
     dependencies: result.dependencies.filter((_, i) => (result.origins?.[i] ?? null) === null),
-    use: result.use ?? [],
+    use: result.use,
   };
 }
 
-const sameList = (a: readonly string[], b: readonly string[]): boolean =>
-  a.length === b.length && a.every((x, i) => x === b[i]);
+const sameList = (a: readonly string[] | undefined, b: readonly string[] | undefined): boolean =>
+  a === undefined || b === undefined
+    ? a === b
+    : a.length === b.length && a.every((x, i) => x === b[i]);
 
 // SPEC §12.3 step 1.4: the carrier and the own list at `rev` when it is known and differs
 function editedCarrier(

@@ -1,0 +1,14 @@
+# an unknown name
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNKNOWN_PRESET: nope: "default-presets" names "nope", which is not a key of "presets": define it there or correct the name.
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  a: [x]
+default-presets: [a, nope]
+files:
+  CLAUDE.md:
+    dependencies: [src]

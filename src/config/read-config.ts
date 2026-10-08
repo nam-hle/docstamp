@@ -10,10 +10,25 @@ import { loadScript } from './script.ts';
 import { CONFIG_NAMES, PRESET_NAME, isMap, isStrings, type Value } from './value.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from './yaml-profile.ts';
 
-const TOP_KEYS = ['version', 'gitignore', 'ignore', 'include', 'presets', 'files'];
+const TOP_KEYS = [
+  'version',
+  'gitignore',
+  'ignore',
+  'include',
+  'presets',
+  'default-presets',
+  'files',
+];
 const DEFAULT_INCLUDE: readonly string[] = ['**/*.md'];
 
 const FILE_KEYS = ['dependencies', 'use'];
+
+const EMPTY_USE_MESSAGE =
+  'An empty "use" opts out of default presets, and the configuration file names none ' +
+  '("default-presets"): remove the "use" key.';
+
+const isNameList = (v: Value | undefined): v is string[] =>
+  isStrings(v) && new Set(v).size === v.length;
 
 const optional = (message: string | undefined) => (message === undefined ? {} : { message });
 
@@ -85,6 +100,7 @@ function readValue(root: string): Value | undefined {
 function collectDeclaration(
   key: string,
   value: Value | undefined,
+  defaults: boolean,
   fatal: Diagnostic[],
   attached: Diagnostic[],
   out: Declaration[],
@@ -99,11 +115,11 @@ function collectDeclaration(
     return;
   }
   const use = value.get('use');
-  if (
-    use !== undefined &&
-    (!isStrings(use) || use.length === 0 || new Set(use).size < use.length)
-  ) {
+  // §9.3 step 8.3: an empty `use` opts out of the default Presets, so it needs some
+  if (use !== undefined && !isNameList(use)) {
     fatal.push(diag('E_CONFIG', { file: key, subject: 'use' }));
+  } else if (use !== undefined && use.length === 0 && !defaults) {
+    fatal.push(diag('E_CONFIG', { file: key, subject: 'use', message: EMPTY_USE_MESSAGE }));
   }
   for (const k of value.keys()) {
     if (k !== 'dependencies' && k !== 'use') {
@@ -144,6 +160,30 @@ function collectPresets(
   return found;
 }
 
+// SPEC §9.3 step 6: the default Presets, each a name of `presets`
+function collectDefaults(
+  value: Value | undefined,
+  presets: ReadonlyMap<string, readonly string[]>,
+  fatal: Diagnostic[],
+): readonly string[] {
+  if (value === undefined) return [];
+  if (!isNameList(value) || value.length === 0) {
+    fatal.push(diag('E_CONFIG', { subject: 'default-presets' }));
+    return [];
+  }
+  for (const name of value) {
+    if (!presets.has(name)) {
+      fatal.push(
+        diag('E_UNKNOWN_PRESET', {
+          subject: name,
+          message: `"default-presets" names "${name}", which is not a key of "presets": define it there or correct the name.`,
+        }),
+      );
+    }
+  }
+  return value;
+}
+
 // SPEC §9.3
 export function readConfig(root: string): {
   config: Config;
@@ -157,6 +197,7 @@ export function readConfig(root: string): {
       useGitignore: true,
       include: DEFAULT_INCLUDE,
       presets: new Map<string, readonly string[]>(),
+      defaultPresets: [],
       declarations: [],
     };
     return { config, attached: [], present: false };
@@ -196,6 +237,7 @@ export function readConfig(root: string): {
   }
 
   const presets = collectPresets(top.get('presets'), fatal);
+  const defaultPresets = collectDefaults(top.get('default-presets'), presets, fatal);
   const declarations: Declaration[] = [];
   const files = top.get('files');
   if (files === undefined) {
@@ -213,7 +255,7 @@ export function readConfig(root: string): {
     fatal.push(diag('E_CONFIG', { subject: 'files' }));
   } else {
     for (const [key, value] of files) {
-      collectDeclaration(key, value, fatal, attached, declarations);
+      collectDeclaration(key, value, top.has('default-presets'), fatal, attached, declarations);
     }
   }
   if (fatal.length > 0) throw new Raised(fatal);
@@ -224,6 +266,7 @@ export function readConfig(root: string): {
       useGitignore: gitignore !== false,
       include: isStrings(include) ? include : DEFAULT_INCLUDE,
       presets,
+      defaultPresets,
       declarations,
     },
     attached,

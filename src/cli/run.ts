@@ -61,6 +61,7 @@ interface Evaluated {
   declarations: Declaration[];
   universe: Universe;
   presets: ReadonlyMap<string, readonly string[]>;
+  defaultPresets: readonly string[];
   lock: Lock;
   global: Diagnostic[];
 }
@@ -84,7 +85,7 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
 }
 
 function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: boolean) {
-  const { universe, declarations, attached, presets } = loadWorkspace(root);
+  const { universe, declarations, attached, presets, defaultPresets } = loadWorkspace(root);
   const lock = readLockFor();
   const renames = new Map<string, string | null>();
   const fs: EngineFs = {
@@ -105,7 +106,7 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
       fs,
     ),
   );
-  return { declarations, universe, presets, results, lock };
+  return { declarations, universe, presets, defaultPresets, results, lock };
 }
 
 // SPEC §12.2
@@ -141,12 +142,19 @@ function withChanges(
   }
   const report = changedSince(root, result, entry, inline !== undefined, whitespace);
   if (report === null) return { ...result, changes: null };
-  const { universe, presets } = evaluated;
+  const { universe, presets, defaultPresets } = evaluated;
   const { ownThen } = report;
   const selection =
     ownThen === undefined
       ? null
-      : selectionChanges(result.file, ownThen, presets, universe.paths, result.resolved);
+      : selectionChanges(
+          result.file,
+          ownThen,
+          presets,
+          defaultPresets,
+          universe.paths,
+          result.resolved,
+        );
   return {
     ...result,
     changes: report.changes,

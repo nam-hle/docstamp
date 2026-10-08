@@ -1,0 +1,31 @@
+$ docstamp list-dependencies CLAUDE.md
+exit: 0
+--- stdout ---
+CLAUDE.md
+  depends   src
+  depends   !**/*.test.ts (preset tests)
+  depends   !**/__test__/** (preset tests)
+  depends   src/cli (preset cli)
+  resolved  src/cli/__test__/helper.ts
+  resolved  src/cli/run.test.ts
+  resolved  src/cli/run.ts
+  resolved  src/core/hash.ts
+  resolved  src/index.ts
+--- stderr ---
+warning: W_SHADOWED_EXCLUSION: CLAUDE.md: !**/*.test.ts: A later pattern selects again files the exclusion matches: "src/cli" (preset "cli"); move the exclusion after it, or narrow that pattern.
+warning: W_SHADOWED_EXCLUSION: CLAUDE.md: !**/__test__/**: A later pattern selects again files the exclusion matches: "src/cli" (preset "cli"); move the exclusion after it, or narrow that pattern.
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  tests:
+    - "!**/*.test.ts"
+    - "!**/__test__/**"
+  spec:
+    - docs/SPEC.md
+  cli:
+    - src/cli
+default-presets: [tests, cli]
+files:
+  CLAUDE.md:
+    dependencies:
+      - src

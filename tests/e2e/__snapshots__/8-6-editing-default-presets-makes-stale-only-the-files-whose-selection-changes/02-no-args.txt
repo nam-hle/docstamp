@@ -1,0 +1,25 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (content-changed)
+  depends   src
+  depends   docs/SPEC.md (preset spec)
+3 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+presets:
+  tests:
+    - "!**/*.test.ts"
+    - "!**/__test__/**"
+  spec:
+    - docs/SPEC.md
+  cli:
+    - src/cli
+default-presets: [spec]
+files:
+  CLAUDE.md:
+    dependencies:
+      - src

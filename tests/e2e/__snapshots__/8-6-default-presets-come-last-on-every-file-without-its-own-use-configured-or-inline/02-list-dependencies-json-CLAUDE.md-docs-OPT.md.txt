@@ -1,0 +1,43 @@
+$ docstamp list-dependencies --json CLAUDE.md docs/OPT.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "dependencies": [
+        "src",
+        "!**/*.test.ts",
+        "!**/__test__/**"
+      ],
+      "use": [],
+      "origins": [
+        null,
+        "tests",
+        "tests"
+      ],
+      "resolvedFiles": [
+        "src/cli/run.ts",
+        "src/core/hash.ts",
+        "src/index.ts"
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "docs/OPT.md",
+      "dependencies": [
+        "src/core"
+      ],
+      "resolvedFiles": [
+        "src/core/hash.test.ts",
+        "src/core/hash.ts"
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

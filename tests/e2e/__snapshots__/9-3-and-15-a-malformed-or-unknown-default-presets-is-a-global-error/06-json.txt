@@ -1,0 +1,19 @@
+$ docstamp --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_UNKNOWN_KEY",
+      "severity": "error",
+      "file": null,
+      "subject": "default-preset",
+      "message": "Remove or correct the key; did you mean \"default-presets\"?"
+    }
+  ]
+}
+--- stderr ---

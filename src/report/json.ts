@@ -45,11 +45,12 @@ export const diagJson = (d: Diagnostic): JsonObject =>
     ['message', d.message],
   ]);
 
-// SPEC §14.5: `use` and `origins`, only for a file that uses a Preset
+// SPEC §14.5: `use` and `origins`, only for a file that uses a Preset, a default one included
 function presetMembers(r: Result): Array<[string, Json]> {
-  if ((r.use ?? []).length === 0) return [];
+  const defaulted = (r.origins ?? []).some((origin) => origin !== null);
+  if ((r.use ?? []).length === 0 && !defaulted) return [];
   return [
-    ['use', [...r.use!]],
+    ['use', [...(r.use ?? [])]],
     ['origins', r.dependencies.map((_, i) => r.origins?.[i] ?? null)],
   ];
 }

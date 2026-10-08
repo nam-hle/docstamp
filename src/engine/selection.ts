@@ -8,14 +8,17 @@ import { expandPresets } from './presets.ts';
 // SPEC §12.3 step 10: the files an edit of the own list added to or dropped from the selection
 export function selectionChanges(
   file: string,
-  then: { readonly dependencies: readonly string[]; readonly use: readonly string[] },
+  then: { readonly dependencies: readonly string[]; readonly use: readonly string[] | undefined },
   presets: ReadonlyMap<string, readonly string[]>,
+  defaults: readonly string[],
   universe: readonly string[],
   resolved: readonly string[],
 ): SelectionChange[] | null {
   let old: readonly string[];
   try {
-    old = expandPresets({ file, ...then }, presets, true).dependencies;
+    const own = { file, dependencies: then.dependencies };
+    const declaration = then.use === undefined ? own : { ...own, use: then.use };
+    old = expandPresets(declaration, presets, defaults, true).dependencies;
   } catch (e) {
     if (!(e instanceof Raised)) throw e;
     return null;

@@ -48,7 +48,7 @@ describe('§12.3 step 1.4: own list', () => {
     });
     expect(configuredOwnList(yaml('  a.md:\n    dependencies: [src]\n'), 'a.md')).toEqual({
       dependencies: ['src'],
-      use: [],
+      use: undefined,
     });
   });
   it('is unknown for a missing key, an empty list or a text that does not parse', () => {
@@ -58,7 +58,7 @@ describe('§12.3 step 1.4: own list', () => {
   });
   it('reads an inline block, and is unknown without one', () => {
     const text = '---\ndocstamp:\n  dependencies:\n    - src\n  hash: x\n---\n# A\n';
-    expect(inlineOwnList(text, 'a.md')).toEqual({ dependencies: ['src'], use: [] });
+    expect(inlineOwnList(text, 'a.md')).toEqual({ dependencies: ['src'], use: undefined });
     expect(inlineOwnList('# A\n', 'a.md')).toBeNull();
   });
   it('the own list now leaves out the patterns of a Preset', () => {
@@ -163,7 +163,7 @@ describe('§12.3 step 10 selection', () => {
   it('lists the files that entered and left, in path order', () => {
     const then = { dependencies: ['src/**', '!**/*.test.ts', 'lib/**'], use: [] };
     expect(
-      selectionChanges('docs/a.md', then, presets, universe, [
+      selectionChanges('docs/a.md', then, presets, [], universe, [
         'src/a.test.ts',
         'src/a.ts',
         'src/b.ts',
@@ -176,15 +176,42 @@ describe('§12.3 step 10 selection', () => {
   it('expands the old use with the Presets of now, and never selects the file itself', () => {
     const then = { dependencies: ['**'], use: ['tests'] };
     expect(
-      selectionChanges('docs/a.md', then, presets, universe, ['lib/c.ts', 'src/a.ts', 'src/b.ts']),
+      selectionChanges('docs/a.md', then, presets, [], universe, [
+        'lib/c.ts',
+        'src/a.ts',
+        'src/b.ts',
+      ]),
     ).toEqual([]);
+  });
+  it('expands an old list without use with the default Presets of now, not an empty use', () => {
+    const now = ['src/a.ts', 'src/b.ts'];
+    const absent = { dependencies: ['src/**'], use: undefined };
+    expect(selectionChanges('docs/a.md', absent, presets, ['tests'], universe, now)).toEqual([]);
+    const none = { dependencies: ['src/**'], use: [] };
+    expect(selectionChanges('docs/a.md', none, presets, ['tests'], universe, now)).toEqual([
+      { status: 'removed', path: 'src/a.test.ts' },
+    ]);
   });
   it('is unknown when a Preset is gone or a pattern does not parse', () => {
     expect(
-      selectionChanges('docs/a.md', { dependencies: ['src'], use: ['x'] }, presets, universe, []),
+      selectionChanges(
+        'docs/a.md',
+        { dependencies: ['src'], use: ['x'] },
+        presets,
+        [],
+        universe,
+        [],
+      ),
     ).toBeNull();
     expect(
-      selectionChanges('docs/a.md', { dependencies: ['src/{'], use: [] }, presets, universe, []),
+      selectionChanges(
+        'docs/a.md',
+        { dependencies: ['src/{'], use: [] },
+        presets,
+        [],
+        universe,
+        [],
+      ),
     ).toBeNull();
   });
 });
