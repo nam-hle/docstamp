@@ -198,7 +198,18 @@ describe('§9.6.5 Writing a Block', () => {
     });
     it('a block with use that has to be rewritten', () => {
       const text = '---\ndocstamp:\n  dependencies: [old]\n  use: [tests]\n---\n';
-      expect(refusal(text, ['old', 'src']).message).toContain('by hand');
+      const { message } = refusal(text, ['old', 'src']);
+      expect(message).toBe(
+        'd.md has a docstamp block with use whose dependencies are not one per line; write each ' +
+          'pattern on its own line ("- <pattern>") so suggest --write can add to it, or edit it ' +
+          'by hand.',
+      );
+    });
+    it('a block with use written one pattern per line is extended, as the message says', () => {
+      const text = '---\ndocstamp:\n  dependencies:\n    - old\n  use: [tests]\n---\n';
+      expect(writeBlock('d.md', text, ['old', 'src'])).toBe(
+        '---\ndocstamp:\n  dependencies:\n    - old\n    - src\n  use: [tests]\n---\n',
+      );
     });
     it('a block that is not a block mapping', () => {
       expect(refusal('---\ndocstamp: {dependencies: [a]}\n---\n').message).toContain('by hand');

@@ -984,7 +984,10 @@ used only by `suggest --write` (§13.10); it never records a Review.
       items of *declared*.
    5. Otherwise (no *key* or no item line, as for `dependencies: [a, b]`, or a block that declares
       no pattern or raises), raise if a line from *marker* + 1 to *last* starts with *keyIndent*
-      followed by `use:`, so a `use` is never lost. Let *indent* be *keyIndent*, or two U+0020 if it
+      followed by `use:`, so a `use` is never lost. The message says what to change: when
+   *declared* is not empty and `ParseBlock(scan)` does not raise, to write `dependencies` one
+   pattern per line (`- <pattern>`), which step 2.4 extends, or to edit the block by hand;
+   otherwise to edit the block by hand. Let *indent* be *keyIndent*, or two U+0020 if it
       is *absent*, and *eol* the terminator of the marker line. Replace the lines after *marker* up
       to and including *last* by the line *indent* and `dependencies:`, and, for each pattern *s*,
       the line *indent*, two U+0020, `- `, *item*(*s*), each followed by *eol*.

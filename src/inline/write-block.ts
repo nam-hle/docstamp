@@ -99,6 +99,13 @@ export function writeBlock(file: string, text: string, dependencies: readonly st
         scan.lines
           .slice(scan.marker + 1, scan.last + 1)
           .some((line) => line.startsWith(`${keyIndent}use:`));
+      if (usesPresets && declared.length > 0 && parsed.problems.length === 0) {
+        throw refuse(
+          `${file} has a docstamp block with use whose dependencies are not one per line; ` +
+            'write each pattern on its own line ("- <pattern>") so suggest --write can add ' +
+            'to it, or edit it by hand.',
+        );
+      }
       if (usesPresets) {
         throw refuse(`${file} has a docstamp block that uses presets; edit it by hand.`);
       }
