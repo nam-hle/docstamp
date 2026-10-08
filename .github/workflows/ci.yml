@@ -54,5 +54,23 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: Test
-        run: pnpm test
+      # `pnpm test` stops at the first red phase. On a platform we are still learning about, run
+      # the phases as separate steps so one failure does not hide the others.
+      - name: Format, lint, types, knip
+        run: pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip
+
+      - name: Build and self-check
+        if: ${{ !cancelled() }}
+        run: pnpm run build && node dist/index.js
+
+      - name: Unit tests
+        if: ${{ !cancelled() }}
+        run: pnpm run test:unit
+
+      - name: End-to-end tests
+        if: ${{ !cancelled() }}
+        run: pnpm run test:e2e
+
+      - name: Pack tests
+        if: ${{ !cancelled() }}
+        run: pnpm run test:pack

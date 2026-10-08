@@ -147,11 +147,15 @@ describe('§7.2 computeUniverse', () => {
     chmodSync(join(root, 'node_modules'), 0o000);
     expect(computeUniverse(root, config()).paths).toEqual(['.gitignore', 'y']);
   });
-  it.runIf(process.getuid?.() !== 0)('unreadable directory raises E_UNREADABLE', () => {
-    const root = makeTree({ y: '' });
-    mkdirSync(join(root, 'locked'), { mode: 0o000 });
-    expect(codes(() => computeUniverse(root, config()))).toEqual(['E_UNREADABLE']);
-  });
+  // Windows has no POSIX permission bits, so a directory cannot be made unreadable with a mode.
+  it.runIf(process.platform !== 'win32' && process.getuid?.() !== 0)(
+    'unreadable directory raises E_UNREADABLE',
+    () => {
+      const root = makeTree({ y: '' });
+      mkdirSync(join(root, 'locked'), { mode: 0o000 });
+      expect(codes(() => computeUniverse(root, config()))).toEqual(['E_UNREADABLE']);
+    },
+  );
 });
 
 describe('§7.4 / §7.5 collisions', () => {
