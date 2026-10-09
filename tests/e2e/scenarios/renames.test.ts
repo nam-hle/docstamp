@@ -45,6 +45,38 @@ scenario('§12.1 renaming a dependency inside a dependency directory', { fixture
   expect((await repo.run([], { label: 'renamed back' })).exit).toBe(0);
 });
 
+scenario(
+  '§14.3.1 the same renames under a second stale file are one same line',
+  { fixture },
+  async (repo) => {
+    await reviewed(repo);
+    repo.rename('src/lib/keep.ts', 'src/lib/kept.ts');
+    repo.rename('src/lib/old-name.ts', 'src/lib/new-name.ts');
+    const result = await repo.run([]);
+    expect(result.exit).toBe(1);
+    const review =
+      '  review: git diff -M ' +
+      /review: git diff -M (\S+)/u.exec(result.stdout)![1]! +
+      ' -- src/lib/keep.ts src/lib/kept.ts src/lib/new-name.ts src/lib/old-name.ts\n';
+    expect(result.stdout).toContain(
+      'STALE    README.md  (content-changed)\n' +
+        '  renamed   src/lib/keep.ts -> src/lib/kept.ts\n' +
+        '  renamed   src/lib/old-name.ts -> src/lib/new-name.ts\n' +
+        review,
+    );
+    expect(result.stdout).toContain(
+      'STALE    docs/api.md  (content-changed)\n' +
+        '  renamed   (same 2 renames as README.md)\n' +
+        review,
+    );
+
+    const json = (await repo.run(['--json'])).json();
+    const paths = (i: number) => json.files[i].changes.map((c: { pair: string }) => c.pair);
+    expect(paths(1)).toEqual(paths(0));
+    expect(paths(1)).toHaveLength(4);
+  },
+);
+
 scenario('§12.1 moving a dependency out of every pattern', { fixture }, async (repo) => {
   await reviewed(repo);
   repo.rename('src/lib/keep.ts', 'elsewhere/keep.ts');

@@ -1,0 +1,107 @@
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 0,
+    "stale": 2,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "README.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/**"
+      ],
+      "changes": [
+        {
+          "status": "deleted",
+          "path": "src/lib/keep.ts",
+          "via": [
+            "src/**"
+          ],
+          "pair": "src/lib/kept.ts"
+        },
+        {
+          "status": "added",
+          "path": "src/lib/kept.ts",
+          "via": [
+            "src/**"
+          ],
+          "pair": "src/lib/keep.ts"
+        },
+        {
+          "status": "added",
+          "path": "src/lib/new-name.ts",
+          "via": [
+            "src/**"
+          ],
+          "pair": "src/lib/old-name.ts"
+        },
+        {
+          "status": "deleted",
+          "path": "src/lib/old-name.ts",
+          "via": [
+            "src/**"
+          ],
+          "pair": "src/lib/new-name.ts"
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "docs/api.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/lib"
+      ],
+      "changes": [
+        {
+          "status": "deleted",
+          "path": "src/lib/keep.ts",
+          "via": [
+            "src/lib"
+          ],
+          "pair": "src/lib/kept.ts"
+        },
+        {
+          "status": "added",
+          "path": "src/lib/kept.ts",
+          "via": [
+            "src/lib"
+          ],
+          "pair": "src/lib/keep.ts"
+        },
+        {
+          "status": "added",
+          "path": "src/lib/new-name.ts",
+          "via": [
+            "src/lib"
+          ],
+          "pair": "src/lib/old-name.ts"
+        },
+        {
+          "status": "deleted",
+          "path": "src/lib/old-name.ts",
+          "via": [
+            "src/lib"
+          ],
+          "pair": "src/lib/new-name.ts"
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

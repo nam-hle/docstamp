@@ -94,6 +94,26 @@ export function changeLines(changes: readonly Change[]): string[] {
   return lines.map((entry) => entry.line);
 }
 
+// SPEC §14.3.1: rename lines shown in full by an earlier block become one same line
+function withoutRepeatedRenames(
+  lines: readonly string[],
+  r: Result,
+  shownBy: Map<string, string>,
+): string[] {
+  const renames = lines.filter((line) => line.startsWith('  renamed   '));
+  if (renames.length < 2) return [...lines];
+  const key = renames.join('');
+  const first = shownBy.get(key);
+  if (first === undefined) {
+    shownBy.set(key, r.file);
+    return [...lines];
+  }
+  const n = entriesOf(r.changes ?? []).filter((e) => e.status === 'renamed').length;
+  const same = `  renamed   (same ${n} renames as ${shown(first)})\n`;
+  const at = lines.indexOf(renames[0]!);
+  return [...lines.slice(0, at), same, ...lines.filter((l, i) => i > at && !renames.includes(l))];
+}
+
 // SPEC §14.3.4
 function pathspecsOf(dependencies: readonly string[]): string[] | null {
   if (dependencies.some((pattern) => pattern.includes('{'))) return null;
@@ -171,13 +191,15 @@ export function checkChunks(
     if (text !== '') chunks.push({ stream, text });
   };
   emit('stderr', diagnosticsText(global));
+  const renamesShownBy = new Map<string, string>();
   for (const r of selected) {
     if (r.state !== 'ok') {
       let block = `${LABEL[r.state].padEnd(9)}${shown(r.file)}`;
       block += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
       if (r.state === 'stale') {
         if (r.changes && (r.changes.length > 0 || r.edited !== undefined)) {
-          block += headLines(r) + changeLines(r.changes).join('') + reviewLine(r, rootArg);
+          const lines = withoutRepeatedRenames(changeLines(r.changes), r, renamesShownBy);
+          block += headLines(r) + lines.join('') + reviewLine(r, rootArg);
         } else block += dependsLines(r);
       }
       emit('stdout', block);

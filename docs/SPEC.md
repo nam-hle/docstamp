@@ -2075,6 +2075,23 @@ trailing `/`; on a tie a group line of `added` precedes one of `deleted`, which 
 `renamed`. Change lines and group lines are in text mode only: `changes` in `--json` always lists
 every Change (§14.5). The last line of the block is the review line of §14.3.4.
 
+The *rename lines* of a block are its change lines and group lines of status `renamed`, in order.
+When a block has at least 2 rename lines and an earlier block of the same output has exactly the
+same rename lines, they are replaced by one *same line* at the position of the first of them:
+
+```
+  renamed   (same <n> renames as <file>)
+```
+
+two spaces, `renamed` padded with spaces to 8 characters, two spaces, and `(same <n> renames as
+<file>)`, with *n* the number of `renamed` entries of the block and *file* the file of the first
+block of the output that printed those rename lines, as in §14.2. The summary line still counts
+every entry, and the review line still lists every path: only the lines between them change.
+
+NOTE: A move that several stale files depend on would otherwise print the same rename lines under
+each of them. The first block in path order keeps them, so every block can be read alone with one
+look up; a block whose renames differ in any line prints them all. JSON is unchanged (§14.5).
+
 NOTE: A moved directory of 13 files, on which 5 files depend, prints one line per file, not 26:
 `renamed   src/old/ -> src/new/  (13 files)`. Only a file whose content is unchanged is paired
 (§12.3 step 8); a moved file that was also edited is a `deleted` and an `added` entry, and those
