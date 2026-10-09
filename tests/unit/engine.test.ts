@@ -108,7 +108,6 @@ describe('§8.5 resolveDependencies', () => {
       fs,
     );
     expect(r.diagnostics.map((d) => [d.code, d.subject])).toEqual([
-      ['E_EMPTY_DEPENDENCIES', ''],
       ['E_EMPTY_PATTERN', 'gone'],
       ['W_EMPTY_EXCLUSION', '!also-nope'],
       ['W_EMPTY_EXCLUSION', '!nope'],
@@ -123,6 +122,16 @@ describe('§8.5 resolveDependencies', () => {
       fs,
     );
     expect(r.diagnostics.map((d) => d.code)).toEqual(['W_EMPTY_EXCLUSION']);
+  });
+  it('one diagnostic per mistake: an empty inclusion is E_EMPTY_PATTERN alone', () => {
+    const r = evaluate(declare('B.md', ['src\\core']), universe, lockOf({}), [], fs);
+    expect(r.diagnostics.map((d) => [d.code, d.subject])).toEqual([
+      ['E_EMPTY_PATTERN', 'src\\core'],
+    ]);
+  });
+  it('valid patterns that together select nothing are E_EMPTY_DEPENDENCIES', () => {
+    const r = evaluate(declare('B.md', ['src/**', '!src/**']), universe, lockOf({}), [], fs);
+    expect(r.diagnostics.map((d) => d.code)).toEqual(['E_EMPTY_DEPENDENCIES']);
   });
   it('empty selection', () => {
     expect(() => resolveDependencies(declare('B.md', ['src/**', '!src/**']), universe)).toThrow(
@@ -179,7 +188,6 @@ describe('§8.5 step 4 W_DUPLICATE_PATTERN', () => {
   it('is reported next to the errors of an invalid file', () => {
     const r = evaluate(declare('B.md', ['gone', 'gone']), universe, lockOf({}), [], fs);
     expect(r.diagnostics.map((d) => [d.code, d.subject])).toEqual([
-      ['E_EMPTY_DEPENDENCIES', ''],
       ['E_EMPTY_PATTERN', 'gone'],
       ['W_DUPLICATE_PATTERN', 'gone'],
     ]);
@@ -366,11 +374,7 @@ describe('§12.1 evaluate', () => {
   it('missing file is invalid but still reports pattern problems', () => {
     const r = evaluate(declare('gone.md', ['nope']), universe, lockOf({}), [], fs);
     expect(r.state).toBe('invalid');
-    expect(r.diagnostics.map((d) => d.code)).toEqual([
-      'E_EMPTY_DEPENDENCIES',
-      'E_EMPTY_PATTERN',
-      'E_FILE_MISSING',
-    ]);
+    expect(r.diagnostics.map((d) => d.code)).toEqual(['E_EMPTY_PATTERN', 'E_FILE_MISSING']);
     expect(r.diagnostics.every((d) => d.file === 'gone.md')).toBe(true);
   });
   it('attached E_PATTERN skips resolution', () => {

@@ -5,5 +5,4 @@ exit: 2
 INVALID  docs/directory.md
 0 ok, 0 stale, 1 invalid
 --- stderr ---
-error: E_EMPTY_DEPENDENCIES: docs/directory.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/directory.md: src/lib: Correct or remove the pattern; it matches no file.

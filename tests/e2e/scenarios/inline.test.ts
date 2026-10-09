@@ -384,7 +384,6 @@ scenario(
       'empty.md: E_BLOCK',
       'flow.md: E_BLOCK',
       'no-deps.md: E_BLOCK',
-      'no-match.md: E_EMPTY_DEPENDENCIES',
       'no-match.md: E_EMPTY_PATTERN',
       'quoted-hash.md: E_BLOCK',
       'scalar.md: E_BLOCK',

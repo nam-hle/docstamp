@@ -1,4 +1,5 @@
-$ docstamp update docs/guide.md --root repo
+# suggest
+$ docstamp suggest docs/guide.md --root repo
 cwd: ..
 exit: 2
 --- stdout ---

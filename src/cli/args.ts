@@ -1,4 +1,5 @@
 import { Raised, diag } from '../core/diagnostics.ts';
+import { closestKey } from '../core/did-you-mean.ts';
 
 type StatsWindowArg =
   | { kind: 'days'; days: number; value: string }
@@ -82,12 +83,27 @@ const DAYS = /^([1-9][0-9]{0,3})d$/u;
 const usage = (subject: string, message?: string) =>
   new Raised([diag('E_USAGE', { subject, ...(message === undefined ? {} : { message }) })]);
 
-// SPEC §13.2
-export function parseArgs(argv: readonly string[]): Args {
+// SPEC §13.2 step 2: a near command name for a first argument that names nothing on disk
+function mistypedCommand(arg: string, exists: (arg: string) => boolean): Raised | null {
+  const near = closestKey(arg, COMMANDS);
+  if (near === null || exists(arg)) return null;
+  return usage(
+    arg,
+    `Unknown command "${arg}"; did you mean "${near}"? ` +
+      `A file of that name is named after --, as in docstamp -- ${arg}; see docstamp help.`,
+  );
+}
+
+// SPEC §13.2; `exists` tells whether an argument names an entry, resolved against cwd
+export function parseArgs(
+  argv: readonly string[],
+  exists: (arg: string) => boolean = () => false,
+): Args {
   const seen = new Set<string>();
   const paths: string[] = [];
   let command: string | undefined;
   let explicit: Command | undefined;
+  let mistyped: Raised | null = null;
   const values = new Map<string, string>();
   let failure: { subject: string; message: string } | undefined;
   const fail = (subject: string, message: string) => {
@@ -124,11 +140,13 @@ export function parseArgs(argv: readonly string[]): Args {
     } else if (command === undefined) {
       if (isCommand(arg)) command = explicit = arg;
       else {
+        mistyped = mistypedCommand(arg, exists);
         command = 'check';
         paths.push(arg);
       }
     } else paths.push(arg);
   }
+  if (mistyped !== null) throw mistyped;
   // §13.2 step 3: the help names
   if (command === 'help') return { mode: 'help', names: paths };
   if (seen.has('--help')) return { mode: 'help', names: explicit === undefined ? [] : [explicit] };

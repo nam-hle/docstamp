@@ -6,9 +6,8 @@ INVALID  MIXED.md
 0 ok, 0 stale, 2 invalid
 next: fix the configuration of each invalid file, then run: docstamp check DOC.md MIXED.md
 --- stderr ---
-error: E_EMPTY_DEPENDENCIES: DOC.md: Correct the patterns in "dependencies"; together they select no file.
-error: E_EMPTY_PATTERN: DOC.md: "src\\core": Correct the pattern; it matches no file: patterns use "/" as the separator, and "\" escapes the next character.
-error: E_EMPTY_PATTERN: MIXED.md: "src\\x": Correct the pattern; it matches no file: patterns use "/" as the separator, and "\" escapes the next character.
+error: E_EMPTY_PATTERN: DOC.md: src\core: Correct the pattern; it matches no file: patterns use "/" as the separator, and "\" escapes the next character.
+error: E_EMPTY_PATTERN: MIXED.md: src\x: Correct the pattern; it matches no file: patterns use "/" as the separator, and "\" escapes the next character.
 --- setup: docstamp.yaml ---
 version: 2
 files:

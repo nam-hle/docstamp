@@ -55,7 +55,7 @@ scenario(
     repo.remove('src/lib');
     const result = await repo.run([], { label: 'src/lib deleted' });
     expect(result.exit).toBe(2);
-    expect(result.stderr).toContain('error: E_EMPTY_DEPENDENCIES: docs/directory.md');
+    expect(result.stderr).not.toContain('E_EMPTY_DEPENDENCIES');
     expect(result.stderr).toContain('error: E_EMPTY_PATTERN: docs/directory.md: src/lib');
     expect(result.stdout).toContain('INVALID  docs/directory.md');
     expect(result.stdout).toContain('STALE    docs/all.md  (content-changed)');
@@ -259,8 +259,7 @@ scenario(
     const text = await repo.run([], { label: 'text', show: ['docstamp.yaml'] });
     expect(text.exit).toBe(2);
     expect(text.stderr).toBe(
-      'error: E_EMPTY_DEPENDENCIES: docs/mixed.md: Correct the patterns in "dependencies"; together they select no file.\n' +
-        'error: E_EMPTY_PATTERN: docs/mixed.md: nothing/**: Correct or remove the pattern; it matches no file.\n' +
+      'error: E_EMPTY_PATTERN: docs/mixed.md: nothing/**: Correct or remove the pattern; it matches no file.\n' +
         'warning: W_EMPTY_EXCLUSION: docs/mixed.md: !nothing/x: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.\n' +
         'error: E_EMPTY_DEPENDENCIES: docs/only.md: Correct the patterns in "dependencies"; together they select no file.\n' +
         'warning: W_EMPTY_EXCLUSION: docs/only.md: !nothing: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.\n',
@@ -442,11 +441,11 @@ scenario('§8.5 a backslash path is told that patterns use "/"', async (repo) =>
   const result = await repo.run([], { show: ['docstamp.yaml'] });
   expect(result.exit).toBe(2);
   const hint = 'patterns use "/" as the separator, and "\\" escapes the next character.';
-  expect(result.stderr).toContain('error: E_EMPTY_PATTERN: DOC.md: "src\\\\core": ');
-  expect(result.stderr).toContain('error: E_EMPTY_PATTERN: MIXED.md: "src\\\\x": ');
-  expect(result.stderr.split(hint)).toHaveLength(3);
-  expect(result.stderr).toContain('error: E_EMPTY_DEPENDENCIES: DOC.md: ');
-  expect(result.stderr).not.toContain('E_EMPTY_DEPENDENCIES: MIXED.md');
+  expect(result.stderr).toBe(
+    `error: E_EMPTY_PATTERN: DOC.md: src\\core: Correct the pattern; it matches no file: ${hint}\n` +
+      `error: E_EMPTY_PATTERN: MIXED.md: src\\x: Correct the pattern; it matches no file: ${hint}\n`,
+  );
+  expect(result.stderr).not.toContain('E_EMPTY_DEPENDENCIES');
 });
 
 scenario('§8.5 a duplicate is reported next to the errors of an invalid file', async (repo) => {

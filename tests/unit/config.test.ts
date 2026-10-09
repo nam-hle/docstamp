@@ -82,12 +82,10 @@ describe('§9.3 readConfig', () => {
     ]);
     expect(message('version: 2\nfils: {}\n')).toEqual([
       ['E_UNKNOWN_KEY', 'fils', 'Remove or correct the key; did you mean "files"?'],
-      [
-        'E_CONFIG',
-        'files',
-        '"files" is required; the unknown key "fils" (E_UNKNOWN_KEY) looks like it: ' +
-          'did you mean "files"?',
-      ],
+    ]);
+    expect(message('version: 2\nignores: []\n')).toEqual([
+      ['E_UNKNOWN_KEY', 'ignores', 'Remove or correct the key; did you mean "ignore"?'],
+      ['E_CONFIG', 'files', '"files" is required; write "files: {}" for none.'],
     ]);
     expect(message('version: 2\nfiles: []\n')[0]![2]).toBe(
       'Fix the configuration file; the key named, if any, is the problem.',

@@ -10,7 +10,9 @@ Usage:
 
 Without a name: the index of commands and topics. With a command or topic: its page. With
 diagnostics and a code: that code alone. It reads no file. --help anywhere before -- prints the page
-of the command word given, or the index when there is none.
+of the command word given, or the index when there is none. A mistyped command (a first word one or
+two edits from a command name that names no file, such as updte) is E_USAGE with exit 2, with or
+without --help.
 
 Reads:
   nothing.

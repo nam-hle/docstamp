@@ -85,8 +85,14 @@ describe('§13.3 selectResults', () => {
       ['E_UNKNOWN_FILE', 'z.md'],
     ]);
   });
-  it('an outside-root arg raises with the original subject', () => {
-    expect(raised(['../x.md'])).toEqual([['E_UNKNOWN_FILE', '../x.md']]);
+  it('an outside-root arg raises E_USAGE with the original subject', () => {
+    expect(raised(['../x.md'])).toEqual([['E_USAGE', '../x.md']]);
+  });
+  it('an outside-root arg and an unknown one each keep their own code', () => {
+    expect(raised(['../x.md', 'z.md'])).toEqual([
+      ['E_USAGE', '../x.md'],
+      ['E_UNKNOWN_FILE', 'z.md'],
+    ]);
   });
   it('the message of an outside-root arg says how it was resolved; an unknown one does not', () => {
     const messages = (args: string[]) => {

@@ -250,8 +250,8 @@ duplicates (all fields equal) removed.
 `[[Message]]` is one sentence naming the problem and its fix. It MUST NOT contain operating system
 error text, parser error text, or absolute paths; it MAY contain an error code name such as
 `EACCES`. The one exception is a file argument that does not resolve inside Root: the `E_USAGE` of
-§13.8 step 3 and §13.10 step 2, and the `E_UNKNOWN_FILE` of §13.3 step 2, name the current
-directory, the resolved path and Root, because that is what explains the failure.
+§13.3 step 2, §13.8 step 3 and §13.10 step 2 names the current directory, the resolved path and
+Root, because that is what explains the failure.
 
 ### 5.6 Inline Block
 
@@ -514,7 +514,8 @@ a file under a directory an earlier negation removed.
    equality, §3.2), collect `W_DUPLICATE_PATTERN` into *warnings*, `[[Subject]]` that String. A
    pattern that comes from a Preset is not counted: only the file's own patterns are.
 5. Let *resolved* be `Select` of the effective patterns of *declaration* and *candidates*.
-6. If *resolved* is empty, collect `E_EMPTY_DEPENDENCIES` into *problems*.
+6. If *resolved* is empty and *problems* is empty, collect `E_EMPTY_DEPENDENCIES` into
+   *problems*.
 7. Call a *path* of *resolved* *re-selected* when its last matching pattern (§8.4) is not a literal
    path (NOTE below) that denotes *path* itself. For each distinct String *e* of the effective
    patterns that has a Negation and satisfies `PatternMatches(e, path)` for some re-selected *path*,
@@ -527,7 +528,10 @@ a file under a directory an earlier negation removed.
 NOTE: A file is never one of its own dependencies (step 2), so editing a file never
 makes it stale. A pattern without Negation must match something (Principle 6): a dependency that
 matches nothing is a mistyped or stale rule, and a declaration whose patterns together select
-nothing is a mistake (step 6).
+nothing is a mistake (step 6). One mistake gives one Diagnostic: when a pattern raised
+`E_EMPTY_PATTERN`, that already explains an empty selection, so step 6 raises
+`E_EMPTY_DEPENDENCIES` only when every pattern without Negation matches a file and together they
+still select nothing: there is no such pattern, or the exclusions deselect every file.
 
 NOTE: A *duplicate* is the same String twice, whatever its Negation, and is warned once however
 many times it repeats. Patterns that differ in any code point, such as `src` and `src/**`, are not
@@ -560,10 +564,9 @@ already raised `E_EMPTY_PATTERN`, and it changes nothing but that wording.
 NOTE: For the same reason, the `[[Message]]` of `E_EMPTY_PATTERN` SHOULD say that patterns use `/`
 as the separator and that `\` escapes the next character when the pattern holds a `\` followed by a
 letter: `src\core` is the literal `srccore` (§8.1 NOTE), almost always a Windows path. When that
-pattern is the Declaration's only inclusion, `E_EMPTY_DEPENDENCIES` (step 6) is raised too: the two
-codes report two facts, the pattern that matches nothing and the Declaration that selects nothing,
-and a consumer may read either, so neither is dropped (§17.1); the hint is in the message of the
-first.
+pattern is the Declaration's only inclusion, it is the only Diagnostic: step 6 raises no
+`E_EMPTY_DEPENDENCIES` beside an `E_EMPTY_PATTERN`. The Diagnostic line shows the pattern as written
+(§14.3), `src\core`.
 
 NOTE: A pattern that comes from a Preset (§8.6) is reported like any other when it is not an
 exclusion: `E_EMPTY_PATTERN`, with the Preset named in the `[[Message]]`. An exclusion that comes
@@ -741,10 +744,11 @@ raises:
    for each string *n* of it that is not a key of `presets` (all of them when `presets` is absent or
    not a Map), collect `E_UNKNOWN_PRESET` into *fatal*, `[[Subject]]` *n*, with an empty `[[File]]`:
    a global Diagnostic, as every other Diagnostic of this step.
-7. If `files` is absent, or not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]`
-   `files`. When it is absent, the message says that `files` is required and to write `files: {}`
-   for none; when a key of step 5 has `files` as its near key (NOTE below), it names that key
-   and its `E_UNKNOWN_KEY` instead, so one typo reads as one problem.
+7. If `files` is not a Map, or is absent while no key of step 5 has `files` as its near key
+   (NOTE below), collect `E_CONFIG` into *fatal*, `[[Subject]]` `files`. When it is absent, the
+   message says that `files` is required and to write `files: {}` for none. When it is absent and
+   a key of step 5 has `files` as its near key, nothing is collected here: that key's
+   `E_UNKNOWN_KEY`, which names `files`, is the one Diagnostic of the typo.
 8. Otherwise, for each (*key*, *value*) of `files`:
    1. If *key* is not a RepoPath, collect `E_CONFIG` into *fatal*, `[[Subject]]` *key*, and
       continue.
@@ -1567,15 +1571,22 @@ The command line is parsed before anything else.
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
-   `list-dependencies`, `list-dependents`, `stats`, `suggest`, `help` or `version`; it is then not a file argument. Otherwise, and when there
-   is none, the command is `check` and that argument stays a file argument. A command word in any
-   later position, or after `--`, is a file argument. Options and file arguments may appear in
-   any order.
+   `list-dependencies`, `list-dependents`, `stats`, `suggest`, `help` or `version`; it is then not a file argument. Otherwise, if it
+   is not an existing entry (any kind, not followed) at the path it resolves to against the
+   current directory (§13.4 step 2), and a command name is at edit distance 1 or 2 from it (the
+   distance of the §9.3 NOTE), it is a *mistyped command*: raise « `E_USAGE` », `[[Subject]]` that
+   argument, whose message names the first such command name at the smallest distance, in the
+   order above, and says that a file of that name is reached after `--` (`Unknown command "updte";
+   did you mean "update"? ...`). Otherwise, and when there is none, the command is `check` and that
+   argument stays a file argument. A command word in any later position, or after `--`, is a file
+   argument. Options and file arguments may appear in any order.
 3. `--help` before any `--`, or the command `help`, selects `help`; `--version` or the command
    `version` selects `version`. `help` wins over `version`. The *help names* are the file
    arguments when the command is `help`; else, when step 2 found a command word, that word alone
    (so `docstamp update --help` names `update`); else none. Both ignore every other argument,
-   options included, and raise no `E_USAGE` here; `help` checks its names itself (§13.11).
+   options included, and raise no `E_USAGE` here; `help` checks its names itself (§13.11). A
+   mistyped command (step 2) is raised before this step, so `docstamp updte --help` and
+   `docstamp updte --version` are `E_USAGE` too, never the index.
 
 Otherwise the following raise « `E_USAGE` » with `[[Subject]]` the offending argument, and exit 2.
 Each message states the problem:
@@ -1599,7 +1610,15 @@ Each message states the problem:
 
 `help` prints help (§13.11) and `version` prints the version; both exit 0 (§14.1), except a
 `help` name that is not known (§13.11). A file named like a command is reached as
-`docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`.
+`docstamp check -- check`, `docstamp -- check` or `docstamp --json -- check`, and a file named
+like a mistyped command that does not exist yet as `docstamp -- updte`.
+
+NOTE: The mistyped command of step 2 is the one place where parsing reads the file system: one
+`lstat` of the first non-option argument, made only when that argument is near a command name. An
+existing path keeps meaning a file, so `docstamp stat` checks a stamped file named `stat` as
+before; only an argument that names nothing on disk, which `check` could only refuse with
+`E_UNKNOWN_FILE` or `E_USAGE` (§13.3), is read as a command typed wrong. The rule does not
+apply after `--`, nor to a command word in a later position.
 
 ### 13.3 File Arguments
 
@@ -1607,9 +1626,9 @@ Each message states the problem:
 
 1. If *args* is empty, return *results*.
 2. Let *problems* be an empty List. For each *arg*: let *path* be `ToRepoPath(arg, cwd, root)`.
-   If that fails, or no Result has `[[File]]` equal to *path*, collect `E_UNKNOWN_FILE` with
-   `[[Subject]]` *arg* into *problems*. When `ToRepoPath` failed, its `[[Message]]` says how *arg*
-   was resolved, as §13.8 step 3 does.
+   If that fails, collect `E_USAGE` with `[[Subject]]` *arg* into *problems*, its `[[Message]]`
+   saying how *arg* was resolved, as §13.8 step 3 does. Otherwise, if no Result has `[[File]]`
+   equal to *path*, collect `E_UNKNOWN_FILE` with `[[Subject]]` *arg* into *problems*.
 3. If *problems* is not empty, raise *problems*.
 4. Return the Results whose `[[File]]` was named, in path order without duplicates.
 
@@ -1629,6 +1648,11 @@ happens.
 
 No case folding is applied: the argument must equal the key under `files`, or the RepoPath of an
 inline file.
+
+When `ToRepoPath` fails, the argument is wrong for this current directory and Root, whatever
+file it names: every command raises `E_USAGE` for it (§13.3 step 2, §13.8 step 3, §13.10 step 2).
+`E_UNKNOWN_FILE` is only for an argument that resolves inside Root to a file that is neither
+declared nor carries an inline block.
 
 ### 13.5 Check
 
@@ -2001,7 +2025,10 @@ Each Diagnostic, global and attached, in Diagnostic order, is written to standar
 <severity>: <code>[: <file>][: <subject>]: <message>
 ```
 
-omitting the bracketed parts when empty. §14.3.2 says when each is written.
+omitting the bracketed parts when empty. `<file>` is written as in §14.2, and so is `<subject>`,
+except that a `\` alone does not make it quoted: a pattern or argument is shown as the user wrote
+it (`src\core`, not `"src\\core"`). A Diagnostic line is read, never pasted as a command, so this
+loses nothing. §14.3.2 says when each is written.
 
 #### 14.3.1 Change Lines
 
@@ -2454,11 +2481,11 @@ command raised.
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a file argument outside Root, name a path that resolves, against the current directory, inside Root; for an unknown help name, one of those the message lists |
+| `E_USAGE` | error | §13.2, §13.3, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a mistyped command, the command name it suggests, or `--` before a file of that name; for a file argument outside Root, name a path that resolves, against the current directory, inside Root; for an unknown help name, one of those the message lists |
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6); `docstamp help start` shows both |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
-| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file, `default-presets` for the default Presets; an empty `use` needs `default-presets`); for a missing `files`, write `files: {}` for none, or correct the unknown key that stands for it; for a module without a default export, `export default` the value |
+| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file, `default-presets` for the default Presets; an empty `use` needs `default-presets`); for a missing `files`, write `files: {}` for none (a key one or two edits from `files` is `E_UNKNOWN_KEY` alone, §9.3 step 7); for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2`; for a file with neither `version` nor `dependents`, add `version: 2` |
 | `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; otherwise its near key, if any (§9.3 NOTE: `did you mean "dependencies"?`); attached to the file when it is a key of an inline block |
 | `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1); for an empty pattern, write a path or glob or remove it; for a lone `!`, write the path to exclude after it or remove it |
@@ -2467,13 +2494,13 @@ command raised.
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when git shows the path renamed (§12.7), depend on the new path, which the message names; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
-| `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies` |
+| `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies`: no inclusion is empty, but together they select no file (there is no inclusion, or the exclusions deselect every file); never raised beside an `E_EMPTY_PATTERN` of the same file |
 | `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3, §13.10 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |
 | `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 Lockfile, `docstamp update --all` rewrites it as version 3 (hashes are unchanged); otherwise as `E_LOCK` |
-| `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block; for a file argument outside Root, name a path that resolves, against the current directory, inside Root |
+| `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block; raised only for an argument that resolves inside Root (§13.4) |
 | `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; for `--from`, name a commit |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 | `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
@@ -2539,6 +2566,38 @@ migration is to read `E_UNKNOWN_KEY` where a consumer looked for `E_BLOCK` with 
 `dependencies` on a file that also had an unknown key. No Hash input, selection or Lockfile
 `version` changes.
 
+NOTE: A file argument that does not resolve inside Root (§13.4) was `E_UNKNOWN_FILE` for `check`,
+`update`, `list-dependencies` and `stats` (§13.3), and `E_USAGE` for `list-dependents` and
+`suggest`, with the same message; it is now `E_USAGE` for every command. The exit code is 2 before
+and after, but the Diagnostic code of that run changes (§17.1, fourth item), so it is breaking. The
+migration is to read `E_USAGE` where a consumer looked for `E_UNKNOWN_FILE` with a message that
+says the argument resolves outside Root; `E_UNKNOWN_FILE` now always means a file inside Root that
+is neither declared nor carries an inline block. No Hash input, selection or Lockfile `version`
+changes.
+
+NOTE: One mistake gives one Diagnostic. A top-level key of the Configuration file whose near key is
+`files`, with `files` absent (`fils: {}`), was `E_UNKNOWN_KEY` and `E_CONFIG` (subject `files`); it
+is now `E_UNKNOWN_KEY` alone (§9.3 step 7), whose message names `files`. A Declaration whose
+inclusions include one that matches nothing, so that nothing is selected (`src\core` as the only
+pattern), was `E_EMPTY_PATTERN` and `E_EMPTY_DEPENDENCIES`; it is now `E_EMPTY_PATTERN` alone
+(§8.5 step 6). The verdict (`invalid`, or a refused run) and the exit code 2 are unchanged, but the
+set of Diagnostic codes of that run changes (§17.1, fourth item), so it is breaking. The migration
+is to read `E_UNKNOWN_KEY` where a consumer looked for the `E_CONFIG` of a missing `files`, and
+`E_EMPTY_PATTERN` on the file where it looked for `E_EMPTY_DEPENDENCIES`; `E_EMPTY_DEPENDENCIES`
+now means that no inclusion is empty, yet together the patterns select nothing. A subject with a
+`\` is no longer quoted on a Diagnostic line of text mode (§14.3); that is text layout (§17.3),
+and `--json` is unchanged. No Hash input, selection or Lockfile `version` changes.
+
+NOTE: A first non-option argument that names no existing path and is one or two edits from a
+command name (`docstamp updte`) was a file argument of `check`, refused with `E_UNKNOWN_FILE`,
+`E_USAGE` (outside Root) or a Root error such as `E_CONFIG_MISSING`; with `--help` it printed the
+index and exited 0. It is now a mistyped command (§13.2 step 2): `E_USAGE`, exit 2, before any
+Root is read, with or without `--help`. A command line that exited 0 now exits 2 and the
+Diagnostic code changes (§17.1, fourth item), so it is breaking. The migration is to spell the
+command, or to write `--` before a file argument that does not exist and is named like a command
+(`docstamp -- updte`). An existing path is read as a file exactly as before. No Hash input,
+selection or Lockfile `version` changes.
+
 ### 17.3 Non-breaking changes
 
 The following are not breaking:
@@ -2603,8 +2662,9 @@ The following are not breaking:
   for a path it does not know;
 - the `[[Message]]` of the `E_USAGE` of §13.8 step 3 now names the directory and Root it was
   resolved against; the code, the exit code and the resolution of §13.4 are unchanged; so does
-  the `[[Message]]` of the `E_UNKNOWN_FILE` of §13.3 and of the `E_USAGE` of §13.10 for an argument
-  that does not resolve inside Root, with the same code and exit code;
+  the `[[Message]]` of the Diagnostic of §13.3 and of the `E_USAGE` of §13.10 for an argument
+  that does not resolve inside Root, with the same code and exit code (the code of §13.3 later
+  changed, §17.2 NOTE);
 - the files of a `next:` line (§14.3.3) written relative to the current directory when it is not
   Root, so that the command shown runs as printed; it is part of the text layout of §14.3;
 - `--transitive` (§13.2, §13.8): a new option of `list-dependents` that no existing command line uses;

@@ -465,6 +465,13 @@ describe('§14.3 diagnostics text', () => {
       'error: E_USAGE: --x: m.\n',
     );
   });
+  it('shows a subject with a \\ as written, and quotes it only for another reason', () => {
+    const line = (subject: string) =>
+      diagnosticsText([diag('E_EMPTY_PATTERN', { file: 'a.md', subject, message: 'm.' })]);
+    expect(line('src\\core')).toBe('error: E_EMPTY_PATTERN: a.md: src\\core: m.\n');
+    expect(line('my src\\core')).toBe('error: E_EMPTY_PATTERN: a.md: "my src\\\\core": m.\n');
+    expect(line('a"b')).toBe('error: E_EMPTY_PATTERN: a.md: "a\\"b": m.\n');
+  });
 });
 
 describe('§14.4 update text', () => {

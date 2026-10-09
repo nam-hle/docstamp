@@ -1,4 +1,5 @@
-$ docstamp update docs/guide.md --root repo
+# stats
+$ docstamp stats docs/guide.md --root repo
 cwd: ..
 exit: 2
 --- stdout ---

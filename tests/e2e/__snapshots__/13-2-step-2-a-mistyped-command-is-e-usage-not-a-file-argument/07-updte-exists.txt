@@ -1,0 +1,10 @@
+# updte exists
+$ docstamp updte
+exit: 1
+--- stdout ---
+STALE    updte  (unrecorded)
+  depends   src/**
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update updte
+  run update only after the review, never --all just to pass; see docstamp help agents
+--- stderr ---

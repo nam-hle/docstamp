@@ -241,16 +241,14 @@ export function readConfig(root: string): {
   const declarations: Declaration[] = [];
   const files = top.get('files');
   if (files === undefined) {
-    // §9.3 step 7: a near miss of "files" is reported once more as E_UNKNOWN_KEY
-    const typo = [...top.keys()].find(
+    // §9.3 step 7: a near miss of "files" is its E_UNKNOWN_KEY alone
+    const typo = [...top.keys()].some(
       (key) => !TOP_KEYS.includes(key) && closestKey(key, TOP_KEYS) === 'files',
     );
-    const message =
-      typo === undefined
-        ? '"files" is required; write "files: {}" for none.'
-        : `"files" is required; the unknown key "${typo}" (E_UNKNOWN_KEY) looks like it: ` +
-          'did you mean "files"?';
-    fatal.push(diag('E_CONFIG', { subject: 'files', message }));
+    if (!typo) {
+      const message = '"files" is required; write "files: {}" for none.';
+      fatal.push(diag('E_CONFIG', { subject: 'files', message }));
+    }
   } else if (!isMap(files)) {
     fatal.push(diag('E_CONFIG', { subject: 'files' }));
   } else {

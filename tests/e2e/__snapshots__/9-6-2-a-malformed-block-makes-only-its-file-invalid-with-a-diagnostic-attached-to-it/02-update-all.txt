@@ -30,7 +30,6 @@ error: E_BLOCK: bad/empty-deps.md: dependencies: The dependencies key must hold 
 error: E_BLOCK: bad/empty.md: docstamp: The docstamp key must hold a mapping with "dependencies" and "hash".
 error: E_BLOCK: bad/flow.md: docstamp: Write the docstamp block as a block mapping, one key per line.
 error: E_BLOCK: bad/no-deps.md: dependencies: The dependencies key must hold a non-empty list of patterns.
-error: E_EMPTY_DEPENDENCIES: bad/no-match.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: bad/no-match.md: nothing/here: Correct or remove the pattern; it matches no file.
 error: E_BLOCK: bad/quoted-hash.md: hash: Write the hash as "hash:" and 64 lowercase hex digits on one line.
 error: E_BLOCK: bad/scalar.md: docstamp: Write the docstamp block as a block mapping, one key per line.

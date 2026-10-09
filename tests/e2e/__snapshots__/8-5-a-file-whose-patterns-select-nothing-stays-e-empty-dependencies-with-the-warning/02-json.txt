@@ -35,13 +35,6 @@ exit: 2
       "changes": null,
       "diagnostics": [
         {
-          "code": "E_EMPTY_DEPENDENCIES",
-          "severity": "error",
-          "file": "docs/mixed.md",
-          "subject": null,
-          "message": "Correct the patterns in \"dependencies\"; together they select no file."
-        },
-        {
           "code": "E_EMPTY_PATTERN",
           "severity": "error",
           "file": "docs/mixed.md",

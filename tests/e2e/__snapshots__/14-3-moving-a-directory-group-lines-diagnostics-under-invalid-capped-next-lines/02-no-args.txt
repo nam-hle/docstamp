@@ -67,25 +67,14 @@ next: review each stale file against its dependencies, then run: docstamp update
 next: fix the configuration of each invalid file, then run: docstamp check docs/invalid-01.md docs/invalid-02.md docs/invalid-03.md docs/invalid-04.md docs/invalid-05.md docs/invalid-06.md docs/invalid-07.md docs/invalid-08.md docs/invalid-09.md docs/invalid-10.md
   and 1 more
 --- stderr ---
-error: E_EMPTY_DEPENDENCIES: docs/invalid-01.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-01.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-02.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-02.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-03.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-03.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-04.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-04.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-05.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-05.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-06.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-06.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-07.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-07.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-08.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-08.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-09.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-09.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-10.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-10.md: src/old: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: docs/invalid-11.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/invalid-11.md: src/old: Correct or remove the pattern; it matches no file.

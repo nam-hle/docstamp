@@ -4,12 +4,15 @@ import type { Code } from '../core/types.ts';
 export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
   E_USAGE: {
     meaning:
-      'The command line is wrong: an unknown or repeated option, a missing value, an option ' +
+      'The command line is wrong: a mistyped command (did you mean "update"?), an unknown or ' +
+      'repeated option, a missing value, an option ' +
       'used with a command that does not take it, a missing file argument, a file argument ' +
-      'outside the root, an unknown help name, or a suggest --write that cannot write a block.',
+      'that resolves outside the root (any command), an unknown help name, or a suggest ' +
+      '--write that cannot write a block.',
     fix:
       'Correct the command line as docstamp help <command> shows it. A removed option names ' +
-      'its replacement. A file argument is resolved against the current directory, not --root.',
+      'its replacement; a mistyped command names the command, and -- before it makes it a ' +
+      'file. A file argument is resolved against the current directory, not --root.',
   },
   E_ROOT: {
     meaning: 'The directory given to --root does not exist.',
@@ -35,8 +38,9 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
     fix:
       'Fix the key the subject names (presets.<name> for a preset, use for a file, ' +
       'default-presets for the default presets; an empty use needs default-presets); for a ' +
-      'missing files, write files: {} for none, or correct the unknown key that stands for it; ' +
-      'a script must export default plain data. See docstamp help config.',
+      'missing files, write files: {} for none (a key one or two edits from files, such as ' +
+      'fils, is E_UNKNOWN_KEY alone); a script must export default plain data. See docstamp ' +
+      'help config.',
   },
   E_CONFIG_VERSION: {
     meaning: 'The configuration file has no version: 2 (a version 1 file used other key names).',
@@ -89,7 +93,9 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'file, and use / as the separator.',
   },
   E_EMPTY_DEPENDENCIES: {
-    meaning: 'The patterns of a file together select no file.',
+    meaning:
+      'The patterns of a file together select no file, though none is E_EMPTY_PATTERN: there ' +
+      'is no pattern without !, or the exclusions remove every selected file.',
     fix: 'Correct the patterns in dependencies; docstamp list-dependencies <file> shows them.',
   },
   E_UNREADABLE: {
@@ -119,7 +125,9 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'version 2 lock: docstamp update --all rewrites it as version 3 (hashes are unchanged).',
   },
   E_UNKNOWN_FILE: {
-    meaning: 'A file argument is not a stamped file, or resolves outside the root.',
+    meaning:
+      'A file argument resolves inside the root to a file that is not stamped. One that ' +
+      'resolves outside the root is E_USAGE.',
     fix:
       'Name a file listed under files or one with a docstamp block, resolved against the ' +
       'current directory; docstamp list-dependencies lists them all.',

@@ -32,7 +32,9 @@ export const COMMAND_PAGES: Record<Command, CommandPage> = {
     description: `
 The default command: a bare docstamp is docstamp check. It evaluates every stamped file (or only
 the named ones), prints a block for each file that is not ok, a summary line, and next: lines that
-name the command to run.
+name the command to run. A first word that names no file and is one or two edits from a command
+name is a mistyped command (E_USAGE: did you mean "update"?), not a file; write -- before such a
+file name.
 
 A stale block lists, when git history allows, the dependencies that changed since the last review
 and a review: line with a read-only git command that shows the change; otherwise it lists the
@@ -244,7 +246,9 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
     description: `
 Without a name: the index of commands and topics. With a command or topic: its page. With
 diagnostics and a code: that code alone. It reads no file. --help anywhere before -- prints the
-page of the command word given, or the index when there is none.`,
+page of the command word given, or the index when there is none. A mistyped command (a first word
+one or two edits from a command name that names no file, such as updte) is E_USAGE with exit 2,
+with or without --help.`,
     options: [],
     reads: 'nothing.',
     writes: 'nothing.',

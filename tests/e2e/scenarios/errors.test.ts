@@ -259,7 +259,7 @@ scenario('§8.5 E_EMPTY_PATTERN and E_EMPTY_DEPENDENCIES', async (repo) => {
     'W_EMPTY_EXCLUSION',
   ]);
   expect(result.stderr).toContain('E_EMPTY_PATTERN: DOC.md: nothing/**');
-  expect(result.stderr).toContain('E_EMPTY_DEPENDENCIES: DOC.md');
+  expect(result.stderr).not.toContain('E_EMPTY_DEPENDENCIES: DOC.md');
   expect(result.stderr).toContain('E_EMPTY_PATTERN: B.md: nothing/**');
   expect(result.stderr).not.toContain('E_EMPTY_DEPENDENCIES: B.md');
   expect(result.stderr).toContain('E_EMPTY_DEPENDENCIES: C.md');
@@ -534,6 +534,8 @@ scenario('§9.3 steps 4 and 7 a first configuration file is told what to add', a
     'error: E_CONFIG: files: "files" is required; write "files: {}" for none.\n',
   );
   repo.write('docstamp.yaml', 'version: 2\nfils: {}\n');
-  const typo = await run(repo, 'a typo of files', [], 2, ['E_UNKNOWN_KEY', 'E_CONFIG']);
-  expect(typo.stderr).toContain('"fils" (E_UNKNOWN_KEY)');
+  const typo = await run(repo, 'a typo of files', [], 2, ['E_UNKNOWN_KEY']);
+  expect(typo.stderr).toBe(
+    'error: E_UNKNOWN_KEY: fils: Remove or correct the key; did you mean "files"?\n',
+  );
 });

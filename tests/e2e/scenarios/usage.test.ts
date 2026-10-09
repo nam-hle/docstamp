@@ -142,6 +142,33 @@ scenario('§13.2 a file named like a command is reached after --', async (repo) 
   await repo.snapFile('docstamp-lock.yaml');
 });
 
+scenario('§13.2 step 2 a mistyped command is E_USAGE, not a file argument', async (repo) => {
+  repo.write('docstamp.yaml', config({ updte: ['src/**'] }));
+  repo.write('src/a.ts', 'a\n');
+  const message =
+    'error: E_USAGE: updte: Unknown command "updte"; did you mean "update"? A file of that ' +
+    'name is named after --, as in docstamp -- updte; see docstamp help.\n';
+
+  for (const args of [['updte'], ['updte', '--help'], ['updte', '-h'], ['--json', 'updte']]) {
+    const result = await repo.run(args, { expectExit: 2 });
+    expect(result.stdout, args.join(' ')).toBe('');
+    expect(result.stderr, args.join(' ')).toBe(message);
+  }
+  const elsewhere = await repo.run(['updte'], { cwd: 'src', expectExit: 2, label: 'from src' });
+  expect(elsewhere.stderr).toBe(message);
+
+  const afterDashes = await repo.run(['--', 'updte'], { expectExit: 2 });
+  expect(afterDashes.stderr).toContain('E_FILE_MISSING: updte');
+
+  repo.write('updte', 'a file now\n');
+  const existing = await repo.run(['updte'], { expectExit: 1, label: 'updte exists' });
+  expect(existing.stdout).toContain('STALE    updte  (unrecorded)');
+
+  repo.mkdir('chek');
+  const existingDir = await repo.run(['chek', '--help'], { expectExit: 0, label: 'a directory' });
+  expect(existingDir.stdout).toContain('Commands:');
+});
+
 scenario('§13.2 a lone dash is a file argument', { fixture: 'docs-site' }, async (repo) => {
   const result = await repo.run(['-']);
   expect(result.exit).toBe(2);

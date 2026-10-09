@@ -6,5 +6,4 @@ INVALID  docs/api.md
 0 ok, 0 stale, 1 invalid
 next: fix the configuration of each invalid file, then run: docstamp check docs/api.md
 --- stderr ---
-error: E_EMPTY_DEPENDENCIES: docs/api.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: docs/api.md: src/lib/old-name.ts: Correct or remove the pattern; it matches no file.

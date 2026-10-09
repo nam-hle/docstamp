@@ -16,9 +16,7 @@ next: fix the configuration of each invalid file, then run: docstamp check B.md 
 --- stderr ---
 error: E_EMPTY_PATTERN: B.md: nothing/**: Correct or remove the pattern; it matches no file.
 error: E_EMPTY_DEPENDENCIES: C.md: Correct the patterns in "dependencies"; together they select no file.
-error: E_EMPTY_DEPENDENCIES: D.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: D.md: D.md: Correct or remove the pattern; it matches no file.
-error: E_EMPTY_DEPENDENCIES: DOC.md: Correct the patterns in "dependencies"; together they select no file.
 error: E_EMPTY_PATTERN: DOC.md: nothing/**: Correct or remove the pattern; it matches no file.
 warning: W_EMPTY_EXCLUSION: E.md: !src/**/*.spec.ts: The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.
 --- setup: docstamp.yaml ---

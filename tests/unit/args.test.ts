@@ -118,6 +118,43 @@ describe('§13.2 parseArgs', () => {
     expect(parseArgs(['--', 'update'])).toMatchObject({ mode: 'check', paths: ['update'] });
     expect(parseArgs(['update', '--', 'help'])).toMatchObject({ mode: 'update', paths: ['help'] });
   });
+  it('a mistyped command is E_USAGE naming the near command, even with --help or -h', () => {
+    const near = (argv: string[]) => [failure(argv)?.subject, failure(argv)?.message];
+    const typo = [
+      'updte',
+      'Unknown command "updte"; did you mean "update"? A file of that name is named after --, ' +
+        'as in docstamp -- updte; see docstamp help.',
+    ];
+    expect(near(['updte'])).toEqual(typo);
+    expect(near(['updte', '--help'])).toEqual(typo);
+    expect(near(['updte', '-h'])).toEqual(typo);
+    expect(near(['-h', 'updte'])).toEqual(typo);
+    expect(near(['--json', 'updte', 'a.md'])).toEqual(typo);
+    expect(near(['--version', 'updte'])).toEqual(typo);
+    expect(failure(['chek'])?.message).toContain('did you mean "check"?');
+    expect(failure(['stat'])?.message).toContain('did you mean "stats"?');
+    expect(failure(['list-dependent', 'a'])?.message).toContain('"list-dependents"?');
+  });
+  it('an existing path, a later word, a far word or -- keeps meaning a file', () => {
+    expect(parseArgs(['updte'], (arg) => arg === 'updte')).toMatchObject({
+      mode: 'check',
+      paths: ['updte'],
+    });
+    expect(parseArgs(['--', 'updte'])).toMatchObject({ mode: 'check', paths: ['updte'] });
+    expect(parseArgs(['check', 'updte'])).toMatchObject({ mode: 'check', paths: ['updte'] });
+    expect(parseArgs(['README.md'])).toMatchObject({ mode: 'check', paths: ['README.md'] });
+    expect(parseArgs(['README.md', '--help'])).toEqual({ mode: 'help', names: [] });
+  });
+  it('asks the file system only for a word near a command name', () => {
+    const asked: string[] = [];
+    const exists = (arg: string) => {
+      asked.push(arg);
+      return true;
+    };
+    parseArgs(['docs/guide.md'], exists);
+    parseArgs(['updte'], exists);
+    expect(asked).toEqual(['updte']);
+  });
   it('--only-stale and --quiet belong to check alone', () => {
     expect(parseArgs(['--only-stale', '--quiet', '--json'])).toMatchObject({
       mode: 'check',

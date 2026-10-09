@@ -83,7 +83,7 @@ export function selectResults(
     const path = toRepoPath(arg, cwd, root);
     if (path === null) {
       const message = resolutionMessage(arg, cwd, root);
-      errors.push(diag('E_UNKNOWN_FILE', { subject: arg, message }));
+      errors.push(diag('E_USAGE', { subject: arg, message }));
     } else if (!known.has(path)) {
       errors.push(diag('E_UNKNOWN_FILE', { subject: arg }));
     } else {
