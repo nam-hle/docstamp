@@ -265,6 +265,50 @@ describe('§14.3.1 renamed lines', () => {
         '  added     src/x.ts\n',
     );
   });
+  it('rename lines an earlier block printed become one same line; the review stays', () => {
+    const renames = moved('src/old/', 'src/new/', 2);
+    const block = (file: string, extra: Change[]) =>
+      res(file, 'stale', { base: 'c0ffee', changes: sorted([...renames, ...extra]) });
+    const text = checkText([
+      block('a.md', []),
+      block('b.md', [change('modified', 'src/m.ts')]),
+      block('c.md', [change('added', 'src/new/f02.ts')]),
+    ]);
+    expect(text).toContain(
+      'STALE    a.md  (content-changed)\n' +
+        '  renamed   src/old/f00.ts -> src/new/f00.ts\n' +
+        '  renamed   src/old/f01.ts -> src/new/f01.ts\n' +
+        '  review: git diff -M c0ffee -- src/new/f00.ts src/new/f01.ts src/old/f00.ts ' +
+        'src/old/f01.ts\n',
+    );
+    expect(text).toContain(
+      'STALE    b.md  (content-changed)\n' +
+        '  changed   1 modified, 2 renamed\n' +
+        '  modified  src/m.ts\n' +
+        '  renamed   (same 2 renames as a.md)\n' +
+        '  review: git diff -M c0ffee -- src/m.ts src/new/f00.ts src/new/f01.ts src/old/f00.ts ' +
+        'src/old/f01.ts\n',
+    );
+    expect(text).toContain(
+      'STALE    c.md  (content-changed)\n' +
+        '  changed   1 added, 2 renamed\n' +
+        '  added     src/new/f02.ts\n' +
+        '  renamed   (same 2 renames as a.md)\n',
+    );
+  });
+  it('a single rename line, or rename lines that differ, are printed in full', () => {
+    const one = sorted(moved('src/old/', 'src/new/', 1));
+    const two = sorted(moved('src/old/', 'src/new/', 2));
+    const other = sorted(moved('src/old/', 'lib/', 2));
+    const text = checkText([
+      res('a.md', 'stale', { changes: one }),
+      res('b.md', 'stale', { changes: one }),
+      res('c.md', 'stale', { changes: two }),
+      res('d.md', 'stale', { changes: other }),
+    ]);
+    expect(text).not.toContain('(same ');
+    expect(text.match(/src\/old\/f00\.ts -> /gu)).toHaveLength(4);
+  });
 });
 
 describe('§14.3.1 whitespace marker', () => {

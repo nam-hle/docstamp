@@ -218,11 +218,37 @@ describe('§13.8 list-dependents --transitive', () => {
     expect(exec(root, cmd, flag, 'src/x.ts').out).toBe(
       'src/x.ts\n' +
         '  a.md   via src/**\n' +
-        '    b.md   via a.md\n' +
-        '      c.md   via b.md\n' +
-        '    c.md   via a.md (listed above)\n' +
-        '  b.md   via src/** (listed above)\n',
+        '    b.md   via a.md (listed below)\n' +
+        '    c.md   via a.md\n' +
+        '  b.md   via src/**\n' +
+        '    c.md   via b.md (listed above)\n',
     );
+  });
+
+  it('prints every direct dependent in full at the first level (DirectFirstTree)', () => {
+    const root = tree({ 'a.md': ['src/**'], 'b.md': ['a.md'], 'c.md': ['src/**', 'b.md'] });
+    expect(exec(root, cmd, flag, 'src/x.ts').out).toBe(
+      'src/x.ts\n' +
+        '  a.md   via src/**\n' +
+        '    b.md   via a.md\n' +
+        '      c.md   via b.md (listed below)\n' +
+        '  c.md   via src/**\n',
+    );
+  });
+
+  it('--json keeps DependentTree: the direct dependent expanded deeper is repeated', () => {
+    const root = tree({ 'a.md': ['src/**'], 'b.md': ['a.md'], 'c.md': ['src/**', 'b.md'] });
+    const leaf = { dependents: [], cycle: false };
+    const c = { file: 'c.md', via: ['b.md'], ...leaf, repeated: false };
+    const b = { file: 'b.md', via: ['a.md'], dependents: [c], cycle: false, repeated: false };
+    expect(JSON.parse(exec(root, cmd, flag, '--json', 'src/x.ts').out).files[0]).toEqual({
+      file: 'src/x.ts',
+      dependents: [
+        { file: 'a.md', via: ['src/**'], dependents: [b], cycle: false, repeated: false },
+        { file: 'c.md', via: ['src/**'], ...leaf, repeated: true },
+      ],
+      diagnostics: [],
+    });
   });
 
   it('does not follow a file whose declaration is invalid, and still reports it', () => {

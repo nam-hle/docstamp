@@ -13,8 +13,9 @@ and the warning W_UNKNOWN_PATH; the exit code stays 0. Direct dependents only, u
 
 Options:
   --json        Print one JSON document instead of text (docstamp help json).
-  --transitive  Also list the dependents of each dependent, depth first; a file reached again is
-                marked (listed above), a cycle (cycle).
+  --transitive  Also list the dependents of each dependent, depth first; every direct dependent is
+                shown in full at the first level, a file reached again is marked (listed above) or
+                (listed below), a cycle (cycle).
   --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
                 file, else with .git. File arguments are still resolved against the current
                 directory.

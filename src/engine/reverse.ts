@@ -26,21 +26,30 @@ export function dependentsOf(
   return found;
 }
 
-// SPEC §13.8 DependentTree
+// SPEC §13.8 DependentTree, and DirectFirstTree when directFirst is true
 export function dependentTree(
   path: string,
   declarations: readonly Declaration[],
   universe: ReadonlySet<string>,
   attached: readonly Diagnostic[],
+  directFirst = false,
 ): ReverseDependent[] {
-  const expanded = new Set<string>();
-  const below = (current: string, chain: readonly string[]): ReverseDependent[] =>
-    dependentsOf(current, declarations, universe, attached).map((d) => {
-      if (chain.includes(d.file)) return { ...d, dependents: [], cycle: true, repeated: false };
-      if (expanded.has(d.file)) return { ...d, dependents: [], cycle: false, repeated: true };
-      expanded.add(d.file);
-      const dependents = below(d.file, [...chain, d.file]);
-      return { ...d, dependents, cycle: false, repeated: false };
-    });
-  return below(path, [path]);
+  const direct = dependentsOf(path, declarations, universe, attached);
+  const reserved = new Set(directFirst ? direct.map((d) => d.file) : []);
+  const built = new Set<string>();
+  const expanded = new Set(reserved);
+  const node = (d: ReverseDependent, chain: readonly string[], top: boolean): ReverseDependent => {
+    if (chain.includes(d.file)) return { ...d, dependents: [], cycle: true, repeated: false };
+    if (!top && expanded.has(d.file)) {
+      const later = reserved.has(d.file) && !built.has(d.file);
+      return { ...d, dependents: [], cycle: false, repeated: true, ...(later && { below: true }) };
+    }
+    expanded.add(d.file);
+    built.add(d.file);
+    const dependents = dependentsOf(d.file, declarations, universe, attached).map((child) =>
+      node(child, [...chain, d.file], false),
+    );
+    return { ...d, dependents, cycle: false, repeated: false };
+  };
+  return direct.map((d) => node(d, [path], directFirst));
 }

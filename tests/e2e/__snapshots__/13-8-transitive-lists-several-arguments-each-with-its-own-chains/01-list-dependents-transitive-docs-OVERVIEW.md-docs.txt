@@ -3,8 +3,8 @@ exit: 0
 --- stdout ---
 docs/GUIDE.md
   README.md          via docs/GUIDE.md
-    docs/OVERVIEW.md   via README.md
-  docs/OVERVIEW.md   via docs/GUIDE.md (listed above)
+    docs/OVERVIEW.md   via README.md (listed below)
+  docs/OVERVIEW.md   via docs/GUIDE.md
 docs/OVERVIEW.md
   (no dependents)
 --- stderr ---

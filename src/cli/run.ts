@@ -249,6 +249,7 @@ function reverseEntries(
   cwd: string,
   paths: readonly string[],
   transitive: boolean,
+  directFirst: boolean,
 ): { entries: ReverseEntry[]; attached: Diagnostic[] } {
   const { universe: walked, declarations, attached } = loadWorkspace(root);
   const universe = new Set(walked.paths);
@@ -264,7 +265,9 @@ function reverseEntries(
   }
   const entries = sortPaths([...keyed.keys()]).map((key): ReverseEntry => ({
     file: key,
-    dependents: (transitive ? dependentTree : dependentsOf)(key, declarations, universe, attached),
+    dependents: transitive
+      ? dependentTree(key, declarations, universe, attached, directFirst)
+      : dependentsOf(key, declarations, universe, attached),
     diagnostics:
       universe.has(key) || existsUnderRoot(root, key)
         ? []
@@ -284,7 +287,8 @@ function runReverse(
   let exitCode = 2;
   try {
     const root = determineRoot(cwd, args.root);
-    const found = reverseEntries(root, cwd, args.paths, args.transitive);
+    // SPEC §14.7: text prints DirectFirstTree, JSON DependentTree
+    const found = reverseEntries(root, cwd, args.paths, args.transitive, !args.json);
     entries = found.entries;
     global = found.attached;
     exitCode = hasError(global) || entries.some((e) => hasError(e.diagnostics)) ? 2 : 0;

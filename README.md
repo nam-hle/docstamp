@@ -103,7 +103,7 @@ next: review each stale file against its dependencies, then run: docstamp update
 
 The `review:` line is a read-only git command that shows the change since the last `update` (the work tree against that commit, so uncommitted edits are in it; `-M` shows a moved file as a rename). Untracked files are not in a git diff until `git add -N`, so when the report lists one, an `untracked: git add -N -- <path>` line follows; after a plain `mv`, run it and the `review:` line shows the rename instead of only the deletion. docstamp never runs it, since it changes the index. `(whitespace only)` is git's judgement that a modified file differs only in white space and blank lines, to help you skim; it never changes the verdict. With more than 10 changed files the `review:` line gives a pathspec of the patterns instead of the paths.
 
-When a directory moves, the report does not list every file twice. A file deleted at one path and added at another with exactly the same content is one `renamed  <old> -> <new>` line; five or more of them moved between the same two directories, or five or more `added` (or `deleted`) files directly in one directory, become one line. A moved file that was also edited stays an `added` and a `deleted` line. And a doc that became `invalid` keeps its errors right under its line on a terminal (each stream alone is unchanged: errors are still on standard error):
+When a directory moves, the report does not list every file twice. A file deleted at one path and added at another with exactly the same content is one `renamed  <old> -> <new>` line; five or more of them moved between the same two directories, or five or more `added` (or `deleted`) files directly in one directory, become one line. A moved file that was also edited stays an `added` and a `deleted` line. When several stale docs show the same two or more rename lines, the first doc in the report prints them and each later one prints `renamed   (same <n> renames as <first doc>)` in their place; its `review:` line still lists every path ([SPEC §14.3.1](docs/SPEC.md#1431-change-lines)). And a doc that became `invalid` keeps its errors right under its line on a terminal (each stream alone is unchanged: errors are still on standard error):
 
 ```console
 $ git mv src/old src/new
@@ -257,7 +257,7 @@ src/core/hsh.ts
 warning: W_UNKNOWN_PATH: src/core/hsh.ts: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory).
 ```
 
-`list-dependents` is direct by default: a doc that depends on another doc is listed for the code the other doc covers only with `--transitive`, which shows the chain of docs that go stale one review round after another. A doc reached a second time is marked `(listed above)` and a cycle is marked `(cycle)`; neither is followed again, so the output is finite. Nothing about a verdict changes ([SPEC §13.8](docs/SPEC.md#138-listdependents)):
+`list-dependents` is direct by default: a doc that depends on another doc is listed for the code the other doc covers only with `--transitive`, which shows the chain of docs that go stale one review round after another. A doc reached a second time is marked `(listed above)` and a cycle is marked `(cycle)`; neither is followed again, so the output is finite. Every direct dependent of the argument is shown in full at the first level, so a deeper occurrence of one that comes later is marked `(listed below)`. Nothing about a verdict changes ([SPEC §13.8](docs/SPEC.md#138-listdependents)):
 
 ```console
 $ docstamp list-dependents --transitive src/core/hash.ts
@@ -268,7 +268,7 @@ src/core/hash.ts
     docs/OVERVIEW.md   via docs/GUIDE.md (listed above)
 ```
 
-With `--json` each dependent also has `dependents` (the same nodes, nested), `cycle` and `repeated`.
+With `--json` each dependent also has `dependents` (the nodes, nested), `cycle` and `repeated`. The JSON tree expands each doc at its first occurrence depth first, so a direct dependent expanded deeper is `repeated` at the first level.
 
 `docstamp list-dependencies <doc>` shows what a doc depends on and which files the patterns select. It does not read the lock:
 

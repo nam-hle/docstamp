@@ -1,0 +1,46 @@
+$ docstamp list-dependents --transitive --json docs/GUIDE.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependents",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "docs/GUIDE.md",
+      "dependents": [
+        {
+          "file": "README.md",
+          "via": [
+            "docs/GUIDE.md"
+          ],
+          "dependents": [
+            {
+              "file": "docs/OVERVIEW.md",
+              "via": [
+                "README.md"
+              ],
+              "dependents": [],
+              "cycle": false,
+              "repeated": false
+            }
+          ],
+          "cycle": false,
+          "repeated": false
+        },
+        {
+          "file": "docs/OVERVIEW.md",
+          "via": [
+            "docs/GUIDE.md"
+          ],
+          "dependents": [],
+          "cycle": false,
+          "repeated": true
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

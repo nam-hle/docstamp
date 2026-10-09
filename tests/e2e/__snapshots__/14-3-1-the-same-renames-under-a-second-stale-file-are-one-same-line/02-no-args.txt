@@ -1,0 +1,16 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    README.md  (content-changed)
+  renamed   src/lib/keep.ts -> src/lib/kept.ts
+  renamed   src/lib/old-name.ts -> src/lib/new-name.ts
+  review: git diff -M 8571bff27092ea6ffa40d48c4a471897c6ea9052 -- src/lib/keep.ts src/lib/kept.ts src/lib/new-name.ts src/lib/old-name.ts
+  untracked: git add -N -- src/lib/kept.ts src/lib/new-name.ts
+STALE    docs/api.md  (content-changed)
+  renamed   (same 2 renames as README.md)
+  review: git diff -M 8571bff27092ea6ffa40d48c4a471897c6ea9052 -- src/lib/keep.ts src/lib/kept.ts src/lib/new-name.ts src/lib/old-name.ts
+  untracked: git add -N -- src/lib/kept.ts src/lib/new-name.ts
+0 ok, 2 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update README.md docs/api.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+--- stderr ---
