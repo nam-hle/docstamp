@@ -19,7 +19,7 @@ Options:
                 file, else with .git. File arguments are still resolved against the current
                 directory.
   <file>...     Any files, resolved against the current directory. At least one.
-  --help        Print this page.
+  -h, --help    Print this page.
 
 Reads:
   the configuration file, the docstamp blocks and the file tree; not the lock.

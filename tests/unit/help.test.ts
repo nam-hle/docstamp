@@ -77,7 +77,7 @@ describe('§13.11 help', () => {
         .split('\nOptions:\n')[1]
         ?.split('\n\n')[0]!
         .split('\n')
-        .map((line) => /^ {2}(--[a-z-]+)/u.exec(line)?.[1])
+        .map((line) => /^ {2}(?:-h, )?(--[a-z-]+)/u.exec(line)?.[1])
         .filter((name) => name !== undefined) ?? [];
     for (const command of COMMANDS) {
       if (command === 'help' || command === 'version') continue;
@@ -96,6 +96,13 @@ describe('§13.11 help', () => {
       expect(page).toContain(`\n${code} (${severity})\n`);
       expect(helpText(['diagnostics', code])).toMatch(new RegExp(`^${code} \\(${severity}\\)\\n`));
     }
+  });
+
+  it('a diagnostic code is looked up in any letter case and printed as SPEC §15 writes it', () => {
+    for (const name of ['e_usage', 'E_usage', 'w_orphan']) {
+      expect(helpText(['diagnostics', name])).toBe(helpText(['diagnostics', name.toUpperCase()]));
+    }
+    expect(raised(['diagnostics', 'e_bogus'])[0]).toMatchObject({ subject: 'e_bogus' });
   });
 
   it('the exit-codes topic has every exit code of SPEC §16', () => {
@@ -126,7 +133,13 @@ describe('§13.11 help', () => {
       const args = parseArgs([command, '--help']);
       // help --help names nothing: the names of the help command are its file arguments
       expect(args).toEqual({ mode: 'help', names: command === 'help' ? [] : [command] });
+      expect(parseArgs([command, '-h']), `${command} -h`).toEqual(args);
+      if (command !== 'help' && command !== 'version') {
+        expect(helpText([command])).toContain('\n  -h, --help ');
+      }
     }
+    expect(parseArgs(['-h'])).toEqual(parseArgs(['--help']));
+    expect(parseArgs(['--', '-h'])).toMatchObject({ mode: 'check', paths: ['-h'] });
   });
 
   it('an unknown name is E_USAGE listing the valid ones', () => {

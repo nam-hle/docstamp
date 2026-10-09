@@ -8,7 +8,9 @@ import { TOPICS, type Topic, type TopicPage } from './help-topics.ts';
 
 const isCommand = (name: string): name is Command => Object.hasOwn(COMMAND_PAGES, name);
 const isTopic = (name: string): name is Topic => Object.hasOwn(TOPICS, name);
-const isCode = (name: string): name is Code => Object.hasOwn(DIAGNOSTIC_HELP, name);
+// §13.11 step 4: a code in any letter case names the code of §15
+const codeOf = (name: string): Code | undefined =>
+  (Object.keys(DIAGNOSTIC_HELP) as Code[]).find((code) => code === name.toUpperCase());
 
 const section = (title: string, body: string) => (body === '' ? '' : `${title}:\n${body}\n\n`);
 
@@ -34,7 +36,7 @@ reviewed, and docstamp update <file> records the review. New here: docstamp help
 function commandText(name: Command): string {
   const page = COMMAND_PAGES[name];
   const options = [...page.options];
-  if (name !== 'help' && name !== 'version') options.push(['--help', 'Print this page.']);
+  if (name !== 'help' && name !== 'version') options.push(['-h, --help', 'Print this page.']);
   const related = page.related.map((r) => `docstamp help ${r}`).join(', ');
   return (
     `${prose(`docstamp ${name}: ${page.summary}`)}\n\n` +
@@ -80,11 +82,12 @@ export function helpText(names: readonly string[]): string {
   const [first, second, ...rest] = names;
   if (first === undefined) return indexText();
   if (first === 'diagnostics' && second !== undefined) {
-    if (!isCode(second)) {
+    const code = codeOf(second);
+    if (code === undefined) {
       throw unknown(second, `Unknown diagnostic code ${second}; see docstamp help diagnostics.`);
     }
     if (rest.length > 0) throw unknown(rest[0]!, 'Name one diagnostic code.');
-    return diagnosticText(second);
+    return diagnosticText(code);
   }
   if (second !== undefined) throw unknown(second, 'Name one command or topic.');
   if (isCommand(first)) return commandText(first);

@@ -984,7 +984,10 @@ used only by `suggest --write` (§13.10); it never records a Review.
       items of *declared*.
    5. Otherwise (no *key* or no item line, as for `dependencies: [a, b]`, or a block that declares
       no pattern or raises), raise if a line from *marker* + 1 to *last* starts with *keyIndent*
-      followed by `use:`, so a `use` is never lost. Let *indent* be *keyIndent*, or two U+0020 if it
+      followed by `use:`, so a `use` is never lost. The message says what to change: when
+   *declared* is not empty and `ParseBlock(scan)` does not raise, to write `dependencies` one
+   pattern per line (`- <pattern>`), which step 2.4 extends, or to edit the block by hand;
+   otherwise to edit the block by hand. Let *indent* be *keyIndent*, or two U+0020 if it
       is *absent*, and *eol* the terminator of the marker line. Replace the lines after *marker* up
       to and including *last* by the line *indent* and `dependencies:`, and, for each pattern *s*,
       the line *indent*, two U+0020, `- `, *item*(*s*), each followed by *eol*.
@@ -1465,7 +1468,9 @@ prefix, before a `/`, of some path of *U*.
    them (a glob that selects only test files).
 10. *Subsumption.* Let *cuts* be the exclusions of every member of *dirs* and of *globs*, ordered
    by the path order of the directory or scope they come from and, for one, in the order of step 9,
-   without duplicates. Let *reincluded* be the members of *files* that a member of *cuts* matches
+   without duplicates, and without `!`*s*`/`*t* for a non-empty *s* when `!`*t* is also one of
+   them, *t* being one of `**/*.test.*`, `**/*.spec.*`, `**/__test__` and `**/__tests__`:
+   `!**/*.test.*` already matches every file that `!packages/**/*.test.*` matches. Let *reincluded* be the members of *files* that a member of *cuts* matches
    (with step 9, the files below a member of *dirs* that remain), and *base* the other members of
    *files*, *dirs* and *globs*. Let
    *sel*(*p*) be `Select(« p », U)`. Remove from *base* every *p* for which another member *q* of
@@ -1550,13 +1555,14 @@ docstamp --version
 
 The commands are `check` (§13.5), `update` (§13.6), `list-dependencies` (§13.7),
 `list-dependents` (§13.8), `stats` (§13.9), `suggest` (§13.10), `help` (§13.11) and `version`.
-`--help` is the same command as `help`, and `--version` the same as `version`.
+`--help` is the same command as `help`, and `--version` the same as `version`. `-h` is the same
+option as `--help`, wherever `--help` is written.
 
 ### 13.2 Parsing
 
 The command line is parsed before anything else.
 
-1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--write`, `--help`, `--version`, and the options with a value, each
+1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--write`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
    written `--name <value>` or `--name=<value>`: `--root`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
@@ -1908,7 +1914,8 @@ a network. `help` reads no file and no Root; it prints to standard output and ex
    `diagnostics` (every code of §15, its meaning and its fix), `agents` (the review workflow of
    §1, ready to paste into an agent's instructions), `schema` (the JSON Schemas the package ships)
    and `spec` (where this document is, and its sections).
-4. With the two names `diagnostics` and a code of §15: the entry of that code alone.
+4. With the two names `diagnostics` and a code of §15 in any letter case (`e_usage` names
+   `E_USAGE`): the entry of that code alone, which names the code as §15 writes it.
 
 Any other help names raise « `E_USAGE` », `[[Subject]]` the first name that is not known, whose
 message lists the names that are; it is written as §14.3 writes a Diagnostic, and the exit code is
@@ -2587,6 +2594,10 @@ The following are not breaking:
   bare `docstamp help` or `--help` still exits 0. So is shipping `docs/SPEC.md` in the package,
   which no command reads, the rule line after the stale `next:` line (§14.3.3, text layout of
   §14.3), and the wording of the `E_USAGE` and `E_CONFIG_MISSING` messages that name a help page;
+- `help diagnostics <code>` with a code in another letter case (§13.11 step 4): it was `E_USAGE`
+  with exit 2 and now prints the entry and exits 0, which only a person reads;
+- `-h` (§13.1, §13.2): the same option as `--help`. It was an unknown option, `E_USAGE` with exit
+  2, so no command line that a release accepted changes meaning;
 - the warnings `W_DUPLICATE_PATTERN`, `W_SHADOWED_EXCLUSION` (§8.5) and `W_UNKNOWN_PATH` (§13.8): new, warning severity,
   no change to a verdict, a Hash, a selection or an exit code; `list-dependents` still exits 0
   for a path it does not know;
@@ -2637,6 +2648,8 @@ The following are not breaking:
   (§14.5), new members;
 - the test exclusions of a glob in a proposal (§12.6 step 9): a proposal rule of §12.6, like the
   directory exclusions; `suggest` prints and `--write` writes them, and nothing else reads them;
+  so is dropping a scoped test exclusion that the same unscoped one makes redundant (§12.6 step 10):
+  the written list selects the same files;
 - `suggest --write` on a block without a `hash` that declares patterns (§9.6.5 steps 2.3 to 2.5,
   §13.10 step 7): it used to replace the list by the proposal, dropping every declared pattern the
   proposal lacked; it now keeps the declared patterns first and adds only `new` ones that leave

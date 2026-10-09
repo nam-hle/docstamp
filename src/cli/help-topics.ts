@@ -33,7 +33,7 @@ Or in the frontmatter of a Markdown file, with no configuration file at all in a
 
     ---
     docstamp:
-      dependencies: [docs/guide.md]
+      dependencies: [src/cli.ts]
     ---
 
 To enroll an existing doc quickly, docstamp suggest --write <doc> proposes its dependencies from the
@@ -53,8 +53,8 @@ When it fails later, follow docstamp help agents.`,
       {
         args: ['suggest', '--write', 'docs/notes.md'],
         out: `suggest docs/notes.md
-  pattern      files  stale
-  src/hash.ts      1    n/a
+  pattern      files   stale
+  src/hash.ts      1  0.5000
 written  docs/notes.md
 `,
       },

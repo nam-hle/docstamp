@@ -23,7 +23,7 @@ Options:
   --since <n>d  The last <n> days, written like 30d (1d to 3650d). The default: 30d.
   --from <rev>  The commits of <rev>..HEAD, which does not move from day to day.
   <file>...     Measure only these stamped files.
-  --help        Print this page.
+  -h, --help    Print this page.
 
 Reads:
   the configuration file, the docstamp blocks, the file tree and git history.

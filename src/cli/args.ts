@@ -98,7 +98,8 @@ export function parseArgs(argv: readonly string[]): Args {
     seen.add(flag);
   };
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]!;
+    // §13.2 step 1: -h is --help
+    const arg = argv[i] === '-h' ? '--help' : argv[i]!;
     if (arg === '--') {
       paths.push(...argv.slice(i + 1));
       break;

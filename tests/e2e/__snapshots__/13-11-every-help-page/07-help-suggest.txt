@@ -28,7 +28,7 @@ Options:
                 left out. Refuses (E_USAGE) a block that has a hash, a file declared in the
                 configuration file, and a block with use that cannot be extended line by line.
   <file>...     The files to read. At least one.
-  --help        Print this page.
+  -h, --help    Print this page.
 
 Reads:
   the configuration file, the named files, the file tree and git history (stale rate).
@@ -39,8 +39,15 @@ Writes:
 Examples:
   $ docstamp suggest docs/notes.md
   suggest docs/notes.md
-    pattern      files  stale
-    src/hash.ts      1    n/a
+    pattern      files   stale
+    src/hash.ts      1  0.5000
+  $ docstamp suggest docs/guide.md
+  suggest docs/guide.md
+    pattern      files   stale  status
+    src/cli.ts       1  1.0000  covered
+    src/hash.ts      1  0.5000  covered
+    only declared  src
+    only declared  !src/**/*.test.ts
   $ docstamp suggest --write docs/notes.md
 
 Exit codes:
