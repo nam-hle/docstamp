@@ -257,7 +257,7 @@ src/core/hsh.ts
 warning: W_UNKNOWN_PATH: src/core/hsh.ts: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory).
 ```
 
-`list-dependents` is direct by default: a doc that depends on another doc is listed for the code the other doc covers only with `--transitive`, which shows the chain of docs that go stale one review round after another. A doc reached a second time is marked `(listed above)` and a cycle is marked `(cycle)`; neither is followed again, so the output is finite. Nothing about a verdict changes ([SPEC §13.8](docs/SPEC.md#138-listdependents)):
+`list-dependents` is direct by default: a doc that depends on another doc is listed for the code the other doc covers only with `--transitive`, which shows the chain of docs that go stale one review round after another. A doc reached a second time is marked `(listed above)` and a cycle is marked `(cycle)`; neither is followed again, so the output is finite. Every direct dependent of the argument is shown in full at the first level, so a deeper occurrence of one that comes later is marked `(listed below)`. Nothing about a verdict changes ([SPEC §13.8](docs/SPEC.md#138-listdependents)):
 
 ```console
 $ docstamp list-dependents --transitive src/core/hash.ts
@@ -268,7 +268,7 @@ src/core/hash.ts
     docs/OVERVIEW.md   via docs/GUIDE.md (listed above)
 ```
 
-With `--json` each dependent also has `dependents` (the same nodes, nested), `cycle` and `repeated`.
+With `--json` each dependent also has `dependents` (the nodes, nested), `cycle` and `repeated`. The JSON tree expands each doc at its first occurrence depth first, so a direct dependent expanded deeper is `repeated` at the first level.
 
 `docstamp list-dependencies <doc>` shows what a doc depends on and which files the patterns select. It does not read the lock:
 

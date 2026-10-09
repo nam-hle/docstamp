@@ -204,8 +204,10 @@ and the Lockfile never change for them. Tests:
 ## Transitive dependents
 
 `list-dependents --transitive` (SPEC §13.8) is `dependentTree` in `src/engine/reverse.ts`, a depth-first
-walk over `dependentsOf` with the chain (cycle) and a per-argument `expanded` set (repeated); text and
-JSON render the same nodes (`reverseText`, `reverseJsonText`). It reads no verdict. Tests:
+walk over `dependentsOf` with the chain (cycle) and a per-argument `expanded` set (repeated). JSON
+renders that tree (`reverseJsonText`); text renders `DirectFirstTree`, the same walk with
+`directFirst` (direct dependents reserved for the first level, `below` marks a later one), via
+`reverseText`. It reads no verdict. Tests:
 `tests/unit/reverse.test.ts`, `tests/e2e/scenarios/transitive.test.ts` on the `doc-chain` fixture.
 
 ## Pattern diagnostics

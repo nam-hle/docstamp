@@ -142,8 +142,9 @@ unless --transitive.`,
       JSON_OPTION,
       [
         '--transitive',
-        'Also list the dependents of each dependent, depth first; a file reached again is ' +
-          'marked (listed above), a cycle (cycle).',
+        'Also list the dependents of each dependent, depth first; every direct dependent is ' +
+          'shown in full at the first level, a file reached again is marked (listed above) ' +
+          'or (listed below), a cycle (cycle).',
       ],
       ROOT_OPTION,
       ['<file>...', 'Any files, resolved against the current directory. At least one.'],

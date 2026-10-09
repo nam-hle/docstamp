@@ -280,7 +280,8 @@ function reverseRows(dependents: readonly ReverseDependent[], depth: number): st
   const width = Math.max(0, ...names.map((n) => n.length));
   let out = '';
   dependents.forEach((d, i) => {
-    const mark = d.cycle === true ? ' (cycle)' : d.repeated === true ? ' (listed above)' : '';
+    const where = d.below === true ? ' (listed below)' : ' (listed above)';
+    const mark = d.cycle === true ? ' (cycle)' : d.repeated === true ? where : '';
     const via = d.via.map(shown).join(', ');
     out += `${'  '.repeat(depth + 1)}${names[i]!.padEnd(width)}   via ${via}${mark}\n`;
     out += reverseRows(d.dependents ?? [], depth + 1);

@@ -1784,6 +1784,13 @@ of step 4.2 for *p*, *found(p)*, as follows; the result is `Below(path, « path 
    3. otherwise: add `d.[[File]]` to *expanded*, `[[Cycle]]` and `[[Repeated]]` false, and
       `[[Dependents]]` `Below(d.[[File]], chain + « d.[[File]] »)`.
 
+Text mode (§14.7) prints instead `DirectFirstTree(path)`, the same walk with the direct dependents
+reserved for the first level: *expanded* starts as the Set of the files of *found(path)*, a node
+of the first level is always built by step 3 (its file is already in *expanded*), and a repeated
+node (step 2) whose file is one of *found(path)* also has `[[Below]]` true when the first-level
+node of that file is not yet built, that is, when it comes later in the order of *found(path)*;
+every other node has `[[Below]]` false. JSON (§14.5) outputs `DependentTree(path)`, unchanged.
+
 NOTE: Without `--transitive` only direct dependency is reported, so C that depends on B that
 depends on code is not a dependent of the code; with it, C is listed below B. The Lockfile is not read (§13.7 NOTE), so
 there is no `stale` information and the exit code is never 1. A file whose pattern is invalid
@@ -1806,6 +1813,12 @@ by another chain that is not a cycle (*repeated*) is listed, marked, and not fol
 output is finite and its size at most the number of stamped files per argument. The order is the
 path order of §13.8 step 4.2 at each level, depth first, so it is deterministic. There is no depth
 option.
+
+NOTE: `DirectFirstTree` exists so that a text tree read top-down never hides a direct dependent:
+with A depending on the argument, B on A, and C on both the argument and B, `DependentTree` expands
+C below B and marks C repeated at the first level, which reads as if C did not depend on the
+argument directly. Text mode shows C in full at the first level and marks the deeper C below B as
+listed below. The JSON nodes keep their shape and values (§17.3).
 
 ### 13.9 Stats
 
@@ -2396,10 +2409,12 @@ width of the longest dependent of the block, three spaces, `via `, and the patte
 `, `, each written as in §14.2. An entry with no dependents has the single row `  (no dependents)`,
 also when it has a `W_UNKNOWN_PATH`. Diagnostics as in §14.3, those of the entries included.
 
-With `--transitive` the rows form a tree, depth first (§13.8): the dependents of a dependent follow
-its row, as a group of rows indented by two more spaces per level, each group padded to the width of
-its own longest dependent. The row of a cycle ends with a space and `(cycle)`, the row of a repeated
-node with a space and `(listed above)`; neither has rows below it:
+With `--transitive` the rows form the tree of `DirectFirstTree` (§13.8), depth first: the
+dependents of a dependent follow its row, as a group of rows indented by two more spaces per level,
+each group padded to the width of its own longest dependent. The row of a cycle ends with a space
+and `(cycle)`, the row of a repeated node with a space and `(listed below)` when its `[[Below]]` is
+true, else `(listed above)`; none of these has rows below it. Every direct dependent of the
+argument therefore has its full row and rows at the first level:
 
 ```
 src/core/hash.ts

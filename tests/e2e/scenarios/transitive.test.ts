@@ -94,11 +94,25 @@ scenario(
     expect(result.stdout).toBe(
       'docs/GUIDE.md\n' +
         '  README.md          via docs/GUIDE.md\n' +
-        '    docs/OVERVIEW.md   via README.md\n' +
-        '  docs/OVERVIEW.md   via docs/GUIDE.md (listed above)\n' +
+        '    docs/OVERVIEW.md   via README.md (listed below)\n' +
+        '  docs/OVERVIEW.md   via docs/GUIDE.md\n' +
         'docs/OVERVIEW.md\n' +
         '  (no dependents)\n',
     );
+  },
+);
+
+scenario(
+  '§13.8 and §14.7 text shows a direct dependent at the first level, JSON keeps DependentTree',
+  { fixture },
+  async (repo) => {
+    const json = (
+      await repo.run(['list-dependents', '--transitive', '--json', 'docs/GUIDE.md'])
+    ).json();
+    const [readme, overview] = json.files[0].dependents;
+    expect(readme.dependents[0]).toMatchObject({ file: 'docs/OVERVIEW.md', repeated: false });
+    expect(overview).toMatchObject({ dependents: [], cycle: false, repeated: true });
+    expect(Object.keys(overview)).toEqual(['file', 'via', 'dependents', 'cycle', 'repeated']);
   },
 );
 

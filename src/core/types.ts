@@ -100,6 +100,8 @@ export interface ReverseDependent {
   readonly dependents?: readonly ReverseDependent[];
   readonly cycle?: boolean;
   readonly repeated?: boolean;
+  // SPEC §13.8 DirectFirstTree, text mode only
+  readonly below?: boolean;
 }
 
 export interface ReverseEntry {
