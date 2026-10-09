@@ -3,6 +3,33 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0](https://github.com/nam-hle/docstamp/compare/v0.4.0...v0.5.0) (2026-10-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* a file argument that resolves outside the root (usually because the current directory is not the root) is now E_USAGE for check, update, list-dependencies and stats; it was E_UNKNOWN_FILE there, and was already E_USAGE for list-dependents and suggest. The message and the exit code (2) are unchanged. Migration: a consumer that looked for E_UNKNOWN_FILE with a message saying the argument resolves outside the root should read E_USAGE instead; E_UNKNOWN_FILE now always means a file inside the root that is neither declared nor carries an inline block. No configuration, Lockfile or hash changes.
+* one mistake now gives one diagnostic. (1) A configuration file whose only stand-in for the missing `files` key is a key one or two edits away from it, such as `fils: {}`, reports E_UNKNOWN_KEY alone (did you mean "files"?); the extra E_CONFIG with subject `files` is gone. (2) A file whose patterns select nothing because an inclusion matches no file (for example `src\core` as the only pattern, or a deleted directory) reports E_EMPTY_PATTERN alone; the extra E_EMPTY_DEPENDENCIES is gone. E_EMPTY_DEPENDENCIES is now raised only when no inclusion is empty yet together the patterns select nothing (no inclusion at all, or exclusions that remove every file). The verdict (invalid) and exit code 2 are unchanged. Migration: a consumer that looked for the E_CONFIG of a missing `files` should also accept E_UNKNOWN_KEY, and one that looked for E_EMPTY_DEPENDENCIES on a file should also accept E_EMPTY_PATTERN on that file. In text mode a subject containing `\` is printed as written instead of quoted; --json is unchanged. No configuration, Lockfile or hash changes.
+* a first argument that is not a command, names nothing on disk, and is one or two edits from a command name (check, update, list-dependencies, list-dependents, stats, suggest, help, version), such as `docstamp updte`, is now E_USAGE "Unknown command "updte"; did you mean "update"?" with exit 2. Before, it was a file argument of check (E_UNKNOWN_FILE, or a root error such as E_CONFIG_MISSING), and with --help it printed the index and exited 0. Migration: spell the command correctly; to name a file that does not exist and is named like a command, write `--` before it (`docstamp -- updte`). An argument that is an existing file or directory is read as before. No configuration, Lockfile or hash changes.
+
+### Features
+
+* default-presets applied to every file without its own use ([#58](https://github.com/nam-hle/docstamp/issues/58)) ([088c410](https://github.com/nam-hle/docstamp/commit/088c4108109127f347dc4e0a2af6f8c39c54ef59))
+
+
+### Bug Fixes
+
+* help page drift and small gaps ([#60](https://github.com/nam-hle/docstamp/issues/60)) ([b9ff9c8](https://github.com/nam-hle/docstamp/commit/b9ff9c828f3437c1f8f04fcb5b4ad6a51f987695))
+* rename lines once per report; direct dependents first in transitive text ([#62](https://github.com/nam-hle/docstamp/issues/62)) ([937f302](https://github.com/nam-hle/docstamp/commit/937f3026c3224ac56495a04287161abbf31e93ce))
+* report a file argument outside the root as E_USAGE for every command ([bd3e325](https://github.com/nam-hle/docstamp/commit/bd3e32513746f7a0bc39e0f9d366dde9a0765be1))
+* report a mistyped command instead of reading it as a file ([bd3e325](https://github.com/nam-hle/docstamp/commit/bd3e32513746f7a0bc39e0f9d366dde9a0765be1))
+* report one diagnostic per configuration or pattern mistake ([bd3e325](https://github.com/nam-hle/docstamp/commit/bd3e32513746f7a0bc39e0f9d366dde9a0765be1))
+
+
+### Documentation
+
+* lead the README with the intention and the benefits ([#63](https://github.com/nam-hle/docstamp/issues/63)) ([da32ceb](https://github.com/nam-hle/docstamp/commit/da32ceb9633ffb95a23d9f067228fe15bff75e87))
+
 ## [0.4.0](https://github.com/nam-hle/docstamp/compare/v0.3.1...v0.4.0) (2026-10-08)
 
 
