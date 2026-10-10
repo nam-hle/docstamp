@@ -1,0 +1,11 @@
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_PLUGIN: headings: Plugin "headings" has apiVersion 2; this docstamp supports apiVersion 1.
+error: E_UNKNOWN_KEY: bogus: Remove or correct the key.
+--- setup: docstamp.config.ts ---
+import { defineConfig } from 'docstamp';
+import headings from './tools/headings.ts';
+
+export default defineConfig({ version: 2, bogus: 1, plugins: [{ ...headings, apiVersion: 2 }], files: { 'CLAUDE.md': { dependencies: ['src/**'] } } } as never);

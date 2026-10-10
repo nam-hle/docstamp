@@ -1,0 +1,12 @@
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: CLAUDE.md: dependencies: A selected dependency is { path, select, match? }: path is one literal file path, select any plain value, match "one" or "all".
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  CLAUDE.md:
+    dependencies:
+      - path: "*.json"
+        select: name
