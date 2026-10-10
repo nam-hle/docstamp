@@ -1,0 +1,11 @@
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNKNOWN_KEY: plugins: Plugins are functions: register them in docstamp.config.ts or docstamp.config.js, not in YAML.
+--- setup: docstamp.yaml ---
+version: 2
+plugins: [headings]
+files:
+  CLAUDE.md:
+    dependencies: [package.json]

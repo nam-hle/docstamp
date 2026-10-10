@@ -1,0 +1,6 @@
+$ docstamp list-dependents package.json
+exit: 0
+--- stdout ---
+package.json
+  CLAUDE.md   via "package.json#\"scripts.build\"", "package.json#\"scripts.test\""
+--- stderr ---

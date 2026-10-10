@@ -1,0 +1,15 @@
+$ docstamp update GUIDE.md
+exit: 0
+--- stdout ---
+written  GUIDE.md
+--- stderr ---
+--- setup: GUIDE.md ---
+---
+docstamp:
+  dependencies:
+    - path: package.json
+      select: scripts.build
+  hash: cc23b031409c71115ac32821f2987532df9118a64bcac3727f3c4148914962ff
+---
+
+# G

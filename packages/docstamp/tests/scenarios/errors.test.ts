@@ -4,8 +4,9 @@ import { config, scenario, type Repo, type RunResult } from './harness/index.ts'
 
 const seen = new Set<string>();
 const unreachable = new Set<string>();
-// these need a real machine and are exercised by tests/e2e/scenarios/errors-real.test.ts, which
-// checks it reaches them
+// these need a real machine or a script plugin: errors-real.test.ts reaches E_PATH_ENCODING and
+// E_HISTORY, plugins.test.ts E_PLUGIN, builtin-plugins.test.ts and the plugin packages' integration
+// tests the E_SELECT ones
 for (const code of [
   'E_PATH_ENCODING',
   'E_PLUGIN',
