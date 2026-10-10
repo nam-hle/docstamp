@@ -1,0 +1,52 @@
+{
+  "name": "docstamp-plugin-markdown",
+  "version": "0.0.0",
+  "description": "docstamp plugin: depend on one section of a Markdown file, by its heading",
+  "license": "MIT",
+  "author": {
+    "name": "Nam Hoang Le",
+    "url": "https://github.com/nam-hle"
+  },
+  "homepage": "https://github.com/nam-hle/docstamp/tree/main/packages/docstamp-plugin-markdown#readme",
+  "bugs": {
+    "url": "https://github.com/nam-hle/docstamp/issues"
+  },
+  "keywords": [
+    "docstamp",
+    "docstamp-plugin",
+    "markdown",
+    "documentation",
+    "freshness"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nam-hle/docstamp.git",
+    "directory": "packages/docstamp-plugin-markdown"
+  },
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "SPEC.md"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "marked": "^18.1.0"
+  },
+  "peerDependencies": {
+    "docstamp": ">=0.6.0"
+  },
+  "devDependencies": {
+    "docstamp": "workspace:*"
+  }
+}
