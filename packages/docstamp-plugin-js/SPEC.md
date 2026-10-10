@@ -137,8 +137,7 @@ modifier, decorator or `export` is a change; a changed body is not.
    *text* (CR LF read as LF).
 
 NOTE: `focus` and `lines` are advisory: docstamp prints them in its changed-file report and never
-hashes them, so they are not part of the compatibility of §9. docstamp hashes `content`, so the
-Hash of a Part is the SHA-256 of its UTF-8 encoding, as it has been.
+hashes them, so they are not part of the compatibility of §9.
 
 NOTE: A `const k = 1, l = 2` statement has two Declarations (`k`, `l`) in one Statement; each is its own
 Group and both give the same text.
