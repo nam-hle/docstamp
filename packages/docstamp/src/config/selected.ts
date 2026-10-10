@@ -4,10 +4,9 @@ import { canonicalJson, fromValue } from '../plugin/canonical.ts';
 import { isMap, type Value } from './value.ts';
 
 export const SELECTED_MESSAGE =
-  'A selected dependency is { path, select, match? }: path is one literal file path, select any ' +
-  'plain value, match "one" or "all".';
+  'A selected dependency is { path, select }: path is one literal file path, select any plain value.';
 
-const KEYS = ['path', 'select', 'match'];
+const KEYS = ['path', 'select'];
 
 const isFinitePlain = (value: Value): boolean => {
   if (typeof value === 'number') return Number.isFinite(value);
@@ -32,11 +31,9 @@ export function parseSelected(value: Value): SelectedEntry | null {
   if (!isMap(value) || [...value.keys()].some((key) => !KEYS.includes(key))) return null;
   const path = value.get('path');
   const select = value.get('select');
-  const match = value.get('match') ?? 'one';
   if (typeof path !== 'string' || select === undefined || !isFinitePlain(select)) return null;
-  if (match !== 'one' && match !== 'all') return null;
   const parsed = parsePattern(path);
   const denoted = parsed === null || parsed.negated ? null : literalPath(parsed);
   if (denoted === null) return null;
-  return { path: denoted, select: fromValue(select), match };
+  return { path: denoted, select: fromValue(select) };
 }

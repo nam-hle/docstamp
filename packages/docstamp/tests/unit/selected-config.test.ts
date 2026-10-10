@@ -36,15 +36,12 @@ const diagnosticsOf = (run: () => unknown) => {
 const entry = (...pairs: [string, Value][]) => new Map<string, Value>(pairs);
 
 describe('§8.7 parseSelected', () => {
-  it('defaults match to one and keeps all', () => {
+  it('reads path and select, and refuses a match key', () => {
     expect(parseSelected(entry(['path', 'a.md'], ['select', 'x']))).toEqual({
       path: 'a.md',
       select: 'x',
-      match: 'one',
     });
-    expect(parseSelected(entry(['path', 'a.md'], ['select', 'x'], ['match', 'all']))?.match).toBe(
-      'all',
-    );
+    expect(parseSelected(entry(['path', 'a.md'], ['select', 'x'], ['match', 'all']))).toBeNull();
   });
 
   it('turns a Map select into a plain object', () => {
@@ -107,29 +104,29 @@ describe('§8.7 identical selected entries', () => {
     writeFileSync(
       join(dir, 'docstamp.yaml'),
       'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n' +
-        '      - { path: a.md, select: { x: 1, y: 2 }, match: all }\n' +
+        '      - { path: a.md, select: { x: 1, y: 2 } }\n' +
         '      - { path: b.md, select: z }\n' +
-        '      - { path: a.md, select: { y: 2, x: 1 }, match: one }\n' +
+        '      - { path: a.md, select: { y: 2, x: 1 } }\n' +
         '      - { path: a.md, select: other }\n',
     );
     expect(readConfig(nodeHost, dir).config.declarations[0]?.selected).toEqual([
-      { path: 'a.md', select: { x: 1, y: 2 }, match: 'all' },
-      { path: 'b.md', select: 'z', match: 'one' },
-      { path: 'a.md', select: 'other', match: 'one' },
+      { path: 'a.md', select: { x: 1, y: 2 } },
+      { path: 'b.md', select: 'z' },
+      { path: 'a.md', select: 'other' },
     ]);
   });
 
   it('keeps the first of identical entries in an inline block', () => {
     const text =
       '---\ndocstamp:\n  dependencies:\n' +
-      '    - { path: a.md, select: { x: 1, y: 2 }, match: all }\n' +
+      '    - { path: a.md, select: { x: 1, y: 2 } }\n' +
       '    - { path: a.md, select: { y: 2, x: 1 } }\n' +
       '    - { path: a.md, select: other }\n---\nbody\n';
     const { declaration, problems } = parseBlock('doc.md', scanFrontmatter(text)!);
     expect(problems).toEqual([]);
     expect(declaration.selected).toEqual([
-      { path: 'a.md', select: { x: 1, y: 2 }, match: 'all' },
-      { path: 'a.md', select: 'other', match: 'one' },
+      { path: 'a.md', select: { x: 1, y: 2 } },
+      { path: 'a.md', select: 'other' },
     ]);
   });
 });
@@ -145,7 +142,7 @@ describe('§9.3 mixed dependencies (YAML)', () => {
     const { config } = readConfig(nodeHost, dir);
     expect(config.declarations[0]?.dependencies).toEqual(['src/**']);
     expect(config.declarations[0]?.selected).toEqual([
-      { path: 'docs/guide.md', select: 'Install', match: 'one' },
+      { path: 'docs/guide.md', select: 'Install' },
     ]);
   });
 

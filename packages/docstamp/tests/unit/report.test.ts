@@ -414,7 +414,7 @@ describe('§14.3 fragment lines: focus and lines', () => {
     expect(one({ lines: [{ start: 3, end: 9 }] })).toContain('(changed)  lines 3-9\n');
   });
 
-  it('joins the parts of a match all selector with a semicolon', () => {
+  it('joins several parts of a fragment with a semicolon', () => {
     expect(
       one({
         focus: ['a', 'b'],

@@ -2,7 +2,7 @@ $ docstamp
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_CONFIG: CLAUDE.md: dependencies: A selected dependency is { path, select, match? }: path is one literal file path, select any plain value, match "one" or "all".
+error: E_CONFIG: CLAUDE.md: dependencies: A selected dependency is { path, select }: path is one literal file path, select any plain value.
 --- setup: docstamp.yaml ---
 version: 2
 files:
