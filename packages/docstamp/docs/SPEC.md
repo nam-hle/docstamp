@@ -125,8 +125,8 @@ the file itself (an *inline* Declaration, §5.6).
 **Selected Dependency**: an element of `dependencies` that names one file and a selector, handled
 by a Plugin, instead of a Pattern (§8.7).
 
-**Plugin**: an object registered in a script Carrier under `plugins` (§9.5) that extracts Fragments
-from the files it claims (§8.7).
+**Plugin**: an object registered in a script Carrier under `plugins` (§9.5), or one of the Builtin
+Plugins (§8.8), that extracts Fragments from the files it claims (§8.7).
 
 **Fragment**: what a Plugin returns for a Selected Dependency: a non-empty List of Strings, the
 hashes of the parts of the file the selector selects (§8.7).
@@ -687,8 +687,10 @@ A *Plugin* is { `[[Name]]`: a non-empty String, `[[ApiVersion]]`: 1, `[[Files]]`
 of Patterns, `[[Extract]]`: a function }, other members being ignored. Plugin names are unique.
 
 `Claim(plugins, path)` returns the Plugin whose `[[Files]]` select *path* (`Select(Files, « path »)`
-is not empty, §8.4), or raises: `E_SELECT` with `[[Subject]]` *path* if none does; `E_PLUGIN` with
-`[[Subject]]` *path* if more than one does, its message naming each Plugin.
+is not empty, §8.4), or raises. Let *claimed* be the Plugins of *plugins* that do; if it is empty,
+let it be the Builtin Plugins (§8.8) that do. `E_SELECT` with `[[Subject]]` *path* if *claimed* is
+empty; `E_PLUGIN` with `[[Subject]]` *path* if it holds more than one, its message naming each
+Plugin.
 
 `Fragments(entry, text)`, with *plugin* = `Claim(plugins, entry.[[Path]])`, calls
 `plugin.[[Extract]]` synchronously with { `path`, `text`, `select` } and reads { `hashes` }, a List
@@ -710,6 +712,48 @@ opaque to docstamp.
 NOTE: `list-dependencies` (§13.7) does not call a Plugin. `ChangedSince` (§12.3), `stats` (§13.9)
 and `suggest` (§13.10) do not know Selected Dependencies yet: a stale file with Selected
 Dependencies has `[[Changes]]` *unknown*; `stats` counts a commit that touches the path.
+
+### 8.8 Builtin Plugins
+
+Two Plugins are built in. `Claim` (§8.7) falls back to them when no registered Plugin claims a path,
+so a registered Plugin whose `[[Files]]` select a path replaces the builtin one for it. They need no
+registration and work in every Carrier and in an inline block; they are not in `plugins`, and their
+names are not checked against it.
+
+| `[[Name]]` | `[[Files]]` | Text parsed as |
+|---|---|---|
+| `docstamp-json` | `**/*.json` | one JSON value (RFC 8259); of a repeated key in an object the last wins |
+| `docstamp-yaml` | `**/*.yaml`, `**/*.yml` | one YAML 1.2 document, core schema, no merge keys |
+
+Their `[[ApiVersion]]` is 1 and their `select` is a *Value Path*: a String of one or more steps.
+The first step is a name or a bracket; each later step is `.` and a name, or a bracket. A *name* is
+one or more characters other than `.`, `[` and `]`; a *bracket* is `[`, a JSON String and `]`,
+which names a key of any characters. `scripts.build`, `items.0.name` and `["a.b"].c` are Value
+Paths.
+
+`Extract(path, text, select)`:
+
+1. Parse *text*. A text that does not parse, a YAML text with more than one document, an error or
+   warning of the YAML parser (a repeated key, an alias that is not defined, too many aliases), or a
+   *select* that is not a Value Path, throws.
+2. Let *value* be the parsed value. For each step: if *value* is a List and the step is `0` or a
+   decimal without a leading zero, less than its length, let *value* be that element; if *value* is
+   a Map and has the step as an own key, let *value* be its member; otherwise return `{ hashes: « » }`,
+   which docstamp reports as `E_SELECT_NOT_FOUND`.
+3. If *value* holds anywhere a Number that is not finite, or a value that is not a null, Boolean,
+   Number, String, List or Map with String keys, throw.
+4. Return `{ hashes: « h » }` with *h* the SHA-256 of the UTF-8 encoding of `CanonicalJson(value)`
+   (§3.5), as 64 lowercase hexadecimal digits.
+
+So a key reordered, a comment, the quoting style and the indentation never change a Fragment, and a
+changed value does. `null` at the path is a value like any other. `match` has no effect: the
+Fragment never holds more than one hash.
+
+NOTE: Several Selected Dependencies of one file are independent (§8.7): each has its own `select`,
+its own Fragment and its own `E_SELECT_NOT_FOUND`, and the Dependency Hash (§10.4 step 3) has a
+line for each.
+
+NOTE: A change to a hash these Plugins return is a change of a Hash input (§17.2).
 
 ## 9 Configuration File
 
@@ -2691,7 +2735,7 @@ A change to any of the following is breaking:
 
 | Area | Breaking |
 |---|---|
-| Hash inputs | the hash algorithm (§10.3); the normalization of content (§10.1, §10.2), including CR LF handling, a byte order mark, the binary sniff, the link rule and the `file`/`link` tags; anything that feeds the Dependency Hash, or its byte layout (§10.4); the order of its entries (§3.3) |
+| Hash inputs | the hash algorithm (§10.3); the normalization of content (§10.1, §10.2), including CR LF handling, a byte order mark, the binary sniff, the link rule and the `file`/`link` tags; anything that feeds the Dependency Hash, or its byte layout (§10.4), including the hashes of the Builtin Plugins (§8.8); the order of its entries (§3.3) |
 | Selection | the pattern dialect or its parsing (§8.1); pattern matching, negation order or directory semantics (§8.2 to §8.5); the Universe: which entries it holds, ignore rules, `.gitignore` handling, the excluded names, path normalization and collisions (§7); symbolic link handling (§7.1) |
 | Formats | the `version` of the Configuration file (§9.3) or the Lockfile (§11.1); a key name of either; the accepted Configuration file names and their precedence (§9.1); the canonical form of the Lockfile (§11.2) |
 | Verdicts | what is `stale` or `ok`; the Reasons (§5.4); any Diagnostic that turns a run from passing to failing or the reverse, including a warning that becomes an error and an error that becomes a warning (§15, §16) |

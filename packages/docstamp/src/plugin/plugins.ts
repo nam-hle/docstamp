@@ -3,6 +3,7 @@ import { types } from 'node:util';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { select as selectPaths } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
+import { builtinPlugins } from './builtin.ts';
 import type { DocstampPlugin, ExtractInput } from './types.ts';
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -60,12 +61,16 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
   return entry as unknown as DocstampPlugin;
 }
 
-// SPEC §8.7
+const claims = (plugin: DocstampPlugin, path: string): boolean => {
+  const patterns = plugin.files.map((source) => parsePattern(source) as ParsedPattern);
+  return selectPaths(patterns, [path]).length > 0;
+};
+
+// SPEC §8.7, §8.8
 export function claim(plugins: readonly DocstampPlugin[], path: string): DocstampPlugin {
-  const claimed = plugins.filter((plugin) => {
-    const patterns = plugin.files.map((source) => parsePattern(source) as ParsedPattern);
-    return selectPaths(patterns, [path]).length > 0;
-  });
+  const registered = plugins.filter((plugin) => claims(plugin, path));
+  const claimed =
+    registered.length > 0 ? registered : builtinPlugins.filter((plugin) => claims(plugin, path));
   if (claimed.length === 1) return claimed[0]!;
   if (claimed.length === 0) {
     const message = `No plugin claims "${path}": register one whose "files" select it.`;

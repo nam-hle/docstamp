@@ -1,0 +1,10 @@
+version: 2
+files:
+  CLAUDE.md:
+    dependencies:
+      - path: package.json
+        select: scripts.build
+      - path: package.json
+        select: scripts.test
+      - path: ci.yml
+        select: jobs.test.steps.1.run
