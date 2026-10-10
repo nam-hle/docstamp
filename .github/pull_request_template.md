@@ -4,7 +4,7 @@
 
 ## Checklist
 
-- [ ] `docs/SPEC.md` is updated first for any behavior change, and the code cites the clause
+- [ ] `packages/docstamp/docs/SPEC.md` is updated first for any behavior change, and the code cites the clause
 - [ ] Tests are added or updated, named by clause
 - [ ] `pnpm test` is green
 - [ ] Stale docs were re-checked against their dependencies before `docstamp update`, not just re-stamped
