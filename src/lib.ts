@@ -1,3 +1,8 @@
+import type { DocstampPlugin } from './plugin/types.ts';
+
+export type { Json } from './core/types.ts';
+export type { DocstampPlugin, ExtractInput, ExtractResult } from './plugin/types.ts';
+
 // SPEC §9.5
 export interface DocstampConfig {
   version: 2;
@@ -9,3 +14,5 @@ export interface DocstampConfig {
 }
 
 export const defineConfig = (config: DocstampConfig): DocstampConfig => config;
+
+export const definePlugin = (plugin: DocstampPlugin): DocstampPlugin => plugin;

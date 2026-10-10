@@ -14,6 +14,10 @@ export type Code =
   | 'E_EMPTY_PATTERN'
   | 'E_EMPTY_DEPENDENCIES'
   | 'E_UNREADABLE'
+  | 'E_PLUGIN'
+  | 'E_SELECT'
+  | 'E_SELECT_NOT_FOUND'
+  | 'E_SELECT_AMBIGUOUS'
   | 'E_PATH_ENCODING'
   | 'E_PATH_COLLISION'
   | 'E_LOCK'
@@ -25,6 +29,21 @@ export type Code =
   | 'W_DUPLICATE_PATTERN'
   | 'W_SHADOWED_EXCLUSION'
   | 'W_UNKNOWN_PATH';
+
+export type Json =
+  | null
+  | boolean
+  | number
+  | string
+  | readonly Json[]
+  | { readonly [key: string]: Json };
+
+// SPEC §8.7
+interface SelectedEntry {
+  readonly path: string;
+  readonly select: Json;
+  readonly match: 'one' | 'all';
+}
 
 export interface Diagnostic {
   readonly code: Code;
@@ -42,6 +61,7 @@ export interface Declaration {
   readonly use?: readonly string[];
   readonly origins?: readonly (string | null)[];
   readonly inline?: { readonly recorded: string | null };
+  readonly selected?: readonly SelectedEntry[];
 }
 
 // SPEC §5.2
@@ -82,6 +102,7 @@ export interface Result {
   readonly dependencies: readonly string[];
   readonly use?: readonly string[];
   readonly origins?: readonly (string | null)[];
+  readonly selected?: readonly SelectedEntry[];
   readonly state: State;
   readonly reasons: readonly Reason[];
   readonly resolved: readonly string[];
