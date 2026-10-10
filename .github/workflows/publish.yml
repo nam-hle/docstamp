@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to publish, for example v0.6.0 or docstamp-plugin-markdown-v0.1.0
+        description: Release tag to publish, for example v0.6.0 or docstamp-plugin-js-v0.1.0
         required: true
 
 permissions:
@@ -42,6 +42,11 @@ jobs:
               name=docstamp-plugin-markdown
               version="${TAG#docstamp-plugin-markdown-v}"
               task=verifyReleaseMarkdown
+              ;;
+            docstamp-plugin-js-v[0-9]*)
+              name=docstamp-plugin-js
+              version="${TAG#docstamp-plugin-js-v}"
+              task=verifyReleaseJs
               ;;
             *) echo "No package is released with the tag $TAG" >&2; exit 1 ;;
           esac
