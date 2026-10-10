@@ -38,6 +38,17 @@ export interface Report {
 const LIMIT = 60_000;
 const MAX_CHANGES = 50;
 const code = (text: string): string => `\`${text}\``;
+const SAFE = /^[A-Za-z0-9_./:@%+=,-]+$/u;
+const quoted = (text: string): string =>
+  SAFE.test(text) ? text : `'${text.replaceAll("'", `'\\''`)}'`;
+
+// the command that names a file the way the report does: from the repository top
+const command = (verb: string, file: string, root: string): string => {
+  const dir = root.replace(/^(\.\/)+/u, '').replace(/\/+$/u, '');
+  if (dir === '' || dir === '.') return `docstamp ${verb} ${quoted(file)}`;
+  return `docstamp ${verb} ${quoted(`${dir}/${file}`)} --root ${quoted(dir)}`;
+};
+
 const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
 const renderDiagnostic = (diagnostic: Diagnostic): string => {
@@ -69,7 +80,7 @@ const patternLines = (file: FileReport, intro: string): string[] => [
   ...file.dependencies.map((pattern) => `- ${code(pattern)}`),
 ];
 
-const renderStale = (file: FileReport): string[] => {
+const renderStale = (file: FileReport, root: string): string[] => {
   const edited = file.dependenciesEdited === true ? ['- its dependency list was edited'] : [];
   const selection = (file.selection ?? []).map(
     (entry) => `- ${entry.status} ${code(entry.path)} (selection)`,
@@ -81,16 +92,16 @@ const renderStale = (file: FileReport): string[] => {
     file.changes === null
       ? [...edited, ...selection, ...patternLines(file, unknown)]
       : [...edited, ...selection, ...capped(changeLines(file.changes))];
-  const next = `After review: ${code(`docstamp update ${file.file}`)}`;
+  const next = `After review: ${code(command('update', file.file, root))}`;
   return [`#### ${code(file.file)} (stale)`, '', ...body, '', next];
 };
 
-const renderInvalid = (file: FileReport): string[] => [
+const renderInvalid = (file: FileReport, root: string): string[] => [
   `#### ${code(file.file)} (invalid)`,
   '',
   ...file.diagnostics.map(renderDiagnostic),
   '',
-  `After the fix: ${code(`docstamp check ${file.file}`)}`,
+  `After the fix: ${code(command('check', file.file, root))}`,
 ];
 
 const fit = (lines: string[]): string => {
@@ -107,7 +118,7 @@ const fit = (lines: string[]): string => {
   return kept.join('\n');
 };
 
-export const renderComment = (report: Report): string => {
+export const renderComment = (report: Report, root = '.'): string => {
   const stale = report.files.filter((file) => file.state === 'stale');
   const invalid = report.files.filter((file) => file.state === 'invalid');
   const globalErrors = report.diagnostics.filter((diagnostic) => diagnostic.severity === 'error');
@@ -123,14 +134,19 @@ export const renderComment = (report: Report): string => {
   }
   if (invalid.length > 0) heading.push(`${plural(invalid.length, 'file')} invalid`);
   if (heading.length === 0) heading.push('the check failed');
+  const silent = stale.length === 0 && invalid.length === 0 && globalErrors.length === 0;
+  const unexplained = silent
+    ? [`docstamp exited with code ${report.exitCode} and reported no error; see the job log.`, '']
+    : [];
 
   const lines = [
     MARKER,
     `### docstamp: ${heading.join(', ')}`,
     '',
     ...(globalErrors.length > 0 ? [...globalErrors.map(renderDiagnostic), ''] : []),
-    ...stale.flatMap((file) => [...renderStale(file), '']),
-    ...invalid.flatMap((file) => [...renderInvalid(file), '']),
+    ...unexplained,
+    ...stale.flatMap((file) => [...renderStale(file, root), '']),
+    ...invalid.flatMap((file) => [...renderInvalid(file, root), '']),
   ];
   const footer =
     stale.length === 0

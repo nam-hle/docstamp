@@ -60,7 +60,9 @@ jobs:
 
       - name: Pack
         id: pack
-        run: echo "path=$RUNNER_TEMP/$(npm pack ./packages/docstamp --silent --pack-destination "$RUNNER_TEMP")" >> "$GITHUB_OUTPUT"
+        run: |
+          tarball=$(npm pack ./packages/docstamp --silent --pack-destination "$RUNNER_TEMP")
+          echo "path=$RUNNER_TEMP/$tarball" >> "$GITHUB_OUTPUT"
 
       - uses: ./
         with:

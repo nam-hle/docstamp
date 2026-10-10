@@ -47,6 +47,7 @@ const okReport = {
 };
 
 const API = 'https://api.github.com/repos/o/r/issues';
+const BOT = { login: 'github-actions[bot]' };
 
 const execute = async (scenario: Scenario) => {
   const calls: Call[] = [];
@@ -83,7 +84,11 @@ const execute = async (scenario: Scenario) => {
   const warnings: string[] = [];
   const api = {
     fetch: fetchStub,
-    readFile: (path: string) => files.get(path) ?? '',
+    readFile: (path: string) => {
+      const text = files.get(path);
+      if (text === undefined) throw new Error(`ENOENT: ${path}`);
+      return text;
+    },
     appendFile: (_path: string, text: string) => void summary.push(text),
     warn: (message: string) => void warnings.push(message),
   };
@@ -109,7 +114,7 @@ describe('action runner', () => {
       pages: [
         [
           { id: 5, body: 'unrelated' },
-          { id: 9, body: `${MARKER}\nold` },
+          { id: 9, body: `${MARKER}\nold`, user: BOT },
         ],
       ],
     });
@@ -122,7 +127,7 @@ describe('action runner', () => {
   it('rewrites an existing comment to all clear on exit 0', async () => {
     const { calls } = await execute({
       report: okReport,
-      pages: [[{ id: 9, body: `${MARKER}\nold` }]],
+      pages: [[{ id: 9, body: `${MARKER}\nold`, user: BOT }]],
     });
     const writes = calls.filter((call) => call.method !== 'GET');
     expect(writes).toHaveLength(1);
@@ -139,7 +144,7 @@ describe('action runner', () => {
     const fullPage = Array.from({ length: 100 }, (_, index) => ({ id: index + 100, body: 'x' }));
     const { calls } = await execute({
       report: staleReport,
-      pages: [fullPage, [{ id: 9, body: MARKER }]],
+      pages: [fullPage, [{ id: 9, body: MARKER, user: BOT }]],
     });
     const writes = calls.filter((call) => call.method !== 'GET');
     expect(writes[0]?.method).toBe('PATCH');
@@ -178,5 +183,37 @@ describe('action runner', () => {
     const { calls, summary } = await execute({ report: 'not json' });
     expect(calls).toHaveLength(0);
     expect(summary.join('')).toContain('not valid JSON');
+  });
+
+  it('says the report is missing when the file cannot be read', async () => {
+    const { calls, summary } = await execute({
+      report: '',
+      env: { DOCSTAMP_REPORT: 'absent.json' },
+    });
+    expect(calls).toHaveLength(0);
+    expect(summary.join('')).toContain('no report was written');
+    expect(summary.join('')).not.toContain('not valid JSON');
+  });
+
+  it('refuses a report of another version without posting', async () => {
+    const { calls, summary } = await execute({ report: { ...okReport, version: 3 } });
+    expect(calls).toHaveLength(0);
+    expect(summary.join('')).toContain('report version 3');
+  });
+
+  it('ignores a marker comment that the bot did not write', async () => {
+    const { calls } = await execute({
+      report: staleReport,
+      pages: [[{ id: 9, body: `${MARKER}\nplanted`, user: { login: 'someone' } }]],
+    });
+    const writes = calls.filter((call) => call.method !== 'GET');
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.method).toBe('POST');
+  });
+
+  it('puts the working directory in the commands of the comment', async () => {
+    const { calls } = await execute({ report: staleReport, env: { DOCSTAMP_ROOT: 'docs' } });
+    const writes = calls.filter((call) => call.method !== 'GET');
+    expect(writes[0]?.body).toContain('docstamp update docs/CLAUDE.md --root docs');
   });
 });

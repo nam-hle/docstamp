@@ -24,6 +24,8 @@ files:
     dependencies:
       - packages/docstamp/src/cli
       - packages/docstamp/docs/SPEC.md
+      - action
+      - action.yml
   packages/docstamp/README.md:
     dependencies:
       - packages/docstamp/src/cli

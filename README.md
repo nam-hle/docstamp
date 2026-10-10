@@ -476,9 +476,9 @@ jobs:
 
 | Input | Default | Meaning |
 | --- | --- | --- |
-| `version` | required | npm version of `docstamp` to run, or a path to a packed tarball. The action installs it into a temporary directory, so your project needs no `docstamp` dependency. |
+| `version` | required | npm version of `docstamp` to run, or a path to a packed tarball (relative to the working directory of the job). The action installs it into a temporary directory, so your project needs no `docstamp` dependency. |
 | `comment` | `true` | Post the pull request comment. |
-| `working-directory` | `.` | Passed to `docstamp` as `--root`. |
+| `working-directory` | `.` | Passed to `docstamp` as `--root`; the commands in the comment then carry it (`docstamp update docs/CLAUDE.md --root docs`). |
 | `github-token` | `github.token` | Needs `pull-requests: write` for the comment. |
 
 The comment lists each stale file with its changed dependencies, and the resolving command. Here is the one for the stale `CLAUDE.md` of this repository, produced from a real `docstamp --json --only-stale` report:
@@ -498,7 +498,7 @@ Review each stale file against its dependencies, then run `docstamp update <file
 Run update only after the review, never `--all` just to pass.
 ```
 
-On a pull request from a fork the token is read-only, so no comment is posted and the same text goes to the job summary only. When the comment cannot be posted for another reason (a read-only token on a bot's pull request, say), the action prints a warning and the verdict stays the exit code of `docstamp`. The comment shows at most 50 changed files per doc, then a count. The comment never runs `update`: only a review writes the lock.
+On a pull request from a fork the token is read-only, so no comment is posted and the same text goes to the job summary only. When the comment cannot be posted for another reason (a read-only token on a bot's pull request, say), the action prints a warning and the verdict stays the exit code of `docstamp`. The comment shows at most 50 changed files per doc, then a count. The comment never runs `update`: only a review writes the lock. The action updates only a comment written by `github-actions[bot]`, so with a personal access token as `github-token` it adds a new comment on each failing run. It runs `actions/setup-node` itself and switches the job to Node 24, which `docstamp` needs; later steps of the job see that version.
 
 #### Without the action
 

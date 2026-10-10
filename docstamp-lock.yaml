@@ -1,7 +1,7 @@
 version: 3
 files:
-  "CLAUDE.md": b7fda5e1894dc65e772a4f1a8eafc8f6fac0ce8e3210103048089e3232afaa47
-  "README.md": 2aae9916a16319503b6e2d5ba737ba70ca7a6021c88ac1149faa3d5e665534ac
+  "CLAUDE.md": c86cae4dd5b5f9aaefc8b7eb2af9f4ab84492049084ce79c620eabb9b6245abe
+  "README.md": 5917b2366dfa63c8f43ca6729bba3a024515892f061c30da3ea63c9af254abaa
   "packages/docstamp-plugin-js/README.md": 7dec9f90e32c88fa3c2de053aea2224693001488db468dbc6dd3695c95b9bed5
   "packages/docstamp-plugin-js/SPEC.md": 7dec9f90e32c88fa3c2de053aea2224693001488db468dbc6dd3695c95b9bed5
   "packages/docstamp-plugin-markdown/README.md": b45ea229d231e089191b10cf43e9d97eead16a3e519dd2859a31df01cd082344
