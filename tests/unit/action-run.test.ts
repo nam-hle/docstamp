@@ -80,13 +80,15 @@ const execute = async (scenario: Scenario) => {
     DOCSTAMP_COMMENT: 'true',
     ...scenario.env,
   };
+  const warnings: string[] = [];
   const api = {
     fetch: fetchStub,
     readFile: (path: string) => files.get(path) ?? '',
     appendFile: (_path: string, text: string) => void summary.push(text),
+    warn: (message: string) => void warnings.push(message),
   };
   await run(env, api);
-  return { calls, summary };
+  return { calls, summary, warnings };
 };
 
 describe('action runner', () => {
@@ -164,10 +166,12 @@ describe('action runner', () => {
     expect(calls).toHaveLength(0);
   });
 
-  it('throws with method, url and status on a non-2xx response', async () => {
-    await expect(execute({ report: staleReport, status: 403 })).rejects.toThrow(
-      `GET ${API}/7/comments?per_page=100&page=1 failed with 403`,
-    );
+  it('warns with method, url and status on a non-2xx response and does not throw', async () => {
+    const { warnings, summary } = await execute({ report: staleReport, status: 403 });
+    expect(warnings).toEqual([
+      `docstamp: could not post the comment: GET ${API}/7/comments?per_page=100&page=1 failed with 403`,
+    ]);
+    expect(summary.join('')).toContain('1 file needs review');
   });
 
   it('writes a one-line summary when the report is not JSON', async () => {

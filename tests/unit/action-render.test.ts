@@ -119,6 +119,53 @@ describe('action comment renderer', () => {
     expect(body).not.toContain('deleted `src/a.ts`');
   });
 
+  it('does not claim missing git history for an unrecorded file', () => {
+    const body = renderComment({
+      ...base,
+      exitCode: 1,
+      summary: { ok: 0, stale: 1, invalid: 0 },
+      files: [stale({ changes: null, reasons: ['unrecorded'] })],
+    });
+    expect(body).not.toContain('Git history is not available');
+    expect(body).toContain('No lock entry yet');
+    expect(body).toContain('`src/**`');
+  });
+
+  it('says the dependency list was edited and lists the selection changes', () => {
+    const body = renderComment({
+      ...base,
+      exitCode: 1,
+      summary: { ok: 0, stale: 1, invalid: 0 },
+      files: [
+        stale({
+          changes: [],
+          dependenciesEdited: true,
+          selection: [{ status: 'added', path: 'src/new.ts' }],
+        }),
+      ],
+    });
+    expect(body).toContain('dependency list was edited');
+    expect(body).toContain('added `src/new.ts` (selection)');
+  });
+
+  it('keeps the update command and the footer when the changes are capped', () => {
+    const changes = Array.from({ length: 5000 }, (_, index) => ({
+      status: 'modified',
+      path: `src/generated/file-${index}.ts`,
+      via: ['src/**'],
+    }));
+    const body = renderComment({
+      ...base,
+      exitCode: 1,
+      summary: { ok: 0, stale: 2, invalid: 0 },
+      files: [stale({ changes }), stale({ file: 'README.md' })],
+    });
+    expect(body).toContain('and 4950 more');
+    expect(body).toContain('docstamp update CLAUDE.md');
+    expect(body).toContain('docstamp update README.md');
+    expect(body).toContain('never `--all`');
+  });
+
   it('stays under the comment size limit and counts what it cut', () => {
     const changes = Array.from({ length: 5000 }, (_, index) => ({
       status: 'modified',

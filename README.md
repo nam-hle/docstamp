@@ -374,7 +374,7 @@ Review each stale file against its dependencies, then run `docstamp update <file
 Run update only after the review, never `--all` just to pass.
 ```
 
-On a pull request from a fork the token is read-only, so no comment is posted and the same text goes to the job summary only. The comment never runs `update`: only a review writes the lock.
+On a pull request from a fork the token is read-only, so no comment is posted and the same text goes to the job summary only. When the comment cannot be posted for another reason (a read-only token on a bot's pull request, say), the action prints a warning and the verdict stays the exit code of `docstamp`. The comment shows at most 50 changed files per doc, then a count. The comment never runs `update`: only a review writes the lock.
 
 #### Without the action
 

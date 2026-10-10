@@ -22,6 +22,8 @@ interface FileReport {
   reasons: string[];
   dependencies: string[];
   changes: Change[] | null;
+  dependenciesEdited?: boolean;
+  selection?: { status: string; path: string }[];
   diagnostics: Diagnostic[];
 }
 
@@ -34,6 +36,7 @@ export interface Report {
 }
 
 const LIMIT = 60_000;
+const MAX_CHANGES = 50;
 const code = (text: string): string => `\`${text}\``;
 const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
@@ -56,14 +59,28 @@ const changeLines = (changes: Change[]): string[] => {
   });
 };
 
+const capped = (lines: string[]): string[] =>
+  lines.length <= MAX_CHANGES
+    ? lines
+    : [...lines.slice(0, MAX_CHANGES), `- ... and ${lines.length - MAX_CHANGES} more`];
+
+const patternLines = (file: FileReport, intro: string): string[] => [
+  intro,
+  ...file.dependencies.map((pattern) => `- ${code(pattern)}`),
+];
+
 const renderStale = (file: FileReport): string[] => {
+  const edited = file.dependenciesEdited === true ? ['- its dependency list was edited'] : [];
+  const selection = (file.selection ?? []).map(
+    (entry) => `- ${entry.status} ${code(entry.path)} (selection)`,
+  );
+  const unknown = file.reasons.includes('unrecorded')
+    ? 'No lock entry yet, so the file was never reviewed. Review it against these dependencies:'
+    : 'Git history is not available, so the changed files are unknown. Diff these dependencies:';
   const body =
     file.changes === null
-      ? [
-          'Git history is not available, so the changed files are unknown. Diff these dependencies:',
-          ...file.dependencies.map((pattern) => `- ${code(pattern)}`),
-        ]
-      : changeLines(file.changes);
+      ? [...edited, ...selection, ...patternLines(file, unknown)]
+      : [...edited, ...selection, ...capped(changeLines(file.changes))];
   const next = `After review: ${code(`docstamp update ${file.file}`)}`;
   return [`#### ${code(file.file)} (stale)`, '', ...body, '', next];
 };
@@ -115,11 +132,13 @@ export const renderComment = (report: Report): string => {
     ...stale.flatMap((file) => [...renderStale(file), '']),
     ...invalid.flatMap((file) => [...renderInvalid(file), '']),
   ];
-  if (stale.length > 0) {
-    lines.push(
-      'Review each stale file against its dependencies, then run `docstamp update <file>`.',
-      'Run update only after the review, never `--all` just to pass.',
-    );
-  }
-  return `${fit(lines)}\n`;
+  const footer =
+    stale.length === 0
+      ? ''
+      : [
+          '',
+          'Review each stale file against its dependencies, then run `docstamp update <file>`.',
+          'Run update only after the review, never `--all` just to pass.',
+        ].join('\n');
+  return `${fit(lines)}${footer}\n`;
 };

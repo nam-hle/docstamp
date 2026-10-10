@@ -17,6 +17,7 @@ interface Api {
   fetch: typeof fetch;
   readFile: (path: string) => string;
   appendFile: (path: string, text: string) => void;
+  warn: (message: string) => void;
 }
 
 interface PullRequest {
@@ -90,11 +91,15 @@ export const run = async (env: Env, api: Api): Promise<void> => {
   if (pullRequest === undefined || pullRequest.headRepository !== env.GITHUB_REPOSITORY) return;
 
   const base = `${env.GITHUB_API_URL ?? 'https://api.github.com'}/repos/${env.GITHUB_REPOSITORY}`;
-  const existing = await findComment(api, env, base, pullRequest.number);
-  if (existing !== undefined) {
-    await call(api, env, 'PATCH', `${base}/issues/comments/${existing.id}`, { body });
-  } else if (report.exitCode !== 0) {
-    await call(api, env, 'POST', `${base}/issues/${pullRequest.number}/comments`, { body });
+  try {
+    const existing = await findComment(api, env, base, pullRequest.number);
+    if (existing !== undefined) {
+      await call(api, env, 'PATCH', `${base}/issues/comments/${existing.id}`, { body });
+    } else if (report.exitCode !== 0) {
+      await call(api, env, 'POST', `${base}/issues/${pullRequest.number}/comments`, { body });
+    }
+  } catch (error) {
+    api.warn(`docstamp: could not post the comment: ${(error as Error).message}`);
   }
 };
 
@@ -103,5 +108,6 @@ if (import.meta.main) {
     fetch,
     readFile: (path) => readFileSync(path, 'utf8'),
     appendFile: appendFileSync,
+    warn: (message) => console.log(`::warning::${message}`),
   });
 }
