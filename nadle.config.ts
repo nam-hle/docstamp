@@ -214,7 +214,10 @@ tasks.register('testUnit', {
   group: 'Testing',
   workingDir: DOCSTAMP,
   description: 'Run the docstamp unit and in-process scenario tests (read-only)',
-  options: { command: 'vitest', args: ['run', 'tests/unit', 'tests/scenarios'] },
+  options: {
+    command: 'vitest',
+    args: ['run', '--no-isolate', 'tests/unit', 'tests/scenarios'],
+  },
 });
 
 tasks.register('testAction', {

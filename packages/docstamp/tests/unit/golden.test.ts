@@ -1,6 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
 import { loadWorkspace } from '../../src/cli/workspace.ts';
 import { evaluate, resolveDependencies } from '../../src/engine/evaluate.ts';
 import { expandPresets } from '../../src/engine/presets.ts';
@@ -9,11 +7,8 @@ import { canonicalJson } from '../../src/plugin/canonical.ts';
 import { select } from '../../src/pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
 import { computeUniverse, type Universe } from '../../src/universe/walk.ts';
-import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
+import { memoryHost, type MemoryHost } from '../helpers/memory-fs.ts';
 import { GOLDEN_IGNORE, GOLDEN_TREE, INLINE_GOLDEN_TREE } from '../helpers/golden-tree.ts';
-import { nodeHost } from '../../src/host/node-fs.ts';
-
-afterEach(cleanupTrees);
 
 const BREAKING =
   'This hash changed. That is a BREAKING change (SPEC §17): bump the lock version, update the ' +
@@ -25,20 +20,22 @@ const SELECTION_BREAKING =
 const config = { ignore: GOLDEN_IGNORE, useGitignore: true, declarations: [] };
 
 interface Golden {
+  host: MemoryHost;
   root: string;
   universe: Universe;
   dependencyHash: (dependencies: string[]) => string;
 }
 
 function golden(): Golden {
-  const root = makeTree(GOLDEN_TREE);
-  const universe = computeUniverse(nodeHost, root, config);
+  const host = memoryHost(GOLDEN_TREE);
+  const root = host.root;
+  const universe = computeUniverse(host, root, config);
   const dependencyHash = (dependencies: string[]) =>
     evaluate({ file: 'DOC.md', dependencies }, universe.paths, { entries: new Map() }, [], {
       isStampedFile: () => true,
-      fileHash: (path) => fileHash(nodeHost, root, universe, path),
+      fileHash: (path) => fileHash(host, root, universe, path),
     }).current;
-  return { root, universe, dependencyHash };
+  return { host, root, universe, dependencyHash };
 }
 
 describe('§17.7 golden file hashes', () => {
@@ -55,8 +52,8 @@ describe('§17.7 golden file hashes', () => {
   };
 
   it.each(Object.entries(expected))('%s', (path, hash) => {
-    const { root, universe } = golden();
-    expect(fileHash(nodeHost, root, universe, path), BREAKING).toBe(hash);
+    const { host, root, universe } = golden();
+    expect(fileHash(host, root, universe, path), BREAKING).toBe(hash);
   });
 });
 
@@ -130,15 +127,15 @@ describe('§17.7 golden Dependency Hashes', () => {
   });
 
   it('a deleted dependency changes the directory hash', () => {
-    const { root, dependencyHash } = golden();
-    rmSync(join(root, 'lib/b.ts'));
-    const universe = computeUniverse(nodeHost, root, config);
+    const { host, root, dependencyHash } = golden();
+    host.fs.remove('lib/b.ts');
+    const universe = computeUniverse(host, root, config);
     const after = evaluate(
       { file: 'DOC.md', dependencies: ['lib'] },
       universe.paths,
       { entries: new Map() },
       [],
-      { isStampedFile: () => true, fileHash: (path) => fileHash(nodeHost, root, universe, path) },
+      { isStampedFile: () => true, fileHash: (path) => fileHash(host, root, universe, path) },
     ).current;
     expect(dependencyHash(['lib'])).not.toBe(after);
     expect(after, BREAKING).toBe(
@@ -250,9 +247,10 @@ describe('§17.7 golden presets', () => {
 
 describe('§17.7 golden inline files', () => {
   const inline = () => {
-    const root = makeTree(INLINE_GOLDEN_TREE);
-    const { universe } = loadWorkspace(nodeHost, root);
-    return { root, universe };
+    const host = memoryHost(INLINE_GOLDEN_TREE);
+    const root = host.root;
+    const { universe } = loadWorkspace(host, root);
+    return { host, root, universe };
   };
   const expected: Record<string, string> = {
     'without.md': '0b96181a7fae2381f131a3d01662ab90f482886f4d5f7e38fdc9d78a6a196e15',
@@ -266,34 +264,34 @@ describe('§17.7 golden inline files', () => {
   };
 
   it.each(Object.entries(expected))('%s', (path, hash) => {
-    const { root, universe } = inline();
-    expect(fileHash(nodeHost, root, universe, path), BREAKING).toBe(hash);
+    const { host, root, universe } = inline();
+    expect(fileHash(host, root, universe, path), BREAKING).toBe(hash);
   });
 
   it('a block with and without a hash line, in LF and CR LF, hash identically', () => {
-    const { root, universe } = inline();
+    const { host, root, universe } = inline();
     const hashes = ['without.md', 'with.md', 'with-other.md', 'crlf.md'].map((path) =>
-      fileHash(nodeHost, root, universe, path),
+      fileHash(host, root, universe, path),
     );
     expect(new Set(hashes).size, BREAKING).toBe(1);
   });
 
   it('a changed dependencies list, a byte order mark and a file outside include change it', () => {
-    const { root, universe } = inline();
-    const hash = (path: string) => fileHash(nodeHost, root, universe, path);
+    const { host, root, universe } = inline();
+    const hash = (path: string) => fileHash(host, root, universe, path);
     expect(hash('deps.md')).not.toBe(hash('without.md'));
     expect(hash('bom.md')).not.toBe(hash('with.md'));
     expect(hash('outside.txt')).not.toBe(hash('with.md'));
   });
 
   it('the Dependency Hash over inline files', () => {
-    const { root, universe } = inline();
+    const { host, root, universe } = inline();
     const dependencyHash = evaluate(
       { file: 'DOC.md', dependencies: ['deps.md', 'with.md'] },
       universe.paths,
       { entries: new Map() },
       [],
-      { isStampedFile: () => true, fileHash: (path) => fileHash(nodeHost, root, universe, path) },
+      { isStampedFile: () => true, fileHash: (path) => fileHash(host, root, universe, path) },
     ).current;
     expect(dependencyHash, BREAKING).toBe(
       '3a55c8a5c25de7c67d79fb34c7692fa74b79973a7e8943fd69db2cafaaef1b8b',

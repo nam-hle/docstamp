@@ -1,17 +1,21 @@
-import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { run, type Io } from '../../src/cli/run.ts';
-import { nodeHost } from '../../src/host/node-fs.ts';
-import { cleanupTrees, makeTree, type TreeSpec } from '../helpers/fixture.ts';
+import { memoryHost, type Entry, type MemoryHost } from '../helpers/memory-fs.ts';
 
-afterEach(cleanupTrees);
+function exec(host: MemoryHost, ...argv: string[]): { code: number; out: string; err: string } {
+  return execIn(host, host.root, ...argv);
+}
 
-function exec(cwd: string, ...argv: string[]): { code: number; out: string; err: string } {
+function execIn(
+  host: MemoryHost,
+  cwd: string,
+  ...argv: string[]
+): { code: number; out: string; err: string } {
   let out = '';
   let err = '';
   const io: Io = { stdout: (s) => (out += s), stderr: (s) => (err += s), isTty: false, env: {} };
-  return { code: run(nodeHost, argv, cwd, io), out, err };
+  return { code: run(host, argv, cwd, io), out, err };
 }
 
 const config = (files: Record<string, string[]>): string =>
@@ -19,8 +23,8 @@ const config = (files: Record<string, string[]>): string =>
     .map(([file, deps]) => `  ${file}:\n    dependencies: [${deps.join(', ')}]\n`)
     .join('')}`;
 
-const tree = (files: Record<string, string[]>, extra: TreeSpec = {}) =>
-  makeTree({
+const tree = (files: Record<string, string[]>, extra: Record<string, Entry> = {}) =>
+  memoryHost({
     'docstamp.yaml': config(files),
     'a.md': 'a',
     'b.md': 'b',
@@ -106,7 +110,16 @@ describe('§13.8 list-dependents', () => {
 
   it('resolves arguments against cwd, dedupes and sorts', () => {
     const root = tree({ 'a.md': ['src/**'] });
-    const r = exec(join(root, 'src'), cmd, 'x.ts', '../src/x.ts', 'gen/y.ts', '--root', root);
+    const r = execIn(
+      root,
+      join(root.root, 'src'),
+      cmd,
+      'x.ts',
+      '../src/x.ts',
+      'gen/y.ts',
+      '--root',
+      root.root,
+    );
     expect(r.out).toBe('src/gen/y.ts\n  a.md   via src/**\nsrc/x.ts\n  a.md   via src/**\n');
   });
 
@@ -115,8 +128,8 @@ describe('§13.8 list-dependents', () => {
     const r = exec(root, cmd, '../outside.ts');
     expect(r.code).toBe(2);
     expect(r.err).toContain('error: E_USAGE: ../outside.ts: ');
-    expect(r.err).toContain(`resolved against the current directory (${root}) to `);
-    expect(r.err).toContain(`which is outside the root ${root};`);
+    expect(r.err).toContain(`resolved against the current directory (${root.root}) to `);
+    expect(r.err).toContain(`which is outside the root ${root.root};`);
   });
 
   it('an invalid pattern is skipped for matching but surfaces E_PATTERN, exit 2', () => {
@@ -129,7 +142,7 @@ describe('§13.8 list-dependents', () => {
 
   it('needs no lock and ignores a broken one', () => {
     const root = tree({ 'a.md': ['src/**'] });
-    writeFileSync(join(root, 'docstamp-lock.yaml'), '<<<<<<< garbage\n');
+    root.fs.set('docstamp-lock.yaml', '<<<<<<< garbage\n');
     expect(exec(root, cmd, 'src/x.ts').code).toBe(0);
   });
 
@@ -158,7 +171,7 @@ describe('§13.8 list-dependents', () => {
   });
 
   it('--json on a raised error has empty files', () => {
-    const doc = JSON.parse(exec(makeTree({}), cmd, '--json', '--root', '.', 'a').out);
+    const doc = JSON.parse(exec(memoryHost({}), cmd, '--json', '--root', '.', 'a').out);
     expect(doc.files).toEqual([]);
     expect(doc.diagnostics[0].code).toBe('E_CONFIG_MISSING');
   });
@@ -300,7 +313,7 @@ describe('§13.8 list-dependents --transitive', () => {
   it('changes no verdict: a stale dependent leaves the file below it ok', () => {
     const root = tree({ 'a.md': ['b.md'], 'b.md': ['src/**'] });
     expect(exec(root, 'update', '--all').code).toBe(0);
-    writeFileSync(join(root, 'src/x.ts'), 'changed');
+    root.fs.set('src/x.ts', 'changed');
     const check = exec(root);
     expect(check.code).toBe(1);
     expect(check.out).toContain('STALE    b.md');

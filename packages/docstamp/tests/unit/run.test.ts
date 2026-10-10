@@ -1,12 +1,8 @@
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { memoizeHash, run, type Io } from '../../src/cli/run.ts';
 import { Raised, diag } from '../../src/core/diagnostics.ts';
-import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
-import { nodeHost } from '../../src/host/node-fs.ts';
-
-afterEach(cleanupTrees);
+import { memoryHost, type MemoryHost } from '../helpers/memory-fs.ts';
 
 describe('per-run hash cache', () => {
   it('hashes a shared file once across callers', () => {
@@ -30,7 +26,7 @@ describe('per-run hash cache', () => {
 
 const CONFIG = 'version: 2\nfiles:\n  doc.md:\n    dependencies:\n      - src/**\n';
 
-function exec(cwd: string, ...argv: string[]): { code: number; out: string; err: string } {
+function exec(host: MemoryHost, ...argv: string[]): { code: number; out: string; err: string } {
   let out = '';
   let err = '';
   const io: Io = {
@@ -39,10 +35,10 @@ function exec(cwd: string, ...argv: string[]): { code: number; out: string; err:
     isTty: false,
     env: {},
   };
-  return { code: run(nodeHost, argv, cwd, io), out, err };
+  return { code: run(host, argv, host.root, io), out, err };
 }
 
-const tree = () => makeTree({ 'docstamp.yaml': CONFIG, 'doc.md': 'x', 'src/a.ts': 'a' });
+const tree = () => memoryHost({ 'docstamp.yaml': CONFIG, 'doc.md': 'x', 'src/a.ts': 'a' });
 
 describe('§13.5 check', () => {
   it('unrecorded is stale, exit 1, next line on stdout', () => {
@@ -56,7 +52,7 @@ describe('§13.5 check', () => {
     const root = tree();
     expect(exec(root, 'update', 'doc.md').out).toBe('written  doc.md\n');
     expect(exec(root).code).toBe(0);
-    writeFileSync(join(root, 'src/a.ts'), 'b');
+    root.fs.set('src/a.ts', 'b');
     const r = exec(root, 'check');
     expect(r.code).toBe(1);
     expect(r.out).toContain('(content-changed)');
@@ -79,7 +75,7 @@ describe('§13.5 check', () => {
     expect(r.out).toBe('');
   });
   it('missing config raises: no summary line', () => {
-    const r = exec(makeTree({}), '--root', '.');
+    const r = exec(memoryHost({}), '--root', '.');
     expect(r.code).toBe(2);
     expect(r.out).toBe('');
     expect(r.err).toContain('E_CONFIG_MISSING');
@@ -91,7 +87,7 @@ describe('§13.5 check', () => {
     expect(JSON.parse(r.out).diagnostics[0].code).toBe('E_UNKNOWN_FILE');
   });
   it('§14.3.2 writes the Diagnostics of an invalid file right after its line', () => {
-    const root = makeTree({
+    const root = memoryHost({
       'docstamp.yaml': `${CONFIG}  gone.md:\n    dependencies: [src/**]\n`,
       'doc.md': 'x',
       'src/a.ts': 'a',
@@ -103,7 +99,7 @@ describe('§13.5 check', () => {
       isTty: false,
       env: {},
     };
-    expect(run(nodeHost, [], root, io)).toBe(2);
+    expect(run(root, [], root.root, io)).toBe(2);
     expect(calls).toEqual([
       'out: STALE    doc.md  (unrecorded)',
       'out: INVALID  gone.md',
@@ -114,7 +110,7 @@ describe('§13.5 check', () => {
     ]);
   });
   it('a symlinked file is invalid', () => {
-    const root = makeTree({
+    const root = memoryHost({
       'docstamp.yaml': CONFIG,
       'real.md': 'x',
       'doc.md': { link: 'real.md' },
@@ -142,7 +138,7 @@ describe('§13.6 update', () => {
   });
   it('strict write fails on a broken lock; --all recovers', () => {
     const root = tree();
-    writeFileSync(join(root, 'docstamp-lock.yaml'), '<<<<<<< garbage\n');
+    root.fs.set('docstamp-lock.yaml', '<<<<<<< garbage\n');
     const strict = exec(root, 'update', 'doc.md');
     expect(strict.code).toBe(2);
     expect(strict.err).toContain('E_LOCK');
@@ -152,42 +148,41 @@ describe('§13.6 update', () => {
   it('a version 2 lock names the migration; --all rewrites it as version 3', () => {
     const root = tree();
     exec(root, 'update', 'doc.md');
-    const v3 = readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8');
-    writeFileSync(
-      join(root, 'docstamp-lock.yaml'),
-      v3.replace('version: 3\nfiles:', 'version: 2\ndependents:'),
-    );
+    const v3 = root.fs.readFile(join(root.root, 'docstamp-lock.yaml')).toString();
+    root.fs.set('docstamp-lock.yaml', v3.replace('version: 3\nfiles:', 'version: 2\ndependents:'));
     const check = exec(root);
     expect(check.code).toBe(2);
     expect(check.err).toContain('E_LOCK_VERSION');
     expect(check.err).toContain('to rewrite it as version 3 (hashes are unchanged)');
     expect(exec(root, 'update', '--all').out).toBe('written  doc.md\n');
-    expect(readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8')).toBe(v3);
+    expect(root.fs.readFile(join(root.root, 'docstamp-lock.yaml')).toString()).toBe(v3);
     expect(exec(root).code).toBe(0);
   });
   it('a lock that is a directory is E_LOCK on check', () => {
     const root = tree();
-    mkdirSync(join(root, 'docstamp-lock.yaml'));
+    root.fs.set('docstamp-lock.yaml', { dir: true });
     const r = exec(root);
     expect(r.code).toBe(2);
     expect(r.err).toContain('E_LOCK');
   });
   it('update --all with a directory lock reports E_UNREADABLE, not a crash', () => {
     const root = tree();
-    mkdirSync(join(root, 'docstamp-lock.yaml'));
+    root.fs.set('docstamp-lock.yaml', { dir: true });
     const r = exec(root, 'update', '--all');
     expect(r.code).toBe(2);
     expect(r.err).toContain('E_UNREADABLE: docstamp-lock.yaml');
-    expect(readdirSync(root).filter((n) => n.includes('.tmp-'))).toEqual([]);
+    expect(
+      root.fs
+        .readDir(root.root)
+        .map((e) => e.name.toString())
+        .filter((n) => n.includes('.tmp-')),
+    ).toEqual([]);
   });
   it('removes orphans', () => {
     const root = tree();
     exec(root, 'update', 'doc.md');
-    writeFileSync(
-      join(root, 'docstamp.yaml'),
-      'version: 2\nfiles:\n  other.md:\n    dependencies: [src/**]\n',
-    );
-    writeFileSync(join(root, 'other.md'), 'o');
+    root.fs.set('docstamp.yaml', 'version: 2\nfiles:\n  other.md:\n    dependencies: [src/**]\n');
+    root.fs.set('other.md', 'o');
     const check = exec(root);
     expect(check.err).toContain('warning: W_ORPHAN');
     const r = exec(root, 'update', '--all');
@@ -206,7 +201,7 @@ describe('§13.7 list-dependencies', () => {
     });
   });
   it('lists only the named files', () => {
-    const root = makeTree({
+    const root = memoryHost({
       'docstamp.yaml': `${CONFIG}  b.md:\n    dependencies: [src/**]\n`,
       'doc.md': 'x',
       'b.md': 'y',
@@ -219,14 +214,14 @@ describe('§13.7 list-dependencies', () => {
   });
   it('is not blocked by a legacy docsync.lock, a broken lock or an unrecorded tree', () => {
     const root = tree();
-    writeFileSync(join(root, 'docsync.lock'), 'version: 1\ndependents: {}\n');
-    writeFileSync(join(root, 'docstamp-lock.yaml'), '<<<<<<< garbage\n');
+    root.fs.set('docsync.lock', 'version: 1\ndependents: {}\n');
+    root.fs.set('docstamp-lock.yaml', '<<<<<<< garbage\n');
     const r = exec(root, list);
     expect(r.code).toBe(0);
     expect(r.err).toBe('');
   });
   it('an invalid file prints its header and diagnostics, exit 2', () => {
-    const root = makeTree({ 'docstamp.yaml': CONFIG, 'src/a.ts': 'a' });
+    const root = memoryHost({ 'docstamp.yaml': CONFIG, 'src/a.ts': 'a' });
     const r = exec(root, list);
     expect(r.code).toBe(2);
     expect(r.out).toBe('doc.md\n');
@@ -251,7 +246,7 @@ describe('§13.7 list-dependencies', () => {
     });
   });
   it('--json on a raised error has empty files', () => {
-    const r = exec(makeTree({}), list, '--json', '--root', '.');
+    const r = exec(memoryHost({}), list, '--json', '--root', '.');
     const doc = JSON.parse(r.out);
     expect(r.code).toBe(2);
     expect(doc.files).toEqual([]);

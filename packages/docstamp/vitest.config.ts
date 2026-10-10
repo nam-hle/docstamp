@@ -7,5 +7,6 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     exclude: [...configDefaults.exclude, 'tests/e2e/fixtures/**'],
     testTimeout: 30_000,
+    fsModuleCache: true,
   },
 });

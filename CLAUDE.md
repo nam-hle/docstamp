@@ -52,7 +52,9 @@ Node.js >= 24. ESM only.
 - **`action/*.ts`** runs on the runner under Node's type stripping, from the action's checkout:
   import only other `action/` modules with `.ts` extensions, never `src/`, and no enums.
 - **vitest** for unit and end-to-end tests: the package has its own configuration; the root one
-  runs the Action's tests (`action/*.test.ts`).
+  runs the Action's tests (`action/*.test.ts`). `testUnit` runs with `--no-isolate`, so files of
+  `tests/unit` and `tests/scenarios` share one module registry per worker: keep no state at module
+  level that a test changes and does not restore.
 - **oxlint** (type-aware) and **oxfmt** for lint and format; `pnpm format` orders imports, never
   by hand.
 - **knip** for unused dependencies, files and exports, one configuration with a section per
