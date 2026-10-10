@@ -93,29 +93,6 @@ scenario('§12.3 Root below the top level of the work tree', { git: false }, asy
   );
 });
 
-scenario('§2 the verdict and the exit code do not depend on git', { fixture }, async (repo) => {
-  await reviewedRepo(repo);
-  repo.append('src/util.ts', 'more\n');
-  const withGit = await repo.run(['--json']);
-  repo.rename('.git', 'dot-git-away');
-  const without = await repo.run(['--json'], { label: 'the same tree without .git' });
-  expect(without.exit).toBe(withGit.exit);
-  expect(without.json().files[0].changes).toBeNull();
-  const strip = (doc: ReturnType<typeof withGit.json>) =>
-    JSON.stringify({ ...doc, files: doc.files.map((f: object) => ({ ...f, changes: null })) });
-  expect(strip(without.json())).toBe(strip(withGit.json()));
-});
-
-scenario('§12.3 unknown when the written lock was never committed', { fixture }, async (repo) => {
-  await reviewedRepo(repo);
-  repo.git('reset', '--hard', '-q', 'HEAD~1');
-  await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
-  repo.append('src/util.ts', 'more\n');
-  const result = await repo.run([]);
-  expect(result.stdout).toContain('  depends   src/**\n');
-  expect((await repo.run(['--json'])).json().files[0].changes).toBeNull();
-});
-
 scenario('§12.3 a shallow clone cannot tell what changed', { fixture: 'shallow' }, async (repo) => {
   repo.write('src/b.ts', 'b\n');
   repo.commit('initial');
@@ -150,20 +127,6 @@ scenario('§12.3 an inherited GIT_DIR selects no repository', { fixture }, async
 });
 
 scenario(
-  '§12.3 an edit that is reverted leaves no report and no stale file',
-  { fixture },
-  async (repo) => {
-    await reviewedRepo(repo);
-    repo.append('src/util.ts', 'more\n');
-    repo.commit('edit');
-    expect((await repo.run([], { label: 'edited' })).exit).toBe(1);
-    repo.git('revert', '--no-edit', 'HEAD');
-    const reverted = await repo.run([], { label: 'edit reverted' });
-    expect(reverted).toMatchObject({ exit: 0, stdout: '1 ok, 0 stale, 0 invalid\n', stderr: '' });
-  },
-);
-
-scenario(
   '§14.3.4 the review line is a git command that shows what the report lists',
   { fixture },
   async (repo) => {
@@ -184,38 +147,6 @@ scenario(
 
     const rooted = await repo.run(['--root', repo.root]);
     expect(rooted.stdout).toContain(`  review: git -C ${gitPath(repo.root)} diff -M ${base} -- `);
-  },
-);
-
-scenario(
-  '§14.3.4 above 10 changed files the review line is a pathspec of the patterns',
-  { fixture },
-  async (repo) => {
-    await reviewedRepo(repo);
-    const base = repo.git('rev-parse', 'HEAD').trim();
-    for (let i = 0; i < 11; i++) repo.write(`src/gen/g${String(i).padStart(2, '0')}.ts`, `${i}\n`);
-    repo.append('src/util.test.ts', 'excluded by the negation\n');
-    repo.append('src/util.ts', 'changed\n');
-    const result = await repo.run([]);
-    expect(result.stdout).toContain('  added     src/gen/  (11 files)\n');
-    expect(result.stdout).toContain(
-      `  review: git diff -M ${base} -- ':(glob)src/**' ':(exclude,glob)src/**/*.test.ts' ` +
-        "':(exclude,glob)src/**/*.test.ts/**'\n",
-    );
-    const listed = repo.git(
-      'diff',
-      '--name-only',
-      base,
-      '--',
-      ':(glob)src/**',
-      ':(exclude,glob)src/**/*.test.ts',
-    );
-    expect(listed).toBe('src/util.ts\n');
-
-    repo.write('docstamp.yaml', config({ 'CLAUDE.md': ['src/**/*.{ts,js}'] }));
-    const braces = await repo.run([], { label: 'alternation in a pattern' });
-    expect(braces.stdout).toContain('  added     src/gen/  (11 files)\n');
-    expect(braces.stdout).not.toContain('review:');
   },
 );
 

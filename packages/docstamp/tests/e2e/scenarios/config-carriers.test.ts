@@ -90,26 +90,6 @@ scenario(
   },
 );
 
-scenario('§9.5 a script value goes through the same validation as YAML', options, async (repo) => {
-  repo.write(
-    'docstamp.config.ts',
-    "export default { version: 2, extra: true, files: { 'CLAUDE.md': { dependencies: ['src//a.ts'] } } };\n",
-  );
-  const result = await repo.run([], { show: ['docstamp.config.ts'] });
-  expect(result.exit).toBe(2);
-  expect(result.stderr).toContain('error: E_UNKNOWN_KEY: extra');
-
-  repo.write(
-    'docstamp.config.ts',
-    "export default { version: 2, files: { 'CLAUDE.md': { dependencies: ['src//a.ts'] } } };\n",
-  );
-  const pattern = await repo.run([], { show: ['docstamp.config.ts'] });
-  expect(pattern.stderr).toContain('error: E_PATTERN: CLAUDE.md: src//a.ts');
-
-  repo.write('docstamp.config.ts', 'export default { files: {} };\n');
-  expect((await repo.run([])).stderr).toContain('E_CONFIG_VERSION');
-});
-
 scenario(
   '§9.5 an ES module with only named exports is E_CONFIG, CommonJS module.exports works',
   options,

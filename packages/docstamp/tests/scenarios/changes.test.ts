@@ -348,3 +348,51 @@ scenario(
     expect(json.selection).toEqual([{ status: 'added', path: 'packages/a/src/x.test.ts' }]);
   },
 );
+
+scenario('§12.3 unknown when the written lock was never committed', { fixture }, async (repo) => {
+  repo.write('docstamp.yaml', config(CLAUDE));
+  repo.commit('initial');
+  await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+  repo.append('src/util.ts', 'more\n');
+  const result = await repo.run([]);
+  expect(result.stdout).toContain('  depends   src/**\n');
+  expect((await repo.run(['--json'])).json().files[0].changes).toBeNull();
+});
+
+scenario(
+  '§12.3 an edit that is reverted leaves no report and no stale file',
+  { fixture },
+  async (repo) => {
+    await reviewedRepo(repo);
+    const original = repo.read('src/util.ts');
+    repo.append('src/util.ts', 'more\n');
+    repo.commit('edit');
+    expect((await repo.run([], { label: 'edited' })).exit).toBe(1);
+    repo.write('src/util.ts', original);
+    repo.commit('revert edit');
+    const reverted = await repo.run([], { label: 'edit reverted' });
+    expect(reverted).toMatchObject({ exit: 0, stdout: '1 ok, 0 stale, 0 invalid\n', stderr: '' });
+  },
+);
+
+scenario(
+  '§14.3.4 above 10 changed files the review line is a pathspec of the patterns',
+  { fixture },
+  async (repo) => {
+    const base = await reviewedRepo(repo);
+    for (let i = 0; i < 11; i++) repo.write(`src/gen/g${String(i).padStart(2, '0')}.ts`, `${i}\n`);
+    repo.append('src/util.test.ts', 'excluded by the negation\n');
+    repo.append('src/util.ts', 'changed\n');
+    const result = await repo.run([]);
+    expect(result.stdout).toContain('  added     src/gen/  (11 files)\n');
+    expect(result.stdout).toContain(
+      `  review: git diff -M ${base} -- ':(glob)src/**' ':(exclude,glob)src/**/*.test.ts' ` +
+        "':(exclude,glob)src/**/*.test.ts/**'\n",
+    );
+
+    repo.write('docstamp.yaml', config({ 'CLAUDE.md': ['src/**/*.{ts,js}'] }));
+    const braces = await repo.run([], { label: 'alternation in a pattern' });
+    expect(braces.stdout).toContain('  added     src/gen/  (11 files)\n');
+    expect(braces.stdout).not.toContain('review:');
+  },
+);

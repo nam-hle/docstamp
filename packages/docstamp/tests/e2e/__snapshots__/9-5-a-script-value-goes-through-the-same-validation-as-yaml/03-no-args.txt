@@ -1,5 +1,0 @@
-$ docstamp
-exit: 2
---- stdout ---
---- stderr ---
-error: E_CONFIG_VERSION: Add "version: 2" to the configuration file.

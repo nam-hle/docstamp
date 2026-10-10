@@ -1,0 +1,25 @@
+$ docstamp list-dependents package.json --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependents",
+  "exitCode": 0,
+  "files": [
+    {
+      "file": "package.json",
+      "dependents": [
+        {
+          "file": "CLAUDE.md",
+          "via": [
+            "package.json#\"scripts.build\"",
+            "package.json#\"scripts.test\""
+          ]
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---
