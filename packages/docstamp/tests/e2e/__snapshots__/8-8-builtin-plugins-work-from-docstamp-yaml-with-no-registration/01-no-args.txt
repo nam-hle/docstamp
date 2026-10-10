@@ -1,0 +1,22 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (unrecorded)
+  depends   "package.json#\"scripts.build\""
+  depends   "package.json#\"scripts.test\""
+  depends   "ci.yml#\"jobs.test.steps.1.run\""
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  CLAUDE.md:
+    dependencies:
+      - path: package.json
+        select: scripts.build
+      - path: package.json
+        select: scripts.test
+      - path: ci.yml
+        select: jobs.test.steps.1.run

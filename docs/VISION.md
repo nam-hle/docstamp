@@ -61,7 +61,8 @@ Roughly in order of how settled each is:
 - **Parts of a file, through plugins.** A plugin per format hashes a part of a file (a Markdown
   heading, a TypeScript symbol by its public shape, a key of `package.json`), so an unrelated
   edit or an internal refactor does not ask for a doc review. The plugin defines what a selector
-  means; docstamp only compares the hashes it returns. Shipped so far: the plugin API, and a
+  means; docstamp only compares the hashes it returns. Shipped so far: the plugin API, a value of a
+  JSON or YAML file by its path (built into `docstamp`, as it needs no new dependency), and a
   Markdown plugin (sections by heading) in its own package, not published yet.
 - **More first-party plugins** as separate packages (JavaScript and TypeScript next, by declaration
   kind and name), once the API has met a few real plugins.
