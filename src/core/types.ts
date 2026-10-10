@@ -39,7 +39,7 @@ export type Json =
   | { readonly [key: string]: Json };
 
 // SPEC §8.7
-interface SelectedEntry {
+export interface SelectedEntry {
   readonly path: string;
   readonly select: Json;
   readonly match: 'one' | 'all';

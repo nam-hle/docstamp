@@ -1,6 +1,7 @@
 import type { Declaration, ReverseDependent, Diagnostic } from '../core/types.ts';
 import { patternMatches, select } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
+import { canonicalJson } from '../plugin/canonical.ts';
 
 // SPEC §13.8 step 3.2
 export function dependentsOf(
@@ -17,11 +18,14 @@ export function dependentsOf(
     const patterns = declaration.dependencies.map(
       (source) => parsePattern(source) as ParsedPattern,
     );
-    if (select(patterns, [path]).length === 0) continue;
-    const via = declaration.dependencies.filter(
+    const selectedVia = (declaration.selected ?? [])
+      .filter((entry) => entry.path === path)
+      .map((entry) => `${entry.path}#${canonicalJson(entry.select)}`);
+    if (select(patterns, [path]).length === 0 && selectedVia.length === 0) continue;
+    const patternVia = declaration.dependencies.filter(
       (_, i) => !patterns[i]!.negated && patternMatches(patterns[i]!, path),
     );
-    found.push({ file: declaration.file, via });
+    found.push({ file: declaration.file, via: [...patternVia, ...selectedVia] });
   }
   return found;
 }

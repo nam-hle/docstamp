@@ -56,7 +56,7 @@ export function fileHash(root: string, u: Universe, path: string): string {
   return sha256Hex(normalizedContent(root, u, path));
 }
 
-interface Fragment {
+export interface Fragment {
   readonly path: string;
   readonly select: string;
   readonly hashes: readonly string[];
