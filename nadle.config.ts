@@ -246,6 +246,12 @@ tasks.register('verifyRelease', {
   description: 'The docstamp unit, end-to-end and pack tests, as publish.yml runs them',
 });
 
+tasks.register('verifyReleaseMarkdown', {
+  group: 'Testing',
+  dependsOn: ['testMarkdown'],
+  description: 'The docstamp-plugin-markdown tests, as publish.yml runs them',
+});
+
 // The gate. `pnpm test` is `nadle test --continue`, which reports every failure.
 tasks.register('test', {
   group: 'Testing',
