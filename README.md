@@ -312,7 +312,7 @@ next: review each stale file against its dependencies, then run: docstamp update
 - **A literal path.** `path` names one file, never a glob.
 - **No changed-file list yet.** A stale file with selected dependencies prints its declaration, as above, and `changes` in `--json` is `null`; read the part yourself.
 - **Determinism is the plugin author's duty.** A plugin runs in your process and docstamp trusts its hashes. Keep it independent of the clock, the network and the environment.
-- **No plugin ships with docstamp yet.** Write your own, as above.
+- **A ready-made Markdown plugin.** `docstamp-plugin-markdown` selects a section by its heading, so you need not write the one above: [packages/docstamp-plugin-markdown](packages/docstamp-plugin-markdown#readme), with its own [SPEC](packages/docstamp-plugin-markdown/SPEC.md). It is not published yet. docstamp itself ships no plugin.
 
 ## Proposing dependencies
 

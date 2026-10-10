@@ -80,7 +80,8 @@ The contract is `packages/docstamp/docs/SPEC.md`, written `SPEC` or by clause (`
 ```
 docstamp/                   # private workspace root
 ├── packages/
-│   └── docstamp/           # the published package `docstamp`; its tree is below
+│   ├── docstamp/           # the published package `docstamp`; its tree is below
+│   └── docstamp-plugin-markdown/   # plugin: sections of a Markdown file; SPEC.md, src/, tests/
 ├── action.yml              # the composite GitHub Action (GitHub needs it at the root)
 ├── action/                 # render.ts (report to PR comment, pure), run.ts (summary, comment
 │                           #   upsert) and their tests, run under Node's type stripping
@@ -195,6 +196,19 @@ Only what no test can check stays here.
 Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change as
 classified by [SPEC §17.2](packages/docstamp/docs/SPEC.md#172-breaking-changes). Commit types drive releases, so get
 them right.
+
+## Plugin packages
+
+Each plugin lives in `packages/docstamp-plugin-<format>/` and is spec-first like the core: its own
+`SPEC.md` defines the selector, what a section is and what is hashed, and its tests are named by
+clause (`describe('§5.3 Sections', ...)`). The hash of a selected part is part of every dependent's
+Dependency Hash, so a change that alters an existing hash is breaking for the plugin (its SPEC §7).
+
+- A plugin imports only the types of `docstamp` (`import type`), so `docstamp` is a peer
+  dependency and no runtime import. It exports a plain object that `satisfies DocstampPlugin`.
+- Its tests include one that runs the built `docstamp` CLI with the plugin
+  (`tests/integration/`); `pnpm nadle testMarkdown` builds both packages first.
+- Each plugin lists its parser as its only dependency, which needs the user's approval.
 
 ## Inline declarations
 
