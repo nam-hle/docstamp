@@ -1,0 +1,53 @@
+{
+  "name": "docstamp-plugin-js",
+  "version": "0.0.0",
+  "description": "docstamp plugin: depend on one top-level declaration of a JavaScript or TypeScript file, by its kind and name",
+  "license": "MIT",
+  "author": {
+    "name": "Nam Hoang Le",
+    "url": "https://github.com/nam-hle"
+  },
+  "homepage": "https://github.com/nam-hle/docstamp/tree/main/packages/docstamp-plugin-js#readme",
+  "bugs": {
+    "url": "https://github.com/nam-hle/docstamp/issues"
+  },
+  "keywords": [
+    "docstamp",
+    "docstamp-plugin",
+    "javascript",
+    "typescript",
+    "documentation",
+    "freshness"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nam-hle/docstamp.git",
+    "directory": "packages/docstamp-plugin-js"
+  },
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "SPEC.md"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.29.9"
+  },
+  "peerDependencies": {
+    "docstamp": ">=0.6.0"
+  },
+  "devDependencies": {
+    "docstamp": "workspace:*"
+  }
+}

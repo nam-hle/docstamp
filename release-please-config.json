@@ -24,6 +24,12 @@
       "initial-version": "0.1.0",
       "include-component-in-tag": true,
       "pull-request-title-pattern": "chore: release${component} v${version}"
+    },
+    "packages/docstamp-plugin-js": {
+      "release-type": "node",
+      "initial-version": "0.1.0",
+      "include-component-in-tag": true,
+      "pull-request-title-pattern": "chore: release${component} v${version}"
     }
   }
 }

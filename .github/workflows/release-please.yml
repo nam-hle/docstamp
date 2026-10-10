@@ -40,7 +40,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
           DOCSTAMP_TAG: ${{ steps.release.outputs['packages/docstamp--tag_name'] }}
           MARKDOWN_TAG: ${{ steps.release.outputs['packages/docstamp-plugin-markdown--tag_name'] }}
+          JS_TAG: ${{ steps.release.outputs['packages/docstamp-plugin-js--tag_name'] }}
         run: |
-          for tag in "$DOCSTAMP_TAG" "$MARKDOWN_TAG"; do
+          for tag in "$DOCSTAMP_TAG" "$MARKDOWN_TAG" "$JS_TAG"; do
             if [ -n "$tag" ]; then gh workflow run publish.yml --ref main --field tag="$tag"; fi
           done
