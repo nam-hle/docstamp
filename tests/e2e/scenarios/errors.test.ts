@@ -512,15 +512,6 @@ scenario('§9.3 NOTE near key: a mistyped key names the key it is close to', asy
   );
 });
 
-it('every diagnostic code of SPEC §15 is exercised through the CLI', () => {
-  const spec = readFileSync(new URL('../../../docs/SPEC.md', import.meta.url), 'utf8');
-  const table = spec.slice(spec.indexOf('## 15 Diagnostics'), spec.indexOf('## 16 Exit Codes'));
-  const codes = [...table.matchAll(/^\| `([EW]_[A-Z_]+)`/gmu)].map((m) => m[1]!);
-  expect(codes.length).toBeGreaterThanOrEqual(18);
-  const missing = codes.filter((code) => !seen.has(code) && !unreachable.has(code));
-  expect(missing).toEqual([]);
-});
-
 scenario('§9.3 steps 4 and 7 a first configuration file is told what to add', async (repo) => {
   base(repo);
   repo.write('docstamp.yaml', 'presets:\n  tests:\n    - "!**/*.test.*"\nfiles: {}\n');
@@ -538,4 +529,41 @@ scenario('§9.3 steps 4 and 7 a first configuration file is told what to add', a
   expect(typo.stderr).toBe(
     'error: E_UNKNOWN_KEY: fils: Remove or correct the key; did you mean "files"?\n',
   );
+});
+
+scenario(
+  '§8.7 and §9.5 plugin and selection errors',
+  { fixture: 'plugins', linkLib: true },
+  async (repo) => {
+    const show = ['docstamp.config.ts'];
+    const withDeps = (deps: string, plugins = '[headings]') =>
+      "import { defineConfig } from 'docstamp';\nimport headings from './tools/headings.ts';\n" +
+      "const other = { ...headings, name: 'other' };\n" +
+      `export default defineConfig({ version: 2, plugins: ${plugins}, files: ` +
+      `{ 'CLAUDE.md': { dependencies: [${deps}] } } });\n`;
+    const missing = "{ path: 'docs/guide.md', select: 'Missing' }";
+    repo.write('docstamp.config.ts', withDeps(missing));
+    await run(repo, 'a selector that matches nothing', [], 2, ['E_SELECT_NOT_FOUND'], show);
+    repo.append('docs/guide.md', '\n## Install\n\nAgain.\n');
+    repo.write('docstamp.config.ts', withDeps("{ path: 'docs/guide.md', select: 'Install' }"));
+    await run(repo, 'a selector that matches twice', [], 2, ['E_SELECT_AMBIGUOUS'], show);
+    repo.write('docstamp.config.ts', withDeps(missing, '[headings, other]'));
+    await run(repo, 'two plugins claim one path', [], 2, ['E_PLUGIN'], show);
+    repo.remove('docstamp.config.ts');
+    repo.write(
+      'docstamp.yaml',
+      'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - path: docs/guide.md\n' +
+        '        select: Install\n',
+    );
+    await run(repo, 'no plugin claims the path', [], 2, ['E_SELECT'], ['docstamp.yaml']);
+  },
+);
+
+it('every diagnostic code of SPEC §15 is exercised through the CLI', () => {
+  const spec = readFileSync(new URL('../../../docs/SPEC.md', import.meta.url), 'utf8');
+  const table = spec.slice(spec.indexOf('## 15 Diagnostics'), spec.indexOf('## 16 Exit Codes'));
+  const codes = [...table.matchAll(/^\| `([EW]_[A-Z_]+)`/gmu)].map((m) => m[1]!);
+  expect(codes.length).toBeGreaterThanOrEqual(18);
+  const missing = codes.filter((code) => !seen.has(code) && !unreachable.has(code));
+  expect(missing).toEqual([]);
 });

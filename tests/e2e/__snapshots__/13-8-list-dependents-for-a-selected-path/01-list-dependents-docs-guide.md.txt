@@ -1,0 +1,6 @@
+$ docstamp list-dependents docs/guide.md
+exit: 0
+--- stdout ---
+docs/guide.md
+  CLAUDE.md   via "docs/guide.md#\"Install\""
+--- stderr ---
