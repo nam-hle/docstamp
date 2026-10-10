@@ -1,0 +1,16 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (unrecorded)
+  depends   "data[1].json#\"name\""
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+--- stderr ---
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  CLAUDE.md:
+    dependencies:
+      - path: 'data\[1\].json'
+        select: name

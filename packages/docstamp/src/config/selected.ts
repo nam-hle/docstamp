@@ -36,6 +36,7 @@ export function parseSelected(value: Value): SelectedEntry | null {
   if (typeof path !== 'string' || select === undefined || !isFinitePlain(select)) return null;
   if (match !== 'one' && match !== 'all') return null;
   const parsed = parsePattern(path);
-  if (parsed === null || parsed.negated || literalPath(parsed) !== path) return null;
-  return { path, select: fromValue(select), match };
+  const denoted = parsed === null || parsed.negated ? null : literalPath(parsed);
+  if (denoted === null) return null;
+  return { path: denoted, select: fromValue(select), match };
 }

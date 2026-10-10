@@ -4,7 +4,7 @@ import { Raised, diag } from '../core/diagnostics.ts';
 import { select as selectPaths } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 import { builtinPlugins } from './builtin.ts';
-import type { DocstampPlugin, ExtractInput } from './types.ts';
+import type { DocstampPlugin, ExtractInput, ExtractResult } from './types.ts';
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -58,7 +58,14 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
   }
   if (names.has(name)) return bad(name, `Two plugins are named "${name}"; names must be unique.`);
   names.add(name);
-  return entry as unknown as DocstampPlugin;
+  // read once: later calls never touch a getter of the user object again
+  const snapshot = [...(patterns as string[])];
+  return {
+    name,
+    apiVersion: 1,
+    files: snapshot,
+    extract: (input) => Reflect.apply(extract, entry, [input]) as ExtractResult,
+  };
 }
 
 const claims = (plugin: DocstampPlugin, path: string): boolean => {
