@@ -36,7 +36,8 @@ runs:
         ROOT: ${{ inputs.working-directory }}
       run: |
         case "$VERSION" in
-          ./*|/*|*.tgz) spec="$VERSION" ;;
+          /*) spec="$VERSION" ;;
+          ./*|*.tgz) spec="$PWD/$VERSION" ;;
           *) spec="docstamp@$VERSION" ;;
         esac
         prefix="$RUNNER_TEMP/docstamp"
@@ -56,7 +57,9 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         DOCSTAMP_REPORT: ${{ steps.docstamp.outputs.report }}
         DOCSTAMP_COMMENT: ${{ inputs.comment }}
-      run: node "${{ github.action_path }}/action/run.ts"
+        DOCSTAMP_ROOT: ${{ inputs.working-directory }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: node "$ACTION_PATH/action/run.ts"
 
     - name: Fail on a stale or invalid file
       shell: bash
