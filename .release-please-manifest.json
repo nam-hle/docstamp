@@ -1,3 +1,4 @@
 {
-  "packages/docstamp": "0.5.0"
+  "packages/docstamp": "0.5.0",
+  "packages/docstamp-plugin-markdown": "0.1.0"
 }
