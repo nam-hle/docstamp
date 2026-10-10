@@ -28,8 +28,7 @@ interface FileReport {
     path: string;
     select: unknown;
     status: string;
-    focus?: string[];
-    lines?: { start: number; end: number }[];
+    parts?: { focus?: string; lines?: { start: number; end: number } }[];
   }[];
   diagnostics: Diagnostic[];
 }
@@ -94,16 +93,11 @@ const renderStale = (file: FileReport, root: string): string[] => {
   );
   const fragments = (file.fragments ?? []).map((entry) => {
     const subject = code(`${entry.path}#${JSON.stringify(entry.select)}`);
-    const parts = Array.from(
-      { length: Math.max(entry.focus?.length ?? 0, entry.lines?.length ?? 0) },
-      (_, index) => {
-        const range = entry.lines?.[index];
-        const lines = range === undefined ? '' : `lines ${range.start}-${range.end}`;
-        const focus = entry.focus?.[index];
-        if (focus === undefined) return lines;
-        return lines === '' ? focus : `${focus} (${lines})`;
-      },
-    );
+    const parts = (entry.parts ?? []).flatMap(({ focus, lines }) => {
+      const range = lines === undefined ? '' : `lines ${lines.start}-${lines.end}`;
+      if (focus === undefined) return range === '' ? [] : [range];
+      return [range === '' ? focus : `${focus} (${range})`];
+    });
     return `- fragment ${subject} (${entry.status})${parts.length === 0 ? '' : `: ${parts.join('; ')}`}`;
   });
   const unknown = file.reasons.includes('unrecorded')

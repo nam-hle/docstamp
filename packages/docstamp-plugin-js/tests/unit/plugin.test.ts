@@ -5,9 +5,22 @@ import plugin from '../../src/index.ts';
 
 const sha = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex');
 
-const extract = (text: string, select: unknown, path = 'file.ts'): string[] => [
-  ...plugin.extract({ path, text, select: select as never }).hashes,
-];
+const extract = (text: string, select: unknown, path = 'file.ts'): string[] =>
+  (plugin.extract({ path, text, select: select as never }).parts ?? []).map((part) =>
+    sha(part.content),
+  );
+
+// the message of the first error the plugin reports, if any
+const errorOf = (text: string, select: unknown, path = 'file.ts'): string | undefined => {
+  const [first] = plugin.extract({ path, text, select: select as never }).diagnostics ?? [];
+  return first?.severity === 'error' ? first.message : undefined;
+};
+
+// how many declarations a selector matches: one part, or the count an ambiguity error names
+const matches = (text: string, select: unknown): number => {
+  if (extract(text, select).length === 1) return 1;
+  return Number(/matches (\d+) declarations/u.exec(errorOf(text, select) ?? '')?.[1] ?? 0);
+};
 
 // The expected Shape: the statement text with the given bodies removed, written out by hand.
 const without = (text: string, ...bodies: string[]): string =>
@@ -64,7 +77,7 @@ describe('§4 Selector', () => {
     ['a kind that is not a string', { name: 'abc', kind: 1 }],
     ['an unknown part', { name: 'abc', part: 'body' }],
   ])('raises for %s', (_, select) => {
-    expect(() => extract(FN, select)).toThrow();
+    expect(errorOf(FN, select)).toBeDefined();
   });
 });
 
@@ -78,7 +91,7 @@ describe('§5 Parsing', () => {
   it('reads JSX in .js, .jsx and .tsx files, but not in .ts files', () => {
     const jsx = 'export const A = () => <div />;';
     for (const path of ['a.js', 'a.jsx', 'a.tsx']) expect(extract(jsx, 'A', path)).toHaveLength(1);
-    expect(() => extract(jsx, 'A', 'a.ts')).toThrow();
+    expect(errorOf(jsx, 'A', 'a.ts')).toBeDefined();
   });
 
   it('reads an angle-bracket type assertion in a .ts file', () => {
@@ -86,7 +99,7 @@ describe('§5 Parsing', () => {
   });
 
   it('does not read TypeScript in a .js file', () => {
-    expect(() => extract('export interface I { x: number }', 'I', 'a.js')).toThrow();
+    expect(errorOf('export interface I { x: number }', 'I', 'a.js')).toBeDefined();
   });
 
   it('reads CommonJS and ES modules alike', () => {
@@ -115,7 +128,7 @@ describe('§5 Parsing', () => {
   });
 
   it('raises for a file that does not parse', () => {
-    expect(() => extract('export function (', 'a')).toThrow();
+    expect(errorOf('export function (', 'a')).toBeDefined();
   });
 
   it('gives the same hashes for CR LF text as for LF text', () => {
@@ -187,7 +200,7 @@ describe('§6.1 Declarations', () => {
 
   it('returns one match per kind when a name is shared, so a kind picks one', () => {
     const text = 'function abc() {}\ninterface abc { x: number }\n';
-    expect(extract(text, 'abc')).toHaveLength(2);
+    expect(matches(text, 'abc')).toBe(2);
     expect(extract(text, { name: 'abc', kind: 'function' })).toEqual([sha('function abc() ')]);
     expect(extract(text, { name: 'abc', kind: 'interface' })).toEqual([
       sha('interface abc { x: number }'),
@@ -210,18 +223,18 @@ describe('§6.2 Groups', () => {
 
   it('keeps functions of one name that are not adjacent as separate matches', () => {
     const text = 'function a(): void;\nconst x = 1;\nfunction a() {}\n';
-    expect(extract(text, 'a')).toHaveLength(2);
+    expect(matches(text, 'a')).toBe(2);
     // a statement that declares nothing between them still separates them
     const between = 'function a(): void;\ncall();\nfunction a() {}\n';
-    expect(extract(between, 'a')).toHaveLength(2);
+    expect(matches(between, 'a')).toBe(2);
   });
 
   it('keeps two implementations as separate matches', () => {
-    expect(extract('function a() {}\nfunction a() {}\n', 'a')).toHaveLength(2);
+    expect(matches('function a() {}\nfunction a() {}\n', 'a')).toBe(2);
   });
 
   it('keeps merged interfaces as separate matches', () => {
-    expect(extract('interface A { x: 1 }\ninterface A { y: 2 }\n', 'A')).toHaveLength(2);
+    expect(matches('interface A { x: 1 }\ninterface A { y: 2 }\n', 'A')).toBe(2);
   });
 
   it('groups ambient overloads', () => {
@@ -382,12 +395,7 @@ describe('§7.1 Source', () => {
 });
 
 describe('§8 Extract', () => {
-  it('returns one hash per matching group, in source order', () => {
-    const text = 'class A {}\nfunction abc() {}\ninterface abc { x: 1 }\n';
-    expect(extract(text, 'abc')).toEqual([sha('function abc() '), sha('interface abc { x: 1 }')]);
-  });
-
-  it('returns no hash when nothing matches', () => {
+  it('returns no part when nothing matches', () => {
     expect(extract(FN, 'missing')).toEqual([]);
     expect(extract('', 'abc')).toEqual([]);
   });
@@ -403,42 +411,68 @@ describe('§8 Extract', () => {
 });
 
 describe('§8 Extract: focus and lines', () => {
-  const full = (text: string, select: unknown) =>
-    plugin.extract({ path: 'file.ts', text, select: select as never });
+  const part = (text: string, select: unknown) =>
+    plugin.extract({ path: 'file.ts', text, select: select as never }).parts?.[0];
   const TEXT =
     'import x from "y";\n\nexport function abc(a: string): number {\n  return a.length;\n}\n\n' +
     'export interface Box {\n  size: number;\n}\n';
 
   it('names the declaration and its part, and gives its lines', () => {
-    expect(full(TEXT, 'abc')).toMatchObject({
-      focus: ['function abc (shape)'],
-      lines: [{ start: 3, end: 5 }],
+    expect(part(TEXT, 'abc')).toMatchObject({
+      focus: 'function abc (shape)',
+      lines: { start: 3, end: 5 },
     });
-    expect(full(TEXT, 'Box')).toMatchObject({
-      focus: ['interface Box (shape)'],
-      lines: [{ start: 7, end: 9 }],
+    expect(part(TEXT, 'Box')).toMatchObject({
+      focus: 'interface Box (shape)',
+      lines: { start: 7, end: 9 },
     });
   });
 
   it('says source when the part is source', () => {
-    expect(full(TEXT, { name: 'abc', part: 'source' }).focus).toEqual(['function abc (source)']);
+    expect(part(TEXT, { name: 'abc', part: 'source' })?.focus).toBe('function abc (source)');
   });
 
   it('gives one range from the first overload to the end of the implementation', () => {
     const text =
       'export function f(a: string): string;\nexport function f(a: number): number;\n' +
       'export function f(a: any): any {\n  return a;\n}\n';
-    expect(full(text, 'f')).toMatchObject({
-      focus: ['function f (shape)'],
-      lines: [{ start: 1, end: 5 }],
+    expect(part(text, 'f')).toMatchObject({
+      focus: 'function f (shape)',
+      lines: { start: 1, end: 5 },
     });
   });
 
   it('counts the same lines for CR LF text', () => {
-    expect(full(TEXT.replaceAll('\n', '\r\n'), 'Box').lines).toEqual([{ start: 7, end: 9 }]);
+    expect(part(TEXT.replaceAll('\n', '\r\n'), 'Box')?.lines).toEqual({ start: 7, end: 9 });
   });
 
-  it('gives neither when nothing matches', () => {
-    expect(full(TEXT, 'Missing')).toEqual({ hashes: [] });
+  it('returns no part and no diagnostic when nothing matches', () => {
+    expect(plugin.extract({ path: 'file.ts', text: TEXT, select: 'Missing' })).toEqual({});
+  });
+});
+
+describe('§8 Extract: a selector that selects two groups', () => {
+  const both = 'class A {}\nfunction abc() {}\ninterface abc { x: 1 }\n';
+
+  it('is an error naming the kind and the line of each, and says to add a kind', () => {
+    const message = errorOf(both, 'abc');
+    expect(message).toContain('function at line 2, interface at line 3');
+    expect(message).toContain('kind');
+  });
+
+  it('is not an error once a kind picks one', () => {
+    expect(errorOf(both, { name: 'abc', kind: 'function' })).toBeUndefined();
+  });
+});
+
+describe('§4 Selector: errors and a file that does not parse', () => {
+  it('names the accepted forms for a selector that is not valid', () => {
+    expect(errorOf(FN, 3)).toContain('{ name, kind, part }');
+  });
+
+  it('names the file, not the parser, for a file that does not parse', () => {
+    const message = errorOf('export function (', 'a', 'broken.ts');
+    expect(message).toContain('broken.ts');
+    expect(message).toContain('could not be parsed');
   });
 });

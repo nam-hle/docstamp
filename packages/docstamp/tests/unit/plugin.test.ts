@@ -19,7 +19,7 @@ const plugin = (over: Record<string, unknown> = {}) => ({
   name: 'md',
   apiVersion: 1,
   files: ['**/*.md'],
-  extract: () => ({ hashes: ['h'] }),
+  extract: () => ({ parts: [{ content: 'h' }] }),
   ...over,
 });
 
@@ -147,16 +147,89 @@ describe('§8.7 claim', () => {
 
 describe('§8.7 runExtract', () => {
   const input = { path: 'a.md', text: 'x', select: 'Install' };
+  const subject = 'a.md#"Install"';
   const run = (extract: unknown) => runExtract(validatePlugins([plugin({ extract })])[0]!, input);
+  const part = (content: string) => ({ parts: [{ content }] });
 
-  it('returns the hashes in order', () => {
-    expect(run(() => ({ hashes: ['a', 'b'] }))).toEqual({ hashes: ['a', 'b'] });
+  it('returns the parts in order', () => {
+    const result = run(() => ({ parts: [{ content: 'a' }, { content: 'b' }] }));
+    expect(result).toEqual({ parts: [{ content: 'a' }, { content: 'b' }], warnings: [] });
   });
 
   it('passes path, text and select', () => {
-    expect(run((i: unknown) => ({ hashes: [JSON.stringify(i)] }))).toEqual({
-      hashes: ['{"path":"a.md","text":"x","select":"Install"}'],
-    });
+    const result = run((i: unknown) => part(JSON.stringify(i)));
+    expect(result.parts[0]?.content).toBe('{"path":"a.md","text":"x","select":"Install"}');
+  });
+
+  it('returns the focus and the lines of each part when the plugin gives them', () => {
+    const parts = [
+      { content: 'a', focus: 'section "A"', lines: { start: 1, end: 3 } },
+      { content: 'b', focus: 'section "B"', lines: { start: 5, end: 5 } },
+    ];
+    expect(run(() => ({ parts })).parts).toEqual(parts);
+  });
+
+  it('leaves focus and lines out when the plugin gives none', () => {
+    expect(Object.keys(run(() => part('a')).parts[0]!)).toEqual(['content']);
+  });
+
+  it('accepts an empty content, which is a part like any other', () => {
+    expect(run(() => part('')).parts).toEqual([{ content: '' }]);
+  });
+
+  it('raises E_SELECT_NOT_FOUND for no part and no error', () => {
+    for (const result of [{}, { parts: [] }, { diagnostics: [] }]) {
+      const [diagnostic, ...rest] = raised(() => run(() => result));
+      expect([diagnostic?.code, diagnostic?.subject, rest]).toEqual([
+        'E_SELECT_NOT_FOUND',
+        subject,
+        [],
+      ]);
+    }
+  });
+
+  it('raises E_SELECT with the message of an error, on the path and the selector', () => {
+    const message = 'The heading appears at lines 3 and 9; add a level.';
+    const [diagnostic, ...rest] = raised(() =>
+      run(() => ({ diagnostics: [{ severity: 'error', message }] })),
+    );
+    expect(rest).toEqual([]);
+    expect([diagnostic?.code, diagnostic?.subject, diagnostic?.message]).toEqual([
+      'E_SELECT',
+      subject,
+      message,
+    ]);
+  });
+
+  it('raises every error, and the warnings with them, and ignores the parts', () => {
+    const diagnostics = [
+      { severity: 'warning', message: 'w' },
+      { severity: 'error', message: 'one' },
+      { severity: 'error', message: 'two' },
+    ];
+    const raisedAll = raised(() => run(() => ({ parts: [{ content: 'a' }], diagnostics })));
+    expect(raisedAll.map((d) => [d.code, d.message])).toEqual([
+      ['E_SELECT', 'one'],
+      ['E_SELECT', 'two'],
+      ['W_SELECT', 'w'],
+    ]);
+  });
+
+  it('returns the warnings with the parts, as W_SELECT on the path and the selector', () => {
+    const diagnostics = [{ severity: 'warning', message: 'Using the first heading.' }];
+    const result = run(() => ({ parts: [{ content: 'a' }], diagnostics }));
+    expect(result.parts).toEqual([{ content: 'a' }]);
+    expect(result.warnings.map((d) => [d.code, d.severity, d.subject, d.message])).toEqual([
+      ['W_SELECT', 'warning', subject, 'Using the first heading.'],
+    ]);
+  });
+
+  it('raises the warnings with E_SELECT_NOT_FOUND', () => {
+    const diagnostics = [{ severity: 'warning', message: 'w' }];
+    expect(raised(() => run(() => ({ diagnostics }))).map((d) => d.code)).toEqual([
+      'E_SELECT_NOT_FOUND',
+      'W_SELECT',
+    ]);
   });
 
   it.each([
@@ -167,63 +240,96 @@ describe('§8.7 runExtract', () => {
       },
     ],
     ['returns nothing', () => undefined],
-    ['returns hashes that are not a list', () => ({ hashes: 'a' })],
-    ['returns an empty hash', () => ({ hashes: [''] })],
-    ['returns a non-string hash', () => ({ hashes: [1] })],
-  ])('raises E_SELECT when the plugin %s', (_, extract) => {
-    expect(raised(() => run(extract)).map((d) => d.code)).toEqual(['E_SELECT']);
-  });
-
-  it('returns the focus and the lines of each hash when the plugin gives them', () => {
-    const result = {
-      hashes: ['a', 'b'],
-      focus: ['section "A"', 'section "B"'],
-      lines: [
-        { start: 1, end: 3 },
-        { start: 5, end: 5 },
-      ],
-    };
-    expect(run(() => result)).toEqual(result);
-  });
-
-  it('leaves focus and lines out when the plugin gives none', () => {
-    expect(Object.keys(run(() => ({ hashes: ['a'] })))).toEqual(['hashes']);
+    ['returns a string', () => 'a'],
+    ['returns a list', () => [{ content: 'a' }]],
+    ['returns parts that are not a list', () => ({ parts: 'a' })],
+    ['returns a part that is not an object', () => ({ parts: ['a'] })],
+    ['returns a part without content', () => ({ parts: [{}] })],
+    ['returns a non-string content', () => ({ parts: [{ content: 1 }] })],
+    ['returns a content with a lone surrogate', () => ({ parts: [{ content: 'a\ud800' }] })],
+  ])('raises E_SELECT on the path when the plugin %s', (_, extract) => {
+    const [diagnostic, ...rest] = raised(() => run(extract));
+    expect(rest).toEqual([]);
+    expect([diagnostic?.code, diagnostic?.subject]).toEqual(['E_SELECT', 'a.md']);
   });
 
   it.each([
-    ['a focus that is not a list', { hashes: ['a'], focus: 'x' }],
-    ['a focus of the wrong length', { hashes: ['a'], focus: ['x', 'y'] }],
-    ['an empty focus string', { hashes: ['a'], focus: [''] }],
-    ['a non-string focus', { hashes: ['a'], focus: [1] }],
-    ['lines that are not a list', { hashes: ['a'], lines: { start: 1, end: 1 } }],
-    ['lines of the wrong length', { hashes: ['a'], lines: [] }],
-    ['a line range that starts at 0', { hashes: ['a'], lines: [{ start: 0, end: 1 }] }],
-    ['a line range that ends before it starts', { hashes: ['a'], lines: [{ start: 3, end: 2 }] }],
-    ['a fractional line', { hashes: ['a'], lines: [{ start: 1.5, end: 2 }] }],
-    ['a line range without an end', { hashes: ['a'], lines: [{ start: 1 }] }],
-  ])('raises E_SELECT for %s', (_, result) => {
+    ['a focus that is not a string', { parts: [{ content: 'a', focus: 1 }] }, /focus/u],
+    ['an empty focus', { parts: [{ content: 'a', focus: '' }] }, /focus/u],
+    ['a focus of two lines', { parts: [{ content: 'a', focus: 'x\ny' }] }, /focus/u],
+    ['a focus with a tab', { parts: [{ content: 'a', focus: 'x\ty' }] }, /focus/u],
+    [
+      'lines that are a list',
+      { parts: [{ content: 'a', lines: [{ start: 1, end: 1 }] }] },
+      /lines/u,
+    ],
+    ['lines that start at 0', { parts: [{ content: 'a', lines: { start: 0, end: 1 } }] }, /lines/u],
+    [
+      'lines that end before the start',
+      { parts: [{ content: 'a', lines: { start: 3, end: 2 } }] },
+      /lines/u,
+    ],
+    ['a fractional line', { parts: [{ content: 'a', lines: { start: 1.5, end: 2 } }] }, /lines/u],
+    ['lines without an end', { parts: [{ content: 'a', lines: { start: 1 } }] }, /lines/u],
+    ['diagnostics that are not a list', { diagnostics: 'x' }, /diagnostics/u],
+    ['a diagnostic without a severity', { diagnostics: [{ message: 'm' }] }, /diagnostic/u],
+    ['an unknown severity', { diagnostics: [{ severity: 'info', message: 'm' }] }, /diagnostic/u],
+    ['an empty message', { diagnostics: [{ severity: 'error', message: '' }] }, /diagnostic/u],
+    [
+      'a message of two lines',
+      { diagnostics: [{ severity: 'error', message: 'a\nb' }] },
+      /diagnostic/u,
+    ],
+    [
+      'a message that is not a string',
+      { diagnostics: [{ severity: 'error', message: 1 }] },
+      /diagnostic/u,
+    ],
+    [
+      'more than 100 diagnostics',
+      { diagnostics: Array.from({ length: 101 }, () => ({ severity: 'warning', message: 'm' })) },
+      /100/u,
+    ],
+  ])('raises E_SELECT for %s', (_, result, wording) => {
     const [diagnostic] = raised(() => run(() => result));
-    expect(diagnostic?.code).toBe('E_SELECT');
-    expect(diagnostic?.message).toMatch(/focus|lines/u);
+    expect([diagnostic?.code, diagnostic?.subject]).toEqual(['E_SELECT', 'a.md']);
+    expect(diagnostic?.message).toMatch(wording);
+  });
+
+  it('accepts exactly 100 diagnostics', () => {
+    const diagnostics = Array.from({ length: 100 }, (_, i) => ({
+      severity: 'warning',
+      message: `m${i}`,
+    }));
+    expect(run(() => ({ parts: [{ content: 'a' }], diagnostics })).warnings).toHaveLength(100);
+  });
+
+  it('ignores members it does not know', () => {
+    const result = run(() => ({ ...part('a'), future: 1 }));
+    expect(result).toEqual({ parts: [{ content: 'a' }], warnings: [] });
   });
 
   it('says synchronous when the plugin returns a promise', () => {
-    const [diagnostic] = raised(() => run(async () => ({ hashes: ['a'] })));
+    const [diagnostic] = raised(() => run(async () => part('a')));
     expect(diagnostic?.message).toContain('synchronous');
   });
 
   const boom = () => {
     throw new Error('/abs/secret/path');
   };
-  const hashesGetter = Object.defineProperty({}, 'hashes', { get: boom });
+  const partsGetter = Object.defineProperty({}, 'parts', { get: boom });
   // oxlint-disable-next-line unicorn/no-thenable
-  const thenGetter = Object.defineProperty({ hashes: ['a'] }, 'then', { get: boom });
-  const elementGetter = Object.defineProperty(['a'], '0', { get: boom });
+  const thenGetter = Object.defineProperty(part('a'), 'then', { get: boom });
+  const contentGetter = { parts: [Object.defineProperty({}, 'content', { get: boom })] };
+  const severityGetter = {
+    diagnostics: [Object.defineProperty({ message: 'm' }, 'severity', { get: boom })],
+  };
 
   it.each([
-    ['a throwing hashes getter', hashesGetter],
+    ['a throwing parts getter', partsGetter],
     ['a throwing then getter', thenGetter],
-    ['a throwing hash element', { hashes: elementGetter }],
+    ['a throwing content getter', contentGetter],
+    ['a throwing severity getter', severityGetter],
   ])('raises E_SELECT for %s without the thrown text', (_, result) => {
     const [diagnostic, ...rest] = raised(() => run(() => result));
     expect(rest).toEqual([]);
@@ -273,21 +379,25 @@ describe('§9.5 validated plugins are snapshots', () => {
     const [valid] = validatePlugins([entry]);
     const readsAfterValidation = reads;
     entry.name = 'renamed';
-    entry.extract = () => ({ hashes: ['other'] });
+    entry.extract = () => ({ parts: [{ content: 'other' }] });
     claim([valid!], 'a.md');
     expect(reads).toBe(readsAfterValidation);
     expect(valid!.name).toBe('md');
-    expect(valid!.extract({ path: 'a.md', text: '', select: 'x' })).toEqual({ hashes: ['h'] });
+    expect(valid!.extract({ path: 'a.md', text: '', select: 'x' })).toEqual({
+      parts: [{ content: 'h' }],
+    });
   });
 
   it('calls extract with the plugin object as this', () => {
     const entry = plugin({
       extract(this: { marker: string }) {
-        return { hashes: [this.marker] };
+        return { parts: [{ content: this.marker }] };
       },
       marker: 'mine',
     });
     const [valid] = validatePlugins([entry]);
-    expect(valid!.extract({ path: 'a.md', text: '', select: 'x' })).toEqual({ hashes: ['mine'] });
+    expect(valid!.extract({ path: 'a.md', text: '', select: 'x' })).toEqual({
+      parts: [{ content: 'mine' }],
+    });
   });
 });

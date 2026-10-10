@@ -120,11 +120,10 @@ function evaluateDeclarations(
         text: selectableText(host, root, universe, path),
       }),
   );
-  // SPEC §12.3 step 11: the Fragments rule of §8.7, with null where it would raise
+  // SPEC §12.3 step 11: Fragments of §8.7, with null where it would raise
   const fragmentOf = (found: () => Extracted): Extracted | null => {
     try {
-      const extracted = found();
-      return extracted.hashes.length === 1 ? extracted : null;
+      return found();
     } catch (e) {
       if (e instanceof Raised) return null;
       throw e;
@@ -153,7 +152,9 @@ function evaluateDeclarations(
     },
     fileHash: hashFiles ? memoizeHash((p) => fileHash(host, root, universe, p)) : () => '',
     // list mode never calls a plugin (§13.7)
-    extractHashes: hashFiles ? (path, select) => extract([path, select]).hashes : () => [''],
+    extractParts: hashFiles
+      ? (path, select) => extract([path, select])
+      : () => ({ parts: [{ content: '' }], warnings: [] }),
   };
   const results = declarations.map((b) =>
     evaluate(

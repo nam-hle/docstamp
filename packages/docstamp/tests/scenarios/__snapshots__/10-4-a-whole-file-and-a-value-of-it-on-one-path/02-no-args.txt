@@ -3,7 +3,7 @@ exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
   modified  package.json
-  review: git diff -M 2dcf822235b976fe84d437e8925262a579a5f8e8 -- package.json
+  review: git diff -M 15632d5eede6c34e902b9c8ae93a844275da97d9 -- package.json
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
   run update only after the review, never --all just to pass; see docstamp help agents

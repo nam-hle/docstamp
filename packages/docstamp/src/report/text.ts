@@ -122,15 +122,12 @@ function withoutRepeatedRenames(
   return [...lines.slice(0, at), same, ...lines.filter((l, i) => i > at && !renames.includes(l))];
 }
 
-// SPEC §14.3: the Focus and Lines of each part, in words
+// SPEC §14.3: the Focus and Lines of each part that has them, in words
 function partsOf(f: FragmentChange): string {
-  const count = Math.max(f.focus?.length ?? 0, f.lines?.length ?? 0);
-  const parts = Array.from({ length: count }, (_, index) => {
-    const range = f.lines?.[index];
-    const lines = range === undefined ? '' : `lines ${range.start}-${range.end}`;
-    const focus = f.focus?.[index];
-    if (focus === undefined) return lines;
-    return lines === '' ? focus : `${focus} (${lines})`;
+  const parts = (f.parts ?? []).flatMap(({ focus, lines }) => {
+    const range = lines === undefined ? '' : `lines ${lines.start}-${lines.end}`;
+    if (focus === undefined) return range === '' ? [] : [range];
+    return [range === '' ? focus : `${focus} (${range})`];
   });
   return parts.length === 0 ? '' : `  ${parts.join('; ')}`;
 }

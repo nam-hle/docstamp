@@ -14,11 +14,16 @@ import { patternMatches, select } from '../pattern/match.ts';
 import { literalPath, parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 import { canonicalJson } from '../plugin/canonical.ts';
 
+export interface Extraction {
+  readonly parts: readonly { readonly content: string }[];
+  readonly warnings: readonly Diagnostic[];
+}
+
 export interface EngineFs {
   isStampedFile(path: string): boolean;
   fileHash(path: string): string;
-  // SPEC §8.7: the Fragment hashes of a Selected Dependency, or a Raised
-  extractHashes?(path: string, select: Json): string[];
+  // SPEC §8.7: the Fragment of a Selected Dependency and the warnings reported with it, or a Raised
+  extractParts?(path: string, select: Json): Extraction;
   // SPEC §8.5 NOTE: the path exists under Root but §7.3 keeps it out of the Universe
   isIgnoredPath?(path: string): boolean;
   // SPEC §12.7: the path git shows a missing literal path renamed to, or null
@@ -137,29 +142,37 @@ function selectedProblems(b: Declaration, universe: readonly string[]): Diagnost
 const bySelected = (a: SelectedEntry, b: SelectedEntry) =>
   comparePaths(a.path, b.path) || comparePaths(canonicalJson(a.select), canonicalJson(b.select));
 
-// SPEC §8.7: the count rule over what the Plugin returned
-function fragmentsOf(b: Declaration, fs: EngineFs, problems: Diagnostic[]): Fragment[] {
+// SPEC §8.7: the Fragments of the Selected Dependencies, and the warnings their Plugins reported
+function fragmentsOf(
+  b: Declaration,
+  fs: EngineFs,
+  problems: Diagnostic[],
+): { fragments: Fragment[]; warnings: Diagnostic[] } {
   const fragments: Fragment[] = [];
+  const warnings: Diagnostic[] = [];
   for (const entry of [...(b.selected ?? [])].sort(bySelected)) {
-    const select = canonicalJson(entry.select);
     try {
-      const hashes = fs.extractHashes!(entry.path, entry.select);
-      const subject = `${entry.path}#${select}`;
-      if (hashes.length === 0) problems.push(diag('E_SELECT_NOT_FOUND', { subject }));
-      else if (hashes.length > 1) {
-        const message = `The selector matched ${hashes.length} times; narrow "select".`;
-        problems.push(diag('E_SELECT_AMBIGUOUS', { subject, message }));
-      } else fragments.push({ path: entry.path, select, hashes });
+      const extracted = fs.extractParts!(entry.path, entry.select);
+      fragments.push({
+        path: entry.path,
+        select: canonicalJson(entry.select),
+        parts: extracted.parts,
+      });
+      warnings.push(...extracted.warnings);
     } catch (e) {
       if (!(e instanceof Raised)) throw e;
       problems.push(...e.diagnostics);
     }
   }
-  return fragments;
+  return { fragments, warnings };
 }
 
 // SPEC §10.4
-function dependencyHash(resolved: readonly string[], b: Declaration, fs: EngineFs): string {
+function dependencyHash(
+  resolved: readonly string[],
+  b: Declaration,
+  fs: EngineFs,
+): { current: string; warnings: Diagnostic[] } {
   const problems: Diagnostic[] = [];
   const entries: Array<[string, string]> = [];
   for (const path of resolved) {
@@ -170,9 +183,9 @@ function dependencyHash(resolved: readonly string[], b: Declaration, fs: EngineF
       problems.push(...e.diagnostics);
     }
   }
-  const fragments = fragmentsOf(b, fs, problems);
+  const { fragments, warnings } = fragmentsOf(b, fs, problems);
   if (problems.length > 0) throw new Raised(problems);
-  return dependencyHashFrom(entries, fragments);
+  return { current: dependencyHashFrom(entries, fragments), warnings };
 }
 
 // SPEC §12.1 (the recorded Hash of an inline Declaration is in its file, §5.6)
@@ -214,7 +227,13 @@ export function evaluate(
     ...new Set([...resolved, ...(b.selected ?? []).map((s) => s.path)]),
   ]);
   let current = '';
-  if (problems.length === 0) collect(() => (current = dependencyHash(resolved, b, fs)));
+  if (problems.length === 0) {
+    collect(() => {
+      const hashed = dependencyHash(resolved, b, fs);
+      current = hashed.current;
+      warnings = [...warnings, ...hashed.warnings];
+    });
+  }
   if (problems.length > 0) {
     const diagnostics = sortDiagnostics(problems.map((d) => ({ ...d, file: b.file })));
     return { ...base, state: 'invalid', reasons: [], resolved: [], current: '', diagnostics };

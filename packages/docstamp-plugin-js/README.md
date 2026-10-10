@@ -52,7 +52,7 @@ STALE    CLAUDE.md  (content-changed)
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 ```
 
-The report names the declaration, its part and its lines because this plugin returns them with the hash (`focus` and `lines`, [SPEC §8](SPEC.md#8-extract)).
+The report names the declaration, its part and its lines because this plugin returns them with the part (`focus` and `lines`, [SPEC §8](SPEC.md#8-extract)).
 
 ## The selector
 
@@ -61,10 +61,10 @@ The report names the declaration, its part and its lines because this plugin ret
   `class`, `interface`, `type`, `enum`, `variable`, `namespace`.
 - `select: { name: 'createUser', part: 'source' }` hashes the whole source instead of the shape.
 - A name shared by two declarations (a function and an interface of the same name) is
-  `E_SELECT_AMBIGUOUS`: add `kind`. A name that is not declared is `E_SELECT_NOT_FOUND`.
+  an `E_SELECT` whose message names both kinds and lines: add `kind`. A name that is not declared is `E_SELECT_NOT_FOUND`.
 - Overload signatures and their implementation are one declaration.
-- An invalid selector, or a file that does not parse, is reported as `E_SELECT` without detail;
-  the forms above are the only valid ones.
+- An invalid selector, or a file that does not parse, is reported as `E_SELECT`, and the message
+  names the accepted forms or the file; the forms above are the only valid ones.
 
 ## What is hashed
 

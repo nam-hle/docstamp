@@ -391,38 +391,47 @@ describe('§14.3 fragment lines', () => {
 });
 
 describe('§14.3 fragment lines: focus and lines', () => {
-  const one = (extra: object) =>
+  const one = (parts?: object[]) =>
     checkText([
       res('a.md', 'stale', {
         changes: [],
         dependencies: [],
         base: 'c0ffee',
-        fragments: [{ path: 'g.md', select: 'Install', status: 'changed' as const, ...extra }],
+        fragments: [
+          {
+            path: 'g.md',
+            select: 'Install',
+            status: 'changed' as const,
+            ...(parts === undefined ? {} : { parts }),
+          },
+        ],
       }),
     ]);
 
   it('adds the focus after the status', () => {
-    expect(one({ focus: ['section "Install"'] })).toContain(
+    expect(one([{ focus: 'section "Install"' }])).toContain(
       '  fragment  "g.md#\\"Install\\""  (changed)  section "Install"\n',
     );
   });
 
   it('adds the lines after the focus, and alone without one', () => {
-    expect(one({ focus: ['section'], lines: [{ start: 3, end: 9 }] })).toContain(
+    expect(one([{ focus: 'section', lines: { start: 3, end: 9 } }])).toContain(
       '(changed)  section (lines 3-9)\n',
     );
-    expect(one({ lines: [{ start: 3, end: 9 }] })).toContain('(changed)  lines 3-9\n');
+    expect(one([{ lines: { start: 3, end: 9 } }])).toContain('(changed)  lines 3-9\n');
   });
 
-  it('joins several parts of a fragment with a semicolon', () => {
+  it('adds nothing for a fragment whose parts have neither', () => {
+    expect(one()).toContain('  fragment  "g.md#\\"Install\\""  (changed)\n');
+  });
+
+  it('joins several parts of a fragment with a semicolon, and skips one with neither', () => {
     expect(
-      one({
-        focus: ['a', 'b'],
-        lines: [
-          { start: 1, end: 2 },
-          { start: 7, end: 8 },
-        ],
-      }),
+      one([
+        { focus: 'a', lines: { start: 1, end: 2 } },
+        {},
+        { focus: 'b', lines: { start: 7, end: 8 } },
+      ]),
     ).toContain('(changed)  a (lines 1-2); b (lines 7-8)\n');
   });
 });

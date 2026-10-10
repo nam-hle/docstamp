@@ -3,7 +3,7 @@ exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
   fragment  "ci.yml#\"jobs.test.steps.1.run\""  (changed)  jobs.test.steps.1.run (string)
-  review: git diff -M e4c9ad969194966ad9bc8efae403cf5d806a7ffd -- ci.yml
+  review: git diff -M d1e332755d9519a547cac7a889c8c78e4919bd5d -- ci.yml
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
   run update only after the review, never --all just to pass; see docstamp help agents

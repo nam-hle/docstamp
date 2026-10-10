@@ -222,7 +222,7 @@ Only what no test can check stays here.
   review happened. `Stamp` changes no other byte of a doc. `suggest --write` writes an inline block
   with no `hash`, never overwrites one that has it, and never stamps (§9.6.5, §13.10).
 - **A plugin is user code.** It runs in-process and synchronously, only from `cli/run.ts` through
-  `EngineFs.extractHashes`; `engine/` never calls a plugin or reads a file; it imports only the pure `canonicalJson` from `plugin/` (§8.7).
+  `EngineFs.extractParts`; `engine/` never calls a plugin or reads a file; it imports only the pure `canonicalJson` from `plugin/` (§8.7).
 - **The hash input rule has one exception.** A file with an inline block is hashed without its
   `hash:` line (§10.2 step 4); anything else about hashing is a breaking change (§17).
 
@@ -251,8 +251,11 @@ Dependency Hash, so a change that alters an existing hash is breaking for the pl
 - Its tests include one that runs the built `docstamp` CLI with the plugin
   (`tests/integration/`); `pnpm nadle testMarkdown` (`testJs`) builds both packages first.
 - Each plugin lists its parser as its only dependency, which needs the user's approval.
-- A plugin returns `focus` and `lines` with its hashes (SPEC §8.7): the report prints them, so
-  write them for every part, in words a reviewer can use. They are advisory and never hashed.
+- A plugin returns `parts` (`content`, and `focus` and `lines` for the report) and `diagnostics`
+  (SPEC §8.7): write `focus` and `lines` for every part, in words a reviewer can use; they are
+  advisory and never hashed. A selector that selects several parts by accident is an `error` of the
+  plugin, which docstamp does not judge, and a message names what to change and carries no parser
+  text or absolute path (§5.5).
 
 ## Inline declarations
 
