@@ -14,7 +14,7 @@
     { "type": "chore", "section": "Internal" }
   ],
   "packages": {
-    ".": {
+    "packages/docstamp": {
       "release-type": "node",
       "initial-version": "0.1.0"
     }

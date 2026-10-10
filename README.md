@@ -125,9 +125,9 @@ Review each stale doc against the listed files, fix what is no longer true, then
 - **`review:`** is a read-only git command showing the change since the last `update` (the work tree against that commit, so uncommitted edits count; `-M` shows renames). Over 10 changed files, it gives a pathspec of the patterns instead.
 - **Untracked files** need `git add -N` to appear in a diff, so the report adds an `untracked: git add -N -- <path>` line; docstamp never runs it, since it changes the index.
 - **`(whitespace only)`** is git's judgement, to help you skim; it never changes the verdict.
-- **Renames.** A file moved with identical content is one `renamed  <old> -> <new>` line; five or more moved between the same two directories, or five or more `added` (or `deleted`) directly in one directory, become one line. A moved and edited file stays `added` plus `deleted`. A later doc with the same rename lines prints `renamed   (same <n> renames as <first doc>)` ([SPEC §14.3.1](docs/SPEC.md#1431-change-lines)).
-- **Long lists.** 5 or more changed files start with a `changed` line counting them by status. A `next:` line names at most 10 files, then `  and <m> more` ([SPEC §14.3](docs/SPEC.md#143-check-text-mode)). `--json` lists every file.
-- **Invalid docs.** On a terminal, errors follow the doc's line (each stream alone is unchanged). When a missing file pattern was moved with its content unchanged, the error names the new path; that hint needs full history and changes no verdict ([SPEC §12.7](docs/SPEC.md#127-renamed-path)).
+- **Renames.** A file moved with identical content is one `renamed  <old> -> <new>` line; five or more moved between the same two directories, or five or more `added` (or `deleted`) directly in one directory, become one line. A moved and edited file stays `added` plus `deleted`. A later doc with the same rename lines prints `renamed   (same <n> renames as <first doc>)` ([SPEC §14.3.1](packages/docstamp/docs/SPEC.md#1431-change-lines)).
+- **Long lists.** 5 or more changed files start with a `changed` line counting them by status. A `next:` line names at most 10 files, then `  and <m> more` ([SPEC §14.3](packages/docstamp/docs/SPEC.md#143-check-text-mode)). `--json` lists every file.
+- **Invalid docs.** On a terminal, errors follow the doc's line (each stream alone is unchanged). When a missing file pattern was moved with its content unchanged, the error names the new path; that hint needs full history and changes no verdict ([SPEC §12.7](packages/docstamp/docs/SPEC.md#127-renamed-path)).
 - **An edited list.** When the doc's own list was edited since the review, an `edited` line names the file holding it (also in `review:`), and `(selection)` lines show files the edit `added` or `removed`, compared on the files present today (`selection` in `--json`). The reason stays `content-changed`: the lock records a hash, not the patterns.
 - **No history.** Without usable git (no work tree, a shallow clone, an uncommitted `update`), the report prints the `depends` patterns instead and `changes` in `--json` is `null`; diff the files of `docstamp list-dependencies <doc>` yourself.
 
@@ -146,13 +146,13 @@ docstamp:
 
 In a repository with a `.git` and no configuration file, add a block without `hash` to each doc and run `docstamp`; it works as in the [Quick start](#quick-start), and `docstamp update` stamps the docs. The root is the nearest directory with a configuration file, else the nearest with a `.git` (a directory or a file, so linked work trees work). `update` rewrites only the `hash:` line, or appends `hash: <64 hex>` as the last key of the block. Every other byte stays: comments, quoting, the byte order mark and the line endings (CR LF files stay CR LF). No `docstamp-lock.yaml` is created; commit the docs. `docstamp help inline` has the rules. Things to know:
 
-- **Which files.** Those the config key `include` selects (default `**/*.md`), not ignored, with a `docstamp:` line in column 0. Only those frontmatters are parsed, strictly ([SPEC §9.2](docs/SPEC.md#92-yaml-profile)). A malformed block makes only that file `invalid`.
+- **Which files.** Those the config key `include` selects (default `**/*.md`), not ignored, with a `docstamp:` line in column 0. Only those frontmatters are parsed, strictly ([SPEC §9.2](packages/docstamp/docs/SPEC.md#92-yaml-profile)). A malformed block makes only that file `invalid`.
 - **With a configuration file.** Both kinds live side by side; `update --all` covers both, and the lock holds only `files`. A file declared both ways is `E_DUPLICATE_DECLARATION`.
-- **Docs depending on docs.** The `hash:` line is not part of a doc's content when another doc hashes it, so re-stamping a doc leaves its dependents `ok` ([SPEC §10.2](docs/SPEC.md#102-normalized-content)).
+- **Docs depending on docs.** The `hash:` line is not part of a doc's content when another doc hashes it, so re-stamping a doc leaves its dependents `ok` ([SPEC §10.2](packages/docstamp/docs/SPEC.md#102-normalized-content)).
 - **Moving a doc.** Its declaration and hash travel with it; dependencies on its old path need the new one.
-- **Formatters.** Reflowing the frontmatter changes the doc (its dependents go stale); rewriting the `hash:` line makes it `invalid`. Exclude the block from formatters. A comment or whitespace edit inside the block counts as a change too ([SPEC §9.6.4](docs/SPEC.md#964-stamping)).
-- **Schema and typos.** The package ships `schema-frontmatter.json` for frontmatter validators (`docstamp help schema`). An unknown key is one `E_UNKNOWN_KEY`, and a near miss names the real key: `dependecies: Remove or correct the key; did you mean "dependencies"?` ([SPEC §9.3](docs/SPEC.md#93-reading)).
-- **Changed files** come from git history of the doc's own `hash:` line ([SPEC §12.3](docs/SPEC.md#123-changedsince)); a doc renamed since the review prints `depends` lines instead.
+- **Formatters.** Reflowing the frontmatter changes the doc (its dependents go stale); rewriting the `hash:` line makes it `invalid`. Exclude the block from formatters. A comment or whitespace edit inside the block counts as a change too ([SPEC §9.6.4](packages/docstamp/docs/SPEC.md#964-stamping)).
+- **Schema and typos.** The package ships `schema-frontmatter.json` for frontmatter validators (`docstamp help schema`). An unknown key is one `E_UNKNOWN_KEY`, and a near miss names the real key: `dependecies: Remove or correct the key; did you mean "dependencies"?` ([SPEC §9.3](packages/docstamp/docs/SPEC.md#93-reading)).
+- **Changed files** come from git history of the doc's own `hash:` line ([SPEC §12.3](packages/docstamp/docs/SPEC.md#123-changedsince)); a doc renamed since the review prints `depends` lines instead.
 
 ## Working with AI agents
 
@@ -173,7 +173,7 @@ src/cli/run.ts
   README.md   via src/cli
 ```
 
-A file argument is resolved against the current directory, not `--root`, and the output is relative to the root. A path that is neither tracked nor on disk prints `(no dependents)` and a `W_UNKNOWN_PATH` warning, with exit 0, so a typo shows but a script keeps working. `--transitive` also lists docs that depend on those docs, the chain that goes stale one review round after another; a doc reached again is marked `(listed above)` or `(listed below)`, a cycle `(cycle)`, and neither is followed again ([SPEC §13.8](docs/SPEC.md#138-listdependents)). With `--json` each dependent also has `dependents` (nested), `cycle` and `repeated`.
+A file argument is resolved against the current directory, not `--root`, and the output is relative to the root. A path that is neither tracked nor on disk prints `(no dependents)` and a `W_UNKNOWN_PATH` warning, with exit 0, so a typo shows but a script keeps working. `--transitive` also lists docs that depend on those docs, the chain that goes stale one review round after another; a doc reached again is marked `(listed above)` or `(listed below)`, a cycle `(cycle)`, and neither is followed again ([SPEC §13.8](packages/docstamp/docs/SPEC.md#138-listdependents)). With `--json` each dependent also has `dependents` (nested), `cycle` and `repeated`.
 
 `docstamp list-dependencies <doc>` shows what a doc depends on and which files the patterns select, without reading the lock:
 
@@ -189,16 +189,16 @@ Every command except `help` and `version` takes `--json`, so an agent can read t
 
 ## Writing good dependencies
 
-The pattern language is `docstamp help patterns` and [SPEC §8](docs/SPEC.md#8-patterns).
+The pattern language is `docstamp help patterns` and [SPEC §8](packages/docstamp/docs/SPEC.md#8-patterns).
 
 - **Bind to the narrowest files that make the doc true.** A doc that depends on all of `src` goes stale on every commit, and people then stop reading the reports. Measure it with [`docstamp stats`](#measuring-how-noisy-a-list-is).
 - **Use directories and globs.** `src/cli` selects everything under it; `src/**/*.ts` selects by shape. Patterns use `/` on every platform: `\` escapes the next character, so `src\core` is the literal `srccore`.
-- **Exclude generated or noisy files with `!`.** The last matching pattern wins, so put exclusions after the pattern they cut from. A pattern without `!` must select at least one file (`E_EMPTY_PATTERN`), and a doc whose patterns together select nothing is `E_EMPTY_DEPENDENCIES`. An exclusion that matches no file is only a warning (`W_EMPTY_EXCLUSION`), so a standard block such as `!src/core/**/__test__/**` can be copied into every doc before any test folder exists. An exclusion that a later pattern undoes is `W_SHADOWED_EXCLUSION`, unless the later pattern names the file by its own path ([SPEC §8.5](docs/SPEC.md#85-resolution)). The same pattern twice in one doc is `W_DUPLICATE_PATTERN`. Warnings never change the selection, the hash, the verdict or the exit code.
+- **Exclude generated or noisy files with `!`.** The last matching pattern wins, so put exclusions after the pattern they cut from. A pattern without `!` must select at least one file (`E_EMPTY_PATTERN`), and a doc whose patterns together select nothing is `E_EMPTY_DEPENDENCIES`. An exclusion that matches no file is only a warning (`W_EMPTY_EXCLUSION`), so a standard block such as `!src/core/**/__test__/**` can be copied into every doc before any test folder exists. An exclusion that a later pattern undoes is `W_SHADOWED_EXCLUSION`, unless the later pattern names the file by its own path ([SPEC §8.5](packages/docstamp/docs/SPEC.md#85-resolution)). The same pattern twice in one doc is `W_DUPLICATE_PATTERN`. Warnings never change the selection, the hash, the verdict or the exit code.
 - **Depend on the source of generated output, not on the output.** Files that `.gitignore` or the `ignore` list excludes cannot be dependencies, whether or not they exist on disk. When a literal path names such a file, `E_EMPTY_PATTERN` says it exists but is ignored, instead of suggesting a typo. `gitignore: false` ends the exclusion for every `.gitignore` in the repository, not for one path.
 - **Do not depend on the lock, the configuration or the doc itself.** The root configuration and lock are not selectable, and a file is never one of its own dependencies, so editing a doc never makes it stale.
-- **Know what counts as a change.** A file is hashed as it is, except that CR LF becomes LF in text files ([SPEC §10.2](docs/SPEC.md#102-normalized-content)). A changed license header, whitespace, a final newline, a byte order mark and every binary file all count, byte for byte. Renaming or moving a dependency counts too.
-- **Commit the lock separately from the edits.** The changed-file list is the difference from the commit that introduced the lock entry. An edit committed in the same commit as `docstamp update` makes the doc stale but is not listed, because docstamp stores one hash and no commit id ([SPEC §12.3](docs/SPEC.md#123-changedsince)).
-- **Lock conflicts.** Two branches that update the same doc conflict on that doc's line in the lock. Take either side, run `docstamp`, review what it reports stale, and write again ([SPEC §11.2](docs/SPEC.md#112-canonical-form)).
+- **Know what counts as a change.** A file is hashed as it is, except that CR LF becomes LF in text files ([SPEC §10.2](packages/docstamp/docs/SPEC.md#102-normalized-content)). A changed license header, whitespace, a final newline, a byte order mark and every binary file all count, byte for byte. Renaming or moving a dependency counts too.
+- **Commit the lock separately from the edits.** The changed-file list is the difference from the commit that introduced the lock entry. An edit committed in the same commit as `docstamp update` makes the doc stale but is not listed, because docstamp stores one hash and no commit id ([SPEC §12.3](packages/docstamp/docs/SPEC.md#123-changedsince)).
+- **Lock conflicts.** Two branches that update the same doc conflict on that doc's line in the lock. Take either side, run `docstamp`, review what it reports stale, and write again ([SPEC §11.2](packages/docstamp/docs/SPEC.md#112-canonical-form)).
 
 ## Sharing a list with presets
 
@@ -221,11 +221,11 @@ A doc's patterns are its own `dependencies`, then each preset's patterns in `use
 - **An own `use` replaces the defaults.** `use: [spec]` gets `spec` only; write `use: [spec, tests]` to keep both, or `use: []` (accepted only when `default-presets` exists) for none. Inline docs get the `default-presets` of the root configuration.
 - **The hash depends on the selected files only.** Editing a preset makes a doc stale exactly when it changes which files the doc selects. Nothing in the lock or an inline `hash:` mentions presets.
 - **Warnings.** A preset exclusion that matches no file raises no `W_EMPTY_EXCLUSION`; a preset inclusion that matches nothing is `E_EMPTY_PATTERN` naming the preset. List exclusion presets last: `use: [no-tests, more-src]` selects the tests again and warns `W_SHADOWED_EXCLUSION`.
-- **`dependencies` stays required**, with at least one pattern of the doc's own. With `--json`, a doc that uses presets also has `use` and `origins`. Details: [SPEC §8.6](docs/SPEC.md#86-presets), `docstamp help presets`.
+- **`dependencies` stays required**, with at least one pattern of the doc's own. With `--json`, a doc that uses presets also has `use` and `origins`. Details: [SPEC §8.6](packages/docstamp/docs/SPEC.md#86-presets), `docstamp help presets`.
 
 ## Depend on part of a file (plugins)
 
-A pattern depends on a whole file. When a doc rests on one section of a long guide, an edit to any other section still makes it stale. A *plugin* teaches docstamp to hash one part of a file: you write it, register it in a script configuration, and name the part with `select`. docstamp stays format-agnostic; the plugin decides what a selector means ([SPEC §8.7](docs/SPEC.md#87-selected-dependencies)).
+A pattern depends on a whole file. When a doc rests on one section of a long guide, an edit to any other section still makes it stale. A *plugin* teaches docstamp to hash one part of a file: you write it, register it in a script configuration, and name the part with `select`. docstamp stays format-agnostic; the plugin decides what a selector means ([SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies)).
 
 A plugin is an object with a `name`, `apiVersion: 1`, the `files` patterns it handles, and a synchronous `extract({ path, text, select })` that returns `{ hashes }`, one hash string per part it finds. This one hashes the body of a Markdown heading:
 
@@ -307,8 +307,8 @@ next: review each stale file against its dependencies, then run: docstamp update
   run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
-- **One part, by default.** `select` is any plain value with finite numbers only, passed to the plugin as it is. Two entries with the same `path` and `select` are one dependency: the first wins, with its `match`. The plugin returning no hash is `E_SELECT_NOT_FOUND`, and more than one is `E_SELECT_AMBIGUOUS`, unless the entry says `match: 'all'`, which hashes every part found. An invalid plugin, or two claiming one file, is `E_PLUGIN`; no plugin claiming the file, or a plugin that throws on it, is `E_SELECT` ([SPEC §8.7](docs/SPEC.md#87-selected-dependencies)).
-- **Script configuration only.** `plugins` is a key of `docstamp.config.ts` or `.js`, not of `docstamp.yaml` or an inline block ([SPEC §9.5](docs/SPEC.md#95-script-carriers)).
+- **One part, by default.** `select` is any plain value with finite numbers only, passed to the plugin as it is. Two entries with the same `path` and `select` are one dependency: the first wins, with its `match`. The plugin returning no hash is `E_SELECT_NOT_FOUND`, and more than one is `E_SELECT_AMBIGUOUS`, unless the entry says `match: 'all'`, which hashes every part found. An invalid plugin, or two claiming one file, is `E_PLUGIN`; no plugin claiming the file, or a plugin that throws on it, is `E_SELECT` ([SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies)).
+- **Script configuration only.** `plugins` is a key of `docstamp.config.ts` or `.js`, not of `docstamp.yaml` or an inline block ([SPEC §9.5](packages/docstamp/docs/SPEC.md#95-script-carriers)).
 - **A literal path.** `path` names one file, never a glob.
 - **No changed-file list yet.** A stale file with selected dependencies prints its declaration, as above, and `changes` in `--json` is `null`; read the part yourself.
 - **Determinism is the plugin author's duty.** A plugin runs in your process and docstamp trusts its hashes. Keep it independent of the clock, the network and the environment.
@@ -342,7 +342,7 @@ Three files of one small directory became the directory, with an exclusion for t
 
 - **What `--write` touches.** Only the block; every other byte stays, and a second run gives the same bytes. An unstamped block keeps its patterns and gets the `new` proposals appended. It refuses a block with a `hash`, a `use` list it would rewrite, or a doc declared in the configuration file.
 - **A diff against what is declared.** A `status` column says `declared`, `covered` or `new`, and `only declared  <pattern>` lines list the rest.
-- **Read it before you keep it.** A directory mention can select hundreds of files, and a mention may be an illustration. Rules: [SPEC §12.6](docs/SPEC.md#126-proposal), [§13.10](docs/SPEC.md#1310-suggest).
+- **Read it before you keep it.** A directory mention can select hundreds of files, and a mention may be an illustration. Rules: [SPEC §12.6](packages/docstamp/docs/SPEC.md#126-proposal), [§13.10](packages/docstamp/docs/SPEC.md#1310-suggest).
 
 ## Measuring how noisy a list is
 
@@ -363,7 +363,7 @@ legend: patterns declared, files they select, commits and distinct days that wou
 - **The window.** `--since <n>d` (default `30d`, 1 to 3650) counts back from now by commit time; `--from <rev>` is `<rev>..HEAD` and gives the same answer twice. Not both. Merge commits are left out; a rename touches both paths.
 - **Resolved at HEAD.** Files deleted or renamed inside the window are not seen, so a reorganization understates staleness.
 - **Needs full history.** A shallow clone, no work tree, no commit, or a bad `--from` is `E_HISTORY` (exit 2).
-- **Named docs and JSON.** `docstamp stats <doc>` measures only that doc. `--json` has the same numbers (`staleRate`, `sweepShare`, ...) and a `window` object ([SPEC §13.9](docs/SPEC.md#139-stats)).
+- **Named docs and JSON.** `docstamp stats <doc>` measures only that doc. `--json` has the same numbers (`staleRate`, `sweepShare`, ...) and a `window` object ([SPEC §13.9](packages/docstamp/docs/SPEC.md#139-stats)).
 
 ## Reference
 
@@ -380,7 +380,7 @@ legend: patterns declared, files they select, commits and distinct days that wou
 | `docstamp help [<command> \| <topic>]` | The index, or one page: `help check`, `help patterns`, `help diagnostics E_EMPTY_PATTERN` (codes may be lower case). `docstamp <command> --help` (or `-h`) is that command's page. An unknown name is `E_USAGE`. |
 | `docstamp version` | The installed version. |
 
-Every command except `help` and `version` takes `--json` and `--root <dir>` (a directory, never another option). A command that fails before evaluating (bad configuration, lock, root or file argument) prints only its diagnostics, with no summary line, and never a partial report: `E_UNKNOWN_FILE` for a file inside the root that is not stamped, `E_USAGE` for an argument outside the root (arguments resolve against the current directory, not `--root`). `--files` and the old `--write` of `check` were replaced by `list-dependencies` and `update`. Command line: [SPEC §13](docs/SPEC.md#13-command-line).
+Every command except `help` and `version` takes `--json` and `--root <dir>` (a directory, never another option). A command that fails before evaluating (bad configuration, lock, root or file argument) prints only its diagnostics, with no summary line, and never a partial report: `E_UNKNOWN_FILE` for a file inside the root that is not stamped, `E_USAGE` for an argument outside the root (arguments resolve against the current directory, not `--root`). `--files` and the old `--write` of `check` were replaced by `list-dependencies` and `update`. Command line: [SPEC §13](packages/docstamp/docs/SPEC.md#13-command-line).
 
 ### Exit codes
 
@@ -391,19 +391,19 @@ Every command except `help` and `version` takes `--json` and `--root <dir>` (a d
 | 2 | An error, an `invalid` file, or a usage error. |
 | 70 | An unexpected internal failure. |
 
-Warnings never affect the exit code. Full table: [SPEC §16](docs/SPEC.md#16-exit-codes).
+Warnings never affect the exit code. Full table: [SPEC §16](packages/docstamp/docs/SPEC.md#16-exit-codes).
 
 ### Configuration
 
-Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules), `presets` ([shared lists](#sharing-a-list-with-presets)), `default-presets` (presets for every doc), `plugins` (script configurations only, [below](#depend-on-part-of-a-file-plugins)) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
+Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](packages/docstamp/docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](packages/docstamp/docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules), `presets` ([shared lists](#sharing-a-list-with-presets)), `default-presets` (presets for every doc), `plugins` (script configurations only, [below](#depend-on-part-of-a-file-plugins)) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
 
 For editor completion in YAML, start the file with `# yaml-language-server: $schema=https://unpkg.com/docstamp/schema.json` (offline: `$schema=./node_modules/docstamp/schema.json`); the package ships it as `schema.json`.
 
-A script must export plain data only, except the `plugins` list ([SPEC §9.5](docs/SPEC.md#95-script-carriers), [plugins](#depend-on-part-of-a-file-plugins)). TypeScript runs through Node's type stripping, so only erasable syntax works (no `enum`, no value `namespace`). TypeScript and JavaScript configurations were verified on Node.js 24.18.1. Evaluating the file may import other files; docstamp does not track them, so import only `docstamp`.
+A script must export plain data only, except the `plugins` list ([SPEC §9.5](packages/docstamp/docs/SPEC.md#95-script-carriers), [plugins](#depend-on-part-of-a-file-plugins)). TypeScript runs through Node's type stripping, so only erasable syntax works (no `enum`, no value `namespace`). TypeScript and JavaScript configurations were verified on Node.js 24.18.1. Evaluating the file may import other files; docstamp does not track them, so import only `docstamp`.
 
 ### JSON output
 
-`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](docs/SPEC.md#145-json-mode)); `docstamp help json` has every shape. Here is the stale `README.md` from the Quick start:
+`--json` carries the same content as the text output, machine-formatted ([SPEC §14.5](packages/docstamp/docs/SPEC.md#145-json-mode)); `docstamp help json` has every shape. Here is the stale `README.md` from the Quick start:
 
 ```json
 {
@@ -420,7 +420,7 @@ A script must export plain data only, except the `plugins` list ([SPEC §9.5](do
 
 ### GitHub Actions
 
-The repository ships a composite action. It runs `docstamp`, writes the report to the job summary, posts it as one pull request comment that later runs update, and fails the job on exit 1 or 2. Fetch full history so the changed-file report can read it ([SPEC §12.3](docs/SPEC.md#123-changedsince)); the verdict itself does not need it. Replace `<version>` with a released version that contains `action.yml`; there is no floating tag before 1.0, because a breaking change raises the minor version.
+The repository ships a composite action. It runs `docstamp`, writes the report to the job summary, posts it as one pull request comment that later runs update, and fails the job on exit 1 or 2. Fetch full history so the changed-file report can read it ([SPEC §12.3](packages/docstamp/docs/SPEC.md#123-changedsince)); the verdict itself does not need it. Replace `<version>` with a released version that contains `action.yml`; there is no floating tag before 1.0, because a breaking change raises the minor version.
 
 ```yaml
 name: Docs
@@ -493,7 +493,7 @@ jobs:
 
 ### Upgrading
 
-From a version 1 lock (`docsync.lock`): delete it, review every file, then run `docstamp update --all` ([SPEC §11.1](docs/SPEC.md#111-reading)).
+From a version 1 lock (`docsync.lock`): delete it, review every file, then run `docstamp update --all` ([SPEC §11.1](packages/docstamp/docs/SPEC.md#111-reading)).
 
 From a version 1 configuration (`dependents` and `covers`): rename `dependents` to `files` and `covers` to `dependencies`, and set `version: 2`. Then run `docstamp update --all` to rewrite the version 2 lock as version 3; the hashes do not change, so first review the files with the previous docstamp version or `git diff`, because the version 2 lock stops `docstamp check` (E_LOCK_VERSION) and it reports nothing stale.
 
@@ -507,7 +507,7 @@ Your committed lock and your CI are what docstamp protects:
 - Breaking changes (hashes, selection, file formats, verdicts, exit codes, error codes, `--json`, the Node.js floor) raise the minor version before 1.0 and the major version after.
 - Each breaking change carries a migration note, shown as "BREAKING CHANGES" in the [release notes](https://github.com/nam-hle/docstamp/releases).
 
-Full policy: [SPEC §17](docs/SPEC.md#17-compatibility).
+Full policy: [SPEC §17](packages/docstamp/docs/SPEC.md#17-compatibility).
 
 ## Why not just ...
 
@@ -517,9 +517,9 @@ Full policy: [SPEC §17](docs/SPEC.md#17-compatibility).
 
 ## Beyond docs
 
-The mechanism does not care that the dependent file is a doc. Any hidden link between two files can be declared the same way: a schema and the fixtures that mirror it, a migration and its seed data, generated code and the template it comes from. Any file in the repository can have dependencies, and any file can be one ([SPEC §1](docs/SPEC.md#1-scope)).
+The mechanism does not care that the dependent file is a doc. Any hidden link between two files can be declared the same way: a schema and the fixtures that mirror it, a migration and its seed data, generated code and the template it comes from. Any file in the repository can have dependencies, and any file can be one ([SPEC §1](packages/docstamp/docs/SPEC.md#1-scope)).
 
-More: [docs/SPEC.md](docs/SPEC.md), the contract for all observable behavior; [docs/PRINCIPLES.md](docs/PRINCIPLES.md), the principles every change is held to; [docs/VISION.md](docs/VISION.md), why docstamp exists.
+More: [packages/docstamp/docs/SPEC.md](packages/docstamp/docs/SPEC.md), the contract for all observable behavior; [docs/PRINCIPLES.md](docs/PRINCIPLES.md), the principles every change is held to; [docs/VISION.md](docs/VISION.md), why docstamp exists.
 
 ## Contributing
 

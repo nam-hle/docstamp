@@ -1,24 +1,32 @@
 version: 2
 include:
   - "**/*.md"
-  - "!tests/e2e/fixtures"
+  - "!packages/docstamp/tests/e2e/fixtures"
 files:
   CLAUDE.md:
     dependencies:
-      - src
-      - tsup.config.ts
-      - vitest.config.ts
+      - packages/docstamp/src
+      - packages/docstamp/tsup.config.ts
+      - packages/docstamp/vitest.config.ts
+      - packages/docstamp/tsconfig.json
+      - tsconfig.base.json
       - tsconfig.json
+      - vitest.config.ts
       - knip.json
       - .oxfmtrc.json
+      - nadle.config.ts
+      - pnpm-workspace.yaml
       - .github
       - action
       - action.yml
       - release-please-config.json
   README.md:
     dependencies:
-      - src/cli
-      - docs/SPEC.md
-  docs/SPEC.md:
+      - packages/docstamp/src/cli
+      - packages/docstamp/docs/SPEC.md
+  packages/docstamp/README.md:
     dependencies:
-      - src
+      - packages/docstamp/src/cli
+  packages/docstamp/docs/SPEC.md:
+    dependencies:
+      - packages/docstamp/src

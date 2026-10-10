@@ -1,5 +1,5 @@
 name: Bug report
-description: Something docstamp does contradicts docs/SPEC.md or looks wrong
+description: Something docstamp does contradicts packages/docstamp/docs/SPEC.md or looks wrong
 labels:
   - bug
 body:
@@ -50,6 +50,6 @@ body:
     id: expected
     attributes:
       label: Expected behavior
-      description: What you expected instead. Cite the docs/SPEC.md clause if there is one.
+      description: What you expected instead. Cite the packages/docstamp/docs/SPEC.md clause if there is one.
     validations:
       required: true

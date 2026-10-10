@@ -3,7 +3,7 @@
 A deterministic snapshot gate for hidden links between files. Each file (usually a doc, but
 any file) declares the files it depends on (its dependencies); `docstamp` fails when they changed
 since the file was last reviewed, and `docstamp update <file>` records the review. Terms are
-defined in [SPEC §4](docs/SPEC.md#4-terms); use them, not synonyms.
+defined in [SPEC §4](packages/docstamp/docs/SPEC.md#4-terms); use them, not synonyms.
 
 Why it is built this way is imported below and binds every change. Read both before anything
 else, and check the work against them.
@@ -13,7 +13,7 @@ else, and check the work against them.
 
 ## The contract
 
-[docs/SPEC.md](docs/SPEC.md) defines all observable behavior: formats, algorithms, output, exit
+[packages/docstamp/docs/SPEC.md](packages/docstamp/docs/SPEC.md) defines all observable behavior: formats, algorithms, output, exit
 codes. It is the source of truth.
 
 - Behavior changes start in the spec, then code and tests follow in the same change.
@@ -30,8 +30,18 @@ Node.js >= 24. ESM only.
 
 ## Tooling
 
-- **pnpm** is the only package manager. Never delete `pnpm-lock.yaml`; update it in place.
-- **TypeScript 7**, strict, `tsc --noEmit` over src, action, tests and root configs.
+- **pnpm** is the only package manager, with a workspace (`pnpm-workspace.yaml`: `packages/*`). The
+  repository root is private and holds the shared tools; the published package is
+  `packages/docstamp`. Never delete `pnpm-lock.yaml`; update it in place.
+- **nadle** (`nadle.config.ts` at the root) is the build tool. `pnpm build`, `pnpm test`,
+  `pnpm format`, `pnpm schema` and `pnpm clean` are aliases onto its tasks; every other step is
+  `pnpm nadle <task>` (`pnpm nadle --list` shows them by group, `--explain <task>` says what a task
+  depends on). A package's tasks run with `workingDir` set to it. `formatCheck`, `lint`, `typecheck`
+  and `knip` cache their passing verdict, and list every file that can change it as inputs. Extra
+  arguments reach the tool after `--`: `pnpm nadle testE2e -- -u`.
+- **TypeScript 7**, strict, `tsc --noEmit`: the package's `tsconfig.json` over its src, tests,
+  scripts and configs; the root `tsconfig.json` over `action/` and the root configs; both extend
+  `tsconfig.base.json`.
 - **tsup** bundles `src/index.ts` into a single `dist/index.js` with a `docstamp` bin, and
   `src/lib.ts` (`defineConfig`, `definePlugin`, `DocstampConfig`) into `dist/lib.js`; `tsc` emits its `.d.ts`
   (tsup's own dts build does not work with TypeScript 7). `schema.json` and
@@ -41,25 +51,50 @@ Node.js >= 24. ESM only.
   (`src/inline/keys.ts`, `src/config/value.ts`).
 - **`action/*.ts`** runs on the runner under Node's type stripping, from the action's checkout:
   import only other `action/` modules with `.ts` extensions, never `src/`, and no enums.
-- **vitest** for unit and end-to-end tests.
+- **vitest** for unit and end-to-end tests: the package has its own configuration; the root one
+  runs the Action's tests (`action/*.test.ts`).
 - **oxlint** (type-aware) and **oxfmt** for lint and format; `pnpm format` orders imports, never
   by hand.
-- **knip** for unused dependencies, files and exports.
+- **knip** for unused dependencies, files and exports, one configuration with a section per
+  workspace. The tools nadle runs by name (`oxfmt`, `oxlint`, `oxlint-tsgolint`) are declared
+  as wired by string.
 - No commit hooks are installed; the gate is the only enforcement.
 - The only runtime dependency is **yaml**. Any other dependency needs a stated reason and the
   user's approval.
 
 ## The gate
 
-`pnpm test` runs format check, lint, types, knip, the build, every test suite (unit, end-to-end,
-pack) and `docstamp` itself. Run it before committing.
+`pnpm test` is `nadle test --continue`: it runs format check, lint, types, knip, the build, every
+test suite (unit, Action, end-to-end, pack) and `docstamp` itself, in parallel where the task graph
+allows, and reports every failure. Run it before committing.
 Nothing narrower is a substitute: a single vitest file or a successful build is iteration, not
 verification. If the gate cannot run, say which steps did.
 
 ## Layout
 
+The code, the tests and the contract live in the package `packages/docstamp/`. Paths below, and in
+the rest of this file, are relative to it (`src/cli/run.ts` is `packages/docstamp/src/cli/run.ts`),
+except the root files named in the tree and `docs/PRINCIPLES.md`, `docs/VISION.md` at the root.
+The contract is `packages/docstamp/docs/SPEC.md`, written `SPEC` or by clause (`§8.7`).
+
 ```
-docstamp/
+docstamp/                   # private workspace root
+├── packages/
+│   └── docstamp/           # the published package `docstamp`; its tree is below
+├── action.yml              # the composite GitHub Action (GitHub needs it at the root)
+├── action/                 # render.ts (report to PR comment, pure), run.ts (summary, comment
+│                           #   upsert) and their tests, run under Node's type stripping
+├── docs/                   # PRINCIPLES.md, VISION.md: they bind the whole repository
+├── nadle.config.ts         # the task graph; pnpm-workspace.yaml lists packages/*
+├── tsconfig.base.json      # strictness shared by every tsconfig; tsconfig.json covers action/
+├── docstamp.yaml, docstamp-lock.yaml   # docstamp on this repository
+├── README.md, CLAUDE.md, CONTRIBUTING.md, ...   # the landing page and the community files
+└── .github/, release-please-config.json, knip.json, .oxfmtrc.json, ...
+```
+
+Inside `packages/docstamp/`:
+
+```
 ├── src/
 │   ├── index.ts          # entry; wires the CLI
 │   ├── lib.ts            # library entry: defineConfig, definePlugin, DocstampConfig (§9.5)
@@ -75,8 +110,6 @@ docstamp/
 │   ├── engine/           # evaluation, presets, reverse lookup, stats, proposal; pure, no I/O (§8.6, §12, §12.5, §12.6, §13.8)
 │   ├── history/          # changed-file report (§12.3), stats replay (§12.4), renamed path (§12.7), git, read-only
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
-├── action.yml            # the composite GitHub Action; installs docstamp, runs it, reports
-├── action/               # render.ts (report to PR comment, pure), run.ts (summary, comment upsert)
 ├── scripts/              # write-schema.ts: regenerates schema.json and schema-frontmatter.json
 ├── tests/
 │   ├── helpers/          # temp-repo fixture builder, golden tree (§17.7)
@@ -87,16 +120,17 @@ docstamp/
 │       ├── fixtures/     # plain trees copied into a temp repo; data, not code
 │       ├── __snapshots__/<scenario>/NN-<args>.txt   # full result of every run
 │       └── pack.test.ts  # npm pack, extract, run from node_modules
-└── docs/
-    ├── SPEC.md           # the contract
-    ├── PRINCIPLES.md
-    └── VISION.md
+├── docs/SPEC.md          # the contract, shipped in the package
+├── schema.json, schema-frontmatter.json   # generated by `pnpm schema`, shipped
+├── tsup.config.ts, tsconfig.json, tsconfig.lib.json, vitest.config.ts
+└── package.json, README.md (the short npm page), CHANGELOG.md, LICENSE
 ```
 
 ## End-to-end tests
 
-`pnpm test:e2e` runs `node dist/index.js` as a child process (never imported) in a temp repo, so
-build first; `pnpm test:pack` packs the repo, extracts it into `node_modules` and runs the bin.
+`pnpm nadle testE2e` runs `node dist/index.js` as a child process (never imported) in a temp repo,
+and builds first; `pnpm nadle testPack` packs the package, extracts it into `node_modules` and
+runs the bin.
 Every scenario asserts the exit code and the semantics, and snapshots the full result.
 
 - **Scenario**: `scenario(name, { fixture?, git?, linkLib?, skipIf? }, async (repo) => ...)` in
@@ -114,7 +148,7 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
   linted, type-checked, collected by vitest or scanned by knip; a `docstamp.config.ts` there imports `docstamp` through
   `linkLib: true`, which links the repo as `node_modules/docstamp`. A fixture file that the fixture's own `.gitignore` ignores (it is the point of the file) is added with `git add -f`, or a fresh `git archive` loses it.
 - **Snapshots**: only the temp root becomes `<root>`; hashes stay real, which pins hash
-  stability. After a deliberate behavior change run `pnpm test:e2e -u`, then read every changed
+  stability. After a deliberate behavior change run `pnpm nadle testE2e -- -u`, then read every changed
   snapshot: a snapshot of a bug is not a test. Obsolete snapshots fail the run: a scenario
   fails on files in its folder that it did not produce, and `snapshot-guard.test.ts` fails on a
   folder no scenario names. Delete what they list after renaming or removing a scenario.
@@ -159,7 +193,7 @@ Only what no test can check stays here.
 ## Commits
 
 Conventional Commits (by convention, not enforced by tooling). `!` marks a breaking change as
-classified by [SPEC §17.2](docs/SPEC.md#172-breaking-changes). Commit types drive releases, so get
+classified by [SPEC §17.2](packages/docstamp/docs/SPEC.md#172-breaking-changes). Commit types drive releases, so get
 them right.
 
 ## Inline declarations
@@ -185,8 +219,8 @@ change to the generic list, a threshold or a mention rule starts there.
 
 ## Help
 
-`docstamp help` (SPEC §13.11) must teach everything without the repository: the README is not in
-the package, `docs/SPEC.md` is. The pages are static text: `src/cli/help-commands.ts` (one page per
+`docstamp help` (SPEC §13.11) must teach everything without the repository: the landing README is
+not in the package (only a short one that links to it), `docs/SPEC.md` is. The pages are static text: `src/cli/help-commands.ts` (one page per
 command of `COMMANDS` in `src/cli/args.ts`), `src/cli/help-topics.ts`, `src/cli/help-diagnostics.ts`
 (a `Record<Code, ...>`, so a new code does not compile without its entry); `src/cli/help.ts` renders
 and looks them up. `tests/unit/help.test.ts` pins them to the parser (every accepted option on its
@@ -250,7 +284,7 @@ Every one goes through `git` in `src/history/git.ts`, which applies step 1: no `
 
 `tests/unit/golden.test.ts` pins exact file hashes, Dependency Hashes and selected file lists for
 the fixed trees in `tests/helpers/golden-tree.ts` (`GOLDEN_TREE`, and `INLINE_GOLDEN_TREE` for inline
-files; [SPEC §17.7](docs/SPEC.md#177-pinned-vectors)). A
+files; [SPEC §17.7](packages/docstamp/docs/SPEC.md#177-pinned-vectors)). A
 failure there is a breaking change, not a stale test: never edit a literal to make it pass.
 To change one on purpose, follow "Breaking changes" in [CONTRIBUTING.md](CONTRIBUTING.md): spec
 first, bump the Lockfile version, then regenerate the literals and review each diff.
@@ -259,34 +293,37 @@ first, bump the Lockfile version, then regenerate the literals and review each d
 
 - The npm package, the command, the config files, the GitHub repository and the repository directory
   are all named `docstamp`.
-- `.github/workflows/ci.yml` runs the phases of `pnpm test` on every pull request and push to `main`,
-  in one `Test (<os>)` matrix job for Linux, macOS and Windows, then `npm pack --dry-run` to
-  prove the tarball builds. It does not dry-run `npm publish`: that fails once the
-  version in `package.json` is already on npm, which is true after every release. A `Docs gate`
+- `.github/workflows/ci.yml` runs `pnpm test` (the whole gate, one step) on every pull request and
+  push to `main`, in one `Test (<os>)` matrix job for Linux, macOS and Windows, then
+  `npm pack ./packages/docstamp --dry-run` to prove the tarball builds. It does not dry-run
+  `npm publish`: that fails once the version in `packages/docstamp/package.json` is already on npm,
+  which is true after every release. A `Docs gate`
   job packs the build and runs `action.yml` on this repository (`uses: ./`), the same file users
   call, so the Action is dogfooded and the PR comment appears on our own pull requests.
 - `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
-  the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
+  the commits on `main` that touch `packages/docstamp`; it writes the version and `CHANGELOG.md`
+  there. Never edit either by hand.
 - Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
   `.github/workflows/publish.yml` for that tag. It builds, runs the unit, end-to-end and pack
-  tests (not the docs self-check) and **stages** the version on npm with
-  `npm stage publish --provenance`. There is no npm token: npm trusts this workflow through a
+  tests (`pnpm nadle verifyRelease`, not the docs self-check) and **stages** the version on npm
+  with `npm stage publish --provenance`, run in `packages/docstamp`. There is no npm token: npm trusts this workflow through a
   Trusted Publisher configured on npmjs.com for `nam-hle/docstamp` and `publish.yml` (the job holds
   `id-token: write`; npm 11.5.1 or newer, with `npm stage`, is checked first). That Trusted
   Publisher may only stage: the version goes live when a person approves it with 2FA, with
   `npm stage list docstamp` then `npm stage approve <stage-id>`, or on npmjs.com. A release is not
   done until it is approved. Provenance requires the repository to be public.
 - To retry a failed publish, run the Publish workflow from `main` with the release tag as input.
-  It refuses a tag that is not on `main` or whose version differs from `package.json`. Nothing
-  else stages.
-- Version bumps edit `package.json`, so the docs deliberately do not depend on it: a release must
-  not make the docs check fail.
+  It refuses a tag that is not on `main` or whose version differs from
+  `packages/docstamp/package.json`. Nothing else stages.
+- Version bumps edit `packages/docstamp/package.json`, so the docs deliberately do not depend on
+  it: a release must not make the docs check fail.
 
 ## Public repository
 
 The repository is public and used by strangers, so the root files are part of the product:
 
 - `README.md` is the landing page. Every command and output in it was run for real; keep it so.
+  The package has its own short `README.md` (what npm shows); it links here instead of repeating.
 - `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and `SECURITY.md` are the community files. Contact goes
   through GitHub-native channels (private vulnerability reporting, the maintainer's profile), never
   an email address.

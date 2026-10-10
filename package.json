@@ -1,78 +1,24 @@
 {
-  "name": "docstamp",
-  "version": "0.5.0",
-  "description": "Deterministic snapshot gate for hidden links between files",
+  "name": "docstamp-workspace",
+  "private": true,
+  "description": "Workspace root of the docstamp repository; the published packages are in packages/",
   "license": "MIT",
-  "author": {
-    "name": "Nam Hoang Le",
-    "url": "https://github.com/nam-hle"
-  },
-  "homepage": "https://github.com/nam-hle/docstamp#readme",
-  "bugs": {
-    "url": "https://github.com/nam-hle/docstamp/issues"
-  },
-  "keywords": [
-    "documentation",
-    "docs",
-    "freshness",
-    "staleness",
-    "ci",
-    "ai-context",
-    "claude-md",
-    "agents-md",
-    "lockfile",
-    "snapshot",
-    "hash"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/nam-hle/docstamp.git"
-  },
   "type": "module",
-  "packageManager": "pnpm@12.5.1",
-  "publishConfig": {
-    "access": "public"
+  "scripts": {
+    "build": "nadle build",
+    "clean": "nadle clean",
+    "format": "nadle format",
+    "schema": "nadle schema",
+    "test": "nadle test --continue"
   },
-  "bin": {
-    "docstamp": "dist/index.js"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/lib.d.ts",
-      "import": "./dist/lib.js"
-    },
-    "./schema.json": "./schema.json",
-    "./schema-frontmatter.json": "./schema-frontmatter.json"
-  },
-  "files": [
-    "dist",
-    "docs/SPEC.md",
-    "schema.json",
-    "schema-frontmatter.json"
-  ],
   "engines": {
     "node": ">=24.0.0"
   },
-  "scripts": {
-    "build": "tsup && tsc -p tsconfig.lib.json",
-    "prepublishOnly": "pnpm run build",
-    "schema": "node scripts/write-schema.ts",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint --type-aware --ignore-pattern \"tests/e2e/fixtures/**\" action src tests scripts",
-    "format": "oxfmt action src tests scripts",
-    "format:check": "oxfmt --check action src tests scripts",
-    "knip": "knip",
-    "test:unit": "vitest run tests/unit",
-    "test:e2e": "vitest run tests/e2e/scenarios",
-    "test": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip && pnpm run build && node dist/index.js && pnpm run test:unit && pnpm run test:e2e && pnpm run test:pack",
-    "test:pack": "vitest run tests/e2e/pack.test.ts"
-  },
-  "dependencies": {
-    "yaml": "^2.9.1"
-  },
+  "packageManager": "pnpm@12.5.1",
   "devDependencies": {
     "@types/node": "^24.19.1",
     "knip": "^6.39.0",
+    "nadle": "^0.6.1",
     "oxfmt": "^0.71.0",
     "oxlint": "^1.86.0",
     "oxlint-tsgolint": "^7.0.2003",
