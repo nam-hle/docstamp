@@ -9,6 +9,7 @@ import type { Value } from '../../src/config/value.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import { parseBlock } from '../../src/inline/block.ts';
 import { scanFrontmatter } from '../../src/inline/frontmatter.ts';
+import { nodeHost } from '../../src/host/node-fs.ts';
 
 const dirs: string[] = [];
 const tmp = (): string => {
@@ -74,7 +75,7 @@ describe('§3.5 non-finite select', () => {
       join(dir, 'docstamp.yaml'),
       `version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - { path: a.md, select: ${select} }\n`,
     );
-    return () => readConfig(dir);
+    return () => readConfig(nodeHost, dir);
   };
 
   it.each([['.inf'], ['.nan'], ['-.inf'], ['{ a: [1, .inf] }']])(
@@ -111,7 +112,7 @@ describe('§8.7 identical selected entries', () => {
         '      - { path: a.md, select: { y: 2, x: 1 }, match: one }\n' +
         '      - { path: a.md, select: other }\n',
     );
-    expect(readConfig(dir).config.declarations[0]?.selected).toEqual([
+    expect(readConfig(nodeHost, dir).config.declarations[0]?.selected).toEqual([
       { path: 'a.md', select: { x: 1, y: 2 }, match: 'all' },
       { path: 'b.md', select: 'z', match: 'one' },
       { path: 'a.md', select: 'other', match: 'one' },
@@ -141,7 +142,7 @@ describe('§9.3 mixed dependencies (YAML)', () => {
       'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - src/**\n' +
         '      - { path: docs/guide.md, select: Install }\n',
     );
-    const { config } = readConfig(dir);
+    const { config } = readConfig(nodeHost, dir);
     expect(config.declarations[0]?.dependencies).toEqual(['src/**']);
     expect(config.declarations[0]?.selected).toEqual([
       { path: 'docs/guide.md', select: 'Install', match: 'one' },
@@ -154,7 +155,7 @@ describe('§9.3 mixed dependencies (YAML)', () => {
       join(dir, 'docstamp.yaml'),
       'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - { path: a.md, select: x, zap: 1 }\n',
     );
-    const [first] = diagnosticsOf(() => readConfig(dir));
+    const [first] = diagnosticsOf(() => readConfig(nodeHost, dir));
     expect(first).toMatchObject({ code: 'E_CONFIG', file: 'CLAUDE.md', subject: 'dependencies' });
   });
 
@@ -164,7 +165,7 @@ describe('§9.3 mixed dependencies (YAML)', () => {
       join(dir, 'docstamp.yaml'),
       'version: 2\nfiles:\n  CLAUDE.md:\n    dependancies: [a]\n',
     );
-    const diagnostics = diagnosticsOf(() => readConfig(dir));
+    const diagnostics = diagnosticsOf(() => readConfig(nodeHost, dir));
     expect(diagnostics[0]).toMatchObject({ code: 'E_CONFIG', file: 'CLAUDE.md' });
     expect(diagnostics[0]?.subject).toBe('');
     expect(diagnostics[0]?.message).toContain('did you mean "dependencies"');
@@ -182,7 +183,7 @@ describe('§9.5 script plugins', () => {
       `export default { version: 2, plugins: [${PLUGIN}], files: { 'CLAUDE.md': ` +
         `{ dependencies: [{ path:'docs/guide.md', select:'Install' }] } } };`,
     );
-    const { config, plugins } = readConfig(dir);
+    const { config, plugins } = readConfig(nodeHost, dir);
     expect(plugins).toHaveLength(1);
     expect(config.declarations[0]?.selected).toHaveLength(1);
     const loaded = loadScript(join(dir, 'docstamp.config.mjs'));
@@ -193,7 +194,7 @@ describe('§9.5 script plugins', () => {
   it('validates plugins', () => {
     const dir = tmp();
     writeScript(dir, 'export default { version: 2, plugins: [{}], files: {} };');
-    expect(diagnosticsOf(() => readConfig(dir))[0]?.code).toBe('E_PLUGIN');
+    expect(diagnosticsOf(() => readConfig(nodeHost, dir))[0]?.code).toBe('E_PLUGIN');
   });
 
   it('still rejects a function elsewhere', () => {
@@ -202,13 +203,13 @@ describe('§9.5 script plugins', () => {
       dir,
       "export default { version: 2, files: { 'a.md': { dependencies: ['x'], use: () => 1 } } };",
     );
-    expect(diagnosticsOf(() => readConfig(dir))[0]?.code).toBe('E_CONFIG');
+    expect(diagnosticsOf(() => readConfig(nodeHost, dir))[0]?.code).toBe('E_CONFIG');
   });
 
   it('rejects a function in a nested plugins key', () => {
     const dir = tmp();
     writeScript(dir, "export default { version: 2, files: { 'a.md': { plugins: () => 1 } } };");
-    expect(diagnosticsOf(() => readConfig(dir))[0]?.code).toBe('E_CONFIG');
+    expect(diagnosticsOf(() => readConfig(nodeHost, dir))[0]?.code).toBe('E_CONFIG');
   });
 
   it('turns a throwing getter on plugins into a Diagnostic', () => {
@@ -219,7 +220,7 @@ describe('§9.5 script plugins', () => {
         "Object.defineProperty(exported, 'plugins', { get() { throw new Error('x'); }, enumerable: true });\n" +
         'export default exported;',
     );
-    const [first] = diagnosticsOf(() => readConfig(dir));
+    const [first] = diagnosticsOf(() => readConfig(nodeHost, dir));
     expect(first).toMatchObject({ code: 'E_CONFIG', subject: 'plugins' });
   });
 });
@@ -228,7 +229,7 @@ describe('§9.5 plugins in YAML', () => {
   it('is E_UNKNOWN_KEY with a hint', () => {
     const dir = tmp();
     writeFileSync(join(dir, 'docstamp.yaml'), 'version: 2\nplugins: []\nfiles: {}\n');
-    const [first] = diagnosticsOf(() => readConfig(dir));
+    const [first] = diagnosticsOf(() => readConfig(nodeHost, dir));
     expect(first).toMatchObject({ code: 'E_UNKNOWN_KEY', subject: 'plugins' });
     expect(first?.message).toContain('docstamp.config');
   });

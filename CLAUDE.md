@@ -100,6 +100,7 @@ Inside `packages/docstamp/`:
 ├── src/
 │   ├── index.ts          # entry; wires the CLI
 │   ├── lib.ts            # library entry: defineConfig, definePlugin, DocstampConfig (§9.5)
+│   ├── host/             # the machine behind ports: FileSystem, Host, the Node adapter
 │   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
 │   ├── cli/              # args, path resolution, workspace load, run, suggest, help; exit codes (§13, §16)
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
@@ -164,6 +165,17 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
   portability bug: fix the code or the test, never skip it silently.
 - Tests are hermetic: no sleeps, no network, nothing outside the temp dir. Keep the suite near
   20 seconds.
+
+## The host
+
+Code under `src/` reaches the file system only through `Host.fs` (`src/host/fs.ts`), which every
+function that reads or writes receives as its first parameter; `src/host/node-fs.ts` is the one
+adapter, and `tests/unit/host-boundary.test.ts` fails on any other import of `node:fs`. Unit
+tests build a tree in memory with `inMemory({ 'a.md': '...' })` from `tests/helpers/memory-fs.ts`:
+no temporary directory, and an unreadable directory is an option, not a `chmod`.
+`tests/unit/fs-contract.test.ts` runs the same cases on the Node adapter and the in-memory one, so
+the fake cannot drift; add a case there when the port grows. A script Carrier (`import()`) and the
+`git` history still need a real directory.
 
 ## Critical Invariants
 

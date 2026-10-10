@@ -2,6 +2,7 @@ import { readConfig } from '../config/read-config.ts';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import type { Declaration, Diagnostic } from '../core/types.ts';
+import type { Host } from '../host/fs.ts';
 import { expandPresets } from '../engine/presets.ts';
 import { readInline } from '../inline/read-inline.ts';
 import type { DocstampPlugin } from '../plugin/types.ts';
@@ -17,10 +18,10 @@ export interface Workspace {
 }
 
 // SPEC §12.2 steps 1 to 5: configured and inline Declarations over one Universe
-export function loadWorkspace(root: string): Workspace {
-  const { config, attached, present, plugins } = readConfig(root);
-  const universe = computeUniverse(root, config);
-  const inline = readInline(root, universe, config.include, config.defaultPresets.length > 0);
+export function loadWorkspace(host: Host, root: string): Workspace {
+  const { config, attached, present, plugins } = readConfig(host, root);
+  const universe = computeUniverse(host, root, config);
+  const inline = readInline(host, root, universe, config.include, config.defaultPresets.length > 0);
   universe.marked = inline.marked;
   if (!present && inline.marked.size === 0) throw new Raised([diag('E_CONFIG_MISSING')]);
 

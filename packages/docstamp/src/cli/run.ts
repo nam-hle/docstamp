@@ -1,7 +1,7 @@
-import { lstatSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import type { Json, SelectedEntry } from '../core/types.ts';
+import type { Host } from '../host/fs.ts';
 import { canonicalJson } from '../plugin/canonical.ts';
 import { claim, runExtract, type Extracted } from '../plugin/plugins.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
@@ -50,24 +50,21 @@ export interface Io {
 declare const VERSION: string | undefined;
 
 // SPEC §9.4: exact-name match in the parent's listing, and a file, not a link
-function isStampedFile(root: string, path: string): boolean {
+function isStampedFile(host: Host, root: string, path: string): boolean {
   const dir = dirname(join(root, path));
   try {
-    const name = readdirSync(dir).find((n) => n.normalize('NFC') === basename(path));
-    return name !== undefined && lstatSync(join(dir, name)).isFile();
+    const entry = host.fs
+      .readDir(dir)
+      .find((e) => e.name.toString('utf8').normalize('NFC') === basename(path));
+    return entry?.kind === 'file';
   } catch {
     return false;
   }
 }
 
 // SPEC §13.2 step 2: an entry of any kind, not followed
-function isEntry(path: string): boolean {
-  try {
-    lstatSync(path);
-    return true;
-  } catch {
-    return false;
-  }
+function isEntry(host: Host, path: string): boolean {
+  return host.fs.kind(path) !== null;
 }
 
 interface Evaluated {
@@ -104,16 +101,23 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
   return memoizeBy((path: string) => path, hash);
 }
 
-function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: boolean) {
-  const { universe, declarations, attached, presets, defaultPresets, plugins } =
-    loadWorkspace(root);
+function evaluateDeclarations(
+  host: Host,
+  root: string,
+  readLockFor: () => Lock,
+  hashFiles: boolean,
+) {
+  const { universe, declarations, attached, presets, defaultPresets, plugins } = loadWorkspace(
+    host,
+    root,
+  );
   const extract = memoizeBy(
     ([path, select]: readonly [string, Json]) => `${path}\u0000${canonicalJson(select)}`,
     ([path, select]: readonly [string, Json]) =>
       runExtract(claim(plugins, path), {
         path,
         select,
-        text: selectableText(root, universe, path),
+        text: selectableText(host, root, universe, path),
       }),
   );
   // SPEC §12.3 step 11: the Fragments rule of §8.7, with null where it would raise
@@ -144,13 +148,13 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
   const lock = readLockFor();
   const renames = new Map<string, string | null>();
   const fs: EngineFs = {
-    isStampedFile: (p) => isStampedFile(root, p),
-    isIgnoredPath: (p) => isIgnoredPath(root, universe, p),
+    isStampedFile: (p) => isStampedFile(host, root, p),
+    isIgnoredPath: (p) => isIgnoredPath(host, root, universe, p),
     renamedTo: (p) => {
       if (!renames.has(p)) renames.set(p, renamedTo(root, universe, p));
       return renames.get(p)!;
     },
-    fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
+    fileHash: hashFiles ? memoizeHash((p) => fileHash(host, root, universe, p)) : () => '',
     // list mode never calls a plugin (§13.7)
     extractHashes: hashFiles ? (path, select) => extract([path, select]).hashes : () => [''],
   };
@@ -167,22 +171,22 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
 }
 
 // SPEC §12.2
-function evaluateAll(root: string, policy: 'strict' | 'discard-invalid'): Evaluated {
+function evaluateAll(host: Host, root: string, policy: 'strict' | 'discard-invalid'): Evaluated {
   const readLockFor = (): Lock => {
     try {
-      return readLock(root);
+      return readLock(host, root);
     } catch (e) {
       if (!(e instanceof Raised) || policy === 'strict') throw e;
       return { entries: new Map() };
     }
   };
-  const evaluated = evaluateDeclarations(root, readLockFor, true);
+  const evaluated = evaluateDeclarations(host, root, readLockFor, true);
   return { ...evaluated, global: orphans(evaluated.declarations, evaluated.lock) };
 }
 
 // SPEC §13.7
-function listAll(root: string): Result[] {
-  return evaluateDeclarations(root, () => ({ entries: new Map() }), false).results;
+function listAll(host: Host, root: string): Result[] {
+  return evaluateDeclarations(host, root, () => ({ entries: new Map() }), false).results;
 }
 
 // SPEC §12.3
@@ -271,6 +275,7 @@ function emit(io: Io, o: Output): number {
 
 // SPEC §13.7
 function runList(
+  host: Host,
   args: { json: boolean; root?: string; paths: string[] },
   cwd: string,
   io: Io,
@@ -279,8 +284,8 @@ function runList(
   let global: Diagnostic[] = [];
   let exitCode = 2;
   try {
-    const root = determineRoot(cwd, args.root);
-    selected = selectResults(args.paths, cwd, root, listAll(root));
+    const root = determineRoot(host, cwd, args.root);
+    selected = selectResults(args.paths, cwd, root, listAll(host, root));
     exitCode = selected.some((r) => r.state === 'invalid') ? 2 : 0;
   } catch (e) {
     if (!(e instanceof Raised)) throw e;
@@ -297,13 +302,14 @@ function runList(
 
 // SPEC §13.8
 function reverseEntries(
+  host: Host,
   root: string,
   cwd: string,
   paths: readonly string[],
   transitive: boolean,
   directFirst: boolean,
 ): { entries: ReverseEntry[]; attached: Diagnostic[] } {
-  const { universe: walked, declarations, attached } = loadWorkspace(root);
+  const { universe: walked, declarations, attached } = loadWorkspace(host, root);
   const universe = new Set(walked.paths);
   const keyed = new Map<string, string | null>();
   for (const arg of paths) keyed.set(toRepoPath(arg, cwd, root) ?? arg, toRepoPath(arg, cwd, root));
@@ -321,7 +327,7 @@ function reverseEntries(
       ? dependentTree(key, declarations, universe, attached, directFirst)
       : dependentsOf(key, declarations, universe, attached),
     diagnostics:
-      universe.has(key) || existsUnderRoot(root, key)
+      universe.has(key) || existsUnderRoot(host, root, key)
         ? []
         : [diag('W_UNKNOWN_PATH', { subject: key })],
   }));
@@ -330,6 +336,7 @@ function reverseEntries(
 
 // SPEC §13.8
 function runReverse(
+  host: Host,
   args: { json: boolean; root?: string; paths: string[]; transitive: boolean },
   cwd: string,
   io: Io,
@@ -338,9 +345,9 @@ function runReverse(
   let global: Diagnostic[] = [];
   let exitCode = 2;
   try {
-    const root = determineRoot(cwd, args.root);
+    const root = determineRoot(host, cwd, args.root);
     // SPEC §14.7: text prints DirectFirstTree, JSON DependentTree
-    const found = reverseEntries(root, cwd, args.paths, args.transitive, !args.json);
+    const found = reverseEntries(host, root, cwd, args.paths, args.transitive, !args.json);
     entries = found.entries;
     global = found.attached;
     exitCode = hasError(global) || entries.some((e) => hasError(e.diagnostics)) ? 2 : 0;
@@ -358,14 +365,14 @@ function runReverse(
 }
 
 // SPEC §13.9; the only read of the clock (§2)
-function runStats(args: Extract<Args, { mode: 'stats' }>, cwd: string, io: Io): number {
+function runStats(host: Host, args: Extract<Args, { mode: 'stats' }>, cwd: string, io: Io): number {
   let exitCode = 2;
   let global: Diagnostic[] = [];
   let window: StatsWindow | null = null;
   let files: readonly FileStats[] = [];
   try {
-    const root = determineRoot(cwd, args.root);
-    const selected = selectResults(args.paths, cwd, root, listAll(root));
+    const root = determineRoot(host, cwd, args.root);
+    const selected = selectResults(args.paths, cwd, root, listAll(host, root));
     const invalid = selected.filter((r) => r.state === 'invalid');
     if (invalid.length > 0) throw new Raised(invalid.flatMap((r) => [...r.diagnostics]));
     const given = args.window;
@@ -405,10 +412,10 @@ function runStats(args: Extract<Args, { mode: 'stats' }>, cwd: string, io: Io): 
 }
 
 // SPEC §13.5, §13.6, §13.7, §13.8, §13.9
-export function run(argv: readonly string[], cwd: string, io: Io): number {
+export function run(host: Host, argv: readonly string[], cwd: string, io: Io): number {
   let args: ReturnType<typeof parseArgs>;
   try {
-    args = parseArgs(argv, (arg) => isEntry(resolve(cwd, arg)));
+    args = parseArgs(argv, (arg) => isEntry(host, resolve(cwd, arg)));
   } catch (e) {
     if (!(e instanceof Raised)) throw e;
     io.stderr(diagnosticsText(e.diagnostics));
@@ -428,10 +435,10 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     io.stdout(`${typeof VERSION === 'string' ? VERSION : '0.0.0'}\n`);
     return 0;
   }
-  if (args.mode === 'list-dependencies') return runList(args, cwd, io);
-  if (args.mode === 'list-dependents') return runReverse(args, cwd, io);
-  if (args.mode === 'stats') return runStats(args, cwd, io);
-  if (args.mode === 'suggest') return runSuggest(args, cwd, io);
+  if (args.mode === 'list-dependencies') return runList(host, args, cwd, io);
+  if (args.mode === 'list-dependents') return runReverse(host, args, cwd, io);
+  if (args.mode === 'stats') return runStats(host, args, cwd, io);
+  if (args.mode === 'suggest') return runSuggest(host, args, cwd, io);
   const { mode, json } = args;
   const empty: Output = {
     json,
@@ -444,8 +451,9 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     ...(mode === 'update' ? { written: new Set<string>(), removed: [] } : {}),
   };
   try {
-    const root = determineRoot(cwd, args.root);
+    const root = determineRoot(host, cwd, args.root);
     const evaluated = evaluateAll(
+      host,
       root,
       args.mode === 'update' && args.all ? 'discard-invalid' : 'strict',
     );
@@ -488,7 +496,7 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
     const bound = new Set(evaluated.declarations.filter((b) => !b.inline).map((b) => b.file));
     const removed = sortPaths([...entries.keys()].filter((d) => !bound.has(d)));
     for (const d of removed) entries.delete(d);
-    if (bound.size > 0 || lockExists(root)) writeLock(root, { entries });
+    if (bound.size > 0 || lockExists(host, root)) writeLock(host, root, { entries });
     const written = selected
       .filter((r) =>
         inlineFiles.has(r.file)
@@ -497,7 +505,13 @@ export function run(argv: readonly string[], cwd: string, io: Io): number {
       )
       .map((r) => r.file);
     for (const file of written.filter((f) => inlineFiles.has(f))) {
-      stampFile(root, evaluated.universe, file, selected.find((r) => r.file === file)!.current);
+      stampFile(
+        host,
+        root,
+        evaluated.universe,
+        file,
+        selected.find((r) => r.file === file)!.current,
+      );
     }
     const unchanged = selected.map((r) => r.file).filter((file) => !written.includes(file));
     const text = updateText(written, unchanged, removed);

@@ -11,6 +11,7 @@ import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
 import { computeUniverse, type Universe } from '../../src/universe/walk.ts';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 import { GOLDEN_IGNORE, GOLDEN_TREE, INLINE_GOLDEN_TREE } from '../helpers/golden-tree.ts';
+import { nodeHost } from '../../src/host/node-fs.ts';
 
 afterEach(cleanupTrees);
 
@@ -31,11 +32,11 @@ interface Golden {
 
 function golden(): Golden {
   const root = makeTree(GOLDEN_TREE);
-  const universe = computeUniverse(root, config);
+  const universe = computeUniverse(nodeHost, root, config);
   const dependencyHash = (dependencies: string[]) =>
     evaluate({ file: 'DOC.md', dependencies }, universe.paths, { entries: new Map() }, [], {
       isStampedFile: () => true,
-      fileHash: (path) => fileHash(root, universe, path),
+      fileHash: (path) => fileHash(nodeHost, root, universe, path),
     }).current;
   return { root, universe, dependencyHash };
 }
@@ -55,7 +56,7 @@ describe('§17.7 golden file hashes', () => {
 
   it.each(Object.entries(expected))('%s', (path, hash) => {
     const { root, universe } = golden();
-    expect(fileHash(root, universe, path), BREAKING).toBe(hash);
+    expect(fileHash(nodeHost, root, universe, path), BREAKING).toBe(hash);
   });
 });
 
@@ -131,13 +132,13 @@ describe('§17.7 golden Dependency Hashes', () => {
   it('a deleted dependency changes the directory hash', () => {
     const { root, dependencyHash } = golden();
     rmSync(join(root, 'lib/b.ts'));
-    const universe = computeUniverse(root, config);
+    const universe = computeUniverse(nodeHost, root, config);
     const after = evaluate(
       { file: 'DOC.md', dependencies: ['lib'] },
       universe.paths,
       { entries: new Map() },
       [],
-      { isStampedFile: () => true, fileHash: (path) => fileHash(root, universe, path) },
+      { isStampedFile: () => true, fileHash: (path) => fileHash(nodeHost, root, universe, path) },
     ).current;
     expect(dependencyHash(['lib'])).not.toBe(after);
     expect(after, BREAKING).toBe(
@@ -250,7 +251,7 @@ describe('§17.7 golden presets', () => {
 describe('§17.7 golden inline files', () => {
   const inline = () => {
     const root = makeTree(INLINE_GOLDEN_TREE);
-    const { universe } = loadWorkspace(root);
+    const { universe } = loadWorkspace(nodeHost, root);
     return { root, universe };
   };
   const expected: Record<string, string> = {
@@ -266,20 +267,20 @@ describe('§17.7 golden inline files', () => {
 
   it.each(Object.entries(expected))('%s', (path, hash) => {
     const { root, universe } = inline();
-    expect(fileHash(root, universe, path), BREAKING).toBe(hash);
+    expect(fileHash(nodeHost, root, universe, path), BREAKING).toBe(hash);
   });
 
   it('a block with and without a hash line, in LF and CR LF, hash identically', () => {
     const { root, universe } = inline();
     const hashes = ['without.md', 'with.md', 'with-other.md', 'crlf.md'].map((path) =>
-      fileHash(root, universe, path),
+      fileHash(nodeHost, root, universe, path),
     );
     expect(new Set(hashes).size, BREAKING).toBe(1);
   });
 
   it('a changed dependencies list, a byte order mark and a file outside include change it', () => {
     const { root, universe } = inline();
-    const hash = (path: string) => fileHash(root, universe, path);
+    const hash = (path: string) => fileHash(nodeHost, root, universe, path);
     expect(hash('deps.md')).not.toBe(hash('without.md'));
     expect(hash('bom.md')).not.toBe(hash('with.md'));
     expect(hash('outside.txt')).not.toBe(hash('with.md'));
@@ -292,7 +293,7 @@ describe('§17.7 golden inline files', () => {
       universe.paths,
       { entries: new Map() },
       [],
-      { isStampedFile: () => true, fileHash: (path) => fileHash(root, universe, path) },
+      { isStampedFile: () => true, fileHash: (path) => fileHash(nodeHost, root, universe, path) },
     ).current;
     expect(dependencyHash, BREAKING).toBe(
       '3a55c8a5c25de7c67d79fb34c7692fa74b79973a7e8943fd69db2cafaaef1b8b',

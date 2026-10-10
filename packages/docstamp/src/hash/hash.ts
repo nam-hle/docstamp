@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, readlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
+import type { Host } from '../host/fs.ts';
 import type { Universe } from '../universe/walk.ts';
 
 // SPEC §10.3
@@ -33,14 +33,14 @@ function crlfToLf(bytes: Buffer): Buffer {
 }
 
 // SPEC §10.2, §9.6.3
-export function normalizedContent(root: string, u: Universe, path: string): Buffer {
+export function normalizedContent(host: Host, root: string, u: Universe, path: string): Buffer {
   const abs = join(root, u.onDisk.get(path) ?? path);
   try {
     if (u.kinds.get(path) === 'link') {
-      const target = readlinkSync(abs, 'utf8').replaceAll('\\', '/');
+      const target = host.fs.readLink(abs).replaceAll('\\', '/');
       return Buffer.concat([Buffer.from('link\u0000'), Buffer.from(target, 'utf8')]);
     }
-    const bytes = readFileSync(abs);
+    const bytes = host.fs.readFile(abs);
     if (isBinary(bytes)) return Buffer.concat([Buffer.from('file\u0000'), bytes]);
     const body = crlfToLf(bytes);
     const hashLines = u.marked?.get(path);
@@ -54,8 +54,8 @@ export function normalizedContent(root: string, u: Universe, path: string): Buff
 const FILE_TAG = Buffer.from('file\u0000');
 
 // SPEC §8.7: the text a Plugin sees is the normalized content of §10.2 as UTF-8
-export function selectableText(root: string, u: Universe, path: string): string {
-  const content = normalizedContent(root, u, path);
+export function selectableText(host: Host, root: string, u: Universe, path: string): string {
+  const content = normalizedContent(host, root, u, path);
   const fail = (why: string) =>
     new Raised([
       diag('E_SELECT', {
@@ -74,8 +74,8 @@ export function selectableText(root: string, u: Universe, path: string): string 
 }
 
 // SPEC §10.3
-export function fileHash(root: string, u: Universe, path: string): string {
-  return sha256Hex(normalizedContent(root, u, path));
+export function fileHash(host: Host, root: string, u: Universe, path: string): string {
+  return sha256Hex(normalizedContent(host, root, u, path));
 }
 
 export interface Fragment {

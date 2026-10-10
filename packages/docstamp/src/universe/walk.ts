@@ -1,8 +1,8 @@
-import { lstatSync, readdirSync, readFileSync, statSync, type Dirent } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import type { Config, Diagnostic } from '../core/types.ts';
+import type { DirEntry, Host } from '../host/fs.ts';
 import { CONFIG_NAMES } from '../config/value.ts';
 import { isIgnored, parseIgnoreLines, type IgnoreRule } from './ignore.ts';
 
@@ -17,28 +17,14 @@ export interface Universe {
   marked?: Map<string, readonly number[]>;
 }
 
-const hasEntry = (dir: string, name: string): boolean => {
-  try {
-    lstatSync(join(dir, name));
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const isDirectory = (dir: string): boolean => {
-  try {
-    return statSync(dir).isDirectory();
-  } catch {
-    return false;
-  }
-};
+const hasEntry = (host: Host, dir: string, name: string): boolean =>
+  host.fs.kind(join(dir, name)) !== null;
 
 // SPEC §6: the nearest configuration file, else the nearest .git
-export function determineRoot(cwd: string, rootOption: string | undefined): string {
+export function determineRoot(host: Host, cwd: string, rootOption: string | undefined): string {
   if (rootOption !== undefined) {
     const dir = resolve(cwd, rootOption);
-    if (!isDirectory(dir)) throw new Raised([diag('E_ROOT')]);
+    if (!host.fs.isDirectory(dir)) throw new Raised([diag('E_ROOT')]);
     return dir;
   }
   const nearest = (found: (dir: string) => boolean): string | null => {
@@ -48,8 +34,8 @@ export function determineRoot(cwd: string, rootOption: string | undefined): stri
     }
   };
   const root =
-    nearest((dir) => CONFIG_NAMES.some((name) => hasEntry(dir, name))) ??
-    nearest((dir) => hasEntry(dir, '.git'));
+    nearest((dir) => CONFIG_NAMES.some((name) => hasEntry(host, dir, name))) ??
+    nearest((dir) => hasEntry(host, dir, '.git'));
   if (root === null) throw new Raised([diag('E_CONFIG_MISSING')]);
   return root;
 }
@@ -59,6 +45,7 @@ const isValidUtf8 = (name: Buffer) => Buffer.from(name.toString('utf8'), 'utf8')
 
 // SPEC §7.2, §7.4, §7.5
 export function computeUniverse(
+  host: Host,
   root: string,
   config: Pick<Config, 'ignore' | 'useGitignore'>,
 ): Universe {
@@ -69,18 +56,20 @@ export function computeUniverse(
   let rules: IgnoreRule[] = [];
 
   const walk = (abs: string, prefix: string): void => {
-    let entries: Dirent<Buffer>[];
+    let entries: DirEntry[];
     try {
-      entries = readdirSync(abs, { withFileTypes: true, encoding: 'buffer' });
+      entries = host.fs.readDir(abs);
     } catch {
       errors.push(diag('E_UNREADABLE', { subject: prefix }));
       return;
     }
     const before = rules;
-    const hasGitignore = entries.some((e) => e.name.toString() === '.gitignore' && e.isFile());
+    const hasGitignore = entries.some(
+      (e) => e.name.toString() === '.gitignore' && e.kind === 'file',
+    );
     if (config.useGitignore && hasGitignore) {
       try {
-        const text = readFileSync(join(abs, '.gitignore'), 'utf8');
+        const text = host.fs.readFile(join(abs, '.gitignore')).toString('utf8');
         rules = [...rules, ...parseIgnoreLines(text, prefix)];
       } catch {
         errors.push(diag('E_UNREADABLE', { subject: joinPath(prefix, '.gitignore') }));
@@ -94,14 +83,8 @@ export function computeUniverse(
       }
       const name = e.name.toString('utf8');
       if (name === '.git') continue;
-      const kind = e.isDirectory()
-        ? 'dir'
-        : e.isSymbolicLink()
-          ? 'link'
-          : e.isFile()
-            ? 'file'
-            : null;
-      if (kind === null) continue;
+      const { kind } = e;
+      if (kind === 'other') continue;
       const rel = joinPath(prefix, name);
       if (isIgnored(rel, kind === 'dir', activeRules)) {
         ignored.push(rel.normalize('NFC'));
@@ -112,7 +95,7 @@ export function computeUniverse(
         continue;
       }
       const childAbs = join(abs, name);
-      if (!hasEntry(childAbs, '.git')) walk(childAbs, rel);
+      if (!hasEntry(host, childAbs, '.git')) walk(childAbs, rel);
     }
     rules = before;
   };
@@ -139,15 +122,17 @@ export function computeUniverse(
 }
 
 // SPEC §13.8 step 4.4: an entry of any kind, found by exact name in each directory listing
-export function existsUnderRoot(root: string, path: string): boolean {
+export function existsUnderRoot(host: Host, root: string, path: string): boolean {
   let dir = root;
   const segments = path.split('/');
   for (const [i, segment] of segments.entries()) {
     try {
-      const name = readdirSync(dir).find((n) => n.normalize('NFC') === segment);
-      if (name === undefined) return false;
-      dir = join(dir, name);
-      if (i < segments.length - 1 && !lstatSync(dir).isDirectory()) return false;
+      const entry = host.fs
+        .readDir(dir)
+        .find((e) => e.name.toString('utf8').normalize('NFC') === segment);
+      if (entry === undefined) return false;
+      dir = join(dir, entry.name.toString('utf8'));
+      if (i < segments.length - 1 && entry.kind !== 'dir') return false;
     } catch {
       return false;
     }
@@ -156,10 +141,10 @@ export function existsUnderRoot(root: string, path: string): boolean {
 }
 
 // SPEC §8.5 NOTE: a path that exists under Root, is not in the Universe, and is ignored
-export function isIgnoredPath(root: string, universe: Universe, path: string): boolean {
+export function isIgnoredPath(host: Host, root: string, universe: Universe, path: string): boolean {
   const ignored = new Set(universe.ignored);
   const segments = path.split('/');
   const aboveOrSelf = segments.some((_, i) => ignored.has(segments.slice(0, i + 1).join('/')));
   const below = universe.ignored.some((entry) => entry.startsWith(`${path}/`));
-  return (aboveOrSelf || below) && hasEntry(root, path);
+  return (aboveOrSelf || below) && hasEntry(host, root, path);
 }

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { memoizeHash, run, type Io } from '../../src/cli/run.ts';
 import { Raised, diag } from '../../src/core/diagnostics.ts';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
+import { nodeHost } from '../../src/host/node-fs.ts';
 
 afterEach(cleanupTrees);
 
@@ -38,7 +39,7 @@ function exec(cwd: string, ...argv: string[]): { code: number; out: string; err:
     isTty: false,
     env: {},
   };
-  return { code: run(argv, cwd, io), out, err };
+  return { code: run(nodeHost, argv, cwd, io), out, err };
 }
 
 const tree = () => makeTree({ 'docstamp.yaml': CONFIG, 'doc.md': 'x', 'src/a.ts': 'a' });
@@ -102,7 +103,7 @@ describe('§13.5 check', () => {
       isTty: false,
       env: {},
     };
-    expect(run([], root, io)).toBe(2);
+    expect(run(nodeHost, [], root, io)).toBe(2);
     expect(calls).toEqual([
       'out: STALE    doc.md  (unrecorded)',
       'out: INVALID  gone.md',

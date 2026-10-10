@@ -1,10 +1,10 @@
-import { lstatSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import { closestKey, unknownKeyMessage } from '../core/did-you-mean.ts';
 import { isRepoPath } from '../core/repo-path.ts';
 import type { Declaration, Config, Diagnostic } from '../core/types.ts';
+import type { Host } from '../host/fs.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { validatePlugins } from '../plugin/plugins.ts';
 import type { DocstampPlugin } from '../plugin/types.ts';
@@ -45,28 +45,13 @@ function missingMessage(value: Value | undefined, dependencies: Value | undefine
     : `The entry has no "dependencies" key; "${near}" is not a key: did you mean "dependencies"?`;
 }
 
-const hasEntry = (path: string): boolean => {
-  try {
-    lstatSync(path);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const isFile = (path: string): boolean => {
-  try {
-    return lstatSync(path).isFile();
-  } catch {
-    return false;
-  }
-};
-
 // SPEC §9.2
-function readYaml(path: string): Value {
+function readYaml(host: Host, path: string): Value {
   let text: string;
   try {
-    text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(readFileSync(path));
+    text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(
+      host.fs.readFile(path),
+    );
   } catch {
     throw new Raised([diag('E_CONFIG')]);
   }
@@ -79,16 +64,16 @@ function readYaml(path: string): Value {
 }
 
 // SPEC §9.3 steps 2 and 3; undefined when there is no configuration file
-function readValue(root: string): { value: Value; plugins: unknown } | undefined {
-  const names = CONFIG_NAMES.filter((name) => hasEntry(join(root, name)));
+function readValue(host: Host, root: string): { value: Value; plugins: unknown } | undefined {
+  const names = CONFIG_NAMES.filter((name) => host.fs.kind(join(root, name)) !== null);
   if (names.length > 1)
     throw new Raised([diag('E_CONFIG_AMBIGUOUS', { subject: names.join(', ') })]);
   const [name] = names;
   if (name === undefined) return undefined;
-  if (!isFile(join(root, name))) throw new Raised([diag('E_CONFIG_MISSING')]);
+  if (host.fs.kind(join(root, name)) !== 'file') throw new Raised([diag('E_CONFIG_MISSING')]);
   const path = join(root, name);
   return name === 'docstamp.yaml'
-    ? { value: readYaml(path), plugins: undefined }
+    ? { value: readYaml(host, path), plugins: undefined }
     : loadScript(path);
 }
 
@@ -206,13 +191,16 @@ const unknownTopKeyMessage = (key: string): string | undefined => {
 };
 
 // SPEC §9.3
-export function readConfig(root: string): {
+export function readConfig(
+  host: Host,
+  root: string,
+): {
   config: Config;
   attached: Diagnostic[];
   present: boolean;
   plugins: DocstampPlugin[];
 } {
-  const loaded = readValue(root);
+  const loaded = readValue(host, root);
   const top = loaded?.value;
   if (top === undefined) {
     const config = {

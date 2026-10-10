@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { loadWorkspace } from '../../src/cli/workspace.ts';
 import { readConfig } from '../../src/config/read-config.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
@@ -6,9 +6,7 @@ import { evaluate } from '../../src/engine/evaluate.ts';
 import { expandPresets } from '../../src/engine/presets.ts';
 import { parseBlock } from '../../src/inline/block.ts';
 import { scanFrontmatter } from '../../src/inline/frontmatter.ts';
-import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
-
-afterEach(cleanupTrees);
+import { inMemory } from '../helpers/memory-fs.ts';
 
 const presets = new Map<string, readonly string[]>([
   ['tests', ['!**/*.test.ts', '!**/__test__/**']],
@@ -102,7 +100,7 @@ describe('§8.6 ExpandPresets', () => {
 });
 
 describe('§9.3 presets and use in the configuration file', () => {
-  const read = (yaml: string) => readConfig(makeTree({ 'docstamp.yaml': yaml }));
+  const read = (yaml: string) => readConfig(...inMemory({ 'docstamp.yaml': yaml }));
   const failures = (yaml: string) =>
     raised(() => read(yaml)).map(([code, file, subject]) => [code, file, subject]);
   const files = 'files:\n  a.md:\n    dependencies: [src]\n';
@@ -204,7 +202,7 @@ describe('§12.2 presets in a workspace', () => {
   };
 
   it('expands a configured declaration and an inline one alike', () => {
-    const ws = loadWorkspace(makeTree({ ...tree, 'docs/G.md': doc('quiet') }));
+    const ws = loadWorkspace(...inMemory({ ...tree, 'docs/G.md': doc('quiet') }));
     expect(ws.attached).toEqual([]);
     expect(ws.declarations.map((d) => [d.file, d.dependencies, d.origins])).toEqual([
       ['CLAUDE.md', ['src', '!src/**/*.test.ts'], [null, 'quiet']],
@@ -213,7 +211,7 @@ describe('§12.2 presets in a workspace', () => {
   });
 
   it('an unknown preset is attached to the file and leaves the others alone', () => {
-    const ws = loadWorkspace(makeTree({ ...tree, 'docs/G.md': doc('nope') }));
+    const ws = loadWorkspace(...inMemory({ ...tree, 'docs/G.md': doc('nope') }));
     expect(ws.attached.map((d) => [d.code, d.file, d.subject])).toEqual([
       ['E_UNKNOWN_PRESET', 'docs/G.md', 'nope'],
     ]);
@@ -221,7 +219,7 @@ describe('§12.2 presets in a workspace', () => {
   });
 
   it('an inline file that uses a preset needs a configuration file', () => {
-    const ws = loadWorkspace(makeTree({ 'docs/G.md': doc('quiet'), 'src/a.ts': 'a\n' }));
+    const ws = loadWorkspace(...inMemory({ 'docs/G.md': doc('quiet'), 'src/a.ts': 'a\n' }));
     expect(ws.attached).toHaveLength(1);
     expect(ws.attached[0]).toMatchObject({ code: 'E_UNKNOWN_PRESET', subject: 'quiet' });
     expect(ws.attached[0]!.message).toContain('no configuration file');
@@ -310,7 +308,7 @@ describe('§8.6 default presets', () => {
 });
 
 describe('§9.3 default-presets in the configuration file', () => {
-  const read = (yaml: string) => readConfig(makeTree({ 'docstamp.yaml': yaml }));
+  const read = (yaml: string) => readConfig(...inMemory({ 'docstamp.yaml': yaml }));
   const failures = (yaml: string) => raised(() => read(yaml));
   const head = 'version: 2\npresets:\n  tests: [a]\n';
 
@@ -395,7 +393,7 @@ describe('§12.2 default presets in a workspace', () => {
   };
 
   it('applies to configured and inline declarations without a use key', () => {
-    const ws = loadWorkspace(makeTree(tree));
+    const ws = loadWorkspace(...inMemory(tree));
     expect(ws.attached).toEqual([]);
     expect(ws.declarations.map((d) => [d.file, d.dependencies.length, d.origins])).toEqual([
       ['A.md', 2, [null, 'quiet']],

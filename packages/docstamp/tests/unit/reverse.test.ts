@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { run, type Io } from '../../src/cli/run.ts';
+import { nodeHost } from '../../src/host/node-fs.ts';
 import { cleanupTrees, makeTree, type TreeSpec } from '../helpers/fixture.ts';
 
 afterEach(cleanupTrees);
@@ -10,7 +11,7 @@ function exec(cwd: string, ...argv: string[]): { code: number; out: string; err:
   let out = '';
   let err = '';
   const io: Io = { stdout: (s) => (out += s), stderr: (s) => (err += s), isTty: false, env: {} };
-  return { code: run(argv, cwd, io), out, err };
+  return { code: run(nodeHost, argv, cwd, io), out, err };
 }
 
 const config = (files: Record<string, string[]>): string =>

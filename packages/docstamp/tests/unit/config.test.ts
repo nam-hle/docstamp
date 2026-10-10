@@ -1,14 +1,10 @@
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
+import { describe, expect, it } from 'vitest';
+import { inMemory } from '../helpers/memory-fs.ts';
 import { readConfig } from '../../src/config/read-config.ts';
 import { parseStrictYaml } from '../../src/config/yaml-profile.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 
-afterEach(cleanupTrees);
-
-const read = (yaml: string) => readConfig(makeTree({ 'docstamp.yaml': yaml }));
+const read = (yaml: string) => readConfig(...inMemory({ 'docstamp.yaml': yaml }));
 const codes = (yaml: string) => {
   try {
     read(yaml);
@@ -167,25 +163,24 @@ describe('§9.3 readConfig', () => {
     expect(codes('')).toEqual(['E_CONFIG']);
   });
   it('symlinked docstamp.yaml is E_CONFIG_MISSING', () => {
-    const root = makeTree({
+    const args = inMemory({
       'real.yaml': 'version: 2\nfiles: {}\n',
       'docstamp.yaml': { link: 'real.yaml' },
     });
-    expect(() => readConfig(root)).toThrow(
+    expect(() => readConfig(...args)).toThrow(
       expect.objectContaining({
         diagnostics: [expect.objectContaining({ code: 'E_CONFIG_MISSING' })],
       }),
     );
   });
   it('invalid UTF-8 is E_CONFIG', () => {
-    const root = makeTree({});
-    writeFileSync(join(root, 'docstamp.yaml'), Buffer.from([0x76, 0x3a, 0x20, 0xff, 0x0a]));
-    expect(() => readConfig(root)).toThrow(
+    const args = inMemory({ 'docstamp.yaml': Buffer.from([0x76, 0x3a, 0x20, 0xff, 0x0a]) });
+    expect(() => readConfig(...args)).toThrow(
       expect.objectContaining({ diagnostics: [expect.objectContaining({ code: 'E_CONFIG' })] }),
     );
   });
   it('no file is the defaults and not present (§9.3 step 2)', () => {
-    expect(readConfig(makeTree({}))).toMatchObject({ present: false, attached: [] });
+    expect(readConfig(...inMemory())).toMatchObject({ present: false, attached: [] });
   });
 });
 
