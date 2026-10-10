@@ -45,16 +45,47 @@ describe('§9.5 validatePlugins', () => {
     expect(found?.name).toBe('md');
   });
 
+  const sparse = [plugin()];
+  sparse.length = 2;
+  const leadingHole = [plugin(), plugin({ name: 'other' })];
+  Reflect.deleteProperty(leadingHole, 0);
+  const throwingGetter = Object.defineProperty(plugin(), 'name', {
+    get: () => {
+      throw new Error('/abs/secret/path');
+    },
+  });
+  const throwingProxy = new Proxy(plugin(), {
+    get: () => {
+      throw new Error('/abs/secret/path');
+    },
+  });
+  const throwingFile = plugin({
+    files: new Proxy(['**/*.md'], {
+      get: (target, key, receiver) => {
+        if (key === '0') throw new Error('/abs/secret/path');
+        return Reflect.get(target, key, receiver);
+      },
+    }),
+  });
+
   it.each([
-    ['not a list', {}],
-    ['not an object', [1]],
-    ['no name', [plugin({ name: '' })]],
-    ['bad files', [plugin({ files: [] })]],
-    ['bad pattern', [plugin({ files: ['a//b'] })]],
-    ['no extract', [plugin({ extract: 'x' })]],
-    ['duplicate names', [plugin(), plugin()]],
-  ])('rejects %s with E_PLUGIN', (_, raw) => {
-    expect(raised(() => validatePlugins(raw)).map((d) => d.code)).toEqual(['E_PLUGIN']);
+    ['not a list', {}, 'plugins'],
+    ['not an object', [1], 'plugins[0]'],
+    ['a hole at the end', sparse, 'plugins[1]'],
+    ['a hole at the start', leadingHole, 'plugins[0]'],
+    ['no name', [plugin({ name: '' })], 'plugins[0]'],
+    ['bad files', [plugin({ files: [] })], 'md'],
+    ['bad pattern', [plugin({ files: ['a//b'] })], 'md'],
+    ['no extract', [plugin({ extract: 'x' })], 'md'],
+    ['duplicate names', [plugin(), plugin()], 'md'],
+    ['a throwing name getter', [throwingGetter], 'plugins[0]'],
+    ['a throwing proxy', [throwingProxy], 'plugins[0]'],
+    ['a throwing files element', [throwingFile], 'plugins[0]'],
+  ])('rejects %s with E_PLUGIN', (_, raw, subject) => {
+    const diagnostics = raised(() => validatePlugins(raw));
+    expect(diagnostics.map((d) => d.code)).toEqual(['E_PLUGIN']);
+    expect(diagnostics[0]?.subject).toBe(subject);
+    expect(diagnostics[0]?.message).not.toContain('secret');
   });
 
   it('names apiVersion for a newer interface', () => {
@@ -121,6 +152,25 @@ describe('§8.7 runExtract', () => {
   it('says synchronous when the plugin returns a promise', () => {
     const [diagnostic] = raised(() => run(async () => ({ hashes: ['a'] })));
     expect(diagnostic?.message).toContain('synchronous');
+  });
+
+  const boom = () => {
+    throw new Error('/abs/secret/path');
+  };
+  const hashesGetter = Object.defineProperty({}, 'hashes', { get: boom });
+  // oxlint-disable-next-line unicorn/no-thenable
+  const thenGetter = Object.defineProperty({ hashes: ['a'] }, 'then', { get: boom });
+  const elementGetter = Object.defineProperty(['a'], '0', { get: boom });
+
+  it.each([
+    ['a throwing hashes getter', hashesGetter],
+    ['a throwing then getter', thenGetter],
+    ['a throwing hash element', { hashes: elementGetter }],
+  ])('raises E_SELECT for %s without the thrown text', (_, result) => {
+    const [diagnostic, ...rest] = raised(() => run(() => result));
+    expect(rest).toEqual([]);
+    expect(diagnostic?.code).toBe('E_SELECT');
+    expect(diagnostic?.message).not.toContain('secret');
   });
 
   it('does not leak the thrown error text', () => {
