@@ -12,6 +12,8 @@ files:
       - knip.json
       - .oxfmtrc.json
       - .github
+      - action
+      - action.yml
       - release-please-config.json
   README.md:
     dependencies:
