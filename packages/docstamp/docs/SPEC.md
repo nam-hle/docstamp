@@ -255,8 +255,7 @@ edited own list selects and the own list at *C* did not (`added`), or the revers
 A *FragmentChange* is { `[[Path]]`: RepoPath, `[[Select]]`: a plain value (§3.5), `[[Status]]`:
 `changed` or `new`, `[[Parts]]`: List of PartInfo or none }: a Selected Dependency (§8.7) whose
 Fragment differs from the one at *C* (`changed`), or that has none to compare with at *C* (`new`).
-A *PartInfo* is { `[[Focus]]`: String or none, `[[Lines]]`: non-empty List of { `start`, `end` } or
-none }. `[[Parts]]` has one PartInfo for each Part of its Fragment now, and is none when no Part has
+A *PartInfo* is { `[[Focus]]`: String or none, `[[Lines]]`: { `start`, `end` } or none }. `[[Parts]]` has one PartInfo for each Part of its Fragment now, and is none when no Part has
 a Focus or Lines.
 
 NOTE: The Lockfile keeps one Hash per file, so a Declaration over thousands of files costs one
@@ -715,8 +714,8 @@ Plugin.
 2. Call `plugin.[[Extract]]` synchronously with { `path`, `text`, `select` }. If it throws, returns
    a Promise or does not return a Map, raise `E_SELECT` (`[[Subject]]` the path).
 3. Read from the result { `parts` }, « » when absent, a List of Maps { `content`: a String without
-   a lone surrogate, `focus`: a non-empty String, when present, `lines`: a non-empty List of
-   { `start`, `end` } integers with 1 <= `start` <= `end`, when present }, and { `diagnostics` },
+   a lone surrogate, `focus`: a non-empty String, when present, `lines`: a Map { `start`, `end` }
+   of integers with 1 <= `start` <= `end`, when present }, and { `diagnostics` },
    « » when absent, a List of at most 100 Maps { `severity`: `error` or `warning`, `message`: a
    non-empty String }. A `focus` or a `message` holds no code point below U+0020 and no U+007F, so
    it is one line. The limit of 100 counts `diagnostics` as returned, before duplicates are
@@ -741,8 +740,8 @@ harmless. Every `message` SHOULD name what to change.
 
 NOTE: *Focus* says in words what a Part is, as a reader of the report needs it (`section "Install"
 (level 2)`, `function createUser`), and *Lines* where it is in *text*, which has the line count of the
-file (CR LF is read as LF, §10.2), as several ranges when the Part is not contiguous. Both are
-written by the Plugin, advisory, and never part of a Hash or a verdict (§10.4 reads `content`
+file (CR LF is read as LF, §10.2). A Part has one range: what lies in several places of the file is
+several Parts, each with its own. Both are written by the Plugin, advisory, and never part of a Hash or a verdict (§10.4 reads `content`
 only); they appear in the changed-file report (§12.3 step 11). A warning never changes a state, a
 Hash or an exit code (§5).
 
@@ -2248,8 +2247,8 @@ STALE    <file>  (<reason>, <reason>)
     `  (changed)` or `  (new)`, then, if `[[Parts]]` is not none, two spaces and a description of
     each Part that has a Focus or Lines (so a Part with neither is not described here, while the
     `"parts"` of §14.5 holds one element for each Part), joined by `; `: its Focus String, followed by
-    `(lines <ranges>)` after a space when Lines is given (`lines <ranges>` alone when there is no
-    Focus), the ranges `<start>-<end>` joined by `, `. They are not counted by the summary line.
+    `(lines <start>-<end>)` after a space when Lines is given (`lines <start>-<end>` alone when
+    there is no Focus). They are not counted by the summary line.
 - For any other `stale`: one `depends` line per pattern, in declaration order, with the
   `(preset <name>)` marker of §14.6 for a pattern that comes from a Preset, then one `depends` line
   per Selected Dependency (§8.7), in order of appearance: the path, `#` and `CanonicalJson(select)`,
@@ -2493,8 +2492,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   present) when the Result's `[[Fragments]]` is not none, and is absent otherwise: a List of
   `{ "path", "select", "status" }` in order, `select` written as in `selected` below and `status`
   being `changed` or `new` (§12.3 step 11), then `"parts"` when `[[Parts]]` is not none: a List with
-  one `{ }` for each Part, holding `"focus"` (a String) and `"lines"` (a List of
-  `{ "start", "end" }`) when the Part has them; without `"parts"` otherwise.
+  one `{ }` for each Part, holding `"focus"` (a String) and `"lines"` (`{ "start", "end" }`) when
+  the Part has them; without `"parts"` otherwise.
 - An element of `files` whose Declaration uses a Preset (§8.6) has the members `use` and `origins`
   between `dependencies` and `changes`, as `list-dependencies` has them (below).
 - A member `"selected"` follows `dependencies` (after `use` and `origins` when present) in an

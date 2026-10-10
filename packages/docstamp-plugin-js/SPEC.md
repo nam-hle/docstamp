@@ -132,7 +132,7 @@ modifier, decorator or `export` is a change; a changed body is not.
    and says to add a `kind` or to rename one of them.
 5. Otherwise return `{ parts: « p » }`, *p* the Part { `content`: `Source` (when `selector.[[Part]]`
    is `source`) or `Shape` (when it is `shape`) of the match, `focus`: `<kind> <name> (<part>)`
-   (`function createUser (shape)`), `lines`: « { `start`, `end` } » }, `start` the line where the
+   (`function createUser (shape)`), `lines`: { `start`, `end` } }, `start` the line where the
    first Statement of the Group starts and `end` the line where its last Statement ends, counted in
    *text* (CR LF read as LF).
 
