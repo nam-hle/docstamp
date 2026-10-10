@@ -85,7 +85,7 @@ lines that follow its content.
 5. Otherwise return `{ parts: « p » }`, *p* the Part { `content`: the Section of the match,
    `focus`: `section "<Text>" (level <Depth>)` with each code point of *Text* below U+0020 or equal to
    U+007F replaced by U+0020 (SPEC §8.7 step 3 refuses a `focus` of more than one line),
-   `lines`: « { `start`, `end` } » }, `start` the line
+   `lines`: { `start`, `end` } }, `start` the line
    of the Heading and `end` the line of the last character of the Section, counted in *text* (the
    argument, frontmatter included, CR LF read as LF).
 
