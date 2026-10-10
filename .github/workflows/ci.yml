@@ -30,29 +30,14 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      # The phases of `pnpm test` as separate steps, so one red phase does not hide the others.
-      - name: Format, lint, types, knip
-        run: pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip
-
-      - name: Build and self-check
-        if: ${{ !cancelled() }}
-        run: pnpm run build && node dist/index.js
-
-      - name: Unit tests
-        if: ${{ !cancelled() }}
-        run: pnpm run test:unit
-
-      - name: End-to-end tests
-        if: ${{ !cancelled() }}
-        run: pnpm run test:e2e
-
-      - name: Pack tests
-        if: ${{ !cancelled() }}
-        run: pnpm run test:pack
+      # nadle runs every phase whose dependencies succeeded and reports all failures at the end,
+      # so one red phase does not hide the others.
+      - name: Gate
+        run: pnpm test
 
       - name: Check the package can be packed
         if: ${{ !cancelled() }}
-        run: npm pack --dry-run
+        run: npm pack ./packages/docstamp --dry-run
 
   docstamp:
     name: Docs gate
@@ -72,7 +57,7 @@ jobs:
 
       - name: Pack
         id: pack
-        run: echo "path=$RUNNER_TEMP/$(npm pack --silent --pack-destination "$RUNNER_TEMP")" >> "$GITHUB_OUTPUT"
+        run: echo "path=$RUNNER_TEMP/$(npm pack ./packages/docstamp --silent --pack-destination "$RUNNER_TEMP")" >> "$GITHUB_OUTPUT"
 
       - uses: ./
         with:

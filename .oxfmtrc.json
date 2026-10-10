@@ -1,5 +1,5 @@
 {
   "singleQuote": true,
   "printWidth": 100,
-  "ignorePatterns": ["tests/e2e/fixtures/**", "tests/e2e/__snapshots__/**"]
+  "ignorePatterns": ["**/tests/e2e/fixtures/**", "**/tests/e2e/__snapshots__/**"]
 }

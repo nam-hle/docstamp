@@ -1,5 +1,15 @@
 {
-  "entry": ["tests/**/*.test.ts", "scripts/*.ts", "action/run.ts"],
-  "project": ["action/**/*.ts", "scripts/**/*.ts", "src/**/*.ts", "tests/**/*.ts"],
-  "ignore": ["tests/e2e/fixtures/**"]
+  "workspaces": {
+    ".": {
+      "entry": ["nadle.config.ts", "action/run.ts", "action/*.test.ts"],
+      "project": ["action/**/*.ts"],
+      "ignoreDependencies": ["oxfmt", "oxlint", "oxlint-tsgolint"]
+    },
+    "packages/docstamp": {
+      "entry": ["tests/**/*.test.ts", "scripts/*.ts"],
+      "project": ["scripts/**/*.ts", "src/**/*.ts", "tests/**/*.ts"],
+      "ignore": ["tests/e2e/fixtures/**"],
+      "ignoreBinaries": ["build"]
+    }
+  }
 }

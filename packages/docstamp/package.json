@@ -1,0 +1,62 @@
+{
+  "name": "docstamp",
+  "version": "0.5.0",
+  "description": "Deterministic snapshot gate for hidden links between files",
+  "license": "MIT",
+  "author": {
+    "name": "Nam Hoang Le",
+    "url": "https://github.com/nam-hle"
+  },
+  "homepage": "https://github.com/nam-hle/docstamp#readme",
+  "bugs": {
+    "url": "https://github.com/nam-hle/docstamp/issues"
+  },
+  "keywords": [
+    "documentation",
+    "docs",
+    "freshness",
+    "staleness",
+    "ci",
+    "ai-context",
+    "claude-md",
+    "agents-md",
+    "lockfile",
+    "snapshot",
+    "hash"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nam-hle/docstamp.git",
+    "directory": "packages/docstamp"
+  },
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "docstamp": "dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/lib.d.ts",
+      "import": "./dist/lib.js"
+    },
+    "./schema.json": "./schema.json",
+    "./schema-frontmatter.json": "./schema-frontmatter.json"
+  },
+  "files": [
+    "dist",
+    "docs/SPEC.md",
+    "schema.json",
+    "schema-frontmatter.json"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "prepublishOnly": "pnpm --workspace-root run build"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  }
+}

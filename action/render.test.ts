@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { MARKER, renderComment, type Report } from '../../action/render.ts';
+import { MARKER, renderComment, type Report } from './render.ts';
 
 const base: Report = { version: 2, exitCode: 0, files: [], diagnostics: [] };
 

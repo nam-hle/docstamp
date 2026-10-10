@@ -34,21 +34,12 @@ jobs:
       - name: Check tag matches package version
         env:
           TAG: ${{ inputs.tag }}
-        run: test "v$(node -p "require('./package.json').version")" = "$TAG"
+        run: test "v$(node -p "require('./packages/docstamp/package.json').version")" = "$TAG"
 
       # The package's own correctness gates. The docs self-check is repo hygiene,
       # not a reason to withhold a release, so `pnpm test` is not used here.
-      - name: Build
-        run: pnpm run build
-
-      - name: Unit tests
-        run: pnpm run test:unit
-
-      - name: End-to-end tests
-        run: pnpm run test:e2e
-
-      - name: Pack tests
-        run: pnpm run test:pack
+      - name: Build and test
+        run: pnpm nadle verifyRelease
 
       # Trusted publishing (OIDC) needs npm 11.5.1 or newer, and staging needs `npm stage`.
       # The Trusted Publisher on npmjs.com only allows staging, so nothing goes live from CI.
@@ -59,6 +50,7 @@ jobs:
           && npm stage --help > /dev/null
 
       - name: Stage on npm
+        working-directory: packages/docstamp
         run: npm stage publish --provenance
 
       - name: Say how to approve

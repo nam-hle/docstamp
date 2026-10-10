@@ -1,11 +1,6 @@
-import { configDefaults, defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 
-// e2e tests spawn the CLI and git; slower runners need more than the 5s default.
-// Fixture trees are data copied into temp repos, never test files.
+// The Action's tests sit next to its code at the repository root; the packages have their own.
 export default defineConfig({
-  test: {
-    include: ['tests/**/*.test.ts'],
-    exclude: [...configDefaults.exclude, 'tests/e2e/fixtures/**'],
-    testTimeout: 30_000,
-  },
+  test: { include: ['action/**/*.test.ts'] },
 });

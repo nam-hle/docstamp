@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { type Env, run } from '../../action/run.ts';
-import { MARKER } from '../../action/render.ts';
+import { type Env, run } from './run.ts';
+import { MARKER } from './render.ts';
 
 interface Call {
   method: string;
