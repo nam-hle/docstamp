@@ -35,9 +35,12 @@ jobs:
       - name: Gate
         run: pnpm test
 
-      - name: Check the package can be packed
+      - name: Check the packages can be packed
         if: ${{ !cancelled() }}
-        run: npm pack ./packages/docstamp --dry-run
+        run: |
+          npm pack ./packages/docstamp --dry-run
+          npm pack ./packages/docstamp-plugin-markdown --dry-run
+          npm pack ./packages/docstamp-plugin-js --dry-run
 
   docstamp:
     name: Docs gate

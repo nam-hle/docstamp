@@ -26,14 +26,22 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Merging the release PR creates the tag and release; publishing is its own
+      # Merging a release PR creates the tag and release; publishing is its own
       # workflow so a failed publish can be retried without a new release.
       # workflow_dispatch may start from the default GITHUB_TOKEN (needs actions: write).
       # There is no checkout, so gh needs GH_REPO to know the repository.
+      # A package outside the repository root has its outputs prefixed with its path
+      # (`release_created` and `tag_name` alone are set only for a root package), and a path with
+      # slashes is read by index. A package that was not released leaves its tag empty.
       - name: Start publish
-        if: ${{ steps.release.outputs.release_created }}
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ steps.release.outputs.tag_name }}
-        run: gh workflow run publish.yml --ref main --field tag="$TAG"
+          DOCSTAMP_TAG: ${{ steps.release.outputs['packages/docstamp--tag_name'] }}
+          MARKDOWN_TAG: ${{ steps.release.outputs['packages/docstamp-plugin-markdown--tag_name'] }}
+          JS_TAG: ${{ steps.release.outputs['packages/docstamp-plugin-js--tag_name'] }}
+        run: |
+          for tag in "$DOCSTAMP_TAG" "$MARKDOWN_TAG" "$JS_TAG"; do
+            if [ -n "$tag" ]; then gh workflow run publish.yml --ref main --field tag="$tag"; fi
+          done

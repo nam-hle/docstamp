@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to publish, for example v0.1.0
+        description: Release tag to publish, for example v0.6.0 or docstamp-plugin-js-v0.1.0
         required: true
 
 permissions:
@@ -29,17 +29,52 @@ jobs:
       - name: Check tag is on main
         run: git merge-base --is-ancestor HEAD origin/main
 
+      # The docstamp package keeps the plain vX.Y.Z tags (they are the ref of the GitHub Action);
+      # every other package is tagged <package>-vX.Y.Z.
+      - name: Resolve the package of the tag
+        id: package
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          case "$TAG" in
+            v[0-9]*) name=docstamp; version="${TAG#v}"; task=verifyRelease ;;
+            docstamp-plugin-markdown-v[0-9]*)
+              name=docstamp-plugin-markdown
+              version="${TAG#docstamp-plugin-markdown-v}"
+              task=verifyReleaseMarkdown
+              ;;
+            docstamp-plugin-js-v[0-9]*)
+              name=docstamp-plugin-js
+              version="${TAG#docstamp-plugin-js-v}"
+              task=verifyReleaseJs
+              ;;
+            *) echo "No package is released with the tag $TAG" >&2; exit 1 ;;
+          esac
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "The tag $TAG does not end in a version" >&2
+            exit 1
+          fi
+          {
+            echo "name=$name"
+            echo "dir=packages/$name"
+            echo "version=$version"
+            echo "task=$task"
+          } >> "$GITHUB_OUTPUT"
+
       - uses: ./.github/actions/setup
 
       - name: Check tag matches package version
         env:
-          TAG: ${{ inputs.tag }}
-        run: test "v$(node -p "require('./packages/docstamp/package.json').version")" = "$TAG"
+          DIR: ${{ steps.package.outputs.dir }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: test "$(node -p "require('./$DIR/package.json').version")" = "$VERSION"
 
       # The package's own correctness gates. The docs self-check is repo hygiene,
       # not a reason to withhold a release, so `pnpm test` is not used here.
       - name: Build and test
-        run: pnpm nadle verifyRelease
+        env:
+          TASK: ${{ steps.package.outputs.task }}
+        run: pnpm nadle "$TASK"
 
       # Trusted publishing (OIDC) needs npm 11.5.1 or newer, and staging needs `npm stage`.
       # The Trusted Publisher on npmjs.com only allows staging, so nothing goes live from CI.
@@ -50,15 +85,16 @@ jobs:
           && npm stage --help > /dev/null
 
       - name: Stage on npm
-        working-directory: packages/docstamp
+        working-directory: ${{ steps.package.outputs.dir }}
         run: npm stage publish --provenance
 
       - name: Say how to approve
         env:
+          NAME: ${{ steps.package.outputs.name }}
           TAG: ${{ inputs.tag }}
         run: |
           {
-            echo "## Staged on npm: docstamp ${TAG}"
+            echo "## Staged on npm: ${NAME} (${TAG})"
             echo
-            echo "Nothing is live yet. Approve with 2FA: \`npm stage list docstamp\` then \`npm stage approve <stage-id>\`, or on npmjs.com."
+            echo "Nothing is live yet. Approve with 2FA: \`npm stage list ${NAME}\` then \`npm stage approve <stage-id>\`, or on npmjs.com."
           } >> "$GITHUB_STEP_SUMMARY"
