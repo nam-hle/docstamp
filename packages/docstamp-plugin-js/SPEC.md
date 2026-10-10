@@ -119,14 +119,21 @@ modifier, decorator or `export` is a change; a changed body is not.
 
 ## 8 Extract
 
-`Extract({ path, text, select })` returns { `hashes` }:
+`Extract({ path, text, select })` returns { `hashes`, `focus`, `lines` }:
 
 1. Let *selector* be ? `ParseSelector(select)` and *statements* be ? `Parse(path, text)`.
 2. Let *groups* be the Groups of `Declarations(statements)` (§6).
 3. Let *matches* be the Groups whose Declarations have `[[Name]]` equal to `selector.[[Name]]` and,
    unless `selector.[[Kind]]` is *none*, `[[Kind]]` equal to it.
-4. Return the List, in source order, of the lower-case hexadecimal SHA-256 of the UTF-8 encoding of
-   `Source` (when `selector.[[Part]]` is `source`) or of `Shape` (when it is `shape`) of each match.
+4. Return `hashes`, the List, in source order, of the lower-case hexadecimal SHA-256 of the UTF-8
+   encoding of `Source` (when `selector.[[Part]]` is `source`) or of `Shape` (when it is `shape`) of each
+   match; and, when there is a match, `focus`, the List of the Strings `<kind> <name> (<part>)` of the
+   matches (`function createUser (shape)`), and `lines`, the List of { `start`, `end` } of the matches:
+   the line where the first Statement of the Group starts and the line where its last Statement ends,
+   counted in *text* (CR LF read as LF).
+
+NOTE: `focus` and `lines` are advisory: docstamp prints them in its changed-file report and never
+hashes them, so they are not part of the compatibility of §9.
 
 NOTE: A `const k = 1, l = 2` statement has two Declarations (`k`, `l`) in one Statement; each is its own
 Group and both give the same text.

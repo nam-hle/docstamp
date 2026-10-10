@@ -210,6 +210,8 @@ Dependency Hash, so a change that alters an existing hash is breaking for the pl
 - Its tests include one that runs the built `docstamp` CLI with the plugin
   (`tests/integration/`); `pnpm nadle testMarkdown` (`testJs`) builds both packages first.
 - Each plugin lists its parser as its only dependency, which needs the user's approval.
+- A plugin returns `focus` and `lines` with its hashes (SPEC §8.7): the report prints them, so
+  write them for every part, in words a reviewer can use. They are advisory and never hashed.
 
 ## Inline declarations
 

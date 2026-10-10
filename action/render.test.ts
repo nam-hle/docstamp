@@ -280,3 +280,36 @@ describe('action comment renderer: renames and silent failures', () => {
     expect(body).toContain('job log');
   });
 });
+
+describe('action comment renderer: focus and lines of a fragment', () => {
+  const withFragment = (fragment: object): string =>
+    renderComment({
+      ...base,
+      exitCode: 1,
+      summary: { ok: 0, stale: 1, invalid: 0 },
+      files: [stale({ changes: [], fragments: [fragment as never] })],
+    });
+
+  it('adds the focus and the lines after the status', () => {
+    const body = withFragment({
+      path: 'docs/guide.md',
+      select: 'Install',
+      status: 'changed',
+      focus: ['section "Install" (level 2)'],
+      lines: [{ start: 3, end: 6 }],
+    });
+    expect(body).toContain(
+      '- fragment `docs/guide.md#"Install"` (changed): section "Install" (level 2) (lines 3-6)',
+    );
+  });
+
+  it('shows the lines alone when the plugin gave no focus', () => {
+    const body = withFragment({
+      path: 'a.md',
+      select: 'x',
+      status: 'new',
+      lines: [{ start: 1, end: 2 }],
+    });
+    expect(body).toContain('- fragment `a.md#"x"` (new): lines 1-2');
+  });
+});

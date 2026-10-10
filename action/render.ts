@@ -24,7 +24,13 @@ interface FileReport {
   changes: Change[] | null;
   dependenciesEdited?: boolean;
   selection?: { status: string; path: string }[];
-  fragments?: { path: string; select: unknown; status: string }[];
+  fragments?: {
+    path: string;
+    select: unknown;
+    status: string;
+    focus?: string[];
+    lines?: { start: number; end: number }[];
+  }[];
   diagnostics: Diagnostic[];
 }
 
@@ -86,10 +92,20 @@ const renderStale = (file: FileReport, root: string): string[] => {
   const selection = (file.selection ?? []).map(
     (entry) => `- ${entry.status} ${code(entry.path)} (selection)`,
   );
-  const fragments = (file.fragments ?? []).map(
-    (entry) =>
-      `- fragment ${code(`${entry.path}#${JSON.stringify(entry.select)}`)} (${entry.status})`,
-  );
+  const fragments = (file.fragments ?? []).map((entry) => {
+    const subject = code(`${entry.path}#${JSON.stringify(entry.select)}`);
+    const parts = Array.from(
+      { length: Math.max(entry.focus?.length ?? 0, entry.lines?.length ?? 0) },
+      (_, index) => {
+        const range = entry.lines?.[index];
+        const lines = range === undefined ? '' : `lines ${range.start}-${range.end}`;
+        const focus = entry.focus?.[index];
+        if (focus === undefined) return lines;
+        return lines === '' ? focus : `${focus} (${lines})`;
+      },
+    );
+    return `- fragment ${subject} (${entry.status})${parts.length === 0 ? '' : `: ${parts.join('; ')}`}`;
+  });
   const unknown = file.reasons.includes('unrecorded')
     ? 'No lock entry yet, so the file was never reviewed. Review it against these dependencies:'
     : 'Git history is not available, so the changed files are unknown. Diff these dependencies:';

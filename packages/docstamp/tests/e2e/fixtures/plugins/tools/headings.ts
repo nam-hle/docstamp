@@ -9,7 +9,7 @@ const parseHeading = (line: string) => {
 };
 
 // Hashes the body of every heading titled <select>, of any level, up to the next heading of
-// the same or a higher level.
+// the same or a higher level; focus and lines tell the report what and where that part is.
 export default definePlugin({
   name: 'headings',
   apiVersion: 1,
@@ -17,14 +17,19 @@ export default definePlugin({
   extract({ text, select }) {
     const lines = text.split('\n');
     const hashes: string[] = [];
+    const focus: string[] = [];
+    const ranges: { start: number; end: number }[] = [];
     lines.forEach((line, index) => {
       const heading = parseHeading(line);
       if (heading?.title !== select) return;
       const end = lines.findIndex(
         (next, i) => i > index && (parseHeading(next)?.level ?? Infinity) <= heading.level,
       );
-      hashes.push(sha(lines.slice(index + 1, end === -1 ? undefined : end).join('\n')));
+      const stop = end === -1 ? lines.length : end;
+      hashes.push(sha(lines.slice(index + 1, stop).join('\n')));
+      focus.push(`section "${heading.title}" (level ${heading.level})`);
+      ranges.push({ start: index + 1, end: stop });
     });
-    return { hashes };
+    return { hashes, focus, lines: ranges };
   },
 });

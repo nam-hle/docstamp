@@ -401,3 +401,44 @@ describe('§8 Extract', () => {
     expect(extract(`const other = 1;\n${FN}\nexport class Z {}\n`, 'abc')).toEqual(base);
   });
 });
+
+describe('§8 Extract: focus and lines', () => {
+  const full = (text: string, select: unknown) =>
+    plugin.extract({ path: 'file.ts', text, select: select as never });
+  const TEXT =
+    'import x from "y";\n\nexport function abc(a: string): number {\n  return a.length;\n}\n\n' +
+    'export interface Box {\n  size: number;\n}\n';
+
+  it('names the declaration and its part, and gives its lines', () => {
+    expect(full(TEXT, 'abc')).toMatchObject({
+      focus: ['function abc (shape)'],
+      lines: [{ start: 3, end: 5 }],
+    });
+    expect(full(TEXT, 'Box')).toMatchObject({
+      focus: ['interface Box (shape)'],
+      lines: [{ start: 7, end: 9 }],
+    });
+  });
+
+  it('says source when the part is source', () => {
+    expect(full(TEXT, { name: 'abc', part: 'source' }).focus).toEqual(['function abc (source)']);
+  });
+
+  it('gives one range from the first overload to the end of the implementation', () => {
+    const text =
+      'export function f(a: string): string;\nexport function f(a: number): number;\n' +
+      'export function f(a: any): any {\n  return a;\n}\n';
+    expect(full(text, 'f')).toMatchObject({
+      focus: ['function f (shape)'],
+      lines: [{ start: 1, end: 5 }],
+    });
+  });
+
+  it('counts the same lines for CR LF text', () => {
+    expect(full(TEXT.replaceAll('\n', '\r\n'), 'Box').lines).toEqual([{ start: 7, end: 9 }]);
+  });
+
+  it('gives neither when nothing matches', () => {
+    expect(full(TEXT, 'Missing')).toEqual({ hashes: [] });
+  });
+});
