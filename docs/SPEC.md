@@ -197,7 +197,7 @@ Carrier. When there is no Configuration file, every field has the default of thi
 `[[Declarations]]` is « » (§9.3 step 2).
 
 NOTE: Plugins (§8.7) are not part of the Config value. They come only from a script Carrier
-(§9.5), and are passed to the algorithms that call them (§8.7 `Fragments`).
+(§9.5), and are passed as an argument to `Evaluate` (§12.1) and `DependencyHash` (§10.4).
 
 ### 5.3 Lock
 
@@ -883,11 +883,13 @@ raises `E_FILE_MISSING`.
    use `export default`, and that a CommonJS `module.exports` value is accepted. Otherwise let
    *exported* be its `default` export if *exports* has one that is neither `undefined` nor Null,
    else *exports*.
-3. Return ? `ToPlain(exported, empty)`.
+3. Return ? `ToPlain(exported, empty)`, where, if *exported* is an object whose prototype is the
+   Object prototype or null and that has an own `plugins` member, *exported* is taken without that
+   member, which is read separately (below).
 
 `LoadScript` returns the plain value of step 3 and, separately, the value of the top-level
-`plugins` member if the exported value is a Map-like plain object that has it. `plugins` is not part
-of the plain value and is exempt from `ToPlain`. It MUST be a dense List of Plugins (§8.7);
+`plugins` member of *exported*, when it has one. `plugins` is not part of the plain value and is
+exempt from `ToPlain`; a function anywhere else is still `E_CONFIG` (`ToPlain` step 6). It MUST be a dense List of Plugins (§8.7);
 otherwise raise `E_PLUGIN`, `[[Subject]]` the Plugin name or `plugins[i]`, with a message that names
 `apiVersion` when `[[ApiVersion]]` is not 1.
 
@@ -1134,20 +1136,23 @@ A *Hash* is the lowercase hexadecimal encoding of a SHA-256 digest: exactly 64 c
 
 ### 10.4 Dependency Hash
 
-`DependencyHash(resolved, selected)`, where *resolved* is a List of RepoPaths in path order and
-*selected* the Selected Dependencies of the file (§8.7), « » when omitted:
+`DependencyHash(resolved, selected, plugins)`, where *resolved* is a List of RepoPaths in path order,
+*selected* the Selected Dependencies of the file (§8.7), « » when omitted, and *plugins* the Plugins
+of §9.5, « » when omitted:
 
 1. Let *problems* be an empty List and *input* the empty byte sequence.
 2. For each *path* of *resolved*: if `FileHash(path)` raises, add its Diagnostics to *problems*;
    otherwise append the UTF-8 encoding of *path*, the byte 0x00, the 64 ASCII bytes of the Hash,
    and the byte 0x0A.
-   2a. Let *fragments* be *selected* with their Fragments (§8.7), in path
-   order of `[[Path]]` then path order of `CanonicalJson([[Select]])`. If *fragments* is not empty,
-   append to *input*, for each: the bytes `select`, 0x00, the UTF-8 encoding of the path, 0x00, of
-   `CanonicalJson(select)`, 0x00, the decimal count of its Fragment, 0x0A, and for each Fragment
-   String: the decimal UTF-8 byte length, 0x00, the String's UTF-8 bytes, 0x0A. If `Fragments`
-   raises, add its Diagnostics to *problems*.
-3. If *problems* is not empty, raise *problems*. Otherwise return the Hash of *input*.
+3. After step 2 (once, not per path), let *fragments* be *selected* with their Fragments
+   (`Fragments(entry, text)` of §8.7 with *plugins*, *text* being the file read as in §10.2 steps 1
+   to 4, after the `file` tag), in path order of `[[Path]]` then path order of
+   `CanonicalJson([[Select]])`. If *fragments* is not empty, append to *input*, for each: the bytes
+   `select`, 0x00, the UTF-8 encoding of the path, 0x00, of `CanonicalJson(select)`, 0x00, the
+   decimal count of its Fragment, 0x0A, and for each Fragment String: the decimal UTF-8 byte
+   length, 0x00, the String's UTF-8 bytes, 0x0A. If `Fragments` raises, add its Diagnostics to
+   *problems*.
+4. If *problems* is not empty, raise *problems*. Otherwise return the Hash of *input*.
 
 NOTE: A file without Selected Dependencies has the input it always had: no Hash changes (§17.4).
 The argument *resolved* holds the paths of Patterns only (§12.1 step 5), not `[[Resolved]]` of the
@@ -1228,8 +1233,9 @@ declare `docstamp-lock.yaml text eol=lf` in `.gitattributes`.
 
 ### 12.1 Evaluate
 
-`Evaluate(declaration, universe, lock, attached)`, where *attached* is the List of Diagnostics
-from §9.3, §9.6 and §12.2 attached to `declaration.[[File]]`:
+`Evaluate(declaration, universe, lock, attached, plugins)`, where *attached* is the List of
+Diagnostics from §9.3, §9.6 and §12.2 attached to `declaration.[[File]]`, and *plugins* the Plugins
+of §9.5 (« » when the Configuration file is not a script Carrier):
 
 1. Let *r* be a Result with `[[File]]`, `[[Use]]` and `[[Dependencies]]` from *declaration*, the
    latter being its effective patterns (§8.6) and `[[Origins]]` their origins (none for each, when
@@ -1243,8 +1249,8 @@ from §9.3, §9.6 and §12.2 attached to `declaration.[[File]]`:
    included, to *problems*. Also, for each Selected Dependency of `declaration.[[Selected]]`, collect
    `E_EMPTY_PATTERN` per §8.7 NOTE into *problems*. Let *all* be the union of *resolved* and the
    `[[Path]]` of the Selected Dependencies, in path order.
-5. If *problems* is empty, let *current* be `DependencyHash(resolved, declaration.[[Selected]])`
-   including its Fragments (§10.4 2a); if it raises, add its Diagnostics to *problems*.
+5. If *problems* is empty, let *current* be `DependencyHash(resolved, declaration.[[Selected]],
+   plugins)` including its Fragments (§10.4 step 3); if it raises, add its Diagnostics to *problems*.
 6. If *problems* is not empty, set *r*.`[[State]]` to `invalid` and *r*.`[[Diagnostics]]` to
    *problems*, each with `[[File]]` set to `declaration.[[File]]`, and return *r*.
 7. Set *r*.`[[Resolved]]` to *all*, *r*.`[[Current]]` to *current* and *r*.`[[Diagnostics]]`
@@ -1265,7 +1271,8 @@ leaves the file `ok`.
 `EvaluateAll(root, lockPolicy)` returns Results, the Lock, and a List of global Diagnostics, or
 raises:
 
-1. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`.
+1. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`, and *plugins* the Plugins that
+   `LoadScript` (§9.5) returned for the Configuration file, « » for any other Carrier or none.
 2. Let *universe* be `? ComputeUniverse(root, config)`.
 3. Let (*inline*, *more*, *marked*) be `? ReadInline(root, universe, config)`. Let *attached* be
    *attached* and *more*.
@@ -1279,7 +1286,7 @@ raises:
    when it raises, collect its Diagnostics into *attached*, `[[File]]` the file of *d*.
 6. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
    entries. Otherwise let *lock* be `? ReadLock(root)`.
-7. Let *results* be `Evaluate(b, universe, lock, attached of b)` for each *b* of *declarations*,
+7. Let *results* be `Evaluate(b, universe, lock, attached of b, plugins)` for each *b* of *declarations*,
    in path order, hashing every file with `NormalizedContent(path, marked)`.
 8. Let *global* be a List holding, for each file of *lock* with no configured Declaration, a
    `W_ORPHAN` with `[[Subject]]` that file.
@@ -1816,7 +1823,7 @@ unreadable Lockfile), so no file is marked reviewed by accident.
 2. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`, *universe* be
    `? ComputeUniverse(root, config)`, and (*declarations*, *attached*, *marked*) be the Declarations
    and attached Diagnostics of steps 3 to 5 of §12.2.
-3. Let *results* be `Evaluate(b, universe, « », attached of b)` for each Declaration *b* of
+3. Let *results* be `Evaluate(b, universe, « », attached of b, « »)` for each Declaration *b* of
    *declarations*, in path order, except that no dependency is read or hashed (§10.4 is
    skipped), so a Result is never `invalid` for `E_UNREADABLE`.
 4. Let *selected* be `? SelectResults(args, cwd, root, results)`.
@@ -2923,7 +2930,7 @@ The test suite of an implementation MUST pin, as literals computed once from a r
   line (the same Hash), one whose `dependencies` differ (another Hash), one in CR LF, one with a
   byte order mark and one in `include` and one outside it, and a file with no block, whose Hash
   is the one of §10.3;
-- the Dependency Hash with Fragments (§10.4 2a):
+- the Dependency Hash with Fragments (§10.4 step 3):
   - entries `[('src/a.ts', 'a' x 64)]`, one Fragment { path `docs/guide.md`, select String
     `Install`, hashes `« abc »` } gives
     `bcd4f23fd8ddf98e99b882cb80ec425b8745e93f420748b606e1e7f639b6b87f`;
