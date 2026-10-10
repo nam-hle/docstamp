@@ -1,0 +1,9 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (content-changed)
+  depends   "data[1].json#\"name\""
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+--- stderr ---

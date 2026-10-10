@@ -68,3 +68,29 @@ scenario('§8.8 text that does not parse is E_SELECT', options, async (repo) => 
   expect(result.exit).toBe(2);
   expect(result.stderr).toContain('E_SELECT');
 });
+
+scenario('§8.7 a selected path with glob characters is written escaped', options, async (repo) => {
+  repo.write('data[1].json', '{"name":"a"}\n');
+  repo.write(
+    'docstamp.yaml',
+    'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n' +
+      "      - path: 'data\\[1\\].json'\n        select: name\n",
+  );
+  const first = await repo.run([], { show: ['docstamp.yaml'] });
+  expect(first.exit).toBe(1);
+  expect(first.stdout).toContain('depends   "data[1].json#\\"name\\""');
+  await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+  expect((await repo.run([])).exit).toBe(0);
+  repo.write('data[1].json', '{"name":"b"}\n');
+  expect((await repo.run([])).exit).toBe(1);
+});
+
+scenario('§8.7 a selected path that is a glob is E_CONFIG', options, async (repo) => {
+  repo.write(
+    'docstamp.yaml',
+    'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - path: "*.json"\n        select: name\n',
+  );
+  const result = await repo.run([], { show: ['docstamp.yaml'] });
+  expect(result.exit).toBe(2);
+  expect(result.stderr).toContain('E_CONFIG');
+});

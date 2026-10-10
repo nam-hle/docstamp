@@ -154,3 +154,26 @@ scenario('§10.4 whole and fragment on one path', options, async (repo) => {
   expect(stale.stdout).toContain('depends   docs/**');
   expect(stale.stdout).toContain('depends   "docs/guide.md#\\"Install\\""');
 });
+
+const badPluginConfig = (members: string) =>
+  "import { defineConfig } from 'docstamp';\n" +
+  "import headings from './tools/headings.ts';\n\n" +
+  `export default defineConfig({ ${members}, plugins: [{ ...headings, apiVersion: 2 }], ` +
+  "files: { 'CLAUDE.md': { dependencies: ['src/**'] } } } as never);\n";
+
+scenario('§9.3 step 5 a bad plugin is reported with the other errors', options, async (repo) => {
+  repo.write('docstamp.config.ts', badPluginConfig('version: 2, bogus: 1'));
+  const result = await repo.run([], { show: ['docstamp.config.ts'] });
+  expect(result.exit).toBe(2);
+  expect(result.stderr).toContain('E_PLUGIN');
+  expect(result.stderr).toContain('apiVersion');
+  expect(result.stderr).toContain('E_UNKNOWN_KEY');
+});
+
+scenario('§9.3 step 4 a wrong version is reported before a bad plugin', options, async (repo) => {
+  repo.write('docstamp.config.ts', badPluginConfig('version: 1'));
+  const result = await repo.run([], { show: ['docstamp.config.ts'] });
+  expect(result.exit).toBe(2);
+  expect(result.stderr).toContain('E_CONFIG_VERSION');
+  expect(result.stderr).not.toContain('E_PLUGIN');
+});

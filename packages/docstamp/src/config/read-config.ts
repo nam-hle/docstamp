@@ -232,10 +232,16 @@ export function readConfig(root: string): {
     const message = fresh ? 'Add "version: 2" to the configuration file.' : undefined;
     throw new Raised([diag('E_CONFIG_VERSION', optional(message))]);
   }
-  const plugins = loaded?.plugins === undefined ? [] : validatePlugins(loaded.plugins);
-
   const fatal: Diagnostic[] = [];
   const attached: Diagnostic[] = [];
+  // SPEC §9.3 step 5: a bad plugin list is collected with the other errors
+  let plugins: DocstampPlugin[] = [];
+  try {
+    if (loaded?.plugins !== undefined) plugins = validatePlugins(loaded.plugins);
+  } catch (error) {
+    if (!(error instanceof Raised)) throw error;
+    fatal.push(...error.diagnostics);
+  }
   for (const key of top.keys()) {
     if (!TOP_KEYS.includes(key)) {
       const message = unknownTopKeyMessage(key);

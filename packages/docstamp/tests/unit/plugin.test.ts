@@ -227,3 +227,34 @@ describe('§8.7 runExtract', () => {
     expect(diagnostic?.message).not.toContain('secret');
   });
 });
+
+describe('§9.5 validated plugins are snapshots', () => {
+  it('reads each member once: a getter or a later edit never reaches a claim', () => {
+    let reads = 0;
+    const entry = plugin({
+      get files() {
+        reads += 1;
+        return ['**/*.md'];
+      },
+    });
+    const [valid] = validatePlugins([entry]);
+    const readsAfterValidation = reads;
+    entry.name = 'renamed';
+    entry.extract = () => ({ hashes: ['other'] });
+    claim([valid!], 'a.md');
+    expect(reads).toBe(readsAfterValidation);
+    expect(valid!.name).toBe('md');
+    expect(valid!.extract({ path: 'a.md', text: '', select: 'x' })).toEqual({ hashes: ['h'] });
+  });
+
+  it('calls extract with the plugin object as this', () => {
+    const entry = plugin({
+      extract(this: { marker: string }) {
+        return { hashes: [this.marker] };
+      },
+      marker: 'mine',
+    });
+    const [valid] = validatePlugins([entry]);
+    expect(valid!.extract({ path: 'a.md', text: '', select: 'x' })).toEqual({ hashes: ['mine'] });
+  });
+});
