@@ -8,7 +8,6 @@ export type { DocstampPlugin, ExtractInput, ExtractResult } from './plugin/types
 export interface SelectedDependency {
   path: string;
   select: Json;
-  match?: 'one' | 'all';
 }
 
 type Dependency = string | SelectedDependency;

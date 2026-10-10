@@ -84,7 +84,6 @@ function selectedMembers(r: Result): Array<[string, Json]> {
         obj([
           ['path', entry.path],
           ['select', selectJson(entry.select)],
-          ['match', entry.match],
         ]),
       ),
     ],

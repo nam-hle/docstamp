@@ -86,8 +86,7 @@ lines that follow its content.
 NOTE: `focus` and `lines` are advisory: docstamp prints them in its changed-file report and never
 hashes them, so they are not part of the compatibility of §7.
 
-NOTE: Two Headings with the same text give two hashes, so docstamp reports `E_SELECT_AMBIGUOUS`
-unless the dependency says `match: all`, which depends on every one.
+NOTE: Two Headings with the same text give two hashes, so docstamp reports `E_SELECT_AMBIGUOUS`.
 
 NOTE: Every byte of a Section counts: a reformatted line, a changed list marker or a blank line added
 before the next Heading is a change. docstamp already normalizes CR LF to LF; step 2 makes a caller

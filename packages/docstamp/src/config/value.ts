@@ -27,6 +27,5 @@ export const SELECTED_SCHEMA = {
   properties: {
     path: { type: 'string', minLength: 1 },
     select: {},
-    match: { enum: ['one', 'all'] },
   },
 } as const;

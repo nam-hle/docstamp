@@ -30,8 +30,7 @@ const FIX: Record<Code, string> = {
     'Register valid plugins in docstamp.config.ts or .js: { name, apiVersion: 1, files, extract }.',
   E_SELECT: 'Register a plugin whose "files" select the path, or fix the plugin or the file.',
   E_SELECT_NOT_FOUND: 'The plugin found nothing for the selector; correct "select" or the file.',
-  E_SELECT_AMBIGUOUS:
-    'The selector matched more than once; narrow "select", or write "match: all" to depend on all.',
+  E_SELECT_AMBIGUOUS: 'The selector matched more than once; narrow "select".',
   E_PATH_ENCODING: 'Rename the file to a valid UTF-8 name.',
   E_PATH_COLLISION: 'Rename one of the files; names differ only by case or normalization.',
   E_LOCK:

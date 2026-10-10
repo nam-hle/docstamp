@@ -137,8 +137,8 @@ E_SELECT_NOT_FOUND (error)
   fix      Correct select or the file.
 
 E_SELECT_AMBIGUOUS (error)
-  meaning  The selector matched more than once and match is one.
-  fix      Narrow select, or write match: all to depend on all.
+  meaning  The selector matched more than once.
+  fix      Narrow select.
 
 W_ORPHAN (warning)
   meaning  The lock has an entry for a file that is no longer declared.
