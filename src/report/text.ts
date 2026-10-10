@@ -1,6 +1,7 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
 import { needsQuoting, quote, shellQuote } from '../core/quote.ts';
+import { canonicalJson } from '../plugin/canonical.ts';
 import type { Change, Diagnostic, Result, ReverseDependent, ReverseEntry } from '../core/types.ts';
 import type { FileStats } from '../engine/stats.ts';
 import type { StatsWindow } from './json.ts';
@@ -243,14 +244,16 @@ export function checkText(selected: readonly Result[], options: CheckTextOptions
     .join('');
 }
 
-// SPEC §14.3, §14.6: one depends line per effective pattern, with its Preset
+// SPEC §14.3, §14.6: one depends line per effective pattern, with its Preset, then per selected
 function dependsLines(r: Result): string {
-  return r.dependencies
-    .map((c, i) => {
-      const preset = r.origins?.[i] ?? null;
-      return `  depends   ${shown(c)}${preset === null ? '' : ` (preset ${shown(preset)})`}\n`;
-    })
-    .join('');
+  const patterns = r.dependencies.map((c, i) => {
+    const preset = r.origins?.[i] ?? null;
+    return `  depends   ${shown(c)}${preset === null ? '' : ` (preset ${shown(preset)})`}\n`;
+  });
+  const selected = (r.selected ?? []).map(
+    (entry) => `  depends   ${shown(`${entry.path}#${canonicalJson(entry.select)}`)}\n`,
+  );
+  return [...patterns, ...selected].join('');
 }
 
 // SPEC §14.6
