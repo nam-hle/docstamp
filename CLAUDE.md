@@ -148,7 +148,7 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
 - **Fixture**: a plain tree under `tests/e2e/fixtures/<use case>/`; add one when a use case needs
   files the existing ones lack (cwd, nesting, ignore rules). Fixture sources are never formatted,
   linted, type-checked, collected by vitest or scanned by knip; a `docstamp.config.ts` there imports `docstamp` through
-  `linkLib: true`, which links the repo as `node_modules/docstamp`. A fixture file that the fixture's own `.gitignore` ignores (it is the point of the file) is added with `git add -f`, or a fresh `git archive` loses it.
+  `linkLib: true`, which links the repo as `node_modules/docstamp` and keeps it out of git (`.git/info/exclude`), because a committed link would make commit ids differ per machine. A fixture file that the fixture's own `.gitignore` ignores (it is the point of the file) is added with `git add -f`, or a fresh `git archive` loses it.
 - **Snapshots**: only the temp root becomes `<root>`; hashes stay real, which pins hash
   stability. After a deliberate behavior change run `pnpm nadle testE2e -- -u`, then read every changed
   snapshot: a snapshot of a bug is not a test. Obsolete snapshots fail the run: a scenario

@@ -1,4 +1,5 @@
 import {
+  appendFileSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -55,6 +56,9 @@ function prepare(options: ScenarioOptions, session: Session): Repo {
       env: hermeticEnv(session.home),
     });
     if (init.status !== 0) throw new Error(`git init failed: ${String(init.stderr)}`);
+    // the link points at this checkout, so committing it would make commit ids differ per machine
+    if (options.linkLib === true)
+      appendFileSync(join(root, '.git', 'info', 'exclude'), 'node_modules\n');
   }
   return new Repo(root, session);
 }

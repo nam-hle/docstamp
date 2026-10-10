@@ -4,7 +4,7 @@ exit: 1
 STALE    CLAUDE.md  (content-changed)
   modified  src/a.ts
   fragment  "docs/guide.md#\"Install\""  (new)
-  review: git diff -M 728d08fe1b1a51001a9dc92aa515c6cf01128551 -- src/a.ts docs/guide.md
+  review: git diff -M 5bafa1d2cb8086da8eba13e9ff7f233b47ca04cf -- src/a.ts docs/guide.md
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
   run update only after the review, never --all just to pass; see docstamp help agents
