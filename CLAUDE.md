@@ -31,7 +31,7 @@ Node.js >= 24. ESM only.
 ## Tooling
 
 - **pnpm** is the only package manager. Never delete `pnpm-lock.yaml`; update it in place.
-- **TypeScript 7**, strict, `tsc --noEmit` over src, tests and root configs.
+- **TypeScript 7**, strict, `tsc --noEmit` over src, action, tests and root configs.
 - **tsup** bundles `src/index.ts` into a single `dist/index.js` with a `docstamp` bin, and
   `src/lib.ts` (`defineConfig`, `DocstampConfig`) into `dist/lib.js`; `tsc` emits its `.d.ts`
   (tsup's own dts build does not work with TypeScript 7). `schema.json` and
@@ -39,6 +39,8 @@ Node.js >= 24. ESM only.
   `src/config/schema.ts` and `src/inline/schema.ts`; a test fails when either is stale. The
   generator runs under Node's type stripping, so those modules import only leaf modules
   (`src/inline/keys.ts`, `src/config/value.ts`).
+- **`action/*.ts`** runs on the runner under Node's type stripping, from the action's checkout:
+  import only other `action/` modules with `.ts` extensions, never `src/`, and no enums.
 - **vitest** for unit and end-to-end tests.
 - **oxlint** (type-aware) and **oxfmt** for lint and format; `pnpm format` orders imports, never
   by hand.
@@ -72,6 +74,8 @@ docstamp/
 │   ├── engine/           # evaluation, presets, reverse lookup, stats, proposal; pure, no I/O (§8.6, §12, §12.5, §12.6, §13.8)
 │   ├── history/          # changed-file report (§12.3), stats replay (§12.4), renamed path (§12.7), git, read-only
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
+├── action.yml            # the composite GitHub Action; installs docstamp, runs it, reports
+├── action/               # render.ts (report to PR comment, pure), run.ts (summary, comment upsert)
 ├── scripts/              # write-schema.ts: regenerates schema.json and schema-frontmatter.json
 ├── tests/
 │   ├── helpers/          # temp-repo fixture builder, golden tree (§17.7)
@@ -255,7 +259,9 @@ first, bump the Lockfile version, then regenerate the literals and review each d
 - `.github/workflows/ci.yml` runs the phases of `pnpm test` on every pull request and push to `main`,
   in one `Test (<os>)` matrix job for Linux, macOS and Windows, then `npm pack --dry-run` to
   prove the tarball builds. It does not dry-run `npm publish`: that fails once the
-  version in `package.json` is already on npm, which is true after every release.
+  version in `package.json` is already on npm, which is true after every release. A `Docs gate`
+  job packs the build and runs `action.yml` on this repository (`uses: ./`), the same file users
+  call, so the Action is dogfooded and the PR comment appears on our own pull requests.
 - `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
   the commits on `main`; it writes the version and `CHANGELOG.md`. Never edit either by hand.
 - Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
