@@ -110,7 +110,8 @@ describe('§8 the plugin through the docstamp CLI', () => {
     const both = `${API}\ninterface createUser { x: number }\n`;
     const ambiguous = repository(CREATE, both).run();
     expect(ambiguous.exit).toBe(2);
-    expect(ambiguous.stderr).toContain('E_SELECT_AMBIGUOUS');
+    expect(ambiguous.stderr).toContain('E_SELECT');
+    expect(ambiguous.stderr).toContain('add a kind');
 
     const picked = repository(
       "{ path: 'api.ts', select: { name: 'createUser', kind: 'function' } }",

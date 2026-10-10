@@ -1,10 +1,10 @@
 version: 3
 files:
-  "CLAUDE.md": 428785e86981e5528b7300ffbf7a7de5ea59318f006c7556bb4c1d2387a910ec
-  "README.md": 90bbcc70bb31b7bccd8e4f8706d4780e4c97e835dc8bfd76cc2e4c635ad79fc6
-  "packages/docstamp-plugin-js/README.md": 2d03b44257d81b3b43c02373b9b5c1d735b0b349827941b5cc2ff263c2ab500f
-  "packages/docstamp-plugin-js/SPEC.md": 2d03b44257d81b3b43c02373b9b5c1d735b0b349827941b5cc2ff263c2ab500f
-  "packages/docstamp-plugin-markdown/README.md": 15de4f9f0dcf7c8349c2e2352d333bf2b877b0c4dd3c07e255910a108fe41238
-  "packages/docstamp-plugin-markdown/SPEC.md": 15de4f9f0dcf7c8349c2e2352d333bf2b877b0c4dd3c07e255910a108fe41238
-  "packages/docstamp/README.md": efd44d3ff848e412f5d4a3e2634eb4cc5f77465c421f42ab3e17e28e3a0100b4
-  "packages/docstamp/docs/SPEC.md": 6a40e1acb614ba7afce08600c495ad03392ac06421a78e10ad5e655c1e7fd223
+  "CLAUDE.md": 34304a359dfb8e3833962496c4cfeefe422eb0f2046d227557f85c42f37cbe03
+  "README.md": 440ee122099eae4c90d0fb1c240797226e705b0fa98ce98f59558289499e2ad8
+  "packages/docstamp-plugin-js/README.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
+  "packages/docstamp-plugin-js/SPEC.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
+  "packages/docstamp-plugin-markdown/README.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
+  "packages/docstamp-plugin-markdown/SPEC.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
+  "packages/docstamp/README.md": 62ca530002e70ee829a54a15a347e014acb1e29d0d07f21748e7fd9351ea709e
+  "packages/docstamp/docs/SPEC.md": 3cb29c0033715a84c249f916a949c493cdf5eb284b7aac89397be0c35b3b7f1c

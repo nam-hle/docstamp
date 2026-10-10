@@ -95,11 +95,12 @@ describe('§6 the plugin through the docstamp CLI', () => {
     expect(result.stderr).toContain('E_SELECT_NOT_FOUND');
   });
 
-  it('reports a heading that appears twice as E_SELECT_AMBIGUOUS', () => {
+  it('reports a heading that appears twice as E_SELECT naming its lines', () => {
     const twice = `${GUIDE}\n## Install\nAgain.\n`;
     const refused = repository(INSTALL, twice).run();
     expect(refused.exit).toBe(2);
-    expect(refused.stderr).toContain('E_SELECT_AMBIGUOUS');
+    expect(refused.stderr).toContain('E_SELECT');
+    expect(refused.stderr).toContain('appears at lines');
   });
 
   it('selects by level when the object form is used', () => {

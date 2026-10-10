@@ -260,31 +260,26 @@ Editing `scripts.lint` or `version` of `package.json` leaves `CLAUDE.md` `ok`; e
 
 A pattern depends on a whole file. When a doc rests on one section of a long guide, an edit to any other section still makes it stale. A *plugin* teaches docstamp to hash one part of a file: you write it, register it in a script configuration, and name the part with `select`. docstamp stays format-agnostic; the plugin decides what a selector means ([SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies)).
 
-A plugin is an object with a `name`, `apiVersion: 1`, the `files` patterns it handles, and a synchronous `extract({ path, text, select })` that returns `{ hashes }`, one hash string per part it finds. It may also return `focus`, a sentence per part that says what the part is, and `lines`, where it is, so that the report can tell a reviewer where to look. This one hashes the body of a Markdown heading:
+A plugin is an object with a `name`, `apiVersion: 1`, the `files` patterns it handles, and a synchronous `extract({ path, text, select })` that returns `{ parts, diagnostics }`. A *part* is `{ content, focus?, lines? }`: docstamp hashes `content`, and the report prints `focus`, a sentence that says what the part is, and `lines`, where it is, so that a reviewer knows where to look. A *diagnostic* is `{ severity, message }`: an `error` makes the file `invalid`, a `warning` is printed and changes nothing. No part and no error means the selector found nothing; several parts mean the selector asked for all of them, so a plugin reports an error when that was an accident. This one hashes the body of a Markdown heading:
 
 ```ts
 // tools/headings.ts
-import { createHash } from 'node:crypto';
-import { definePlugin } from 'docstamp';
-
-const sha = (text: string) => createHash('sha256').update(text).digest('hex');
+import { definePlugin, type Part } from 'docstamp';
 
 const parseHeading = (line: string) => {
   const [, marks = '', title = ''] = /^(#{1,6})\s+(.*?)\s*$/u.exec(line) ?? [];
   return marks === '' ? undefined : { level: marks.length, title };
 };
 
-// Hashes the body of every heading titled <select>, of any level, up to the next heading of
-// the same or a higher level; focus and lines tell the report what and where that part is.
+// The body of the heading titled <select>, of any level, up to the next heading of the same or a
+// higher level. Two such headings are an error: the author says which one is meant.
 export default definePlugin({
   name: 'headings',
   apiVersion: 1,
   files: ['**/*.md'],
   extract({ text, select }) {
     const lines = text.split('\n');
-    const hashes: string[] = [];
-    const focus: string[] = [];
-    const ranges: { start: number; end: number }[] = [];
+    const found: Part[] = [];
     lines.forEach((line, index) => {
       const heading = parseHeading(line);
       if (heading?.title !== select) return;
@@ -292,11 +287,18 @@ export default definePlugin({
         (next, i) => i > index && (parseHeading(next)?.level ?? Infinity) <= heading.level,
       );
       const stop = end === -1 ? lines.length : end;
-      hashes.push(sha(lines.slice(index + 1, stop).join('\n')));
-      focus.push(`section "${heading.title}" (level ${heading.level})`);
-      ranges.push({ start: index + 1, end: stop });
+      found.push({
+        content: lines.slice(index + 1, stop).join('\n'),
+        focus: `section "${heading.title}" (level ${heading.level})`,
+        lines: { start: index + 1, end: stop },
+      });
     });
-    return { hashes, focus, lines: ranges };
+    if (found.length > 1) {
+      const where = found.map((part) => part.lines!.start).join(', ');
+      const message = `"${String(select)}" is a heading at lines ${where}; rename one.`;
+      return { diagnostics: [{ severity: 'error', message }] };
+    }
+    return { parts: found };
   },
 });
 ```
@@ -345,11 +347,11 @@ next: review each stale file against its dependencies, then run: docstamp update
   run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
-- **One part, by default.** `select` is any plain value with finite numbers only, passed to the plugin as it is. Two entries with the same `path` and `select` are one dependency: the first wins. A plugin that finds no part, several parts, or throws, and a plugin that is invalid or claimed twice, each make the file `invalid` with their own code: [SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies), `docstamp help diagnostics`.
+- **The plugin decides what a selector selects.** `select` is any plain value with finite numbers only, passed to the plugin as it is. Two entries with the same `path` and `select` are one dependency: the first wins. A plugin that finds no part (`E_SELECT_NOT_FOUND`), reports an error of its own (`E_SELECT`, in its own words), throws or returns a malformed result (`E_SELECT`), and a plugin that is invalid or claimed twice (`E_PLUGIN`), each make the file `invalid`; a plugin warning is `W_SELECT`, printed on stderr, and changes nothing: [SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies), `docstamp help diagnostics`.
 - **Script configuration only.** `plugins` is a key of `docstamp.config.ts` or `.js`, not of `docstamp.yaml` or an inline block ([SPEC §9.5](packages/docstamp/docs/SPEC.md#95-script-carriers)).
 - **A literal path.** `path` names one file, never a glob; escape glob characters as in a pattern (`data\[1\].json` for `data[1].json`).
-- **A stale file names the parts that changed.** The report runs the plugin on the file as it was at the review commit and prints `fragment  "docs/guide.md#\"Install\""  (changed)` for each selected part whose hash differs (`(new)` when the part did not exist then), followed by the `focus` and `lines` the plugin gave for it, and `--json` has a `fragments` list with the same. Like the changed-file list it needs history, and it never changes a verdict ([SPEC §12.3](packages/docstamp/docs/SPEC.md#123-changedsince)).
-- **Determinism is the plugin author's duty.** A plugin runs in your process and docstamp trusts its hashes. Keep it independent of the clock, the network and the environment.
+- **A stale file names the parts that changed.** The report runs the plugin on the file as it was at the review commit and prints `fragment  "docs/guide.md#\"Install\""  (changed)` for each selected dependency whose parts differ (`(new)` when it had none then), followed by the `focus` and `lines` the plugin gave for each part, and `--json` has a `fragments` list with a `parts` list in it. Like the changed-file list it needs history, and it never changes a verdict ([SPEC §12.3](packages/docstamp/docs/SPEC.md#123-changedsince)).
+- **Determinism is the plugin author's duty.** A plugin runs in your process, and docstamp hashes the `content` it returns. Keep it independent of the clock, the network and the environment, and return several parts in an order that does not change when an unrelated part of the file does.
 - **Ready-made plugins.** `docstamp-plugin-markdown` selects a section by its heading, so you need not write the one above: [packages/docstamp-plugin-markdown](packages/docstamp-plugin-markdown#readme), with its own [SPEC](packages/docstamp-plugin-markdown/SPEC.md). `docstamp-plugin-js` selects a top-level declaration of a JavaScript or TypeScript file by its name: [packages/docstamp-plugin-js](packages/docstamp-plugin-js#readme), with its own [SPEC](packages/docstamp-plugin-js/SPEC.md). Neither is published yet. docstamp itself ships only the JSON and YAML plugins described above.
 
 ## Proposing dependencies

@@ -9,8 +9,9 @@ export interface FragmentProbe {
   readonly earlier: (entry: SelectedEntry, text: string) => Extracted | null;
 }
 
-const sameStrings = (a: readonly string[], b: readonly string[]): boolean =>
-  a.length === b.length && a.every((value, index) => value === b[index]);
+const sameContents = (a: Extracted, b: Extracted): boolean =>
+  a.parts.length === b.parts.length &&
+  a.parts.every((part, index) => part.content === b.parts[index]!.content);
 
 // SPEC §12.3 step 11: the text of a path at a commit as a plugin reads it, null when not text
 function textAt(git: Git, commit: string, path: string): string | null {
@@ -34,16 +35,18 @@ export function fragmentChanges(
     if (current === null) continue;
     const old = textAt(git, commit, entry.path);
     const before = old === null ? null : earlier(entry, old);
-    const status =
-      before === null ? 'new' : sameStrings(before.hashes, current.hashes) ? null : 'changed';
+    const status = before === null ? 'new' : sameContents(before, current) ? null : 'changed';
     if (status === null) continue;
-    const { focus, lines } = current;
+    const infos = current.parts.map(({ focus, lines }) => ({
+      ...(focus === undefined ? {} : { focus }),
+      ...(lines === undefined ? {} : { lines }),
+    }));
+    const described = infos.some((info) => info.focus !== undefined || info.lines !== undefined);
     changes.push({
       path: entry.path,
       select: entry.select,
       status,
-      ...(focus === undefined ? {} : { focus }),
-      ...(lines === undefined ? {} : { lines }),
+      ...(described ? { parts: infos } : {}),
     });
   }
   return changes;

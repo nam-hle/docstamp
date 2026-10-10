@@ -17,7 +17,6 @@ export type Code =
   | 'E_PLUGIN'
   | 'E_SELECT'
   | 'E_SELECT_NOT_FOUND'
-  | 'E_SELECT_AMBIGUOUS'
   | 'E_PATH_ENCODING'
   | 'E_PATH_COLLISION'
   | 'E_LOCK'
@@ -28,6 +27,7 @@ export type Code =
   | 'W_EMPTY_EXCLUSION'
   | 'W_DUPLICATE_PATTERN'
   | 'W_SHADOWED_EXCLUSION'
+  | 'W_SELECT'
   | 'W_UNKNOWN_PATH';
 
 export type Json =
@@ -96,14 +96,19 @@ export interface SelectionChange {
   readonly path: string;
 }
 
+// SPEC §5.4: what the plugin says one part is and where it is; advisory
+interface PartInfo {
+  readonly focus?: string;
+  readonly lines?: { readonly start: number; readonly end: number };
+}
+
 // SPEC §5.4
 export interface FragmentChange {
   readonly path: string;
   readonly select: Json;
   readonly status: 'changed' | 'new';
-  // SPEC §8.7, §5.4: what the plugin says the part is and where it is; advisory
-  readonly focus?: readonly string[];
-  readonly lines?: readonly { readonly start: number; readonly end: number }[];
+  // one PartInfo for each part now; absent when no part has a focus or lines
+  readonly parts?: readonly PartInfo[];
 }
 
 export interface Result {

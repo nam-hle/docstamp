@@ -9,7 +9,7 @@ docstamp:
   dependencies:
     - path: package.json
       select: scripts.build
-  hash: cc23b031409c71115ac32821f2987532df9118a64bcac3727f3c4148914962ff
+  hash: 8fb5b62bf146fe8b3eb4b3ff7dbb50d5845c14f35ab8734319a1f142e33a5d07
 ---
 
 # G

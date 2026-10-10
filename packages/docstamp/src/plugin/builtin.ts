@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { parseAllDocuments } from 'yaml';
 
 import type { Json } from '../core/types.ts';
@@ -76,9 +75,6 @@ function toJson(value: unknown): Json {
   throw new Error('not a plain value');
 }
 
-const digest = (value: Json): string =>
-  createHash('sha256').update(canonicalJson(value), 'utf8').digest('hex');
-
 // SPEC §8.8: the type of the value, in words
 const typeName = (value: Json): string => {
   if (value === null) return 'null';
@@ -86,13 +82,39 @@ const typeName = (value: Json): string => {
   return typeof value === 'object' ? 'object' : typeof value;
 };
 
-function extractFrom(parse: (text: string) => unknown) {
+const problem = (message: string): ExtractResult => ({
+  diagnostics: [{ severity: 'error', message }],
+});
+
+function extractFrom(format: string, parse: (text: string) => unknown) {
   return ({ text, select }: ExtractInput): ExtractResult => {
-    const steps = parseValuePath(select);
-    const found = walk(parse(text), steps);
-    if (!found.found) return { hashes: [] };
-    const value = toJson(found.value);
-    return { hashes: [digest(value)], focus: [`${select as string} (${typeName(value)})`] };
+    let steps: Step[];
+    try {
+      steps = parseValuePath(select);
+    } catch {
+      return problem(
+        'The selector is not a Value Path; write steps such as scripts.build, items.0.name or ["a.b"].c.',
+      );
+    }
+    let parsed: unknown;
+    try {
+      parsed = parse(text);
+    } catch {
+      return problem(`The file is not one valid ${format} document; fix the file.`);
+    }
+    const found = walk(parsed, steps);
+    if (!found.found) return {};
+    let value: Json;
+    try {
+      value = toJson(found.value);
+    } catch {
+      return problem(
+        'The value is not plain data (finite numbers, strings, booleans, null, lists and maps); select another value.',
+      );
+    }
+    return {
+      parts: [{ content: canonicalJson(value), focus: `${select as string} (${typeName(value)})` }],
+    };
   };
 }
 
@@ -111,12 +133,12 @@ export const builtinPlugins: readonly DocstampPlugin[] = [
     name: 'docstamp-json',
     apiVersion: 1,
     files: ['**/*.json'],
-    extract: extractFrom((text) => JSON.parse(text)),
+    extract: extractFrom('JSON', (text) => JSON.parse(text)),
   },
   {
     name: 'docstamp-yaml',
     apiVersion: 1,
     files: ['**/*.yaml', '**/*.yml'],
-    extract: extractFrom(parseYaml),
+    extract: extractFrom('YAML', parseYaml),
   },
 ];
