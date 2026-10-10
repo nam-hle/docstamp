@@ -3,6 +3,29 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1](https://github.com/nam-hle/docstamp/compare/v0.5.0...v0.5.1) (2026-10-10)
+
+
+### Features
+
+* depend on one value of a JSON or YAML file with built-in plugins ([#80](https://github.com/nam-hle/docstamp/issues/80)) ([bf80d5f](https://github.com/nam-hle/docstamp/commit/bf80d5f161e9a8627bb7b50829fba28b02ae2c47))
+* let a plugin say what a part is and where it is ([#86](https://github.com/nam-hle/docstamp/issues/86)) ([0ba965e](https://github.com/nam-hle/docstamp/commit/0ba965e826e395e137f511d69cccfb36bae79ba4))
+* say which selected part of a file changed in the changed-file report ([#83](https://github.com/nam-hle/docstamp/issues/83)) ([f890efc](https://github.com/nam-hle/docstamp/commit/f890efc3b36c05ee12af1d4d4076dca1bde6d0e4))
+
+
+### Bug Fixes
+
+* close gaps in the plugin core ([#84](https://github.com/nam-hle/docstamp/issues/84)) ([654e41c](https://github.com/nam-hle/docstamp/commit/654e41cc0a29af1130ff82c75b9335ae395d2a6b))
+
+
+### Internal
+
+* keep only wiring in the real end-to-end suite ([#90](https://github.com/nam-hle/docstamp/issues/90)) ([f803575](https://github.com/nam-hle/docstamp/commit/f80357508c7ed45243bb3eb3f6c7a4d1a8245d56))
+* move the package into packages/docstamp and run the gate through nadle ([#74](https://github.com/nam-hle/docstamp/issues/74)) ([a47c751](https://github.com/nam-hle/docstamp/commit/a47c7518f99aa6bf7d1b29bb390abd1748018841))
+* reach git and the clock through the Host, and run the git scenarios in memory ([#89](https://github.com/nam-hle/docstamp/issues/89)) ([d0aa922](https://github.com/nam-hle/docstamp/commit/d0aa922f95db0035f37146cd04f4876bbf52fde1))
+* reach the file system through a Host port ([#87](https://github.com/nam-hle/docstamp/issues/87)) ([d92d82b](https://github.com/nam-hle/docstamp/commit/d92d82b7cf1293b5386f3623230ac2b453ecef31))
+* run most scenarios in memory, in this process ([#88](https://github.com/nam-hle/docstamp/issues/88)) ([bc95a87](https://github.com/nam-hle/docstamp/commit/bc95a876b550ea3769cea0be38cfaa332585d036))
+
 ## [0.5.0](https://github.com/nam-hle/docstamp/compare/v0.4.0...v0.5.0) (2026-10-09)
 
 
