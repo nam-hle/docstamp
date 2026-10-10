@@ -213,8 +213,8 @@ tasks.register('testUnit', {
   run: PnpxTask,
   group: 'Testing',
   workingDir: DOCSTAMP,
-  description: 'Run the docstamp unit tests (read-only)',
-  options: { command: 'vitest', args: ['run', 'tests/unit'] },
+  description: 'Run the docstamp unit and in-process scenario tests (read-only)',
+  options: { command: 'vitest', args: ['run', 'tests/unit', 'tests/scenarios'] },
 });
 
 tasks.register('testAction', {

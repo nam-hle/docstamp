@@ -15,54 +15,18 @@ import {
 } from 'node:fs';
 import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ExpectStatic } from 'vitest';
+import { ScenarioRepo, type Execution, type RunOptions, type Session } from '../../harness/core.ts';
 
 export const E2E_DIR = fileURLToPath(new URL('..', import.meta.url));
 export const REPO_DIR = fileURLToPath(new URL('../../..', import.meta.url));
 const BIN = join(REPO_DIR, 'dist/index.js');
 const FIRST_COMMIT_TIME = 1_767_225_600;
 
-export interface Session {
-  expect: ExpectStatic;
-  skip: (reason: string) => never;
-  slug: string;
-  base: string;
+export interface DiskSession extends Session {
   home: string;
-  counter: number;
-  produced: Set<string>;
   clock: number;
   fixtureDir: string | undefined;
 }
-
-export interface RunOptions {
-  cwd?: string;
-  env?: Record<string, string>;
-  expectExit?: number;
-  snapshot?: boolean;
-  label?: string;
-  show?: string[];
-}
-
-interface Doc {
-  [key: string]: any;
-}
-
-export interface RunResult {
-  exit: number;
-  stdout: string;
-  stderr: string;
-  json: () => Doc;
-}
-
-const slugify = (text: string, max = 48): string =>
-  text
-    .replace(/[^A-Za-z0-9._]+/gu, '-')
-    .replace(/^[-.]+|-+$/gu, '')
-    .slice(0, max)
-    .replace(/-+$/gu, '');
-
-const shellQuote = (arg: string): string =>
-  /^[A-Za-z0-9_@%+=:,./<>-]+$/u.test(arg) ? arg : `'${arg.replaceAll("'", `'\\''`)}'`;
 
 export const hermeticEnv = (home: string): Record<string, string> => ({
   PATH: process.env['PATH'] ?? '',
@@ -86,13 +50,15 @@ const GIT_FLAGS = [
   'core.quotepath=false',
 ];
 
-export class Repo {
+export class Repo extends ScenarioRepo {
   private pinnedTime: string | undefined;
 
   constructor(
-    readonly root: string,
-    private readonly session: Session,
-  ) {}
+    root: string,
+    protected readonly session: DiskSession,
+  ) {
+    super(root, session);
+  }
 
   path(...segments: string[]): string {
     return join(this.root, ...segments);
@@ -214,7 +180,7 @@ export class Repo {
     return this.at(target);
   }
 
-  async run(args: readonly string[], options: RunOptions = {}): Promise<RunResult> {
+  protected async execute(args: readonly string[], options: RunOptions): Promise<Execution> {
     if (!existsSync(BIN)) throw new Error('dist/index.js is missing: run `pnpm build` first');
     const cwd = join(this.root, options.cwd ?? '');
     const spawned = spawnSync(process.execPath, [BIN, ...args], {
@@ -223,72 +189,7 @@ export class Repo {
       env: { ...hermeticEnv(this.session.home), ...options.env },
     });
     if (spawned.status === null) throw new Error(`docstamp was killed: ${spawned.signal}`);
-    const { status: exit, stdout, stderr } = spawned;
-    if (options.expectExit !== undefined && exit !== options.expectExit) {
-      throw new Error(
-        `docstamp ${args.join(' ')}: expected exit ${options.expectExit}, got ${exit}\n` +
-          `stdout:\n${stdout}\nstderr:\n${stderr}`,
-      );
-    }
-    const result: RunResult = { exit, stdout, stderr, json: () => JSON.parse(stdout) as Doc };
-    if (options.snapshot !== false) {
-      await this.snapshot(
-        slugify(options.label ?? this.normalize(args.join(' '))) || 'no-args',
-        this.describeRun(args, options, result),
-      );
-    }
-    return result;
-  }
-
-  async snapFile(path: string, label = path): Promise<void> {
-    const body = this.exists(path) ? this.read(path) : '(absent)\n';
-    await this.snapshot(`file-${slugify(label)}`, `file: ${path}\n--- content ---\n${body}`);
-  }
-
-  async snap(label: string, text: string): Promise<void> {
-    await this.snapshot(slugify(label), `${label}\n--- text ---\n${text}`);
-  }
-
-  private describeRun(args: readonly string[], options: RunOptions, result: RunResult): string {
-    const env = Object.entries(options.env ?? {}).map(([k, v]) => `env: ${k}=${v}\n`);
-    const cwd = options.cwd === undefined ? '' : `cwd: ${options.cwd}\n`;
-    const label = options.label === undefined ? '' : `# ${options.label}\n`;
-    const shown = (options.show ?? []).map((path) => {
-      const body = this.exists(path) ? this.read(path) : '(absent)\n';
-      const text = body === '' ? '(empty)\n' : body;
-      return `--- setup: ${path} ---\n${text}${text.endsWith('\n') ? '' : '\n(no final newline)\n'}`;
-    });
-    const line = ['docstamp', ...args].map((arg) => shellQuote(this.normalize(arg))).join(' ');
-    return (
-      `${label}$ ${line}\n${cwd}${env.join('')}exit: ${result.exit}\n` +
-      `--- stdout ---\n${result.stdout}--- stderr ---\n${result.stderr}${shown.join('')}`
-    );
-  }
-
-  private normalize(text: string): string {
-    const mapped = text.replaceAll(this.root, '<root>').replaceAll(this.session.base, '<tmp>');
-    if (process.platform !== 'win32') return mapped;
-    // docstamp prints paths with `/`, so map the forward-slash spelling of the same paths too.
-    const slashed = mapped
-      .replaceAll(this.root.replaceAll('\\', '/'), '<root>')
-      .replaceAll(this.session.base.replaceAll('\\', '/'), '<tmp>')
-      .replaceAll(this.root.replaceAll('\\', '\\\\'), '<root>')
-      .replace(/(['"])(<root>|<tmp>)([^\s'"]*)\1/gu, '$2$3');
-    return slashed.replace(
-      /(<root>|<tmp>)([^\s'"]*)/gu,
-      (_, token: string, tail: string) => token + tail.replaceAll('\\', '/'),
-    );
-  }
-
-  private async snapshot(name: string, text: string): Promise<void> {
-    const session = this.session;
-    session.counter += 1;
-    const file = `${String(session.counter).padStart(2, '0')}-${name}.txt`;
-    session.produced.add(file);
-    const normalized = this.normalize(text).replaceAll('\r', '␍').replaceAll('﻿', '<BOM>');
-    await session
-      .expect(normalized)
-      .toMatchFileSnapshot(join(E2E_DIR, '__snapshots__', session.slug, file));
+    return { exit: spawned.status, stdout: spawned.stdout, stderr: spawned.stderr };
   }
 }
 

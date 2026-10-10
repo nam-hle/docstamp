@@ -1,6 +1,6 @@
 import { dirname } from 'node:path';
 import { expect } from 'vitest';
-import { config, scenario } from '../harness/index.ts';
+import { config, scenario } from './harness/index.ts';
 
 // Windows prints some of these paths with `\` and some with `/`; compare them alike.
 const slashes = (text: string): string => text.replaceAll('\\', '/');
