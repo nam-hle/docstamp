@@ -26,6 +26,12 @@ const FIX: Record<Code, string> = {
   E_EMPTY_PATTERN: 'Correct or remove the pattern; it matches no file.',
   E_EMPTY_DEPENDENCIES: 'Correct the patterns in "dependencies"; together they select no file.',
   E_UNREADABLE: 'Fix the permissions or remove the entry.',
+  E_PLUGIN:
+    'Register valid plugins in docstamp.config.ts or .js: { name, apiVersion: 1, files, extract }.',
+  E_SELECT: 'Register a plugin whose "files" select the path, or fix the plugin or the file.',
+  E_SELECT_NOT_FOUND: 'The plugin found nothing for the selector; correct "select" or the file.',
+  E_SELECT_AMBIGUOUS:
+    'The selector matched more than once; narrow "select", or write "match: all" to depend on all.',
   E_PATH_ENCODING: 'Rename the file to a valid UTF-8 name.',
   E_PATH_COLLISION: 'Rename one of the files; names differ only by case or normalization.',
   E_LOCK:

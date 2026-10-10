@@ -138,6 +138,24 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'commit, or a --from that names no commit.',
     fix: 'Run in a git work tree with its full history (fetch-depth: 0 in CI); name a commit.',
   },
+  E_PLUGIN: {
+    meaning:
+      'A plugin is not valid (wrong shape, apiVersion, files or extract, or a duplicate name), ' +
+      'or two plugins claim the same file.',
+    fix: 'Register valid plugins: { name, apiVersion: 1, files, extract }, one per file.',
+  },
+  E_SELECT: {
+    meaning: 'No plugin claims a file that has a selector, or the plugin failed on it.',
+    fix: 'Register a plugin whose files select the path, or fix the plugin or the file.',
+  },
+  E_SELECT_NOT_FOUND: {
+    meaning: 'The plugin found nothing for the selector.',
+    fix: 'Correct select or the file.',
+  },
+  E_SELECT_AMBIGUOUS: {
+    meaning: 'The selector matched more than once and match is one.',
+    fix: 'Narrow select, or write match: all to depend on all.',
+  },
   W_ORPHAN: {
     meaning: 'The lock has an entry for a file that is no longer declared.',
     fix: 'Run docstamp update on any file; it removes the entry.',

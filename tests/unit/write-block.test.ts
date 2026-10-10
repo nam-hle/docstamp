@@ -268,4 +268,19 @@ describe('§9.6.5 Writing a Block', () => {
       expect(roundTrip(DEPS)).toEqual(DEPS);
     });
   });
+
+  describe('§9.6.2 Selected Dependencies are never dropped', () => {
+    const MAP = '    - path: docs/guide.md\n      select: Install\n';
+    it('refuses a block of only Selected Dependencies', () => {
+      const text = `---\ndocstamp:\n  dependencies:\n${MAP}---\nbody\n`;
+      expect(refusal(text, ['src/cli']).code).toBe('E_USAGE');
+    });
+    it('extends a mixed block and keeps the Map byte for byte', () => {
+      const text = `---\ndocstamp:\n  dependencies:\n    - src/cli\n${MAP}---\nbody\n`;
+      const out = writeBlock('d.md', text, ['src/cli', 'docs/SPEC.md']);
+      expect(out).toBe(
+        `---\ndocstamp:\n  dependencies:\n    - src/cli\n${MAP}    - docs/SPEC.md\n---\nbody\n`,
+      );
+    });
+  });
 });

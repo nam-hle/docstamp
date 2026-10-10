@@ -51,13 +51,51 @@ export function normalizedContent(root: string, u: Universe, path: string): Buff
   }
 }
 
+const FILE_TAG = Buffer.from('file\u0000');
+
+// SPEC §8.7: the text a Plugin sees is the normalized content of §10.2 as UTF-8
+export function selectableText(root: string, u: Universe, path: string): string {
+  const content = normalizedContent(root, u, path);
+  const fail = (why: string) =>
+    new Raised([
+      diag('E_SELECT', {
+        subject: path,
+        message: `The file is ${why}; a plugin reads only text.`,
+      }),
+    ]);
+  if (!content.subarray(0, FILE_TAG.length).equals(FILE_TAG)) throw fail('a link');
+  const body = content.subarray(FILE_TAG.length);
+  if (isBinary(body)) throw fail('binary');
+  try {
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(body);
+  } catch {
+    throw fail('not valid UTF-8');
+  }
+}
+
 // SPEC §10.3
 export function fileHash(root: string, u: Universe, path: string): string {
   return sha256Hex(normalizedContent(root, u, path));
 }
 
+export interface Fragment {
+  readonly path: string;
+  readonly select: string;
+  readonly hashes: readonly string[];
+}
+
+// SPEC §10.4 step 3: one section per Selected Dependency, only when there is one
+const fragmentSection = (fragment: Fragment): string => {
+  const head = `select\u0000${fragment.path}\u0000${fragment.select}\u0000${fragment.hashes.length}\n`;
+  const body = fragment.hashes.map((hash) => `${Buffer.byteLength(hash, 'utf8')}\u0000${hash}\n`);
+  return head + body.join('');
+};
+
 // SPEC §10.4 (pure part: input already hashed)
-export function dependencyHashFrom(entries: ReadonlyArray<[string, string]>): string {
+export function dependencyHashFrom(
+  entries: ReadonlyArray<[string, string]>,
+  fragments: readonly Fragment[] = [],
+): string {
   const parts = entries.map(([path, hash]) => `${path}\u0000${hash}\n`);
-  return sha256Hex(Buffer.from(parts.join(''), 'utf8'));
+  return sha256Hex(Buffer.from(parts.join('') + fragments.map(fragmentSection).join(''), 'utf8'));
 }

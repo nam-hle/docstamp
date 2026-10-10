@@ -101,6 +101,15 @@ every host.
 NOTE: `Quote` produces both a valid JSON string and a valid YAML 1.2 double-quoted scalar that
 parse back to *s*. It is the only escaping used in output and in the Lockfile.
 
+### 3.5 Canonical JSON
+
+`CanonicalJson(v)` for a plain value *v* (§9.5 `ToPlain`, restricted to Null, Boolean, finite
+Number, String, List and Map) returns a String: for Null, a Boolean, a Number or a String, the
+result of ECMAScript `JSON.stringify(v)`; for a List, `[`, the `CanonicalJson` of its elements
+separated by `,`, and `]`; for a Map, `{`, each `JSON.stringify(key)`, `:` and `CanonicalJson` of
+the value, in path order (§3.3) of the keys and separated by `,`, and `}`. There is no
+white space.
+
 ## 4 Terms
 
 **Root**: the directory against which every RepoPath is resolved (§6).
@@ -109,9 +118,18 @@ parse back to *s*. It is the only escaping used in output and in the Lockfile.
 or trailing `/`, no empty segment, no segment `.` or `..`, no U+0000, and is in Unicode
 Normalization Form C (NFC).
 
-**Declaration**: what gives a file its dependencies, as a List of patterns: an entry of `files` in
+**Declaration**: what gives a file its dependencies, as a List of patterns and Selected Dependencies: an entry of `files` in
 the Configuration file (a *configured* Declaration), or the `docstamp` block in the frontmatter of
 the file itself (an *inline* Declaration, §5.6).
+
+**Selected Dependency**: an element of `dependencies` that names one file and a selector, handled
+by a Plugin, instead of a Pattern (§8.7).
+
+**Plugin**: an object registered in a script Carrier under `plugins` (§9.5) that extracts Fragments
+from the files it claims (§8.7).
+
+**Fragment**: what a Plugin returns for a Selected Dependency: a non-empty List of Strings, the
+hashes of the parts of the file the selector selects (§8.7).
 
 **File** (stamped file): a file that has a Declaration, and so rests on other files, its
 dependencies. The Configuration file, the Lockfile and the JSON output name it `file`, and the
@@ -158,6 +176,7 @@ the Dependency Hash of configured Declarations only (§5.3).
 |---|---|---|
 | `[[File]]` | RepoPath | |
 | `[[Dependencies]]` | List of String | the patterns, verbatim, in declaration order |
+| `[[Selected]]` | List of Selected Dependency | the Selected Dependencies of the file, in order of appearance (§8.7), « » when none |
 | `[[Use]]` | List of String, or none | the names in its own `use` key, in order; none when it has no `use` key (§8.6) |
 | `[[Origin]]` | `config` or `inline` | where it is declared |
 | `[[Recorded]]` | Hash, or none | inline only: the Hash recorded in the block (§5.6), none if it has no `hash` key |
@@ -176,6 +195,9 @@ the Dependency Hash of configured Declarations only (§5.3).
 NOTE: A Config is built from the normalized value of the Configuration file (§9.3), whatever its
 Carrier. When there is no Configuration file, every field has the default of this table, and
 `[[Declarations]]` is « » (§9.3 step 2).
+
+NOTE: Plugins (§8.7) are not part of the Config value. They come only from a script Carrier
+(§9.5), and are passed as an argument to `Evaluate` (§12.1) and `DependencyHash` (§10.4).
 
 ### 5.3 Lock
 
@@ -201,6 +223,7 @@ identical needs no Review (Principle 4).
 | `[[File]]` | RepoPath | |
 | `[[Dependencies]]` | List of String | the Declaration's effective patterns (§8.6): its `[[Dependencies]]` when it uses no Preset |
 | `[[Use]]` | List of String | the Declaration's `[[Use]]` |
+| `[[Selected]]` | List of Selected Dependency | the Declaration's `[[Selected]]` |
 | `[[Origins]]` | List of String or none | one element per element of `[[Dependencies]]`: the name of the Preset the pattern comes from, or none for the Declaration's own pattern |
 | `[[State]]` | `ok`, `stale` or `invalid` | §12.1 |
 | `[[Reasons]]` | List of Reason | non-empty iff `[[State]]` is `stale` |
@@ -266,7 +289,8 @@ docstamp:
 ---
 ```
 
-`dependencies` is required: a non-empty List of patterns of the dialect of §8.1. `use` is optional:
+`dependencies` is required: a non-empty List whose elements are patterns of the dialect of §8.1 or
+Selected Dependencies (§8.7). `use` is optional:
 a non-empty List of Preset names (§8.6), or the empty List when the Configuration file names default
 Presets, to use none of them (§9.6.2). `hash` is optional:
 a Hash (§10.3): the Dependency Hash (§10.4) recorded at the last Write of the file, the same value
@@ -514,8 +538,8 @@ a file under a directory an earlier negation removed.
    equality, §3.2), collect `W_DUPLICATE_PATTERN` into *warnings*, `[[Subject]]` that String. A
    pattern that comes from a Preset is not counted: only the file's own patterns are.
 5. Let *resolved* be `Select` of the effective patterns of *declaration* and *candidates*.
-6. If *resolved* is empty and *problems* is empty, collect `E_EMPTY_DEPENDENCIES` into
-   *problems*.
+6. If *resolved* is empty, `declaration.[[Selected]]` is empty and *problems* is empty, collect
+   `E_EMPTY_DEPENDENCIES` into *problems*.
 7. Call a *path* of *resolved* *re-selected* when its last matching pattern (§8.4) is not a literal
    path (NOTE below) that denotes *path* itself. For each distinct String *e* of the effective
    patterns that has a Negation and satisfies `PatternMatches(e, path)` for some re-selected *path*,
@@ -646,6 +670,47 @@ same stays `ok`, because the Dependency Hash depends on the resolved files only 
 patterns. The Lockfile and its `version` are unchanged. It is not an edit of the file's own list
 (§12.3 step 1.4), which holds the file's own `use` key only.
 
+### 8.7 Selected Dependencies
+
+A *Selected Dependency* is { `[[Path]]`: a literal RepoPath (§8.5 NOTE), `[[Select]]`: a plain value
+(§3.5), `[[Match]]`: `one` or `all` }. In a `dependencies` List a Selected Dependency is written as
+a Map with the keys `path`, `select` and, optionally, `match` (`one` when absent); a String is a
+Pattern (§8.1) as before. A Map with another key, a missing `path` or `select`, a `path` that is
+not a literal RepoPath, a `select` holding a Number that is not finite at any depth, or a `match`
+other than `one` or `all` is `E_CONFIG` (`E_BLOCK` in an inline block).
+
+Selected Dependencies with the same `[[Path]]` and the same `CanonicalJson([[Select]])` are one
+dependency: the Declaration's `[[Selected]]` holds the first of them in order of appearance, with
+its `[[Match]]`, and drops the others without a diagnostic.
+
+A *Plugin* is { `[[Name]]`: a non-empty String, `[[ApiVersion]]`: 1, `[[Files]]`: a non-empty List
+of Patterns, `[[Extract]]`: a function }, other members being ignored. Plugin names are unique.
+
+`Claim(plugins, path)` returns the Plugin whose `[[Files]]` select *path* (`Select(Files, « path »)`
+is not empty, §8.4), or raises: `E_SELECT` with `[[Subject]]` *path* if none does; `E_PLUGIN` with
+`[[Subject]]` *path* if more than one does, its message naming each Plugin.
+
+`Fragments(entry, text)`, with *plugin* = `Claim(plugins, entry.[[Path]])`, calls
+`plugin.[[Extract]]` synchronously with { `path`, `text`, `select` } and reads { `hashes` }, a List
+of non-empty Strings, in the order given. It raises `E_SELECT` (`[[Subject]]` the path) if the call
+throws, returns a Promise, does not return such a List, or if the file is a link, binary (§10.1) or
+not valid UTF-8. *text* is the content of §10.2 steps 1 to 4 after the `file` tag. Then, with *n*
+the length of `hashes`: `E_SELECT_NOT_FOUND` if *n* is 0; `E_SELECT_AMBIGUOUS` if *n* > 1 and
+`[[Match]]` is `one`; else the Fragment is `hashes`. For both, `[[Subject]]` is the path, `#` and
+`CanonicalJson(select)`.
+
+NOTE: A Selected Dependency whose path is not in the Universe, or is the file itself, is
+`E_EMPTY_PATTERN` with `[[Subject]]` the path (§8.5 steps 2 and 3). A file whose `dependencies`
+hold only Selected Dependencies is not `E_EMPTY_DEPENDENCIES`.
+
+NOTE: A Plugin is user code run in the host runtime, like a script Carrier (§9.5 NOTE): it SHOULD be
+deterministic and independent of the environment, the clock and the network (§2). Its hashes are
+opaque to docstamp.
+
+NOTE: `list-dependencies` (§13.7) does not call a Plugin. `ChangedSince` (§12.3), `stats` (§13.9)
+and `suggest` (§13.10) do not know Selected Dependencies yet: a stale file with Selected
+Dependencies has `[[Changes]]` *unknown*; `stats` counts a commit that touches the path.
+
 ## 9 Configuration File
 
 ### 9.1 Carriers
@@ -753,7 +818,8 @@ raises:
    1. If *key* is not a RepoPath, collect `E_CONFIG` into *fatal*, `[[Subject]]` *key*, and
       continue.
    2. If *value* is not a Map, or has no key `dependencies`, or `dependencies` is not a non-empty
-      List of Strings, collect `E_CONFIG` into *fatal*, `[[File]]` *key*, and continue.
+      List whose elements are Strings or Selected Dependencies (§8.7), collect `E_CONFIG` into
+      *fatal*, `[[File]]` *key*, and continue.
    3. For each key of *value* other than `dependencies` and `use`, collect `E_UNKNOWN_KEY` into
       *fatal*, `[[File]]` *key*, `[[Subject]]` that key. If `use` is present and is not a List of
       Strings without a repeated element, or is empty while `default-presets` is absent, collect
@@ -761,7 +827,8 @@ raises:
    4. For each string *s* of `dependencies` that is not a valid Pattern (§8.1), collect
       `E_PATTERN` into *attached*, `[[File]]` *key*, `[[Subject]]` *s*.
    5. Produce the Declaration { `[[File]]`: *key*, `[[Dependencies]]`: the strings of
-      `dependencies`, `[[Use]]`: the strings of `use`, or none if it is absent, `[[Origin]]`:
+      `dependencies`, `[[Selected]]`: its Maps as Selected Dependencies (§8.7), each in order of
+      appearance, `[[Use]]`: the strings of `use`, or none if it is absent, `[[Origin]]`:
       `config`, `[[Recorded]]`: none }.
 9. If *fatal* is not empty, raise *fatal*.
 10. Return the Config, with defaults (§5.2) for absent keys, `[[Presets]]` from `presets`,
@@ -778,6 +845,10 @@ A structural error stops evaluation.
 NOTE: `include` replaces the default `**/*.md` (§5.2); it selects only where inline blocks are
 searched (§9.6.1), never which files may be dependencies. `files` stays required: a Configuration
 file that only sets `ignore` or `include` writes `files: {}`.
+
+NOTE: `plugins` is accepted only in a script Carrier (§9.5), which removes it from the value before
+step 3. In `docstamp.yaml` it is `E_UNKNOWN_KEY` (step 5), and its message says that Plugins are
+registered in a script Carrier.
 
 NOTE: Steps 5 to 10 never see the Carrier. Key order in a Map is not significant: the Declarations are
 in path order (step 10).
@@ -816,7 +887,15 @@ raises `E_FILE_MISSING`.
    use `export default`, and that a CommonJS `module.exports` value is accepted. Otherwise let
    *exported* be its `default` export if *exports* has one that is neither `undefined` nor Null,
    else *exports*.
-3. Return ? `ToPlain(exported, empty)`.
+3. Return ? `ToPlain(exported, empty)`, where, if *exported* is an object whose prototype is the
+   Object prototype or null and that has an own `plugins` member, *exported* is taken without that
+   member, which is read separately (below).
+
+`LoadScript` returns the plain value of step 3 and, separately, the value of the top-level
+`plugins` member of *exported*, when it has one. `plugins` is not part of the plain value and is
+exempt from `ToPlain`; a function anywhere else is still `E_CONFIG` (`ToPlain` step 6). It MUST be a dense, plain (not a Proxy) List of Plugins (§8.7);
+otherwise raise `E_PLUGIN`, `[[Subject]]` the Plugin name or `plugins[i]`, with a message that names
+`apiVersion` when `[[ApiVersion]]` is not 1.
 
 `ToPlain(v, ancestors)`, where *ancestors* is the List of objects being converted, raises
 `E_CONFIG` with `[[Subject]]` the top-level key whose value contains *v* (empty if *v* is the
@@ -833,6 +912,9 @@ exported value itself):
    each name to `ToPlain(value, ancestors + « v »)`.
 6. Raise. This covers `undefined`, functions, symbols, big integers, accessors, class instances
    and every other object.
+
+NOTE: `plugins` is accepted only in a script Carrier; in `docstamp.yaml` it is `E_UNKNOWN_KEY`, and
+its message says Plugins are registered in a script Carrier (§9.3 NOTE).
 
 NOTE: A Proxy is rejected wherever it occurs, even one that wraps a plain object or an Array, since
 its traps can answer differently on each access.
@@ -882,26 +964,27 @@ raises a List of Diagnostics attached to *file*:
    `[[Subject]]` `docstamp`, and return as in step 2.
 5. For each key of the block other than `dependencies`, `use` and `hash`, collect `E_UNKNOWN_KEY`,
    `[[Subject]]` the key.
-6. If `dependencies` is present but not a non-empty List of Strings, or is absent and step 5
-   collected no `E_UNKNOWN_KEY`, collect `E_BLOCK`, `[[Subject]]` `dependencies`. Otherwise, for
-   each string *s* of it that is not a valid Pattern (§8.1), collect `E_PATTERN`, `[[Subject]]`
-   *s*. If `use` is present and is not a List of Strings without a repeated element, or is empty
+6. If `dependencies` is present but not a non-empty List whose elements are Strings or Selected
+   Dependencies (§8.7), or is absent and step 5 collected no `E_UNKNOWN_KEY`, collect `E_BLOCK`,
+   `[[Subject]]` `dependencies`. Otherwise, for each string *s* of it that is not a valid Pattern
+   (§8.1), collect `E_PATTERN`, `[[Subject]]` *s*. If `use` is present and is not a List of Strings without a repeated element, or is empty
    while *defaults* is false, collect `E_BLOCK`, `[[Subject]]` `use`.
 7. If `hash` is present, let *recorded* be it. Collect `E_BLOCK`, `[[Subject]]` `hash`, unless
    *recorded* is a String of 64 characters of `[0-9a-f]`, the scan has exactly one
    line of *hashLines*, and that line, after `hash:`, is one or more blanks, *recorded* itself,
    optional blanks, an optional `#` comment and its terminator.
 8. If *problems* is empty, return the Declaration { `[[File]]` *file*, `[[Dependencies]]` the
-   strings of `dependencies`, `[[Use]]` the strings of `use`, or none if it is absent, `[[Origin]]`
+   strings of `dependencies`, `[[Selected]]` its Maps as Selected Dependencies (§8.7), each in order
+   of appearance, `[[Use]]` the strings of `use`, or none if it is absent, `[[Origin]]`
    `inline`, `[[Recorded]]` *recorded*, or none }. Otherwise raise *problems*, and the Declaration of the Result
-   (§12.1) is { *file*, the strings of `dependencies` if it is a List of Strings else « » }.
+   (§12.1) is { *file*, the strings of `dependencies` if it is a List of Strings and Selected Dependencies else « » }.
 
 NOTE: One fault, one Diagnostic. A key that is not part of the block is reported once, as
 `E_UNKNOWN_KEY` attached to the file, and never also as `E_BLOCK`: a mistyped `dependancies` does
 not add "`dependencies` is missing". `E_BLOCK` remains for exactly these cases: the marker line is
 not a block mapping (step 2); the frontmatter is not strict YAML (step 3); the document or the
 `docstamp` key is not a mapping (step 4); `dependencies` is absent and no key is unknown, or is
-present and not a non-empty List of Strings (step 6); `use` is not a List of Strings without a
+present and not a non-empty List of Strings and Selected Dependencies (step 6); `use` is not a List of Strings without a
 repeated element, or is empty without default Presets (step 6); `hash` is not 64 lowercase hexadecimal digits
 alone on its line (step 7). A block with an unknown key and a malformed `dependencies` or `hash`
 has one Diagnostic for each fault.
@@ -1057,13 +1140,27 @@ A *Hash* is the lowercase hexadecimal encoding of a SHA-256 digest: exactly 64 c
 
 ### 10.4 Dependency Hash
 
-`DependencyHash(resolved)`, where *resolved* is a List of RepoPaths in path order:
+`DependencyHash(resolved, selected, plugins)`, where *resolved* is a List of RepoPaths in path order,
+*selected* the Selected Dependencies of the file (§8.7), « » when omitted, and *plugins* the Plugins
+of §9.5, « » when omitted:
 
 1. Let *problems* be an empty List and *input* the empty byte sequence.
 2. For each *path* of *resolved*: if `FileHash(path)` raises, add its Diagnostics to *problems*;
    otherwise append the UTF-8 encoding of *path*, the byte 0x00, the 64 ASCII bytes of the Hash,
    and the byte 0x0A.
-3. If *problems* is not empty, raise *problems*. Otherwise return the Hash of *input*.
+3. After step 2 (once, not per path), let *fragments* be *selected* with their Fragments
+   (`Fragments(entry, text)` of §8.7 with *plugins*, *text* being the file read as in §10.2 steps 1
+   to 4, after the `file` tag), in path order of `[[Path]]` then path order of
+   `CanonicalJson([[Select]])`. If *fragments* is not empty, append to *input*, for each: the bytes
+   `select`, 0x00, the UTF-8 encoding of the path, 0x00, of `CanonicalJson(select)`, 0x00, the
+   decimal count of its Fragment, 0x0A, and for each Fragment String: the decimal UTF-8 byte
+   length, 0x00, the String's UTF-8 bytes, 0x0A. If `Fragments` raises, add its Diagnostics to
+   *problems*.
+4. If *problems* is not empty, raise *problems*. Otherwise return the Hash of *input*.
+
+NOTE: A file without Selected Dependencies has the input it always had: no Hash changes (§17.4).
+The argument *resolved* holds the paths of Patterns only (§12.1 step 5), not `[[Resolved]]` of the
+Result; a Selected-only path has no whole-file line.
 
 NOTE: The path is part of the input, so renaming or moving a dependency changes the Dependency Hash
 even when its content does not. An empty file contributes the Hash of the bytes `file`, 0x00.
@@ -1140,8 +1237,9 @@ declare `docstamp-lock.yaml text eol=lf` in `.gitattributes`.
 
 ### 12.1 Evaluate
 
-`Evaluate(declaration, universe, lock, attached)`, where *attached* is the List of Diagnostics
-from §9.3, §9.6 and §12.2 attached to `declaration.[[File]]`:
+`Evaluate(declaration, universe, lock, attached, plugins)`, where *attached* is the List of
+Diagnostics from §9.3, §9.6 and §12.2 attached to `declaration.[[File]]`, and *plugins* the Plugins
+of §9.5 (« » when the Configuration file is not a script Carrier):
 
 1. Let *r* be a Result with `[[File]]`, `[[Use]]` and `[[Dependencies]]` from *declaration*, the
    latter being its effective patterns (§8.6) and `[[Origins]]` their origins (none for each, when
@@ -1152,12 +1250,14 @@ from §9.3, §9.6 and §12.2 attached to `declaration.[[File]]`:
    *problems*. (An inline file always satisfies it.)
 4. If *attached* is empty, let *resolved* and *warnings* be the result of
    `ResolveDependencies(declaration, universe)`; if it raises, add its Diagnostics, warnings
-   included, to *problems*.
-5. If *problems* is empty, let *current* be `DependencyHash(resolved)`; if it raises, add its
-   Diagnostics to *problems*.
+   included, to *problems*. Also, for each Selected Dependency of `declaration.[[Selected]]`, collect
+   `E_EMPTY_PATTERN` per §8.7 NOTE into *problems*. Let *all* be the union of *resolved* and the
+   `[[Path]]` of the Selected Dependencies, in path order.
+5. If *problems* is empty, let *current* be `DependencyHash(resolved, declaration.[[Selected]],
+   plugins)` including its Fragments (§10.4 step 3); if it raises, add its Diagnostics to *problems*.
 6. If *problems* is not empty, set *r*.`[[State]]` to `invalid` and *r*.`[[Diagnostics]]` to
    *problems*, each with `[[File]]` set to `declaration.[[File]]`, and return *r*.
-7. Set *r*.`[[Resolved]]` to *resolved*, *r*.`[[Current]]` to *current* and *r*.`[[Diagnostics]]`
+7. Set *r*.`[[Resolved]]` to *all*, *r*.`[[Current]]` to *current* and *r*.`[[Diagnostics]]`
    to *warnings*, each with `[[File]]` set to `declaration.[[File]]`.
 8. Let *entry* be `declaration.[[Recorded]]` if `declaration.[[Origin]]` is `inline`, else the
    LockEntry of `declaration.[[File]]` in *lock*, or *none*.
@@ -1175,7 +1275,8 @@ leaves the file `ok`.
 `EvaluateAll(root, lockPolicy)` returns Results, the Lock, and a List of global Diagnostics, or
 raises:
 
-1. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`.
+1. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`, and *plugins* the Plugins that
+   `LoadScript` (§9.5) returned for the Configuration file, « » for any other Carrier or none.
 2. Let *universe* be `? ComputeUniverse(root, config)`.
 3. Let (*inline*, *more*, *marked*) be `? ReadInline(root, universe, config)`. Let *attached* be
    *attached* and *more*.
@@ -1189,7 +1290,7 @@ raises:
    when it raises, collect its Diagnostics into *attached*, `[[File]]` the file of *d*.
 6. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
    entries. Otherwise let *lock* be `? ReadLock(root)`.
-7. Let *results* be `Evaluate(b, universe, lock, attached of b)` for each *b* of *declarations*,
+7. Let *results* be `Evaluate(b, universe, lock, attached of b, plugins)` for each *b* of *declarations*,
    in path order, hashing every file with `NormalizedContent(path, marked)`.
 8. Let *global* be a List holding, for each file of *lock* with no configured Declaration, a
    `W_ORPHAN` with `[[Subject]]` that file.
@@ -1212,7 +1313,8 @@ without changing any verdict.
 `[[Edited]]` and `[[Selection]]` of step 9, or *unknown*. It is
 run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
 contain `content-changed`, and whose file has a LockEntry *entry*, or an inline `[[Recorded]]`
-Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
+Hash *entry*, and whose Declaration has no Selected Dependency (§8.7 NOTE); for every other Result
+`[[Changes]]` is *unknown*.
 
 1. Run `git` in Root with every environment variable starting with `GIT_` removed and
    `GIT_OPTIONAL_LOCKS=0` set, so that no inherited repository or index selection applies and
@@ -1725,7 +1827,7 @@ unreadable Lockfile), so no file is marked reviewed by accident.
 2. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`, *universe* be
    `? ComputeUniverse(root, config)`, and (*declarations*, *attached*, *marked*) be the Declarations
    and attached Diagnostics of steps 3 to 5 of §12.2.
-3. Let *results* be `Evaluate(b, universe, « », attached of b)` for each Declaration *b* of
+3. Let *results* be `Evaluate(b, universe, « », attached of b, « »)` for each Declaration *b* of
    *declarations*, in path order, except that no dependency is read or hashed (§10.4 is
    skipped), so a Result is never `invalid` for `E_UNREADABLE`.
 4. Let *selected* be `? SelectResults(args, cwd, root, results)`.
@@ -2018,7 +2120,10 @@ STALE    <file>  (<reason>, <reason>)
     characters, two spaces, and the path as in §14.2 (`  modified  <path>`, `  added     <path>`,
     `  deleted   <path>`, `  renamed   <from> -> <to>`), or a group line.
 - For any other `stale`: one `depends` line per pattern, in declaration order, with the
-  `(preset <name>)` marker of §14.6 for a pattern that comes from a Preset.
+  `(preset <name>)` marker of §14.6 for a pattern that comes from a Preset, then one `depends` line
+  per Selected Dependency (§8.7), in order of appearance: the path, `#` and `CanonicalJson(select)`,
+  as one String of §14.2. A stale Result with Selected Dependencies has no known `[[Changes]]`
+  (§8.7 NOTE), so it always uses `depends` lines.
 
 Then one summary line:
 
@@ -2254,6 +2359,10 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   order (§12.3 step 10).
 - An element of `files` whose Declaration uses a Preset (§8.6) has the members `use` and `origins`
   between `dependencies` and `changes`, as `list-dependencies` has them (below).
+- A member `"selected"` follows `dependencies` (after `use` and `origins` when present) in an
+  element of `files` of `check`, `update` and `list-dependencies` when the Declaration has Selected
+  Dependencies (§8.7), and is absent otherwise: a List of `{ "path", "select", "match" }` in order of
+  appearance, `select` as the plain value with its Map keys in path order.
 - With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (true only when it was written, §13.6 step 10; false when it was unchanged or when
   step 5 of §13.6 refused), and the top level adds `"removed"`, a
@@ -2409,7 +2518,8 @@ One block per selected Result, in path order:
 with one `depends` line per effective pattern (§8.6) in order, then one `resolved` line per
 dependency in path order, each written as in §14.2. A `depends` line of a pattern that comes from a
 Preset ends with a space and `(preset <name>)`, as in `  depends   !**/*.test.* (preset tests)`, with
-the name written as in §14.2. An `invalid` Result prints its first line only. There is no
+the name written as in §14.2. After the `depends` lines of the patterns, one `depends` line per
+Selected Dependency (§8.7), as in §14.3. An `invalid` Result prints its first line only. There is no
 summary line. Diagnostics as in §14.3.
 
 ### 14.7 List-Dependents, Text Mode
@@ -2517,15 +2627,15 @@ command raised.
 | `E_ROOT` | error | §6 | pass an existing directory |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6); `docstamp help start` shows both |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
-| `E_CONFIG` | error | §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file, `default-presets` for the default Presets; an empty `use` needs `default-presets`); for a missing `files`, write `files: {}` for none (a key one or two edits from `files` is `E_UNKNOWN_KEY` alone, §9.3 step 7); for a module without a default export, `export default` the value |
+| `E_CONFIG` | error | §8.7, §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file, `default-presets` for the default Presets; an empty `use` needs `default-presets`); for a missing `files`, write `files: {}` for none (a key one or two edits from `files` is `E_UNKNOWN_KEY` alone, §9.3 step 7); for a module without a default export, `export default` the value |
 | `E_CONFIG_VERSION` | error | §9.3 | rename `dependents` to `files` and `covers` to `dependencies`, set `version: 2`; for a file with neither `version` nor `dependents`, add `version: 2` |
 | `E_UNKNOWN_KEY` | error | §9.3, §9.6.2 | remove or correct the key; for `dependents` rename it to `files`, for `covers` rename it to `dependencies`; otherwise its near key, if any (§9.3 NOTE: `did you mean "dependencies"?`); attached to the file when it is a key of an inline block |
 | `E_PATTERN` | error | §9.3, §9.6.2 | correct the pattern (§8.1); for an empty pattern, write a path or glob or remove it; for a lone `!`, write the path to exclude after it or remove it |
 | `E_UNKNOWN_PRESET` | error | §8.6, §9.3 | define the Preset under `presets` in the Configuration file, or correct the name in `use` or `default-presets`; subject the name, attached to the file, or global for a name of `default-presets` |
-| `E_BLOCK` | error | §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies`, `use` or `hash` |
+| `E_BLOCK` | error | §8.7, §9.6.2 | write the `docstamp` block as a block mapping with `dependencies` and, optionally, `hash: <64 hex>` on one line; the subject names the part: `docstamp`, `frontmatter`, `dependencies`, `use` or `hash` |
 | `E_DUPLICATE_DECLARATION` | error | §12.2 | declare the file once: remove the entry under `files` or the `docstamp` block |
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
-| `E_EMPTY_PATTERN` | error | §8.5 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when git shows the path renamed (§12.7), depend on the new path, which the message names; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
+| `E_EMPTY_PATTERN` | error | §8.5, §8.7 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when git shows the path renamed (§12.7), depend on the new path, which the message names; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies`: no inclusion is empty, but together they select no file (there is no inclusion, or the exclusions deselect every file); never raised beside an `E_EMPTY_PATTERN` of the same file |
 | `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3, §13.10 | fix permissions, or make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
@@ -2534,6 +2644,10 @@ command raised.
 | `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 Lockfile, `docstamp update --all` rewrites it as version 3 (hashes are unchanged); otherwise as `E_LOCK` |
 | `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block; raised only for an argument that resolves inside Root (§13.4) |
 | `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; for `--from`, name a commit |
+| `E_PLUGIN` | error | §8.7, §9.5 | fix the Plugin in the `plugins` of the script Carrier: a non-empty `name`, `apiVersion: 1`, a non-empty `files` List of Patterns and an `extract` function, unique names, and no two Plugins claiming one path; the subject names the Plugin or `plugins[i]`, or the path claimed twice |
+| `E_SELECT` | error | §8.7 | register a Plugin whose `files` claim the path, or fix the Plugin: `extract` must return `{ hashes }` synchronously and the file must be a UTF-8 text file; subject the path |
+| `E_SELECT_NOT_FOUND` | error | §8.7 | correct `select`, or the file, so the Plugin returns at least one Fragment; subject the path, `#` and the selector |
+| `E_SELECT_AMBIGUOUS` | error | §8.7 | narrow `select` to one Fragment, or write `match: all`; subject the path, `#` and the selector |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 | `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
 | `W_SHADOWED_EXCLUSION` | warning | §8.5 | move the exclusion after the named later pattern (for a Preset, list it last in `use`), or narrow that pattern, unless re-selecting those files is intended; attached to the file, subject the exclusion |
@@ -2629,6 +2743,12 @@ Diagnostic code changes (§17.1, fourth item), so it is breaking. The migration 
 command, or to write `--` before a file argument that does not exist and is named like a command
 (`docstamp -- updte`). An existing path is read as a file exactly as before. No Hash input,
 selection or Lockfile `version` changes.
+
+NOTE: A script Carrier may now export a top-level `plugins` member, and a `dependencies` List may
+hold Maps (§8.7). `plugins` was `E_UNKNOWN_KEY` and a Map element was `E_CONFIG`: an error that
+becomes a pass, so *Platform* (what a script Carrier may export) and *Verdicts*: breaking. The
+migration is none for existing files. No Hash input, selection or Lockfile `version` changes for a
+file without Selected Dependencies.
 
 ### 17.3 Non-breaking changes
 
@@ -2813,7 +2933,14 @@ The test suite of an implementation MUST pin, as literals computed once from a r
 - the file Hashes (§10.2 step 4) of a fixed tree of inline files: one with and one without a `hash`
   line (the same Hash), one whose `dependencies` differ (another Hash), one in CR LF, one with a
   byte order mark and one in `include` and one outside it, and a file with no block, whose Hash
-  is the one of §10.3.
+  is the one of §10.3;
+- the Dependency Hash with Fragments (§10.4 step 3):
+  - entries `[('src/a.ts', 'a' x 64)]`, one Fragment { path `docs/guide.md`, select String
+    `Install`, hashes `« abc »` } gives
+    `bcd4f23fd8ddf98e99b882cb80ec425b8745e93f420748b606e1e7f639b6b87f`;
+  - no entries, one Fragment { path `docs/guide.md`, select Map `{ kind: function, name: abc }`,
+    hashes `« abc, def »` } gives
+    `27a11cb64839d5d0038aaf73f64ac2e4df995ae08cc2a4218159369940d1d29b`.
 
 A change that makes a vector fail is breaking (§17.2). The vector is updated only together with a
 new Lockfile `version` (§17.4) and its migration note (§17.6).

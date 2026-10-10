@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { loadWorkspace } from '../../src/cli/workspace.ts';
 import { evaluate, resolveDependencies } from '../../src/engine/evaluate.ts';
 import { expandPresets } from '../../src/engine/presets.ts';
-import { fileHash } from '../../src/hash/hash.ts';
+import { dependencyHashFrom, fileHash } from '../../src/hash/hash.ts';
+import { canonicalJson } from '../../src/plugin/canonical.ts';
 import { select } from '../../src/pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
 import { computeUniverse, type Universe } from '../../src/universe/walk.ts';
@@ -295,6 +296,23 @@ describe('§17.7 golden inline files', () => {
     ).current;
     expect(dependencyHash, BREAKING).toBe(
       '3a55c8a5c25de7c67d79fb34c7692fa74b79973a7e8943fd69db2cafaaef1b8b',
+    );
+  });
+});
+
+describe('§17.7 fragment vectors', () => {
+  it('pins a Dependency Hash with whole-file and fragment input', () => {
+    const fragments = [{ path: 'docs/guide.md', select: '"Install"', hashes: ['abc'] }];
+    expect(dependencyHashFrom([['src/a.ts', 'a'.repeat(64)]], fragments)).toBe(
+      'bcd4f23fd8ddf98e99b882cb80ec425b8745e93f420748b606e1e7f639b6b87f',
+    );
+  });
+
+  it('pins a Dependency Hash with an object selector, two hashes and no whole files', () => {
+    const select = canonicalJson({ name: 'abc', kind: 'function' });
+    const fragments = [{ path: 'docs/guide.md', select, hashes: ['abc', 'def'] }];
+    expect(dependencyHashFrom([], fragments)).toBe(
+      '27a11cb64839d5d0038aaf73f64ac2e4df995ae08cc2a4218159369940d1d29b',
     );
   });
 });

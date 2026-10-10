@@ -39,6 +39,7 @@ function toPlain(v: unknown, ancestors: readonly object[], key: string): Value {
   if (proto !== Object.prototype && proto !== null) throw new Violation(key);
   const map = new Map<string, Value>();
   for (const name of own) {
+    if (ancestors.length === 0 && name === 'plugins') continue; // §9.5: read apart
     if (typeof name !== 'string') throw new Violation(key);
     const top = ancestors.length === 0 ? name : key;
     if (Object.getOwnPropertyDescriptor(v, name)?.enumerable !== true) throw new Violation(top);
@@ -53,8 +54,21 @@ function dataOf(object: object, name: string, key: string): unknown {
   return descriptor.value;
 }
 
+// SPEC §9.5: the top-level `plugins` member, read without invoking a getter
+function readPlugins(exported: unknown): unknown {
+  if (typeof exported !== 'object' || exported === null || Array.isArray(exported))
+    return undefined;
+  if (types.isProxy(exported)) return undefined;
+  const proto: unknown = Object.getPrototypeOf(exported);
+  if (proto !== Object.prototype && proto !== null) return undefined;
+  const descriptor = Object.getOwnPropertyDescriptor(exported, 'plugins');
+  if (descriptor === undefined) return undefined;
+  if (!isData(descriptor)) throw new Violation('plugins');
+  return descriptor.value;
+}
+
 // SPEC §9.5
-export function loadScript(absPath: string): Value {
+export function loadScript(absPath: string): { value: Value; plugins: unknown } {
   let exported: unknown;
   try {
     const loaded: unknown = createRequire(absPath)(absPath);
@@ -71,7 +85,8 @@ export function loadScript(absPath: string): Value {
     throw new Raised([diag('E_CONFIG')]);
   }
   try {
-    return toPlain(exported, [], '');
+    const plugins = readPlugins(exported);
+    return { value: toPlain(exported, [], ''), plugins };
   } catch (error) {
     if (error instanceof Violation || error instanceof RangeError) {
       throw new Raised([

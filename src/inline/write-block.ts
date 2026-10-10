@@ -1,5 +1,7 @@
 import { Raised, diag } from '../core/diagnostics.ts';
 import { quote } from '../core/quote.ts';
+import type { SelectedEntry } from '../core/types.ts';
+import { canonicalJson } from '../plugin/canonical.ts';
 import { MARKER_REST, parseBlock } from './block.ts';
 import { scanFrontmatter, splitFrontmatter } from './frontmatter.ts';
 
@@ -15,6 +17,10 @@ const body = (dependencies: readonly string[], indent: string, eol: string): str
   `${indent}dependencies:${eol}`,
   ...dependencies.map((pattern) => `${indent}  - ${item(pattern)}${eol}`),
 ];
+
+// §9.6.2, §8.7: the rewrite must keep every Selected Dependency, in order
+const canonicalSelected = (entries: readonly SelectedEntry[]): string =>
+  canonicalJson(entries.map(({ path, select, match }) => ({ path, select, match })));
 
 const INDENTED = /^( +)[^ \t\r\n]/u;
 
@@ -66,6 +72,7 @@ export function writeBlock(file: string, text: string, dependencies: readonly st
   const refuse = (message: string) => new Raised([diag('E_USAGE', { subject: file, message })]);
   const scan = scanFrontmatter(text);
   let result: string;
+  const before = scan === null ? [] : (parseBlock(file, scan).declaration.selected ?? []);
   if (scan !== null) {
     if (scan.hashLines.length > 0) {
       throw refuse(`${file} records a hash; edit its docstamp block by hand.`);
@@ -135,7 +142,8 @@ export function writeBlock(file: string, text: string, dependencies: readonly st
     parsed !== null &&
     parsed.problems.length === 0 &&
     parsed.declaration.dependencies.length === dependencies.length &&
-    parsed.declaration.dependencies.every((pattern, index) => pattern === dependencies[index]);
+    parsed.declaration.dependencies.every((pattern, index) => pattern === dependencies[index]) &&
+    canonicalSelected(parsed.declaration.selected ?? []) === canonicalSelected(before);
   if (!same) {
     throw refuse(`${file} has frontmatter that cannot be extended safely; edit it by hand.`);
   }

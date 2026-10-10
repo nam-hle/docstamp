@@ -1,13 +1,24 @@
 import { Raised, diag, sortDiagnostics } from '../core/diagnostics.ts';
-import { sortPaths } from '../core/order.ts';
-import type { Declaration, Diagnostic, Lock, Reason, Result } from '../core/types.ts';
-import { dependencyHashFrom } from '../hash/hash.ts';
+import { comparePaths, sortPaths } from '../core/order.ts';
+import type {
+  Declaration,
+  Diagnostic,
+  Json,
+  Lock,
+  Reason,
+  Result,
+  SelectedEntry,
+} from '../core/types.ts';
+import { dependencyHashFrom, type Fragment } from '../hash/hash.ts';
 import { patternMatches, select } from '../pattern/match.ts';
 import { literalPath, parsePattern, type ParsedPattern } from '../pattern/parse.ts';
+import { canonicalJson } from '../plugin/canonical.ts';
 
 export interface EngineFs {
   isStampedFile(path: string): boolean;
   fileHash(path: string): string;
+  // SPEC §8.7: the Fragment hashes of a Selected Dependency, or a Raised
+  extractHashes?(path: string, select: Json): string[];
   // SPEC §8.5 NOTE: the path exists under Root but §7.3 keeps it out of the Universe
   isIgnoredPath?(path: string): boolean;
   // SPEC §12.7: the path git shows a missing literal path renamed to, or null
@@ -102,7 +113,7 @@ function resolveWithWarnings(
   }
   const resolved = select(patterns, candidates);
   // §8.5 step 6: an E_EMPTY_PATTERN already explains an empty selection
-  if (resolved.length === 0 && problems.length === 0) {
+  if (resolved.length === 0 && problems.length === 0 && (b.selected?.length ?? 0) === 0) {
     problems.push(diag('E_EMPTY_DEPENDENCIES', { file: b.file }));
   }
   warnings.push(...shadowedExclusions(b, patterns, resolved));
@@ -115,8 +126,42 @@ export function resolveDependencies(b: Declaration, universe: readonly string[])
   return resolveWithWarnings(b, universe).resolved;
 }
 
+// SPEC §8.7 NOTE, §8.5 steps 2 and 3: a Selected path is a candidate file, never the file itself
+function selectedProblems(b: Declaration, universe: readonly string[]): Diagnostic[] {
+  const candidates = new Set(universe.filter((path) => path !== b.file));
+  return (b.selected ?? [])
+    .filter((entry) => !candidates.has(entry.path))
+    .map((entry) => diag('E_EMPTY_PATTERN', { file: b.file, subject: entry.path }));
+}
+
+const bySelected = (a: SelectedEntry, b: SelectedEntry) =>
+  comparePaths(a.path, b.path) || comparePaths(canonicalJson(a.select), canonicalJson(b.select));
+
+// SPEC §8.7: the count rule over what the Plugin returned
+function fragmentsOf(b: Declaration, fs: EngineFs, problems: Diagnostic[]): Fragment[] {
+  const fragments: Fragment[] = [];
+  for (const entry of [...(b.selected ?? [])].sort(bySelected)) {
+    const select = canonicalJson(entry.select);
+    try {
+      const hashes = fs.extractHashes!(entry.path, entry.select);
+      const subject = `${entry.path}#${select}`;
+      if (hashes.length === 0) problems.push(diag('E_SELECT_NOT_FOUND', { subject }));
+      else if (hashes.length > 1 && entry.match === 'one') {
+        const message =
+          `The selector matched ${hashes.length} times; narrow "select", ` +
+          'or write "match: all" to depend on all.';
+        problems.push(diag('E_SELECT_AMBIGUOUS', { subject, message }));
+      } else fragments.push({ path: entry.path, select, hashes });
+    } catch (e) {
+      if (!(e instanceof Raised)) throw e;
+      problems.push(...e.diagnostics);
+    }
+  }
+  return fragments;
+}
+
 // SPEC §10.4
-function dependencyHash(resolved: readonly string[], fs: EngineFs): string {
+function dependencyHash(resolved: readonly string[], b: Declaration, fs: EngineFs): string {
   const problems: Diagnostic[] = [];
   const entries: Array<[string, string]> = [];
   for (const path of resolved) {
@@ -127,8 +172,9 @@ function dependencyHash(resolved: readonly string[], fs: EngineFs): string {
       problems.push(...e.diagnostics);
     }
   }
+  const fragments = fragmentsOf(b, fs, problems);
   if (problems.length > 0) throw new Raised(problems);
-  return dependencyHashFrom(entries);
+  return dependencyHashFrom(entries, fragments);
 }
 
 // SPEC §12.1 (the recorded Hash of an inline Declaration is in its file, §5.6)
@@ -144,6 +190,7 @@ export function evaluate(
     dependencies: b.dependencies,
     ...(b.use === undefined ? {} : { use: b.use }),
     ...(b.origins === undefined ? {} : { origins: b.origins }),
+    ...(b.selected === undefined || b.selected.length === 0 ? {} : { selected: b.selected }),
   };
   const problems: Diagnostic[] = [...attached];
   const collect = (fn: () => void) => {
@@ -163,9 +210,13 @@ export function evaluate(
     const ignored = (path: string) => fs.isIgnoredPath?.(path) ?? false;
     const renamed = (path: string) => fs.renamedTo?.(path) ?? null;
     collect(() => ({ resolved, warnings } = resolveWithWarnings(b, universe, ignored, renamed)));
+    problems.push(...selectedProblems(b, universe));
   }
+  const everything = sortPaths([
+    ...new Set([...resolved, ...(b.selected ?? []).map((s) => s.path)]),
+  ]);
   let current = '';
-  if (problems.length === 0) collect(() => (current = dependencyHash(resolved, fs)));
+  if (problems.length === 0) collect(() => (current = dependencyHash(resolved, b, fs)));
   if (problems.length > 0) {
     const diagnostics = sortDiagnostics(problems.map((d) => ({ ...d, file: b.file })));
     return { ...base, state: 'invalid', reasons: [], resolved: [], current: '', diagnostics };
@@ -176,7 +227,7 @@ export function evaluate(
   else if (entry !== current) reasons.push('content-changed');
   const state = reasons.length > 0 ? 'stale' : 'ok';
   const diagnostics = sortDiagnostics(warnings.map((d) => ({ ...d, file: b.file })));
-  return { ...base, state, reasons, resolved, current, diagnostics };
+  return { ...base, state, reasons, resolved: everything, current, diagnostics };
 }
 
 // SPEC §12.2 step 8: only a configured Declaration binds a LockEntry

@@ -37,7 +37,10 @@ describe('§9.3 schema.json', () => {
     const { include, presets, files } = schema.properties;
     expect(include.items).toEqual(pattern);
     expect(Object.values(presets.patternProperties)[0]!.items).toEqual(pattern);
-    expect(files.additionalProperties.properties.dependencies.items).toEqual(pattern);
+    const { anyOf } = files.additionalProperties.properties.dependencies.items as {
+      anyOf: unknown[];
+    };
+    expect(anyOf[0]).toEqual(pattern);
   });
 });
 
@@ -72,7 +75,7 @@ describe('§5.6 schema-frontmatter.json', () => {
   });
   it('rejects an empty pattern and a lone "!" in dependencies (§8.1)', () => {
     expect(block().properties['dependencies']).toMatchObject({
-      items: { type: 'string', minLength: 1, not: { const: '!' } },
+      items: { anyOf: [{ type: 'string', minLength: 1, not: { const: '!' } }, expect.anything()] },
     });
   });
   it('leaves the other frontmatter keys free', () => {

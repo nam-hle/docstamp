@@ -1,6 +1,13 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
+import { comparePaths } from '../core/order.ts';
 import { quote } from '../core/quote.ts';
-import type { Diagnostic, Result, ReverseDependent, ReverseEntry } from '../core/types.ts';
+import type {
+  Diagnostic,
+  Json as CoreJson,
+  Result,
+  ReverseDependent,
+  ReverseEntry,
+} from '../core/types.ts';
 import type { FileStats } from '../engine/stats.ts';
 
 export interface JsonDoc {
@@ -55,6 +62,35 @@ function presetMembers(r: Result): Array<[string, Json]> {
   ];
 }
 
+// SPEC §14.5: `select` as the plain value, Map keys in path order
+function selectJson(value: CoreJson): Json {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return (value as readonly CoreJson[]).map(selectJson);
+  const map = value as { readonly [key: string]: CoreJson };
+  return obj(
+    Object.keys(map)
+      .sort(comparePaths)
+      .map((key): [string, Json] => [key, selectJson(map[key] as CoreJson)]),
+  );
+}
+
+// SPEC §14.5: `selected`, only for a file with Selected Dependencies
+function selectedMembers(r: Result): Array<[string, Json]> {
+  if (r.selected === undefined || r.selected.length === 0) return [];
+  return [
+    [
+      'selected',
+      r.selected.map((entry) =>
+        obj([
+          ['path', entry.path],
+          ['select', selectJson(entry.select)],
+          ['match', entry.match],
+        ]),
+      ),
+    ],
+  ];
+}
+
 // SPEC §14.5
 export function jsonText(doc: JsonDoc): string {
   const count = (s: Result['state']) => doc.selected.filter((r) => r.state === s).length;
@@ -67,6 +103,7 @@ export function jsonText(doc: JsonDoc): string {
       ['reasons', [...r.reasons]],
       ['dependencies', [...r.dependencies]],
       ...presetMembers(r),
+      ...selectedMembers(r),
       [
         'changes',
         r.changes
@@ -137,6 +174,7 @@ export function listJsonText(doc: ListJsonDoc): string {
       ['dependencies', [...r.dependencies]],
     ];
     members.push(...presetMembers(r));
+    members.push(...selectedMembers(r));
     members.push(['resolvedFiles', [...r.resolved]]);
     members.push(['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)]);
     return obj(members);

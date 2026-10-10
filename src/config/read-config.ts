@@ -6,9 +6,13 @@ import { closestKey, unknownKeyMessage } from '../core/did-you-mean.ts';
 import { isRepoPath } from '../core/repo-path.ts';
 import type { Declaration, Config, Diagnostic } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
+import { validatePlugins } from '../plugin/plugins.ts';
+import type { DocstampPlugin } from '../plugin/types.ts';
+import { fromYaml, isYamlMap } from './from-yaml.ts';
 import { loadScript } from './script.ts';
+import { SELECTED_MESSAGE, dedupeSelected, parseSelected } from './selected.ts';
 import { CONFIG_NAMES, PRESET_NAME, isMap, isStrings, type Value } from './value.ts';
-import { parseStrictYaml, type YamlMap, type YamlValue } from './yaml-profile.ts';
+import { parseStrictYaml } from './yaml-profile.ts';
 
 const TOP_KEYS = [
   'version',
@@ -58,17 +62,6 @@ const isFile = (path: string): boolean => {
   }
 };
 
-const isYamlMap = (v: YamlValue): v is YamlMap =>
-  typeof v === 'object' && v !== null && !Array.isArray(v);
-
-const fromYaml = (v: YamlValue): Value => {
-  if (Array.isArray(v)) return v.map(fromYaml);
-  if (isYamlMap(v)) {
-    return new Map([...v.entries].map(([key, info]) => [key, fromYaml(info.value)]));
-  }
-  return v;
-};
-
 // SPEC §9.2
 function readYaml(path: string): Value {
   let text: string;
@@ -86,7 +79,7 @@ function readYaml(path: string): Value {
 }
 
 // SPEC §9.3 steps 2 and 3; undefined when there is no configuration file
-function readValue(root: string): Value | undefined {
+function readValue(root: string): { value: Value; plugins: unknown } | undefined {
   const names = CONFIG_NAMES.filter((name) => hasEntry(join(root, name)));
   if (names.length > 1)
     throw new Raised([diag('E_CONFIG_AMBIGUOUS', { subject: names.join(', ') })]);
@@ -94,7 +87,9 @@ function readValue(root: string): Value | undefined {
   if (name === undefined) return undefined;
   if (!isFile(join(root, name))) throw new Raised([diag('E_CONFIG_MISSING')]);
   const path = join(root, name);
-  return name === 'docstamp.yaml' ? readYaml(path) : loadScript(path);
+  return name === 'docstamp.yaml'
+    ? { value: readYaml(path), plugins: undefined }
+    : loadScript(path);
 }
 
 function collectDeclaration(
@@ -109,9 +104,18 @@ function collectDeclaration(
     fatal.push(diag('E_CONFIG', { subject: key }));
     return;
   }
-  const dependencies = isMap(value) ? value.get('dependencies') : undefined;
-  if (!isMap(value) || !isStrings(dependencies) || dependencies.length === 0) {
-    fatal.push(diag('E_CONFIG', { file: key, ...optional(missingMessage(value, dependencies)) }));
+  const items = isMap(value) ? value.get('dependencies') : undefined;
+  // §9.3 step 8.1, §8.7: Strings are Patterns, Maps are Selected Dependencies
+  const entries = Array.isArray(items) ? items.filter((item) => typeof item !== 'string') : [];
+  if (!isMap(value) || !Array.isArray(items) || items.length === 0 || !entries.every(isMap)) {
+    fatal.push(diag('E_CONFIG', { file: key, ...optional(missingMessage(value, items)) }));
+    return;
+  }
+  const dependencies = items.filter((item) => typeof item === 'string');
+  const selected = entries.map(parseSelected);
+  if (!selected.every((entry) => entry !== null)) {
+    const message = SELECTED_MESSAGE;
+    fatal.push(diag('E_CONFIG', { file: key, subject: 'dependencies', message }));
     return;
   }
   const use = value.get('use');
@@ -133,7 +137,12 @@ function collectDeclaration(
       attached.push(diag('E_PATTERN', { file: key, subject: pattern }));
     }
   }
-  out.push({ file: key, dependencies, ...(isStrings(use) ? { use } : {}) });
+  out.push({
+    file: key,
+    dependencies,
+    ...(selected.length > 0 ? { selected: dedupeSelected(selected) } : {}),
+    ...(isStrings(use) ? { use } : {}),
+  });
 }
 
 // SPEC §9.3 step 6
@@ -184,13 +193,27 @@ function collectDefaults(
   return value;
 }
 
+// SPEC §9.5 NOTE: `plugins` is a script Carrier member, never a YAML key
+const unknownTopKeyMessage = (key: string): string | undefined => {
+  if (key === 'dependents') return 'Rename "dependents" to "files".';
+  if (key === 'plugins') {
+    return (
+      'Plugins are functions: register them in docstamp.config.ts or docstamp.config.js, ' +
+      'not in YAML.'
+    );
+  }
+  return unknownKeyMessage(key, TOP_KEYS);
+};
+
 // SPEC §9.3
 export function readConfig(root: string): {
   config: Config;
   attached: Diagnostic[];
   present: boolean;
+  plugins: DocstampPlugin[];
 } {
-  const top = readValue(root);
+  const loaded = readValue(root);
+  const top = loaded?.value;
   if (top === undefined) {
     const config = {
       ignore: [],
@@ -200,7 +223,7 @@ export function readConfig(root: string): {
       defaultPresets: [],
       declarations: [],
     };
-    return { config, attached: [], present: false };
+    return { config, attached: [], present: false, plugins: [] };
   }
   if (!isMap(top)) throw new Raised([diag('E_CONFIG')]);
   if (top.get('version') !== 2) {
@@ -209,13 +232,13 @@ export function readConfig(root: string): {
     const message = fresh ? 'Add "version: 2" to the configuration file.' : undefined;
     throw new Raised([diag('E_CONFIG_VERSION', optional(message))]);
   }
+  const plugins = loaded?.plugins === undefined ? [] : validatePlugins(loaded.plugins);
 
   const fatal: Diagnostic[] = [];
   const attached: Diagnostic[] = [];
   for (const key of top.keys()) {
     if (!TOP_KEYS.includes(key)) {
-      const message =
-        key === 'dependents' ? 'Rename "dependents" to "files".' : unknownKeyMessage(key, TOP_KEYS);
+      const message = unknownTopKeyMessage(key);
       fatal.push(diag('E_UNKNOWN_KEY', { subject: key, ...optional(message) }));
     }
   }
@@ -269,5 +292,6 @@ export function readConfig(root: string): {
     },
     attached,
     present: true,
+    plugins,
   };
 }

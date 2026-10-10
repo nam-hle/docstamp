@@ -1,0 +1,16 @@
+# no plugin claims the path
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  CLAUDE.md
+0 ok, 0 stale, 1 invalid
+next: fix the configuration of each invalid file, then run: docstamp check CLAUDE.md
+--- stderr ---
+error: E_SELECT: CLAUDE.md: docs/guide.md: No plugin claims "docs/guide.md": register one whose "files" select it.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  CLAUDE.md:
+    dependencies:
+      - path: docs/guide.md
+        select: Install

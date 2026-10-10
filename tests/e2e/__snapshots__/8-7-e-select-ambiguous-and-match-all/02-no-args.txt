@@ -1,0 +1,15 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (unrecorded)
+  depends   src/**
+  depends   "docs/guide.md#\"Install\""
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+--- stderr ---
+--- setup: docstamp.config.ts ---
+import { defineConfig } from 'docstamp';
+import headings from './tools/headings.ts';
+
+export default defineConfig({ version: 2, plugins: [headings], files: { 'CLAUDE.md': { dependencies: ['src/**', { path: 'docs/guide.md', select: 'Install', match: 'all' }] } } });
