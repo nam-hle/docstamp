@@ -1,13 +1,16 @@
 import { lstatSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
+import type { Json } from '../core/types.ts';
+import { canonicalJson } from '../plugin/canonical.ts';
+import { claim, runExtract } from '../plugin/plugins.ts';
 import { sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
 import { dependentTree, dependentsOf } from '../engine/reverse.ts';
 import { selectionChanges } from '../engine/selection.ts';
 import { statistics, type FileStats } from '../engine/stats.ts';
-import { fileHash } from '../hash/hash.ts';
+import { fileHash, selectableText } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
 import { renamedTo } from '../history/renamed.ts';
 import { replay } from '../history/replay.ts';
@@ -76,26 +79,41 @@ interface Evaluated {
   global: Diagnostic[];
 }
 
-export function memoizeHash(hash: (path: string) => string): (path: string) => string {
-  const cache = new Map<string, string | Raised>();
-  return (path) => {
-    let cached = cache.get(path);
+function memoizeBy<K, V>(key: (arg: K) => string, fn: (arg: K) => V): (arg: K) => V {
+  const cache = new Map<string, V | Raised>();
+  return (arg) => {
+    const id = key(arg);
+    let cached = cache.get(id);
     if (cached === undefined) {
       try {
-        cached = hash(path);
+        cached = fn(arg);
       } catch (e) {
         if (!(e instanceof Raised)) throw e;
         cached = e;
       }
-      cache.set(path, cached);
+      cache.set(id, cached);
     }
     if (cached instanceof Raised) throw cached;
     return cached;
   };
 }
 
+export function memoizeHash(hash: (path: string) => string): (path: string) => string {
+  return memoizeBy((path: string) => path, hash);
+}
+
 function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: boolean) {
-  const { universe, declarations, attached, presets, defaultPresets } = loadWorkspace(root);
+  const { universe, declarations, attached, presets, defaultPresets, plugins } =
+    loadWorkspace(root);
+  const extract = memoizeBy(
+    ([path, select]: readonly [string, Json]) => `${path}\u0000${canonicalJson(select)}`,
+    ([path, select]: readonly [string, Json]) =>
+      runExtract(claim(plugins, path), {
+        path,
+        select,
+        text: selectableText(root, universe, path),
+      }),
+  );
   const lock = readLockFor();
   const renames = new Map<string, string | null>();
   const fs: EngineFs = {
@@ -106,6 +124,8 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
       return renames.get(p)!;
     },
     fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
+    // list mode never calls a plugin (§13.7)
+    extractHashes: hashFiles ? (path, select) => extract([path, select]) : () => [''],
   };
   const results = declarations.map((b) =>
     evaluate(
@@ -145,11 +165,14 @@ function withChanges(
   evaluated: Evaluated,
   whitespace: Map<string, boolean>,
 ): Result {
-  const inline = evaluated.declarations.find((b) => b.file === result.file)?.inline;
+  const declaration = evaluated.declarations.find((b) => b.file === result.file);
+  const inline = declaration?.inline;
   const entry = inline ? inline.recorded : evaluated.lock.entries.get(result.file);
   if (result.state !== 'stale' || !result.reasons.includes('content-changed') || !entry) {
     return result;
   }
+  // §8.7 NOTE: no changed-file report for fragments yet
+  if (declaration?.selected?.length) return { ...result, changes: null };
   const report = changedSince(root, result, entry, inline !== undefined, whitespace);
   if (report === null) return { ...result, changes: null };
   const { universe, presets, defaultPresets } = evaluated;

@@ -51,6 +51,28 @@ export function normalizedContent(root: string, u: Universe, path: string): Buff
   }
 }
 
+const FILE_TAG = Buffer.from('file\u0000');
+
+// SPEC §8.7: the text a Plugin sees is the normalized content of §10.2 as UTF-8
+export function selectableText(root: string, u: Universe, path: string): string {
+  const content = normalizedContent(root, u, path);
+  const fail = (why: string) =>
+    new Raised([
+      diag('E_SELECT', {
+        subject: path,
+        message: `The file is ${why}; a plugin reads only text.`,
+      }),
+    ]);
+  if (!content.subarray(0, FILE_TAG.length).equals(FILE_TAG)) throw fail('a link');
+  const body = content.subarray(FILE_TAG.length);
+  if (isBinary(body)) throw fail('binary');
+  try {
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(body);
+  } catch {
+    throw fail('not valid UTF-8');
+  }
+}
+
 // SPEC §10.3
 export function fileHash(root: string, u: Universe, path: string): string {
   return sha256Hex(normalizedContent(root, u, path));
