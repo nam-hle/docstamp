@@ -9,7 +9,17 @@ const AT_TERMINAL = Boolean(process.stdout.isTTY) && !process.env['CI'];
 configure({ reporter: AT_TERMINAL ? 'default' : 'agent' });
 
 const DOCSTAMP = 'packages/docstamp';
-const MARKDOWN = 'packages/docstamp-plugin-markdown';
+
+// A plugin builds after docstamp, whose declarations it types against, and is tested with the real
+// CLI. Each one gets the same tasks, suffixed with its id (`typecheckMarkdown`, `testJs`, ...).
+const PLUGINS = [
+  {
+    id: 'Markdown',
+    name: 'docstamp-plugin-markdown',
+    dir: 'packages/docstamp-plugin-markdown',
+  },
+  { id: 'Js', name: 'docstamp-plugin-js', dir: 'packages/docstamp-plugin-js' },
+] as const;
 
 // Directories that hold code, per tool. A package's own `dist` and `node_modules` are never inputs.
 const CODE = [
@@ -17,8 +27,7 @@ const CODE = [
   `${DOCSTAMP}/src`,
   `${DOCSTAMP}/tests`,
   `${DOCSTAMP}/scripts`,
-  `${MARKDOWN}/src`,
-  `${MARKDOWN}/tests`,
+  ...PLUGINS.flatMap(({ dir }) => [`${dir}/src`, `${dir}/tests`]),
 ];
 
 // What can change the verdict of a check: the code, and the configuration of every tool.
@@ -32,12 +41,11 @@ const verdictInputs = [
     '*.config.ts',
     '.oxfmtrc.json',
     'knip.json',
-    `${DOCSTAMP}/package.json`,
-    `${DOCSTAMP}/tsconfig*.json`,
-    `${DOCSTAMP}/*.config.ts`,
-    `${MARKDOWN}/package.json`,
-    `${MARKDOWN}/tsconfig*.json`,
-    `${MARKDOWN}/*.config.ts`,
+    ...[DOCSTAMP, ...PLUGINS.map(({ dir }) => dir)].flatMap((dir) => [
+      `${dir}/package.json`,
+      `${dir}/tsconfig*.json`,
+      `${dir}/*.config.ts`,
+    ]),
   ),
 ];
 
@@ -85,23 +93,24 @@ tasks.register('typecheckDocstamp', {
   inputs: verdictInputs,
 });
 
-// The plugin imports the types of docstamp, which are the declarations docstamp builds into dist.
-tasks.register('typecheckMarkdown', {
-  run: PnpxTask,
-  group: 'Checking',
-  cacheVerdict: true,
-  dependsOn: ['declarations'],
-  description: 'Type-check docstamp-plugin-markdown (read-only)',
-  options: {
-    command: 'tsc',
-    args: ['--noEmit', '-p', `${MARKDOWN}/tsconfig.json`],
-  },
-  inputs: [...verdictInputs, Inputs.files(`${DOCSTAMP}/dist/lib.d.ts`)],
-});
+for (const { id, name, dir } of PLUGINS) {
+  tasks.register(`typecheck${id}`, {
+    run: PnpxTask,
+    group: 'Checking',
+    cacheVerdict: true,
+    dependsOn: ['declarations'],
+    description: `Type-check ${name} (read-only)`,
+    options: {
+      command: 'tsc',
+      args: ['--noEmit', '-p', `${dir}/tsconfig.json`],
+    },
+    inputs: [...verdictInputs, Inputs.files(`${DOCSTAMP}/dist/lib.d.ts`)],
+  });
+}
 
 tasks.register('typecheck', {
   group: 'Checking',
-  dependsOn: ['typecheckRoot', 'typecheckDocstamp', 'typecheckMarkdown'],
+  dependsOn: ['typecheckRoot', 'typecheckDocstamp', ...PLUGINS.map(({ id }) => `typecheck${id}`)],
   description: 'Type-check every project (read-only)',
 });
 
@@ -134,38 +143,40 @@ tasks.register('declarations', {
   options: { command: 'tsc', args: ['-p', 'tsconfig.lib.json'] },
 });
 
-tasks.register('bundleMarkdown', {
-  run: PnpxTask,
-  group: 'Building',
-  workingDir: MARKDOWN,
-  description: 'Bundle docstamp-plugin-markdown with tsup (writes dist)',
-  options: { command: 'tsup', args: AT_TERMINAL ? [] : ['--silent'] },
-});
-
-tasks.register('declarationsMarkdown', {
-  run: PnpxTask,
-  group: 'Building',
-  workingDir: MARKDOWN,
-  dependsOn: ['bundleMarkdown', 'declarations'],
-  description: 'Emit the declarations of docstamp-plugin-markdown into dist (writes dist)',
-  options: { command: 'tsc', args: ['-p', 'tsconfig.build.json'] },
-});
-
-tasks.register('buildMarkdown', {
-  group: 'Building',
-  dependsOn: ['bundleMarkdown', 'declarationsMarkdown'],
-  description: 'docstamp-plugin-markdown and its declarations (writes dist)',
-});
-
 tasks.register('buildDocstamp', {
   group: 'Building',
   dependsOn: ['bundle', 'declarations'],
   description: 'The docstamp CLI, library and declarations (writes dist)',
 });
 
+for (const { id, name, dir } of PLUGINS) {
+  tasks.register(`bundle${id}`, {
+    run: PnpxTask,
+    group: 'Building',
+    workingDir: dir,
+    description: `Bundle ${name} with tsup (writes dist)`,
+    options: { command: 'tsup', args: AT_TERMINAL ? [] : ['--silent'] },
+  });
+
+  tasks.register(`declarations${id}`, {
+    run: PnpxTask,
+    group: 'Building',
+    workingDir: dir,
+    dependsOn: [`bundle${id}`, 'declarations'],
+    description: `Emit the declarations of ${name} into dist (writes dist)`,
+    options: { command: 'tsc', args: ['-p', 'tsconfig.build.json'] },
+  });
+
+  tasks.register(`build${id}`, {
+    group: 'Building',
+    dependsOn: [`bundle${id}`, `declarations${id}`],
+    description: `${name} and its declarations (writes dist)`,
+  });
+}
+
 tasks.register('build', {
   group: 'Building',
-  dependsOn: ['buildDocstamp', 'buildMarkdown'],
+  dependsOn: ['buildDocstamp', ...PLUGINS.map(({ id }) => `build${id}`)],
   description:
     'Every package: the CLI, the library, the plugins and their declarations (writes dist)',
 });
@@ -182,7 +193,9 @@ tasks.register('clean', {
   run: DeleteTask,
   group: 'Building',
   description: 'Delete dist (writes)',
-  options: { paths: [`${DOCSTAMP}/dist`, `${MARKDOWN}/dist`] },
+  options: {
+    paths: [DOCSTAMP, ...PLUGINS.map(({ dir }) => dir)].map((dir) => `${dir}/dist`),
+  },
 });
 
 // --- Testing ---
@@ -221,15 +234,6 @@ tasks.register('testE2e', {
   options: { command: 'vitest', args: ['run', 'tests/e2e/scenarios'] },
 });
 
-tasks.register('testMarkdown', {
-  run: PnpxTask,
-  group: 'Testing',
-  workingDir: MARKDOWN,
-  dependsOn: ['buildDocstamp', 'buildMarkdown'],
-  description: 'Run the docstamp-plugin-markdown tests, with the real docstamp CLI (read-only)',
-  options: { command: 'vitest', args: ['run'] },
-});
-
 tasks.register('testPack', {
   run: PnpxTask,
   group: 'Testing',
@@ -239,6 +243,17 @@ tasks.register('testPack', {
   options: { command: 'vitest', args: ['run', 'tests/e2e/pack.test.ts'] },
 });
 
+for (const { id, name, dir } of PLUGINS) {
+  tasks.register(`test${id}`, {
+    run: PnpxTask,
+    group: 'Testing',
+    workingDir: dir,
+    dependsOn: ['buildDocstamp', `build${id}`],
+    description: `Run the ${name} tests, with the real docstamp CLI (read-only)`,
+    options: { command: 'vitest', args: ['run'] },
+  });
+}
+
 // The release workflow's gate: the package's own correctness, not the docs self-check.
 tasks.register('verifyRelease', {
   group: 'Testing',
@@ -246,11 +261,13 @@ tasks.register('verifyRelease', {
   description: 'The docstamp unit, end-to-end and pack tests, as publish.yml runs them',
 });
 
-tasks.register('verifyReleaseMarkdown', {
-  group: 'Testing',
-  dependsOn: ['testMarkdown'],
-  description: 'The docstamp-plugin-markdown tests, as publish.yml runs them',
-});
+for (const { id, name } of PLUGINS) {
+  tasks.register(`verifyRelease${id}`, {
+    group: 'Testing',
+    dependsOn: [`test${id}`],
+    description: `The ${name} tests, as publish.yml runs them`,
+  });
+}
 
 // The gate. `pnpm test` is `nadle test --continue`, which reports every failure.
 tasks.register('test', {
@@ -263,7 +280,7 @@ tasks.register('test', {
     'docstamp',
     'testUnit',
     'testAction',
-    'testMarkdown',
+    ...PLUGINS.map(({ id }) => `test${id}`),
     'testE2e',
     'testPack',
   ],

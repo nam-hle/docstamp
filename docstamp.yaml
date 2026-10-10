@@ -36,3 +36,9 @@ files:
   packages/docstamp-plugin-markdown/SPEC.md:
     dependencies:
       - packages/docstamp-plugin-markdown/src
+  packages/docstamp-plugin-js/README.md:
+    dependencies:
+      - packages/docstamp-plugin-js/src
+  packages/docstamp-plugin-js/SPEC.md:
+    dependencies:
+      - packages/docstamp-plugin-js/src

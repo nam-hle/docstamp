@@ -81,7 +81,8 @@ The contract is `packages/docstamp/docs/SPEC.md`, written `SPEC` or by clause (`
 docstamp/                   # private workspace root
 ├── packages/
 │   ├── docstamp/           # the published package `docstamp`; its tree is below
-│   └── docstamp-plugin-markdown/   # plugin: sections of a Markdown file; SPEC.md, src/, tests/
+│   ├── docstamp-plugin-markdown/   # plugin: sections of a Markdown file; SPEC.md, src/, tests/
+│   └── docstamp-plugin-js/         # plugin: declarations of a JS/TS file; SPEC.md, src/, tests/
 ├── action.yml              # the composite GitHub Action (GitHub needs it at the root)
 ├── action/                 # render.ts (report to PR comment, pure), run.ts (summary, comment
 │                           #   upsert) and their tests, run under Node's type stripping
@@ -200,14 +201,14 @@ them right.
 ## Plugin packages
 
 Each plugin lives in `packages/docstamp-plugin-<format>/` and is spec-first like the core: its own
-`SPEC.md` defines the selector, what a section is and what is hashed, and its tests are named by
+`SPEC.md` defines the selector, what a part is and what is hashed, and its tests are named by
 clause (`describe('§5.3 Sections', ...)`). The hash of a selected part is part of every dependent's
 Dependency Hash, so a change that alters an existing hash is breaking for the plugin (its SPEC §7).
 
 - A plugin imports only the types of `docstamp` (`import type`), so `docstamp` is a peer
   dependency and no runtime import. It exports a plain object that `satisfies DocstampPlugin`.
 - Its tests include one that runs the built `docstamp` CLI with the plugin
-  (`tests/integration/`); `pnpm nadle testMarkdown` builds both packages first.
+  (`tests/integration/`); `pnpm nadle testMarkdown` (`testJs`) builds both packages first.
 - Each plugin lists its parser as its only dependency, which needs the user's approval.
 
 ## Inline declarations
@@ -309,8 +310,8 @@ first, bump the Lockfile version, then regenerate the literals and review each d
   are all named `docstamp`.
 - `.github/workflows/ci.yml` runs `pnpm test` (the whole gate, one step) on every pull request and
   push to `main`, in one `Test (<os>)` matrix job for Linux, macOS and Windows, then
-  `npm pack --dry-run` of each package (`packages/docstamp`, `packages/docstamp-plugin-markdown`)
-  to prove the tarballs build. It does not dry-run `npm publish`: that fails once the version in a
+  `npm pack --dry-run` of each package (`packages/docstamp`, `packages/docstamp-plugin-markdown`,
+  `packages/docstamp-plugin-js`) to prove the tarballs build. It does not dry-run `npm publish`: that fails once the version in a
   package's `package.json` is already on npm, which is true after every release. A `Docs gate`
   job packs the build and runs `action.yml` on this repository (`uses: ./`), the same file users
   call, so the Action is dogfooded and the PR comment appears on our own pull requests.
@@ -325,8 +326,8 @@ first, bump the Lockfile version, then regenerate the literals and review each d
   unprefixed `release_created` and `tag_name` are never set.
 - Merging a release pull request tags the release and creates the GitHub release, then starts
   `.github/workflows/publish.yml` for that tag. The workflow resolves the package from the tag,
-  builds and runs its tests (`pnpm nadle verifyRelease` for `docstamp`, `verifyReleaseMarkdown` for
-  the plugin, never the docs self-check) and **stages** the version on npm with
+  builds and runs its tests (`pnpm nadle verifyRelease` for `docstamp`, `verifyReleaseMarkdown` and
+  `verifyReleaseJs` for the plugins, never the docs self-check) and **stages** the version on npm with
   `npm stage publish --provenance`, run in the package folder. There is no npm token: npm trusts
   this workflow through a Trusted Publisher configured on npmjs.com for `nam-hle/docstamp` and
   `publish.yml`, one per package (the job holds `id-token: write`; npm 11.5.1 or newer, with
@@ -340,9 +341,9 @@ first, bump the Lockfile version, then regenerate the literals and review each d
   package's `package.json`. Nothing else stages.
 - Version bumps edit each package's `package.json`, so the docs deliberately do not depend on it: a
   release must not make the docs check fail.
-- `docstamp-plugin-markdown` declares `docstamp` as a peer (`>=0.6.0`, the first version with the
-  plugin API) and a `workspace:*` development dependency for its types; consumers ignore the
-  development dependency.
+- `docstamp-plugin-markdown` and `docstamp-plugin-js` declare `docstamp` as a peer (`>=0.6.0`, the
+  first version with the plugin API) and a `workspace:*` development dependency for its types;
+  consumers ignore the development dependency.
 
 ## Public repository
 
