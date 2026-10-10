@@ -1,3 +1,5 @@
+import { types } from 'node:util';
+
 import { Raised, diag } from '../core/diagnostics.ts';
 import { select as selectPaths } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
@@ -13,11 +15,18 @@ const bad = (subject: string, message: string): never => {
 // SPEC §9.5, §8.7
 export function validatePlugins(raw: unknown): DocstampPlugin[] {
   if (!Array.isArray(raw)) return bad('plugins', 'The "plugins" member must be a list of plugins.');
+  if (types.isProxy(raw)) return bad('plugins', 'The "plugins" list must be a plain list.');
   const names = new Set<string>();
-  return Array.from({ length: raw.length }, (_, index) => {
+  let length: number;
+  try {
+    length = raw.length;
+  } catch {
+    return bad('plugins', 'The "plugins" list could not be read.');
+  }
+  return Array.from({ length }, (_, index) => {
     const label = `plugins[${index}]`;
-    if (!(index in raw)) return bad(label, 'The "plugins" list must not have holes.');
     try {
+      if (!(index in raw)) return bad(label, 'The "plugins" list must not have holes.');
       return validateEntry(raw[index], label, names);
     } catch (error) {
       if (error instanceof Raised) throw error;
@@ -88,7 +97,14 @@ export function runExtract(plugin: DocstampPlugin, input: ExtractInput): string[
   } catch {
     return fail('returned a value that could not be read');
   }
-  if (promised) return fail('returned a promise; extract must be synchronous');
+  if (promised) {
+    try {
+      (result as PromiseLike<unknown>).then(undefined, () => {});
+    } catch {
+      // the failure is reported below; nothing else to contain
+    }
+    return fail('returned a promise; extract must be synchronous');
+  }
   if (!Array.isArray(hashes)) return fail('did not return { hashes: string[] }');
   if (!hashes.every((hash) => typeof hash === 'string' && hash !== '')) {
     return fail('returned a hash that is not a non-empty string');

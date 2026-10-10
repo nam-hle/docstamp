@@ -68,6 +68,31 @@ describe('§9.5 validatePlugins', () => {
     }),
   });
 
+  const trap = (name: string) =>
+    new Proxy([plugin()], {
+      [name]: () => {
+        throw new Error('/abs/secret/path');
+      },
+    });
+
+  it.each([
+    ['a proxy list with a throwing has trap', trap('has')],
+    ['a proxy list with a throwing get trap', trap('get')],
+    [
+      'a proxy list with a throwing length',
+      new Proxy([plugin()], {
+        get: (target, key, receiver) => {
+          if (key === 'length') throw new Error('/abs/secret/path');
+          return Reflect.get(target, key, receiver);
+        },
+      }),
+    ],
+  ])('rejects %s with one E_PLUGIN', (_, raw) => {
+    const diagnostics = raised(() => validatePlugins(raw));
+    expect(diagnostics.map((d) => d.code)).toEqual(['E_PLUGIN']);
+    expect(diagnostics[0]?.message).not.toContain('secret');
+  });
+
   it.each([
     ['not a list', {}, 'plugins'],
     ['not an object', [1], 'plugins[0]'],
@@ -171,6 +196,26 @@ describe('§8.7 runExtract', () => {
     expect(rest).toEqual([]);
     expect(diagnostic?.code).toBe('E_SELECT');
     expect(diagnostic?.message).not.toContain('secret');
+  });
+
+  it('contains a rejecting async plugin without an unhandled rejection', async () => {
+    const unhandled: unknown[] = [];
+    const listener = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', listener);
+    try {
+      const [diagnostic] = raised(() =>
+        run(async () => {
+          throw new Error('/abs/secret/path');
+        }),
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(unhandled).toEqual([]);
+      expect(diagnostic?.code).toBe('E_SELECT');
+      expect(diagnostic?.message).toContain('synchronous');
+      expect(diagnostic?.message).not.toContain('secret');
+    } finally {
+      process.off('unhandledRejection', listener);
+    }
   });
 
   it('does not leak the thrown error text', () => {
