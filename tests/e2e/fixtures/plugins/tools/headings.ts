@@ -2,9 +2,14 @@ import { createHash } from 'node:crypto';
 import { definePlugin } from 'docstamp';
 
 const sha = (text: string) => createHash('sha256').update(text).digest('hex');
-const levelOf = (line: string) => /^(#+)\s/u.exec(line)?.[1]?.length;
 
-// Hashes the body of every "## <select>" section up to the next heading of the same or higher level.
+const parseHeading = (line: string) => {
+  const [, marks = '', title = ''] = /^(#{1,6})\s+(.*?)\s*$/u.exec(line) ?? [];
+  return marks === '' ? undefined : { level: marks.length, title };
+};
+
+// Hashes the body of every heading titled <select>, of any level, up to the next heading of
+// the same or a higher level.
 export default definePlugin({
   name: 'headings',
   apiVersion: 1,
@@ -13,10 +18,10 @@ export default definePlugin({
     const lines = text.split('\n');
     const hashes: string[] = [];
     lines.forEach((line, index) => {
-      const heading = /^(#{1,6})\s+(.*?)\s*$/u.exec(line);
-      if (heading?.[2] !== select) return;
+      const heading = parseHeading(line);
+      if (heading?.title !== select) return;
       const end = lines.findIndex(
-        (next, i) => i > index && (levelOf(next) ?? Infinity) <= heading[1]!.length,
+        (next, i) => i > index && (parseHeading(next)?.level ?? Infinity) <= heading.level,
       );
       hashes.push(sha(lines.slice(index + 1, end === -1 ? undefined : end).join('\n')));
     });

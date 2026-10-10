@@ -49,7 +49,7 @@ npx docstamp help start   # from nothing to a first passing check
 ## Contents
 
 - [Quick start](#quick-start), [Inline declarations](#inline-declarations), [Working with AI agents](#working-with-ai-agents)
-- [Writing good dependencies](#writing-good-dependencies), [sharing them with presets](#sharing-a-list-with-presets), [proposing them](#proposing-dependencies), [measuring them](#measuring-how-noisy-a-list-is)
+- [Writing good dependencies](#writing-good-dependencies), [sharing them with presets](#sharing-a-list-with-presets), [part of a file](#depend-on-part-of-a-file-plugins), [proposing them](#proposing-dependencies), [measuring them](#measuring-how-noisy-a-list-is)
 - [Reference](#reference): [commands](#commands), [exit codes](#exit-codes), [configuration](#configuration), [JSON output](#json-output), [GitHub Actions](#github-actions), [upgrading](#upgrading)
 - [Compatibility](#compatibility), [Why not just ...](#why-not-just-), [Beyond docs](#beyond-docs), [Contributing](#contributing)
 
@@ -223,6 +223,97 @@ A doc's patterns are its own `dependencies`, then each preset's patterns in `use
 - **Warnings.** A preset exclusion that matches no file raises no `W_EMPTY_EXCLUSION`; a preset inclusion that matches nothing is `E_EMPTY_PATTERN` naming the preset. List exclusion presets last: `use: [no-tests, more-src]` selects the tests again and warns `W_SHADOWED_EXCLUSION`.
 - **`dependencies` stays required**, with at least one pattern of the doc's own. With `--json`, a doc that uses presets also has `use` and `origins`. Details: [SPEC §8.6](docs/SPEC.md#86-presets), `docstamp help presets`.
 
+## Depend on part of a file (plugins)
+
+A pattern depends on a whole file. When a doc rests on one section of a long guide, an edit to any other section still makes it stale. A *plugin* teaches docstamp to hash one part of a file: you write it, register it in a script configuration, and name the part with `select`. docstamp stays format-agnostic; the plugin decides what a selector means ([SPEC §8.7](docs/SPEC.md#87-selected-dependencies)).
+
+A plugin is an object with a `name`, `apiVersion: 1`, the `files` patterns it handles, and a synchronous `extract({ path, text, select })` that returns `{ hashes }`, one hash string per part it finds. This one hashes the body of a Markdown heading:
+
+```ts
+// tools/headings.ts
+import { createHash } from 'node:crypto';
+import { definePlugin } from 'docstamp';
+
+const sha = (text: string) => createHash('sha256').update(text).digest('hex');
+
+const parseHeading = (line: string) => {
+  const [, marks = '', title = ''] = /^(#{1,6})\s+(.*?)\s*$/u.exec(line) ?? [];
+  return marks === '' ? undefined : { level: marks.length, title };
+};
+
+// Hashes the body of every heading titled <select>, of any level, up to the next heading of
+// the same or a higher level.
+export default definePlugin({
+  name: 'headings',
+  apiVersion: 1,
+  files: ['**/*.md'],
+  extract({ text, select }) {
+    const lines = text.split('\n');
+    const hashes: string[] = [];
+    lines.forEach((line, index) => {
+      const heading = parseHeading(line);
+      if (heading?.title !== select) return;
+      const end = lines.findIndex(
+        (next, i) => i > index && (parseHeading(next)?.level ?? Infinity) <= heading.level,
+      );
+      hashes.push(sha(lines.slice(index + 1, end === -1 ? undefined : end).join('\n')));
+    });
+    return { hashes };
+  },
+});
+```
+
+Register it under `plugins` and add an entry `{ path, select }` next to the patterns. `CLAUDE.md` here depends on `src` and on the `Install` section of `docs/guide.md` only:
+
+```ts
+// docstamp.config.ts
+import { defineConfig } from 'docstamp';
+import headings from './tools/headings.ts';
+
+export default defineConfig({
+  version: 2,
+  plugins: [headings],
+  files: {
+    'CLAUDE.md': {
+      dependencies: ['src/**', { path: 'docs/guide.md', select: 'Install' }],
+    },
+  },
+});
+```
+
+```console
+$ docstamp
+STALE    CLAUDE.md  (unrecorded)
+  depends   src/**
+  depends   "docs/guide.md#\"Install\""
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+$ docstamp update CLAUDE.md
+written  CLAUDE.md
+$ docstamp
+1 ok, 0 stale, 0 invalid
+```
+
+Editing the `Usage` section of `docs/guide.md` leaves `CLAUDE.md` `ok`; editing `Install` makes it stale:
+
+```console
+$ docstamp
+STALE    CLAUDE.md  (content-changed)
+  depends   src/**
+  depends   "docs/guide.md#\"Install\""
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+```
+
+- **One part, by default.** `select` is any plain value, passed to the plugin as it is. The plugin returning no hash is `E_SELECT_NOT_FOUND`, and more than one is `E_SELECT_AMBIGUOUS`, unless the entry says `match: 'all'`, which hashes every part found. An invalid plugin, or two claiming one file, is `E_PLUGIN`; no plugin claiming the file, or a plugin that throws on it, is `E_SELECT` ([SPEC §8.7](docs/SPEC.md#87-selected-dependencies)).
+- **Script configuration only.** `plugins` is a key of `docstamp.config.ts` or `.js`, not of `docstamp.yaml` or an inline block ([SPEC §9.5](docs/SPEC.md#95-script-carriers)).
+- **A literal path.** `path` names one file, never a glob.
+- **No changed-file list yet.** A stale file with selected dependencies prints its declaration, as above, and `changes` in `--json` is `null`; read the part yourself.
+- **Determinism is the plugin author's duty.** A plugin runs in your process and docstamp trusts its hashes. Keep it independent of the clock, the network and the environment.
+- **No plugin ships with docstamp yet.** Write your own, as above.
+
 ## Proposing dependencies
 
 `docstamp suggest <file>...` reads the docs you name and proposes their `dependencies` from the repository paths they mention (paths in backticks, links, globs), with the number of files each pattern selects and the share of the last 30 days' commits that would have made the doc stale. `--write` records the proposal as an inline block without a `hash`, so the doc stays `unrecorded` until someone reviews it.
@@ -304,11 +395,11 @@ Warnings never affect the exit code. Full table: [SPEC §16](docs/SPEC.md#16-exi
 
 ### Configuration
 
-Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules), `presets` ([shared lists](#sharing-a-list-with-presets)), `default-presets` (presets for every doc) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
+Declare the dependencies of each file in one configuration file at the repository root ([SPEC §9](docs/SPEC.md#9-configuration-file)). The Quick start shows the whole shape. The carrier is `docstamp.yaml`, or a script: `docstamp.config.ts`, `.mts`, `.js` or `.mjs` ([SPEC §9.1](docs/SPEC.md#91-carriers)). Two configuration files raise `E_CONFIG_AMBIGUOUS`. Besides `files`, the optional keys are `gitignore` (default `true`), `ignore` (extra ignore rules), `presets` ([shared lists](#sharing-a-list-with-presets)), `default-presets` (presets for every doc), `plugins` (script configurations only, [below](#depend-on-part-of-a-file-plugins)) and `include` (default `["**/*.md"]`): the patterns that select the files searched for [inline declarations](#inline-declarations). `files` stays required, so a configuration that only sets `ignore` or `include` writes `files: {}`. Without any configuration file the defaults apply and only inline declarations exist; a repository with neither fails with `E_CONFIG_MISSING`, so a gate that checks nothing never passes unnoticed.
 
 For editor completion in YAML, start the file with `# yaml-language-server: $schema=https://unpkg.com/docstamp/schema.json` (offline: `$schema=./node_modules/docstamp/schema.json`); the package ships it as `schema.json`.
 
-A script must export plain data only ([SPEC §9.5](docs/SPEC.md#95-script-carriers)). TypeScript runs through Node's type stripping, so only erasable syntax works (no `enum`, no value `namespace`). TypeScript and JavaScript configurations were verified on Node.js 24.18.1. Evaluating the file may import other files; docstamp does not track them, so import only `docstamp`.
+A script must export plain data only, except the `plugins` list ([SPEC §9.5](docs/SPEC.md#95-script-carriers), [plugins](#depend-on-part-of-a-file-plugins)). TypeScript runs through Node's type stripping, so only erasable syntax works (no `enum`, no value `namespace`). TypeScript and JavaScript configurations were verified on Node.js 24.18.1. Evaluating the file may import other files; docstamp does not track them, so import only `docstamp`.
 
 ### JSON output
 

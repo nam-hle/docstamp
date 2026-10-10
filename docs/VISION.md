@@ -58,10 +58,13 @@ files that changed, instead of the whole repo and a vague question.
 Roughly in order of how settled each is:
 
 - **Files, folders and globs** as targets: the proof of concept.
-- **TypeScript symbols** (`src/api.ts#createUser`), hashed by public shape, so an internal
-  refactor does not ask for a doc review.
-- **Structured paths** (`package.json#scripts`) and **Markdown headings** as targets.
-- **A public extractor API** for other languages, once two or three built-in ones show its shape.
+- **Parts of a file, through plugins.** A plugin per format hashes a part of a file (a Markdown
+  heading, a TypeScript symbol by its public shape, a key of `package.json`), so an unrelated
+  edit or an internal refactor does not ask for a doc review. The plugin defines what a selector
+  means; docstamp only compares the hashes it returns. Shipped so far: the plugin API, with no
+  plugin of its own.
+- **First-party plugins** as separate packages (Markdown and JavaScript first), once the API has
+  met a few real plugins.
 
 ## What it will not become
 
