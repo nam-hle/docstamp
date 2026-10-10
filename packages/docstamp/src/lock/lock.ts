@@ -1,4 +1,3 @@
-import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
 import { Raised, diag } from '../core/diagnostics.ts';
@@ -6,6 +5,7 @@ import { sortPaths } from '../core/order.ts';
 import { quote } from '../core/quote.ts';
 import { isRepoPath } from '../core/repo-path.ts';
 import type { Lock } from '../core/types.ts';
+import type { Host } from '../host/fs.ts';
 
 const LOCK = 'docstamp-lock.yaml';
 // Historical name from before the rename to docstamp; kept on purpose (§11.1).
@@ -30,8 +30,8 @@ function decode(bytes: Buffer): string {
 }
 
 // SPEC §11.1 step 1
-function rejectLegacyLock(root: string): void {
-  if (!existsSync(join(root, LEGACY_LOCK))) return;
+function rejectLegacyLock(host: Host, root: string): void {
+  if (host.fs.kind(join(root, LEGACY_LOCK)) === null) return;
   throw new Raised([
     diag('E_LOCK_VERSION', {
       subject: LEGACY_LOCK,
@@ -43,13 +43,13 @@ function rejectLegacyLock(root: string): void {
 }
 
 // SPEC §11.1
-export function readLock(root: string): Lock {
-  rejectLegacyLock(root);
+export function readLock(host: Host, root: string): Lock {
+  rejectLegacyLock(host, root);
   const path = join(root, LOCK);
-  if (!existsSync(path)) return { entries: new Map() };
+  if (host.fs.kind(path) === null) return { entries: new Map() };
   let bytes: Buffer;
   try {
-    bytes = readFileSync(path);
+    bytes = host.fs.readFile(path);
   } catch {
     throw fail('E_LOCK');
   }
@@ -89,22 +89,20 @@ export function lockText(lock: Lock): string {
   return out;
 }
 
-export const lockExists = (root: string): boolean => existsSync(join(root, LOCK));
+export const lockExists = (host: Host, root: string): boolean =>
+  host.fs.kind(join(root, LOCK)) !== null;
 
 // SPEC §11.3
-export function writeLock(root: string, lock: Lock): boolean {
+export function writeLock(host: Host, root: string, lock: Lock): boolean {
   const path = join(root, LOCK);
   const text = lockText(lock);
-  const temp = `${path}.tmp-${process.pid}`;
   try {
-    if (existsSync(path)) {
-      const current = readFileSync(path).toString('latin1').replaceAll('\r\n', '\n');
+    if (host.fs.kind(path) !== null) {
+      const current = host.fs.readFile(path).toString('latin1').replaceAll('\r\n', '\n');
       if (current === Buffer.from(text, 'utf8').toString('latin1')) return false;
     }
-    writeFileSync(temp, text, 'utf8');
-    renameSync(temp, path);
+    host.fs.writeAtomic(path, text);
   } catch {
-    rmSync(temp, { force: true });
     throw new Raised([
       diag('E_UNREADABLE', {
         subject: LOCK,

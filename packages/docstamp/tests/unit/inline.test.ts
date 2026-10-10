@@ -1,15 +1,11 @@
-import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { loadWorkspace } from '../../src/cli/workspace.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import { fileHash } from '../../src/hash/hash.ts';
 import { parseBlock } from '../../src/inline/block.ts';
 import { recordedHash, scanFrontmatter, stampText } from '../../src/inline/frontmatter.ts';
 import { stampFile } from '../../src/inline/read-inline.ts';
-import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
-
-afterEach(cleanupTrees);
+import { inMemory, memoryHost } from '../helpers/memory-fs.ts';
 
 const H = 'a'.repeat(64);
 const OTHER = 'b'.repeat(64);
@@ -222,21 +218,26 @@ describe('§9.6.4 Stamp', () => {
     expect(recordedHash('# plain\n')).toBeNull();
   });
   it('stampFile writes atomically, keeps the mode, and leaves no temporary file', () => {
-    const root = makeTree({ 'd.md': '---\ndocstamp:\n  dependencies: [src]\n---\nbody\n' });
+    const host = memoryHost({
+      'd.md': { content: '---\ndocstamp:\n  dependencies: [src]\n---\nbody\n', mode: 0o755 },
+    });
+    const { root } = host;
     const universe = { paths: ['d.md'], kinds: new Map(), onDisk: new Map(), ignored: [] };
-    stampFile(root, universe, 'd.md', H);
-    expect(readFileSync(join(root, 'd.md'), 'utf8')).toBe(
+    stampFile(host, root, universe, 'd.md', H);
+    expect(host.fs.text('d.md')).toBe(
       `---\ndocstamp:\n  dependencies: [src]\n  hash: ${H}\n---\nbody\n`,
     );
-    expect(() => stampFile(root, universe, 'gone.md', H)).toThrow(Raised);
+    expect(host.fs.modeOf('d.md')).toBe(0o755);
+    expect(host.fs.paths().filter((path) => path.includes('.tmp-'))).toEqual([]);
+    expect(() => stampFile(host, root, universe, 'gone.md', H)).toThrow(Raised);
   });
 });
 
 describe('§10.2 hash input rule for inline files', () => {
   const hashes = (files: Record<string, string>) => {
-    const root = makeTree({ 'src/a.ts': 'a\n', ...files });
-    const { universe } = loadWorkspace(root);
-    return (path: string) => fileHash(root, universe, path);
+    const host = memoryHost({ 'src/a.ts': 'a\n', ...files });
+    const { universe } = loadWorkspace(host, host.root);
+    return (path: string) => fileHash(host, host.root, universe, path);
   };
   const withBlock = (deps: string, hash = '') =>
     `---\nt: 1\ndocstamp:\n  dependencies: ${deps}\n${hash}---\nbody\n`;
@@ -288,7 +289,7 @@ describe('§10.2 hash input rule for inline files', () => {
 });
 
 describe('§12.2 loadWorkspace', () => {
-  const load = (files: Record<string, string>) => loadWorkspace(makeTree(files));
+  const load = (files: Record<string, string>) => loadWorkspace(...inMemory(files));
   const failure = (files: Record<string, string>) => {
     try {
       load(files);
@@ -348,13 +349,13 @@ describe('§12.2 loadWorkspace', () => {
     expect(ws.attached).toEqual([]);
   });
   it('binary and non UTF-8 files are skipped', () => {
-    const root = makeTree({ 'a.md': withDeps('[src]'), 'src/a.ts': 'a\n' });
-    writeFileSync(join(root, 'bin.md'), Buffer.from([0x2d, 0x2d, 0x2d, 0x0a, 0x00, 0xff]));
-    writeFileSync(
-      join(root, 'latin.md'),
-      Buffer.from('---\ndocstamp:\n  dependencies: [é]\n---\n', 'latin1'),
-    );
-    expect(loadWorkspace(root).declarations.map((d) => d.file)).toEqual(['a.md']);
+    const args = inMemory({
+      'a.md': withDeps('[src]'),
+      'src/a.ts': 'a\n',
+      'bin.md': Buffer.from([0x2d, 0x2d, 0x2d, 0x0a, 0x00, 0xff]),
+      'latin.md': Buffer.from('---\ndocstamp:\n  dependencies: [é]\n---\n', 'latin1'),
+    });
+    expect(loadWorkspace(...args).declarations.map((d) => d.file)).toEqual(['a.md']);
   });
   it('a file declared inline and under files is E_DUPLICATE_DECLARATION, not merged', () => {
     const ws = load({
@@ -375,11 +376,11 @@ describe('§12.2 loadWorkspace', () => {
     expect(ws.attached.map((d) => [d.code, d.file])).toEqual([['E_UNKNOWN_KEY', 'a.md']]);
   });
   it('the marked files hold their hash lines for the hash rule', () => {
-    const root = makeTree({
+    const args = inMemory({
       'a.md': `---\ndocstamp:\n  dependencies: [src]\n  hash: ${H}\n---\n`,
       'src/a.ts': 'a\n',
     });
-    expect(loadWorkspace(root).universe.marked?.get('a.md')).toEqual([3]);
+    expect(loadWorkspace(...args).universe.marked?.get('a.md')).toEqual([3]);
   });
 });
 

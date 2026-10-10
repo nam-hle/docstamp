@@ -1,4 +1,3 @@
-import { lstatSync } from 'node:fs';
 import { join } from 'node:path';
 import { readConfig } from '../config/read-config.ts';
 import { Raised, diag } from '../core/diagnostics.ts';
@@ -17,6 +16,7 @@ import { suggestJsonText, suggestText, type SuggestEntry } from '../report/sugge
 import { diagnosticsText } from '../report/text.ts';
 import { computeUniverse, determineRoot, isIgnoredPath } from '../universe/walk.ts';
 import type { Args } from './args.ts';
+import type { Host } from '../host/fs.ts';
 import { resolutionMessage, toRepoPath } from './paths.ts';
 import type { Io } from './run.ts';
 
@@ -50,10 +50,14 @@ function staleRates(root: string, proposals: ReadonlyMap<string, readonly Sugges
   return rates;
 }
 
-function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): SuggestEntry[] {
-  const root = determineRoot(cwd, args.root);
-  const { config } = readConfig(root);
-  const universe = computeUniverse(root, config);
+function suggestAll(
+  host: Host,
+  args: Extract<Args, { mode: 'suggest' }>,
+  cwd: string,
+): SuggestEntry[] {
+  const root = determineRoot(host, cwd, args.root);
+  const { config } = readConfig(host, root);
+  const universe = computeUniverse(host, root, config);
   const problems: Diagnostic[] = [];
   const texts = new Map<string, string>();
   const absolute = (path: string) => join(root, universe.onDisk.get(path) ?? path);
@@ -65,7 +69,7 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
     }
     let text: string | null = null;
     try {
-      text = lstatSync(absolute(path)).isFile() ? textOf(absolute(path)) : null;
+      text = host.fs.kind(absolute(path)) === 'file' ? textOf(host, absolute(path)) : null;
     } catch {
       text = null;
     }
@@ -102,7 +106,7 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
     const scan = scanFrontmatter(texts.get(path)!);
     return scan === null ? null : parseBlock(path, scan).declaration.dependencies;
   };
-  const isIgnored = (path: string) => isIgnoredPath(root, universe, path);
+  const isIgnored = (path: string) => isIgnoredPath(host, root, universe, path);
   const proposals = new Map(
     names.map((path) => [path, propose(path, texts.get(path)!, universe.paths, isIgnored)]),
   );
@@ -138,7 +142,7 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
       const text = writeBlock(path, texts.get(path)!, patterns);
       if (text !== texts.get(path)) rewritten.set(path, text);
     }
-    for (const [path, text] of rewritten) replaceFile(absolute(path), path, () => text);
+    for (const [path, text] of rewritten) replaceFile(host, absolute(path), path, () => text);
   }
   return names.map((path) => {
     const { suggestions, ignored } = proposals.get(path)!;
@@ -159,12 +163,17 @@ function suggestAll(args: Extract<Args, { mode: 'suggest' }>, cwd: string): Sugg
 }
 
 // SPEC §13.10; reads the clock for the window (§2)
-export function runSuggest(args: Extract<Args, { mode: 'suggest' }>, cwd: string, io: Io): number {
+export function runSuggest(
+  host: Host,
+  args: Extract<Args, { mode: 'suggest' }>,
+  cwd: string,
+  io: Io,
+): number {
   let files: SuggestEntry[] = [];
   let global: Diagnostic[] = [];
   let exitCode = 2;
   try {
-    files = suggestAll(args, cwd);
+    files = suggestAll(host, args, cwd);
     exitCode = 0;
   } catch (e) {
     if (!(e instanceof Raised)) throw e;

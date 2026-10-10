@@ -1,7 +1,8 @@
 import { run } from './cli/run.ts';
+import { nodeHost } from './host/node-fs.ts';
 
 try {
-  process.exitCode = run(process.argv.slice(2), process.cwd(), {
+  process.exitCode = run(nodeHost, process.argv.slice(2), process.cwd(), {
     stdout: (s) => process.stdout.write(s),
     stderr: (s) => process.stderr.write(s),
     isTty: process.stdout.isTTY === true,

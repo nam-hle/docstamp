@@ -1,35 +1,33 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
-import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
+import { memoryHost, type Entry } from '../helpers/memory-fs.ts';
 import { computeUniverse } from '../../src/universe/walk.ts';
 import { dependencyHashFrom, fileHash, normalizedContent } from '../../src/hash/hash.ts';
 
-afterEach(cleanupTrees);
-
 const cfg = { ignore: [], useGitignore: true, declarations: [] };
-const setup = (spec: Parameters<typeof makeTree>[0]) => {
-  const root = makeTree(spec);
-  return { root, u: computeUniverse(root, cfg) };
+const setup = (spec: Record<string, Entry>) => {
+  const host = memoryHost(spec);
+  return { host, root: host.root, u: computeUniverse(host, host.root, cfg) };
 };
 
 describe('§10.2 normalizedContent', () => {
   it('CRLF and LF hash the same; lone CR does not', () => {
-    const { root, u } = setup({ a: 'x\r\ny', b: 'x\ny', c: 'x\ry' });
-    expect(fileHash(root, u, 'a')).toBe(fileHash(root, u, 'b'));
-    expect(fileHash(root, u, 'c')).not.toBe(fileHash(root, u, 'b'));
+    const { host, root, u } = setup({ a: 'x\r\ny', b: 'x\ny', c: 'x\ry' });
+    expect(fileHash(host, root, u, 'a')).toBe(fileHash(host, root, u, 'b'));
+    expect(fileHash(host, root, u, 'c')).not.toBe(fileHash(host, root, u, 'b'));
   });
   it('binary content is not normalized', () => {
-    const { root, u } = setup({ a: 'x\u0000\r\n', b: 'x\u0000\n' });
-    expect(fileHash(root, u, 'a')).not.toBe(fileHash(root, u, 'b'));
+    const { host, root, u } = setup({ a: 'x\u0000\r\n', b: 'x\u0000\n' });
+    expect(fileHash(host, root, u, 'a')).not.toBe(fileHash(host, root, u, 'b'));
   });
   it('file and link are tagged differently', () => {
-    const { root, u } = setup({ t: 'x', f: 't', l: { link: 't' } });
-    expect(normalizedContent(root, u, 'f').subarray(0, 5).toString()).toBe('file\u0000');
-    expect(normalizedContent(root, u, 'l').toString()).toBe('link\u0000t');
+    const { host, root, u } = setup({ t: 'x', f: 't', l: { link: 't' } });
+    expect(normalizedContent(host, root, u, 'f').subarray(0, 5).toString()).toBe('file\u0000');
+    expect(normalizedContent(host, root, u, 'l').toString()).toBe('link\u0000t');
   });
   it('dangling link hashes by target, no error', () => {
-    const { root, u } = setup({ l: { link: 'missing' } });
-    expect(fileHash(root, u, 'l')).toMatch(/^[0-9a-f]{64}$/u);
+    const { host, root, u } = setup({ l: { link: 'missing' } });
+    expect(fileHash(host, root, u, 'l')).toMatch(/^[0-9a-f]{64}$/u);
   });
 });
 

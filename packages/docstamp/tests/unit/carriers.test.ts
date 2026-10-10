@@ -4,6 +4,7 @@ import { CONFIG_NAMES } from '../../src/config/value.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import { defineConfig } from '../../src/lib.ts';
 import { cleanupTrees, makeTree, type TreeSpec } from '../helpers/fixture.ts';
+import { nodeHost } from '../../src/host/node-fs.ts';
 
 afterEach(cleanupTrees);
 
@@ -21,7 +22,7 @@ const SOURCES: Record<(typeof CONFIG_NAMES)[number], string> = {
 
 const failure = (spec: TreeSpec) => {
   try {
-    readConfig(makeTree(spec));
+    readConfig(nodeHost, makeTree(spec));
   } catch (e) {
     if (e instanceof Raised) return e.diagnostics.map((d) => [d.code, d.subject]);
     throw e;
@@ -33,7 +34,7 @@ const VALID = '{ version: 2, files: {} }';
 
 describe('§9.1 Carriers', () => {
   it.each(CONFIG_NAMES)('%s normalizes to the same Config', (name) => {
-    const { config, attached } = readConfig(makeTree({ [name]: SOURCES[name] }));
+    const { config, attached } = readConfig(nodeHost, makeTree({ [name]: SOURCES[name] }));
     expect(attached).toEqual([]);
     expect(config.ignore).toEqual(['dist']);
     expect(config.useGitignore).toBe(true);
@@ -65,7 +66,7 @@ describe('§9.3 discovery', () => {
     ]);
   });
   it('none is the defaults, not present (§9.3 step 2)', () => {
-    const { config, attached, present } = readConfig(makeTree({ 'other.txt': '' }));
+    const { config, attached, present } = readConfig(nodeHost, makeTree({ 'other.txt': '' }));
     expect({ present, attached }).toEqual({ present: false, attached: [] });
     expect(config).toEqual({
       ignore: [],
@@ -89,6 +90,7 @@ describe('§9.3 discovery', () => {
 describe('§9.5 script carriers', () => {
   it('a named default export wins over the module itself', () => {
     const { config } = readConfig(
+      nodeHost,
       makeTree({ 'docstamp.config.js': `exports.default = ${VALID}; exports.other = 1;\n` }),
     );
     expect(config.declarations).toEqual([]);
@@ -115,6 +117,7 @@ describe('§9.5 script carriers', () => {
   });
   it('key order of files is irrelevant', () => {
     const { config } = readConfig(
+      nodeHost,
       makeTree({
         'docstamp.config.mjs': `export default { version: 2, files: { 'z': { dependencies: ['a'] }, '1': { dependencies: ['a'] } } };`,
       }),

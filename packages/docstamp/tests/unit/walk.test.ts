@@ -1,7 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
-import { chmodSync, mkdirSync } from 'node:fs';
-import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
+import { memoryHost, type Entry, type MemoryOptions } from '../helpers/memory-fs.ts';
 import { computeUniverse, determineRoot, isIgnoredPath } from '../../src/universe/walk.ts';
 import { CONFIG_NAMES } from '../../src/config/value.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
@@ -17,7 +16,10 @@ const config = (over: Partial<Config> = {}): Config => ({
   ...over,
 });
 
-afterEach(cleanupTrees);
+const tree = (spec: Record<string, Entry>, options?: MemoryOptions) => {
+  const host = memoryHost(spec, options);
+  return { host, root: host.root };
+};
 
 const codes = (fn: () => unknown) => {
   try {
@@ -30,45 +32,47 @@ const codes = (fn: () => unknown) => {
 
 describe('§6 determineRoot', () => {
   it('finds nearest docstamp.yaml upward', () => {
-    const root = makeTree({ 'docstamp.yaml': '', 'a/b/x': '' });
-    expect(determineRoot(join(root, 'a/b'), undefined)).toBe(root);
+    const { host, root } = tree({ 'docstamp.yaml': '', 'a/b/x': '' });
+    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(root);
   });
   it('--root must exist', () => {
-    expect(codes(() => determineRoot('/', '/nope/nope'))).toEqual(['E_ROOT']);
+    expect(codes(() => determineRoot(memoryHost(), '/', '/nope/nope'))).toEqual(['E_ROOT']);
   });
   it('no docstamp.yaml raises E_CONFIG_MISSING', () => {
-    const root = makeTree({ 'a/x': '' });
-    expect(codes(() => determineRoot(join(root, 'a'), undefined))).toEqual(['E_CONFIG_MISSING']);
+    const { host, root } = tree({ 'a/x': '' });
+    expect(codes(() => determineRoot(host, join(root, 'a'), undefined))).toEqual([
+      'E_CONFIG_MISSING',
+    ]);
   });
   it.each(CONFIG_NAMES)('finds %s upward', (name) => {
-    const root = makeTree({ [name]: '', 'a/b/x': '' });
-    expect(determineRoot(join(root, 'a/b'), undefined)).toBe(root);
+    const { host, root } = tree({ [name]: '', 'a/b/x': '' });
+    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(root);
   });
   it('a directory named docstamp.yaml still counts as an entry', () => {
-    const root = makeTree({ 'docstamp.yaml/x': '' });
-    expect(determineRoot(root, undefined)).toBe(root);
+    const { host, root } = tree({ 'docstamp.yaml/x': '' });
+    expect(determineRoot(host, root, undefined)).toBe(root);
   });
   it('without a configuration file the nearest .git directory is the root', () => {
-    const root = makeTree({ '.git/HEAD': '', 'a/b/x': '', 'a/.git/HEAD': '' });
-    expect(determineRoot(join(root, 'a/b'), undefined)).toBe(join(root, 'a'));
+    const { host, root } = tree({ '.git/HEAD': '', 'a/b/x': '', 'a/.git/HEAD': '' });
+    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(join(root, 'a'));
   });
   it('a .git file, as in a linked work tree, counts', () => {
-    const root = makeTree({ '.git': 'gitdir: elsewhere\n', 'a/b/x': '' });
-    expect(determineRoot(join(root, 'a/b'), undefined)).toBe(root);
+    const { host, root } = tree({ '.git': 'gitdir: elsewhere\n', 'a/b/x': '' });
+    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(root);
   });
   it('a configuration file further up wins over a nearer .git', () => {
-    const root = makeTree({ 'docstamp.yaml': '', 'a/.git/HEAD': '', 'a/b/x': '' });
-    expect(determineRoot(join(root, 'a/b'), undefined)).toBe(root);
+    const { host, root } = tree({ 'docstamp.yaml': '', 'a/.git/HEAD': '', 'a/b/x': '' });
+    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(root);
   });
   it('--root wins over both', () => {
-    const root = makeTree({ 'docstamp.yaml': '', 'a/.git/HEAD': '' });
-    expect(determineRoot(join(root, 'a'), '..')).toBe(root);
+    const { host, root } = tree({ 'docstamp.yaml': '', 'a/.git/HEAD': '' });
+    expect(determineRoot(host, join(root, 'a'), '..')).toBe(root);
   });
 });
 
 describe('§7.2 computeUniverse', () => {
   it('honors nested .gitignore and excludes docstamp files and .git', () => {
-    const root = makeTree({
+    const { host, root } = tree({
       'docstamp.yaml': '',
       'docstamp-lock.yaml': '',
       '.gitignore': 'dist/\n',
@@ -80,113 +84,108 @@ describe('§7.2 computeUniverse', () => {
       'sub/.git': 'gitdir: /abs',
       'sub/x.ts': '',
     });
-    expect(computeUniverse(root, config()).paths).toEqual([
+    expect(computeUniverse(host, root, config()).paths).toEqual([
       '.gitignore',
       'src/.gitignore',
       'src/a.ts',
     ]);
   });
   it('a nested .gitignore does not affect sibling directories', () => {
-    const root = makeTree({
+    const { host, root } = tree({
       'src/.gitignore': '*.gen.ts\n',
       'src/a.gen.ts': '',
       'lib/a.gen.ts': '',
     });
-    expect(computeUniverse(root, config()).paths).toEqual(['lib/a.gen.ts', 'src/.gitignore']);
+    expect(computeUniverse(host, root, config()).paths).toEqual(['lib/a.gen.ts', 'src/.gitignore']);
   });
   it.each(CONFIG_NAMES)('removes %s at Root from the Universe', (name) => {
-    const root = makeTree({ [name]: '', 'a.md': '' });
-    expect(computeUniverse(root, config()).paths).toEqual(['a.md']);
+    const { host, root } = tree({ [name]: '', 'a.md': '' });
+    expect(computeUniverse(host, root, config()).paths).toEqual(['a.md']);
   });
   it('a nested configuration file stays in the Universe', () => {
-    const root = makeTree({ 'sub/docstamp.config.ts': '' });
-    expect(computeUniverse(root, config()).paths).toEqual(['sub/docstamp.config.ts']);
+    const { host, root } = tree({ 'sub/docstamp.config.ts': '' });
+    expect(computeUniverse(host, root, config()).paths).toEqual(['sub/docstamp.config.ts']);
   });
   it('a nested docstamp.yaml stays in the Universe', () => {
-    const root = makeTree({
+    const { host, root } = tree({
       'docstamp.yaml': '',
       'sub/docstamp.yaml': '',
       'sub/docstamp-lock.yaml': '',
     });
-    expect(computeUniverse(root, config()).paths).toEqual([
+    expect(computeUniverse(host, root, config()).paths).toEqual([
       'sub/docstamp-lock.yaml',
       'sub/docstamp.yaml',
     ]);
   });
   it('a leftover docsync.lock stays in the Universe', () => {
-    const root = makeTree({ 'docstamp.yaml': '', 'docsync.lock': '' });
-    expect(computeUniverse(root, config()).paths).toEqual(['docsync.lock']);
+    const { host, root } = tree({ 'docstamp.yaml': '', 'docsync.lock': '' });
+    expect(computeUniverse(host, root, config()).paths).toEqual(['docsync.lock']);
   });
   it('gitignore:false ignores .gitignore files but not config ignore', () => {
-    const root = makeTree({ '.gitignore': 'a\n', a: '', b: '' });
-    expect(computeUniverse(root, config({ useGitignore: false, ignore: ['b'] })).paths).toEqual([
-      '.gitignore',
-      'a',
-    ]);
+    const { host, root } = tree({ '.gitignore': 'a\n', a: '', b: '' });
+    expect(
+      computeUniverse(host, root, config({ useGitignore: false, ignore: ['b'] })).paths,
+    ).toEqual(['.gitignore', 'a']);
   });
   it('config ignore applies after .gitignore rules', () => {
-    const root = makeTree({ '.gitignore': '!keep\n', keep: '', other: '' });
-    expect(computeUniverse(root, config({ ignore: ['*'] })).paths).toEqual([]);
+    const { host, root } = tree({ '.gitignore': '!keep\n', keep: '', other: '' });
+    expect(computeUniverse(host, root, config({ ignore: ['*'] })).paths).toEqual([]);
   });
   it('negation cannot re-include inside an ignored directory', () => {
-    const root = makeTree({ '.gitignore': 'gen/\n!gen/keep.ts\n', 'gen/keep.ts': '' });
-    expect(computeUniverse(root, config()).paths).toEqual(['.gitignore']);
+    const { host, root } = tree({ '.gitignore': 'gen/\n!gen/keep.ts\n', 'gen/keep.ts': '' });
+    expect(computeUniverse(host, root, config()).paths).toEqual(['.gitignore']);
   });
   it('links are entries, never followed', () => {
-    const root = makeTree({ 'a.ts': '', 'l.ts': { link: 'a.ts' }, d: { link: '/etc' } });
-    const u = computeUniverse(root, config());
+    const { host, root } = tree({ 'a.ts': '', 'l.ts': { link: 'a.ts' }, d: { link: '/etc' } });
+    const u = computeUniverse(host, root, config());
     expect(u.paths).toEqual(['a.ts', 'd', 'l.ts']);
     expect(u.kinds.get('d')).toBe('link');
   });
   it('skips nested repositories', () => {
-    const root = makeTree({ 'nested/.git/HEAD': '', 'nested/x': '', y: '' });
-    expect(computeUniverse(root, config()).paths).toEqual(['y']);
+    const { host, root } = tree({ 'nested/.git/HEAD': '', 'nested/x': '', y: '' });
+    expect(computeUniverse(host, root, config()).paths).toEqual(['y']);
   });
   it('does not descend into ignored directories (no reads)', () => {
-    const root = makeTree({ '.gitignore': 'node_modules/\n', y: '' });
-    mkdirSync(join(root, 'node_modules'));
-    chmodSync(join(root, 'node_modules'), 0o000);
-    expect(computeUniverse(root, config()).paths).toEqual(['.gitignore', 'y']);
+    const { host, root } = tree(
+      { '.gitignore': 'node_modules/\n', y: '', node_modules: { dir: true } },
+      { unreadable: ['node_modules'] },
+    );
+    expect(computeUniverse(host, root, config()).paths).toEqual(['.gitignore', 'y']);
   });
-  // Windows has no POSIX permission bits, so a directory cannot be made unreadable with a mode.
-  it.runIf(process.platform !== 'win32' && process.getuid?.() !== 0)(
-    'unreadable directory raises E_UNREADABLE',
-    () => {
-      const root = makeTree({ y: '' });
-      mkdirSync(join(root, 'locked'), { mode: 0o000 });
-      expect(codes(() => computeUniverse(root, config()))).toEqual(['E_UNREADABLE']);
-    },
-  );
+  it('an unreadable directory raises E_UNREADABLE', () => {
+    const { host, root } = tree({ y: '', locked: { dir: true } }, { unreadable: ['locked'] });
+    expect(codes(() => computeUniverse(host, root, config()))).toEqual(['E_UNREADABLE']);
+  });
 });
 
 describe('§7.4 / §7.5 collisions', () => {
   it('NFD names are converted to NFC', () => {
-    const root = makeTree({ 'é.md': '' });
-    const u = computeUniverse(root, config());
+    const { host, root } = tree({ 'é.md': '' });
+    const u = computeUniverse(host, root, config());
     expect(u.paths).toEqual(['é.md']);
     expect(u.onDisk.get('é.md')).toMatch(/^(é|é)\.md$/);
   });
-  it.runIf(process.platform === 'linux')('case collision is an error', () => {
-    const root = makeTree({ 'A.md': '', 'a.md': '' });
-    expect(codes(() => computeUniverse(root, config()))).toEqual(['E_PATH_COLLISION']);
+  it('case collision is an error', () => {
+    const { host, root } = tree({ 'A.md': '', 'a.md': '' });
+    expect(codes(() => computeUniverse(host, root, config()))).toEqual(['E_PATH_COLLISION']);
   });
 });
 
 describe('§8.5 NOTE isIgnoredPath', () => {
   const ignoredBy = (files: Record<string, string>, over: Partial<Config>, ...paths: string[]) => {
-    const root = makeTree(files);
-    const universe = computeUniverse(root, config(over));
-    return paths.map((path) => isIgnoredPath(root, universe, path));
+    const { host, root } = tree(files);
+    const universe = computeUniverse(host, root, config(over));
+    return paths.map((path) => isIgnoredPath(host, root, universe, path));
   };
 
   it('records the entries a rule skipped, not what is below them', () => {
-    const root = makeTree({
+    const { host, root } = tree({
       '.gitignore': 'build/\n*.log\n',
       'build/a/b.js': '',
       'x.log': '',
       y: '',
     });
-    expect(computeUniverse(root, config()).ignored).toEqual(['build', 'x.log']);
+    expect(computeUniverse(host, root, config()).ignored).toEqual(['build', 'x.log']);
   });
   it('a gitignored file, a file below a gitignored directory and the directory itself', () => {
     const files = { '.gitignore': '.npmrc\nbuild/\n', '.npmrc': '', 'build/out/index.js': '' };

@@ -1,7 +1,7 @@
-import { readFileSync, renameSync, rmSync, statSync, writeFileSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import type { Declaration, Diagnostic } from '../core/types.ts';
+import type { Host } from '../host/fs.ts';
 import { isBinary } from '../hash/hash.ts';
 import { select } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
@@ -18,8 +18,8 @@ export interface InlineRead {
 const onDisk = (root: string, universe: Universe, file: string) =>
   join(root, universe.onDisk.get(file) ?? file);
 
-export function textOf(path: string): string | null {
-  const bytes = readFileSync(path);
+export function textOf(host: Host, path: string): string | null {
+  const bytes = host.fs.readFile(path);
   if (isBinary(bytes)) return null;
   try {
     return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
@@ -30,6 +30,7 @@ export function textOf(path: string): string | null {
 
 // SPEC §9.6.3
 export function readInline(
+  host: Host,
   root: string,
   universe: Universe,
   include: readonly string[],
@@ -45,7 +46,7 @@ export function readInline(
   for (const file of candidates) {
     let text: string | null;
     try {
-      text = textOf(onDisk(root, universe, file));
+      text = textOf(host, onDisk(root, universe, file));
     } catch {
       fatal.push(diag('E_UNREADABLE', { subject: file }));
       continue;
@@ -62,14 +63,10 @@ export function readInline(
 }
 
 // SPEC §9.6.4 step 3: replace the file atomically, keeping its mode
-export function replaceFile(path: string, file: string, produce: () => string): void {
-  const temp = `${path}.tmp-${process.pid}`;
+export function replaceFile(host: Host, path: string, file: string, produce: () => string): void {
   try {
-    writeFileSync(temp, produce(), 'utf8');
-    chmodSync(temp, statSync(path).mode);
-    renameSync(temp, path);
+    host.fs.writeAtomic(path, produce(), { keepMode: true });
   } catch {
-    rmSync(temp, { force: true });
     throw new Raised([
       diag('E_UNREADABLE', {
         subject: file,
@@ -80,7 +77,13 @@ export function replaceFile(path: string, file: string, produce: () => string): 
 }
 
 // SPEC §9.6.4
-export function stampFile(root: string, universe: Universe, file: string, hash: string): void {
+export function stampFile(
+  host: Host,
+  root: string,
+  universe: Universe,
+  file: string,
+  hash: string,
+): void {
   const path = onDisk(root, universe, file);
-  replaceFile(path, file, () => stampText(scanFrontmatter(textOf(path)!)!, hash));
+  replaceFile(host, path, file, () => stampText(scanFrontmatter(textOf(host, path)!)!, hash));
 }
