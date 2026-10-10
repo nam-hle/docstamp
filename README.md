@@ -307,7 +307,7 @@ next: review each stale file against its dependencies, then run: docstamp update
   run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
-- **One part, by default.** `select` is any plain value, passed to the plugin as it is. The plugin returning no hash is `E_SELECT_NOT_FOUND`, and more than one is `E_SELECT_AMBIGUOUS`, unless the entry says `match: 'all'`, which hashes every part found. An invalid plugin, or two claiming one file, is `E_PLUGIN`; no plugin claiming the file, or a plugin that throws on it, is `E_SELECT` ([SPEC §8.7](docs/SPEC.md#87-selected-dependencies)).
+- **One part, by default.** `select` is any plain value with finite numbers only, passed to the plugin as it is. Two entries with the same `path` and `select` are one dependency: the first wins, with its `match`. The plugin returning no hash is `E_SELECT_NOT_FOUND`, and more than one is `E_SELECT_AMBIGUOUS`, unless the entry says `match: 'all'`, which hashes every part found. An invalid plugin, or two claiming one file, is `E_PLUGIN`; no plugin claiming the file, or a plugin that throws on it, is `E_SELECT` ([SPEC §8.7](docs/SPEC.md#87-selected-dependencies)).
 - **Script configuration only.** `plugins` is a key of `docstamp.config.ts` or `.js`, not of `docstamp.yaml` or an inline block ([SPEC §9.5](docs/SPEC.md#95-script-carriers)).
 - **A literal path.** `path` names one file, never a glob.
 - **No changed-file list yet.** A stale file with selected dependencies prints its declaration, as above, and `changes` in `--json` is `null`; read the part yourself.
