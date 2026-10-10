@@ -141,7 +141,7 @@ Only what no test can check stays here.
   review happened. `Stamp` changes no other byte of a doc. `suggest --write` writes an inline block
   with no `hash`, never overwrites one that has it, and never stamps (§9.6.5, §13.10).
 - **A plugin is user code.** It runs in-process and synchronously, only from `cli/run.ts` through
-  `EngineFs.extractHashes`; `engine/` never imports a plugin or reads a file (§8.7).
+  `EngineFs.extractHashes`; `engine/` never calls a plugin or reads a file; it imports only the pure `canonicalJson` from `plugin/` (§8.7).
 - **The hash input rule has one exception.** A file with an inline block is hashed without its
   `hash:` line (§10.2 step 4); anything else about hashing is a breaking change (§17).
 
