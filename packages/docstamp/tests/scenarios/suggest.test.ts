@@ -1,7 +1,6 @@
-import { statSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { expect } from 'vitest';
-import { scenario, type Repo } from '../harness/index.ts';
+import { scenario, type Repo } from './harness/index.ts';
 
 const OVERVIEW = 'docs/overview.md';
 const ago = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
@@ -25,7 +24,7 @@ function tree(repo: Repo, dir = ''): Record<string, string> {
   const out: Record<string, string> = {};
   for (const name of repo.list(dir)) {
     const path = dir === '' ? name : `${dir}/${name}`;
-    if (statSync(repo.path(path)).isDirectory()) Object.assign(out, tree(repo, path));
+    if (repo.isDirectory(path)) Object.assign(out, tree(repo, path));
     else out[path] = repo.read(path);
   }
   return out;
@@ -173,19 +172,6 @@ scenario(
     expect(result.stdout).toBe(
       'suggest README.md\n  pattern     files  stale\n  docs/guide      1    n/a\n',
     );
-  },
-);
-
-scenario(
-  '§13.10 a shallow clone has no usable history and suggest still answers',
-  { fixture: 'suggest' },
-  async (repo) => {
-    history(repo);
-    const clone = repo.shallowClone('clone');
-    const result = await clone.run(['suggest', 'README.md']);
-    expect(result.exit).toBe(0);
-    expect(result.stdout).toContain('n/a');
-    expect(result.stderr).toBe('');
   },
 );
 

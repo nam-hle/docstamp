@@ -16,7 +16,7 @@ import { suggestJsonText, suggestText, type SuggestEntry } from '../report/sugge
 import { diagnosticsText } from '../report/text.ts';
 import { computeUniverse, determineRoot, isIgnoredPath } from '../universe/walk.ts';
 import type { Args } from './args.ts';
-import type { Host } from '../host/fs.ts';
+import type { Host } from '../host/host.ts';
 import { resolutionMessage, toRepoPath } from './paths.ts';
 import type { Io } from './run.ts';
 
@@ -24,7 +24,11 @@ const WINDOW_DAYS = 30;
 const usage = (subject: string, message: string) => diag('E_USAGE', { subject, message });
 
 // SPEC §13.10 step 6: the stale rate of each pattern, null when the history cannot tell
-function staleRates(root: string, proposals: ReadonlyMap<string, readonly Suggestion[]>) {
+function staleRates(
+  host: Host,
+  root: string,
+  proposals: ReadonlyMap<string, readonly Suggestion[]>,
+) {
   const rates = new Map<string, number | null>();
   const inputs = [...proposals].flatMap(([doc, suggestions]) =>
     suggestions
@@ -38,7 +42,11 @@ function staleRates(root: string, proposals: ReadonlyMap<string, readonly Sugges
   );
   let commits;
   try {
-    const window = replay(root, { kind: 'days', days: WINDOW_DAYS }, Math.floor(Date.now() / 1000));
+    const window = replay(
+      host.git(root),
+      { kind: 'days', days: WINDOW_DAYS },
+      Math.floor(host.clock.now() / 1000),
+    );
     commits = window.commits.length === 0 ? null : window.commits;
   } catch {
     commits = null;
@@ -111,6 +119,7 @@ function suggestAll(
     names.map((path) => [path, propose(path, texts.get(path)!, universe.paths, isIgnored)]),
   );
   const rates = staleRates(
+    host,
     root,
     new Map([...proposals].map(([path, proposal]) => [path, proposal.suggestions])),
   );

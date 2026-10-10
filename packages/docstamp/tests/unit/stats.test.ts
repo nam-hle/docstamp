@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { parseArgs } from '../../src/cli/args.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import { ratio, statistics, type CommitRecord } from '../../src/engine/stats.ts';
-import { daysRange, parseLog } from '../../src/history/replay.ts';
+import type { Git, LogEntry, LogWindow } from '../../src/host/git.ts';
+import { parseLog } from '../../src/host/git-output.ts';
+import { replay } from '../../src/history/replay.ts';
 import { statsJsonText } from '../../src/report/json.ts';
 import { statsText } from '../../src/report/text.ts';
 
@@ -15,37 +17,29 @@ const input = (file: string, ...resolved: string[]) => ({
   diagnostics: [],
 });
 
-describe('§12.4 Replay: the git range', () => {
-  it('the last N days is a number of seconds, never a date for git to parse', () => {
-    expect(daysRange(30, 3_000_000)).toEqual(['--max-age=408000', 'HEAD']);
-    expect(daysRange(1, 100_000)).toEqual(['--max-age=13600', 'HEAD']);
-    expect(daysRange(3650, 1_000_000_000)).toEqual(['--max-age=684640000', 'HEAD']);
-  });
-});
-
 describe('§12.4 Replay: git log output', () => {
-  it('reads commits with their UTC day and their paths', () => {
+  it('reads commits with their time and their paths', () => {
     const output =
       `\u0001${ID}\x00${Date.UTC(2026, 0, 2, 23, 59, 59) / 1000}\x00\nsrc/a.ts\x00docs/b.md\x00` +
       `\u0001${'b'.repeat(64)}\x00${Date.UTC(2026, 0, 3) / 1000}\x00\nREADME.md\x00`;
     expect(parseLog(output)).toEqual([
-      { day: '2026-01-02', paths: ['src/a.ts', 'docs/b.md'] },
-      { day: '2026-01-03', paths: ['README.md'] },
+      { seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000, paths: ['src/a.ts', 'docs/b.md'] },
+      { seconds: Date.UTC(2026, 0, 3) / 1000, paths: ['README.md'] },
     ]);
   });
   it('a commit with no paths is still a commit', () => {
     expect(parseLog(`\u0001${ID}\x00100\x00\u0001${'c'.repeat(40)}\x00200\x00`)).toEqual([
-      { day: '1970-01-01', paths: [] },
-      { day: '1970-01-01', paths: [] },
+      { seconds: 100, paths: [] },
+      { seconds: 200, paths: [] },
     ]);
-    expect(parseLog(`\u0001${ID}\x00100\x00`)).toEqual([{ day: '1970-01-01', paths: [] }]);
+    expect(parseLog(`\u0001${ID}\x00100\x00`)).toEqual([{ seconds: 100, paths: [] }]);
   });
   it('no output is no commits', () => {
     expect(parseLog('')).toEqual([]);
   });
   it('converts paths to NFC', () => {
     expect(parseLog(`\u0001${ID}\x00100\x00\ne\u0301.ts\x00`)).toEqual([
-      { day: '1970-01-01', paths: ['\u00e9.ts'] },
+      { seconds: 100, paths: ['\u00e9.ts'] },
     ]);
   });
   it('a malformed log is refused', () => {
@@ -53,6 +47,62 @@ describe('§12.4 Replay: git log output', () => {
     expect(parseLog(`\u0001${ID}\x00100`)).toBeNull();
     expect(parseLog(`\u0001${ID}\x00not-a-number\x00`)).toBeNull();
     expect(parseLog(`\u0001short\x00100\x00`)).toBeNull();
+  });
+});
+
+// a Git that answers only what replay asks, and remembers the window
+const stubGit = (log: LogEntry[], seen: LogWindow[] = []): Git =>
+  ({
+    isShallow: () => false,
+    hasCommit: () => true,
+    resolve: (rev: string) => (rev === 'v1' ? ID : null),
+    log: (window: LogWindow) => {
+      seen.push(window);
+      return log;
+    },
+  }) as unknown as Git;
+
+describe('§12.4 Replay: the window', () => {
+  it('the last N days is a number of seconds, never a date for git to parse', () => {
+    const seen: LogWindow[] = [];
+    replay(stubGit([], seen), { kind: 'days', days: 30 }, 3_000_000);
+    replay(stubGit([], seen), { kind: 'days', days: 1 }, 100_000);
+    replay(stubGit([], seen), { kind: 'days', days: 3650 }, 1_000_000_000);
+    expect(seen).toEqual([{ maxAge: 408000 }, { maxAge: 13600 }, { maxAge: 684640000 }]);
+  });
+  it('from names a commit, resolved before git is asked for the log', () => {
+    const seen: LogWindow[] = [];
+    expect(replay(stubGit([], seen), { kind: 'from', value: 'v1' }, 0).kind).toBe('revision');
+    expect(seen).toEqual([{ after: ID }]);
+    expect(() => replay(stubGit([]), { kind: 'from', value: 'nope' }, 0)).toThrow(Raised);
+  });
+  it('a commit is its UTC day and its paths', () => {
+    const log = [{ seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000, paths: ['a.ts'] }];
+    expect(replay(stubGit(log), { kind: 'days', days: 9 }, 0).commits).toEqual([
+      { day: '2026-01-02', paths: ['a.ts'] },
+    ]);
+  });
+  it('is E_HISTORY for a shallow repository, no commit, or a log git cannot give', () => {
+    const base = stubGit([]);
+    const code = (git: Git) => {
+      try {
+        replay(git, { kind: 'days', days: 1 }, 0);
+      } catch (e) {
+        return e instanceof Raised ? e.diagnostics[0]?.code : 'other';
+      }
+      return 'none';
+    };
+    expect(code({ ...base, isShallow: () => true } as Git)).toBe('E_HISTORY');
+    expect(code({ ...base, hasCommit: () => false } as Git)).toBe('E_HISTORY');
+    expect(
+      code({
+        ...base,
+        isShallow: () => {
+          throw new Error('no git');
+        },
+      } as Git),
+    ).toBe('E_HISTORY');
+    expect(code({ ...base, log: () => null } as Git)).toBe('E_HISTORY');
   });
 });
 

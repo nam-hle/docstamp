@@ -1,9 +1,9 @@
 import { expect } from 'vitest';
-import { COMMANDS } from '../../../src/cli/args.ts';
-import { COMMAND_PAGES } from '../../../src/cli/help-commands.ts';
-import type { Example } from '../../../src/cli/help-format.ts';
-import { TOPICS } from '../../../src/cli/help-topics.ts';
-import { scenario } from '../harness/index.ts';
+import { COMMANDS } from '../../src/cli/args.ts';
+import { COMMAND_PAGES } from '../../src/cli/help-commands.ts';
+import type { Example } from '../../src/cli/help-format.ts';
+import { TOPICS } from '../../src/cli/help-topics.ts';
+import { scenario } from './harness/index.ts';
 
 const pages: [string, readonly Example[]][] = [
   ...COMMANDS.map((c): [string, readonly Example[]] => [c, COMMAND_PAGES[c].examples]),

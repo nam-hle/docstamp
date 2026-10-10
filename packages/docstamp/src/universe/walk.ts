@@ -2,7 +2,8 @@ import { dirname, join, resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import type { Config, Diagnostic } from '../core/types.ts';
-import type { DirEntry, Host } from '../host/fs.ts';
+import type { DirEntry } from '../host/fs.ts';
+import type { Host } from '../host/host.ts';
 import { CONFIG_NAMES } from '../config/value.ts';
 import { isIgnored, parseIgnoreLines, type IgnoreRule } from './ignore.ts';
 

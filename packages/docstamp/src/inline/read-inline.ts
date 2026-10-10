@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import type { Declaration, Diagnostic } from '../core/types.ts';
-import type { Host } from '../host/fs.ts';
+import type { Host } from '../host/host.ts';
 import { isBinary } from '../hash/hash.ts';
 import { select } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';

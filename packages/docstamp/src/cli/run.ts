@@ -1,7 +1,7 @@
 import { basename, dirname, join, resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import type { Json, SelectedEntry } from '../core/types.ts';
-import type { Host } from '../host/fs.ts';
+import type { Host } from '../host/host.ts';
 import { canonicalJson } from '../plugin/canonical.ts';
 import { claim, runExtract, type Extracted } from '../plugin/plugins.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
@@ -151,7 +151,7 @@ function evaluateDeclarations(
     isStampedFile: (p) => isStampedFile(host, root, p),
     isIgnoredPath: (p) => isIgnoredPath(host, root, universe, p),
     renamedTo: (p) => {
-      if (!renames.has(p)) renames.set(p, renamedTo(root, universe, p));
+      if (!renames.has(p)) renames.set(p, renamedTo(host.git(root), universe, p));
       return renames.get(p)!;
     },
     fileHash: hashFiles ? memoizeHash((p) => fileHash(host, root, universe, p)) : () => '',
@@ -191,6 +191,7 @@ function listAll(host: Host, root: string): Result[] {
 
 // SPEC §12.3
 function withChanges(
+  host: Host,
   root: string,
   result: Result,
   evaluated: Evaluated,
@@ -205,7 +206,14 @@ function withChanges(
   const probe = declaration?.selected?.length
     ? evaluated.fragmentProbe(declaration.selected)
     : undefined;
-  const report = changedSince(root, result, entry, inline !== undefined, whitespace, probe);
+  const report = changedSince(
+    host.git(root),
+    result,
+    entry,
+    inline !== undefined,
+    whitespace,
+    probe,
+  );
   if (report === null) return { ...result, changes: null };
   const { universe, presets, defaultPresets } = evaluated;
   const { ownThen } = report;
@@ -377,9 +385,9 @@ function runStats(host: Host, args: Extract<Args, { mode: 'stats' }>, cwd: strin
     if (invalid.length > 0) throw new Raised(invalid.flatMap((r) => [...r.diagnostics]));
     const given = args.window;
     const replayed = replay(
-      root,
+      host.git(root),
       given.kind === 'days' ? given : { kind: 'from', value: given.value },
-      Math.floor(Date.now() / 1000),
+      Math.floor(host.clock.now() / 1000),
     );
     const computed = statistics(
       selected.map((r) => ({
@@ -467,7 +475,7 @@ export function run(host: Host, argv: readonly string[], cwd: string, io: Io): n
       const stale = selected.some((r) => r.state === 'stale');
       const exitCode = refused ? 2 : stale ? 1 : 0;
       const whitespace = new Map<string, boolean>();
-      const reported = selected.map((r) => withChanges(root, r, evaluated, whitespace));
+      const reported = selected.map((r) => withChanges(host, root, r, evaluated, whitespace));
       const chunks = checkChunks(reported, global, {
         root: args.root,
         quiet: args.quiet,

@@ -3,7 +3,7 @@ import { memoryHost, type Entry, type MemoryOptions } from '../helpers/memory-fs
 import { lockText, readLock, writeLock } from '../../src/lock/lock.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import type { Lock } from '../../src/core/types.ts';
-import type { Host } from '../../src/host/fs.ts';
+import type { Host } from '../../src/host/host.ts';
 
 const tree = (spec: Record<string, Entry>, options?: MemoryOptions) => {
   const host = memoryHost(spec, options);

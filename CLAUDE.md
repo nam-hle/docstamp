@@ -100,7 +100,7 @@ Inside `packages/docstamp/`:
 ├── src/
 │   ├── index.ts          # entry; wires the CLI
 │   ├── lib.ts            # library entry: defineConfig, definePlugin, DocstampConfig (§9.5)
-│   ├── host/             # the machine behind ports: FileSystem, Host, the Node adapter
+│   ├── host/             # the machine behind ports: FileSystem, Git, Clock, Host, the Node adapters
 │   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
 │   ├── cli/              # args, path resolution, workspace load, run, suggest, help; exit codes (§13, §16)
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
@@ -111,7 +111,7 @@ Inside `packages/docstamp/`:
 │   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
 │   ├── engine/           # evaluation, presets, reverse lookup, stats, proposal; pure, no I/O (§8.6, §12, §12.5, §12.6, §13.8)
-│   ├── history/          # changed-file report (§12.3), stats replay (§12.4), renamed path (§12.7), git, read-only
+│   ├── history/          # changed-file report (§12.3), stats replay (§12.4), renamed path (§12.7); ask the Git port
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json and schema-frontmatter.json
 ├── tests/
@@ -138,12 +138,19 @@ Inside `packages/docstamp/`:
 
 Most behavior is tested as a scenario: `scenario(name, { fixture?, git? }, async (repo) => ...)` from
 `tests/scenarios/harness`, with the same `repo` helpers and snapshot format as an end-to-end
-test below, but the tree is built in memory and `repo.run` calls `run(host, ...)` in this process,
-so a scenario takes milliseconds and needs neither a temp directory nor the built CLI. A scenario
-cannot use `git`, `commit`, `at`, `copyTo` or `shallowClone` (they throw), a script Carrier, a plugin
-loaded from `node_modules`, `--version`, or a property of a real file (its mode, inode or mtime):
-that scenario is an end-to-end test. `pnpm nadle testUnit` runs the unit tests and the scenarios.
+test below, but the tree and its git live in memory and `repo.run` calls `run(host, ...)` in this
+process, so a scenario takes milliseconds and needs neither a temp directory, git nor the built
+CLI. `commit(msg, at?)`, `git('rev-parse', 'HEAD')` and `git('tag', name, rev)` work, with the
+commit ids and times git would give. A scenario cannot use anything else of git (`amend`, `rebase`,
+`mv`, `init`, `at`, `copyTo`, `shallowClone`: they throw), a script Carrier, a plugin loaded from
+`node_modules`, `--version`, an environment variable git reads, a file name that is not UTF-8, or a
+property of a real file (its mode, inode or mtime): that scenario is an end-to-end test.
+`pnpm nadle testUnit` runs the unit tests and the scenarios.
 `tests/e2e/scenarios/snapshot-guard.test.ts` checks the snapshots of both suites.
+
+An end-to-end test proves that the parts are connected: the built binary, the real file system, real
+git (its history rewrites, a shallow clone, a repository above the Root, `GIT_DIR`), the script
+and plugin loaders and the package. What the CLI says in each case is a scenario.
 
 ## End-to-end tests
 
@@ -184,14 +191,20 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
 
 ## The host
 
-Code under `src/` reaches the file system only through `Host.fs` (`src/host/fs.ts`), which every
-function that reads or writes receives as its first parameter; `src/host/node-fs.ts` is the one
-adapter, and `tests/unit/host-boundary.test.ts` fails on any other import of `node:fs`. Unit
-tests build a tree in memory with `inMemory({ 'a.md': '...' })` from `tests/helpers/memory-fs.ts`:
-no temporary directory, and an unreadable directory is an option, not a `chmod`.
-`tests/unit/fs-contract.test.ts` runs the same cases on the Node adapter and the in-memory one, so
-the fake cannot drift; add a case there when the port grows. A script Carrier (`import()`) and the
-`git` history still need a real directory.
+Code under `src/` reaches the machine only through `Host` (`src/host/host.ts`), which every
+function that reads, writes or asks git receives as its first parameter: `Host.fs` is the file
+system, `Host.git(root)` a repository with typed, read-only questions (`src/host/git.ts`), and
+`Host.clock` the time. `src/host/node-fs.ts` and `src/host/node-git.ts` are the adapters (git is
+run there, with the command lines and the parsing of its output), and `tests/unit/host-boundary.test.ts`
+fails on any other `node:fs`, `node:child_process` or clock read in `src/`.
+
+Unit tests build a tree in memory with `inMemory({ 'a.md': '...' })` from
+`tests/helpers/memory-fs.ts`, which also holds a git (`tests/helpers/memory-git.ts`): a straight line
+of commits over the work tree, with the object ids git computes. `tests/unit/fs-contract.test.ts`
+and `tests/unit/git-contract.test.ts` run the same cases on the real adapter and the fake, so the
+fake cannot drift; add a case there when a port grows. A script Carrier (`import()`) and what the
+fake leaves out (branches, rebases, merges, shallow clones, a repository above the Root) need a real
+directory: those are end-to-end tests.
 
 ## Critical Invariants
 
@@ -199,8 +212,8 @@ Only what no test can check stays here.
 
 - **No LLM call, no network, no clock** anywhere in `src/` (SPEC §2), except the reads of the
   clock in `runStats` for `stats --since` and in `runSuggest` for its 30-day window. `git` is
-  invoked only in `src/history/`, read-only, through `execFileSync` with an argument array (no
-  shell), and never for the verdict, the Lockfile or the exit code of `check`, `update` or the list
+  invoked only in `src/host/node-git.ts`, read-only, through `execFileSync` with an argument array
+  (no shell), and never for the verdict, the Lockfile or the exit code of `check`, `update` or the list
   commands; the renamed-path wording of `E_EMPTY_PATTERN` (§12.7) is a message, not a verdict. `stats` only reports (§13.9); `suggest` reads it for the stale rate alone, and never
   fails for want of it (§13.10).
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
@@ -318,14 +331,14 @@ raised `E_EMPTY_PATTERN`, and it changes nothing but that message.
 in the order of SPEC §14.3.2 (an `INVALID` line, then its Diagnostics). `emit` in `src/cli/run.ts`
 writes them one by one, in that order: never all of stdout first. Each stream alone must stay what
 §14.1 says; `tests/unit/run.test.ts` pins the interleaving. `reviewLine` (§14.3.4) only builds the
-text of a git command for the reader; `git` still runs in `src/history/` alone, read-only, and
-`isWhitespaceOnly` (§12.3 step 7) makes two more read-only calls there, `renamed` (step 8) three
-(`rev-parse`, `ls-tree`, `hash-object --stdin-paths`), and `editedCarrier` (step 1.4) one `git show`, and
-`fragmentChanges` (step 11, `src/history/fragments.ts`) one `git show` per selected dependency. It
-never runs a plugin: `cli/run.ts` hands it a `FragmentProbe`, so a plugin still runs only from there;
-`renamedTo` (§12.7) uses `rev-parse`, `ls-tree`, `log -1` and `hash-object --stdin-paths`.
-Every one goes through `git` in `src/history/git.ts`, which applies step 1: no `GIT_*` variables,
-`GIT_OPTIONAL_LOCKS=0` and `-c core.autocrlf=false`.
+text of a git command for the reader; `git` still runs in `src/host/node-git.ts` alone, read-only: `history/` asks the `Git` port
+(`isWhitespaceOnly` for §12.3 step 7, `objectsAt` and `hashWorkFiles` for step 8, `fileAt` for step
+1.4 and, per selected dependency, for step 11 in `src/history/fragments.ts`, `objectAt`,
+`lastCommitTouching` and `objectsAt` for `renamedTo`, §12.7) and the adapter turns each into the
+command line and parses the output. `fragmentChanges` never runs a plugin: `cli/run.ts` hands it a
+`FragmentProbe`, so a plugin still runs only from there. Every command goes through one function in
+the adapter, which applies step 1: no `GIT_*` variables, `GIT_OPTIONAL_LOCKS=0` and
+`-c core.autocrlf=false`.
 
 ## Compatibility guard
 

@@ -4,7 +4,7 @@ import { comparePaths } from '../core/order.ts';
 import { closestKey, unknownKeyMessage } from '../core/did-you-mean.ts';
 import { isRepoPath } from '../core/repo-path.ts';
 import type { Declaration, Config, Diagnostic } from '../core/types.ts';
-import type { Host } from '../host/fs.ts';
+import type { Host } from '../host/host.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { validatePlugins } from '../plugin/plugins.ts';
 import type { DocstampPlugin } from '../plugin/types.ts';

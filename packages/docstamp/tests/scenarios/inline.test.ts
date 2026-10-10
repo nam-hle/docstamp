@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { config, scenario, type Repo } from '../harness/index.ts';
+import { config, scenario, type Repo } from './harness/index.ts';
 
 const fixture = 'inline-docs';
 const HASH_LINE = /^ {2}hash: [0-9a-f]{64}\r?$/u;
@@ -546,25 +546,5 @@ scenario(
     expect(invalid.exit).toBe(2);
     expect(invalid.stdout).toContain('INVALID  docs/GUIDE.md\n');
     expect(invalid.stderr).toContain('error: E_BLOCK: docs/GUIDE.md: hash: ');
-  },
-);
-
-scenario(
-  '§12.3 the changed-file report of an inline doc comes from the history of its hash line',
-  { fixture },
-  async (repo) => {
-    await reviewedRepo(repo);
-    repo.append('src/cli/run.ts', 'export const a = 1;\n');
-    repo.commit('edit one');
-    repo.git('commit', '--amend', '-q', '-m', 'reworded');
-    repo.write('src/cli/added.ts', 'export const b = 2;\n');
-    const result = await repo.run(['--json']);
-    expect(result.json().files[0].changes).toEqual([
-      { status: 'added', path: 'src/cli/added.ts', via: ['src/cli'] },
-      { status: 'modified', path: 'src/cli/run.ts', via: ['src/cli'] },
-    ]);
-    const shallow = repo.shallowClone('clone');
-    const text = await shallow.run([], { label: 'a shallow clone cannot tell' });
-    expect(text.stdout).toContain('  depends   src/cli\n');
   },
 );

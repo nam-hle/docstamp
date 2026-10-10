@@ -35,6 +35,9 @@ export interface RunResult {
   json: () => Doc;
 }
 
+// the first commit of a scenario, then a minute more for each; `commit(message, at)` pins one
+export const FIRST_COMMIT_TIME = 1_767_225_600;
+
 export interface Execution {
   exit: number;
   stdout: string;
