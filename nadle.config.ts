@@ -9,9 +9,17 @@ const AT_TERMINAL = Boolean(process.stdout.isTTY) && !process.env['CI'];
 configure({ reporter: AT_TERMINAL ? 'default' : 'agent' });
 
 const DOCSTAMP = 'packages/docstamp';
+const MARKDOWN = 'packages/docstamp-plugin-markdown';
 
 // Directories that hold code, per tool. A package's own `dist` and `node_modules` are never inputs.
-const CODE = ['action', `${DOCSTAMP}/src`, `${DOCSTAMP}/tests`, `${DOCSTAMP}/scripts`];
+const CODE = [
+  'action',
+  `${DOCSTAMP}/src`,
+  `${DOCSTAMP}/tests`,
+  `${DOCSTAMP}/scripts`,
+  `${MARKDOWN}/src`,
+  `${MARKDOWN}/tests`,
+];
 
 // What can change the verdict of a check: the code, and the configuration of every tool.
 const verdictInputs = [
@@ -27,6 +35,9 @@ const verdictInputs = [
     `${DOCSTAMP}/package.json`,
     `${DOCSTAMP}/tsconfig*.json`,
     `${DOCSTAMP}/*.config.ts`,
+    `${MARKDOWN}/package.json`,
+    `${MARKDOWN}/tsconfig*.json`,
+    `${MARKDOWN}/*.config.ts`,
   ),
 ];
 
@@ -67,13 +78,30 @@ tasks.register('typecheckDocstamp', {
   group: 'Checking',
   cacheVerdict: true,
   description: 'Type-check the docstamp package: src, tests, scripts, configs (read-only)',
-  options: { command: 'tsc', args: ['--noEmit', '-p', `${DOCSTAMP}/tsconfig.json`] },
+  options: {
+    command: 'tsc',
+    args: ['--noEmit', '-p', `${DOCSTAMP}/tsconfig.json`],
+  },
   inputs: verdictInputs,
+});
+
+// The plugin imports the types of docstamp, which are the declarations docstamp builds into dist.
+tasks.register('typecheckMarkdown', {
+  run: PnpxTask,
+  group: 'Checking',
+  cacheVerdict: true,
+  dependsOn: ['declarations'],
+  description: 'Type-check docstamp-plugin-markdown (read-only)',
+  options: {
+    command: 'tsc',
+    args: ['--noEmit', '-p', `${MARKDOWN}/tsconfig.json`],
+  },
+  inputs: [...verdictInputs, Inputs.files(`${DOCSTAMP}/dist/lib.d.ts`)],
 });
 
 tasks.register('typecheck', {
   group: 'Checking',
-  dependsOn: ['typecheckRoot', 'typecheckDocstamp'],
+  dependsOn: ['typecheckRoot', 'typecheckDocstamp', 'typecheckMarkdown'],
   description: 'Type-check every project (read-only)',
 });
 
@@ -106,10 +134,40 @@ tasks.register('declarations', {
   options: { command: 'tsc', args: ['-p', 'tsconfig.lib.json'] },
 });
 
-tasks.register('build', {
+tasks.register('bundleMarkdown', {
+  run: PnpxTask,
+  group: 'Building',
+  workingDir: MARKDOWN,
+  description: 'Bundle docstamp-plugin-markdown with tsup (writes dist)',
+  options: { command: 'tsup', args: AT_TERMINAL ? [] : ['--silent'] },
+});
+
+tasks.register('declarationsMarkdown', {
+  run: PnpxTask,
+  group: 'Building',
+  workingDir: MARKDOWN,
+  dependsOn: ['bundleMarkdown', 'declarations'],
+  description: 'Emit the declarations of docstamp-plugin-markdown into dist (writes dist)',
+  options: { command: 'tsc', args: ['-p', 'tsconfig.build.json'] },
+});
+
+tasks.register('buildMarkdown', {
+  group: 'Building',
+  dependsOn: ['bundleMarkdown', 'declarationsMarkdown'],
+  description: 'docstamp-plugin-markdown and its declarations (writes dist)',
+});
+
+tasks.register('buildDocstamp', {
   group: 'Building',
   dependsOn: ['bundle', 'declarations'],
-  description: 'The CLI, the library and its declarations (writes dist)',
+  description: 'The docstamp CLI, library and declarations (writes dist)',
+});
+
+tasks.register('build', {
+  group: 'Building',
+  dependsOn: ['buildDocstamp', 'buildMarkdown'],
+  description:
+    'Every package: the CLI, the library, the plugins and their declarations (writes dist)',
 });
 
 tasks.register('schema', {
@@ -124,7 +182,7 @@ tasks.register('clean', {
   run: DeleteTask,
   group: 'Building',
   description: 'Delete dist (writes)',
-  options: { paths: [`${DOCSTAMP}/dist`] },
+  options: { paths: [`${DOCSTAMP}/dist`, `${MARKDOWN}/dist`] },
 });
 
 // --- Testing ---
@@ -133,7 +191,7 @@ tasks.register('clean', {
 tasks.register('docstamp', {
   run: NodeTask,
   group: 'Testing',
-  dependsOn: ['build'],
+  dependsOn: ['buildDocstamp'],
   description: 'Run the built docstamp on this repository (read-only)',
   options: { script: `${DOCSTAMP}/dist/index.js` },
 });
@@ -157,16 +215,26 @@ tasks.register('testE2e', {
   run: PnpxTask,
   group: 'Testing',
   workingDir: DOCSTAMP,
-  dependsOn: ['build'],
-  description: 'Run the end-to-end tests against the built CLI (read-only; -- -u updates snapshots)',
+  dependsOn: ['buildDocstamp'],
+  description:
+    'Run the end-to-end tests against the built CLI (read-only; -- -u updates snapshots)',
   options: { command: 'vitest', args: ['run', 'tests/e2e/scenarios'] },
+});
+
+tasks.register('testMarkdown', {
+  run: PnpxTask,
+  group: 'Testing',
+  workingDir: MARKDOWN,
+  dependsOn: ['buildDocstamp', 'buildMarkdown'],
+  description: 'Run the docstamp-plugin-markdown tests, with the real docstamp CLI (read-only)',
+  options: { command: 'vitest', args: ['run'] },
 });
 
 tasks.register('testPack', {
   run: PnpxTask,
   group: 'Testing',
   workingDir: DOCSTAMP,
-  dependsOn: ['build'],
+  dependsOn: ['buildDocstamp'],
   description: 'Pack the package, extract it into node_modules and run the bin (read-only)',
   options: { command: 'vitest', args: ['run', 'tests/e2e/pack.test.ts'] },
 });
@@ -189,10 +257,12 @@ tasks.register('test', {
     'docstamp',
     'testUnit',
     'testAction',
+    'testMarkdown',
     'testE2e',
     'testPack',
   ],
-  description: 'The gate: format, lint, types, knip, the build, the self-check and every test suite',
+  description:
+    'The gate: format, lint, types, knip, the build, the self-check and every test suite',
 });
 
 // --- Formatting ---

@@ -10,6 +10,10 @@
       "project": ["scripts/**/*.ts", "src/**/*.ts", "tests/**/*.ts"],
       "ignore": ["tests/e2e/fixtures/**"],
       "ignoreBinaries": ["build"]
+    },
+    "packages/docstamp-plugin-markdown": {
+      "entry": ["tests/**/*.test.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts"]
     }
   }
 }

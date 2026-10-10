@@ -30,3 +30,9 @@ files:
   packages/docstamp/docs/SPEC.md:
     dependencies:
       - packages/docstamp/src
+  packages/docstamp-plugin-markdown/README.md:
+    dependencies:
+      - packages/docstamp-plugin-markdown/src
+  packages/docstamp-plugin-markdown/SPEC.md:
+    dependencies:
+      - packages/docstamp-plugin-markdown/src
