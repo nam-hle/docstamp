@@ -36,8 +36,10 @@ The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugi
    String or is empty.
 5. Raise unless *level* is *none* or an integer from 1 to 6.
 
-NOTE: A selector that raises is reported by docstamp as `E_SELECT` (the plugin threw). A selector
-that is valid but matches nothing is `E_SELECT_NOT_FOUND`.
+NOTE: A selector that raises is returned as `{ diagnostics: « d » }`, *d* an `error` whose message
+says what is wrong and the two forms that are accepted (`Install` and `{ heading: Install, level: 2 }`);
+docstamp reports it as `E_SELECT` (SPEC §8.7). A selector that is valid but matches nothing returns
+`{ }`, which docstamp reports as `E_SELECT_NOT_FOUND`.
 
 ## 5 Body, Headings, Sections
 
@@ -71,22 +73,26 @@ lines that follow its content.
 
 ## 6 Extract
 
-`Extract({ path, text, select })` returns { `hashes`, `focus`, `lines` }:
+`Extract({ path, text, select })` returns { `parts`, `diagnostics` }:
 
-1. Let *selector* be ? `ParseSelector(select)`.
+1. Let *selector* be ? `ParseSelector(select)`; where it raises, return the `error` of §4 NOTE.
 2. Let *body* be `Body(text)` with every CR LF replaced by LF, and *headings* be `Headings(body)`.
 3. Let *matches* be the Headings *h* with `h.[[Text]]` equal to `selector.[[Heading]]` and, unless
    `selector.[[Level]]` is *none*, `h.[[Depth]]` equal to it.
-4. Return `hashes`, the List, in source order, of the lower-case hexadecimal SHA-256 of the UTF-8
-   encoding of the Section of each match; and, when there is a match, `focus`, the List of the Strings
-   `section "<Text>" (level <Depth>)` of the matches, and `lines`, the List of { `start`, `end` } of
-   their Sections: the line of the Heading and the line of the last character of the Section, counted
-   in *text* (the argument, frontmatter included, CR LF read as LF).
+4. If *matches* is empty, return `{ }`. If it has more than one Heading, return
+   `{ diagnostics: « d » }`, *d* an `error` whose message names the line of each Heading and says
+   to add a `level` or to rename one of them.
+5. Otherwise return `{ parts: « p » }`, *p* the Part { `content`: the Section of the match,
+   `focus`: `section "<Text>" (level <Depth>)`, `lines`: « { `start`, `end` } » }, `start` the line
+   of the Heading and `end` the line of the last character of the Section, counted in *text* (the
+   argument, frontmatter included, CR LF read as LF).
 
 NOTE: `focus` and `lines` are advisory: docstamp prints them in its changed-file report and never
-hashes them, so they are not part of the compatibility of §7.
+hashes them, so they are not part of the compatibility of §7. docstamp hashes `content`, so the
+Hash of a Section is the SHA-256 of its UTF-8 encoding, as it has been.
 
-NOTE: Two Headings with the same text give two hashes, so docstamp reports `E_SELECT_AMBIGUOUS`.
+NOTE: Two Headings with the same text are an `error` whatever the selector says: this Plugin has no
+form that selects all of them.
 
 NOTE: Every byte of a Section counts: a reformatted line, a changed list marker or a blank line added
 before the next Heading is a change. docstamp already normalizes CR LF to LF; step 2 makes a caller
