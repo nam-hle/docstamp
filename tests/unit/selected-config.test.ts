@@ -67,6 +67,72 @@ describe('§8.7 parseSelected', () => {
   });
 });
 
+describe('§3.5 non-finite select', () => {
+  const yamlWith = (select: string) => {
+    const dir = tmp();
+    writeFileSync(
+      join(dir, 'docstamp.yaml'),
+      `version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - { path: a.md, select: ${select} }\n`,
+    );
+    return () => readConfig(dir);
+  };
+
+  it.each([['.inf'], ['.nan'], ['-.inf'], ['{ a: [1, .inf] }']])(
+    'rejects select %s in YAML with E_CONFIG',
+    (select) => {
+      const [first] = diagnosticsOf(yamlWith(select));
+      expect(first).toMatchObject({ code: 'E_CONFIG', file: 'CLAUDE.md', subject: 'dependencies' });
+    },
+  );
+
+  it('rejects an infinite number in parseSelected', () => {
+    expect(parseSelected(entry(['path', 'a.md'], ['select', Infinity]))).toBeNull();
+    expect(parseSelected(entry(['path', 'a.md'], ['select', [1, NaN]]))).toBeNull();
+  });
+
+  it.each([['.inf'], ['.nan'], ['{ a: [1, .inf] }']])(
+    'rejects select %s in an inline block with E_BLOCK',
+    (select) => {
+      const text = `---\ndocstamp:\n  dependencies:\n    - { path: a.md, select: ${select} }\n---\nbody\n`;
+      const { problems } = parseBlock('doc.md', scanFrontmatter(text)!);
+      expect(problems[0]).toMatchObject({ code: 'E_BLOCK', subject: 'dependencies' });
+    },
+  );
+});
+
+describe('§8.7 identical selected entries', () => {
+  it('keeps the first of identical entries in a config file', () => {
+    const dir = tmp();
+    writeFileSync(
+      join(dir, 'docstamp.yaml'),
+      'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n' +
+        '      - { path: a.md, select: { x: 1, y: 2 }, match: all }\n' +
+        '      - { path: b.md, select: z }\n' +
+        '      - { path: a.md, select: { y: 2, x: 1 }, match: one }\n' +
+        '      - { path: a.md, select: other }\n',
+    );
+    expect(readConfig(dir).config.declarations[0]?.selected).toEqual([
+      { path: 'a.md', select: { x: 1, y: 2 }, match: 'all' },
+      { path: 'b.md', select: 'z', match: 'one' },
+      { path: 'a.md', select: 'other', match: 'one' },
+    ]);
+  });
+
+  it('keeps the first of identical entries in an inline block', () => {
+    const text =
+      '---\ndocstamp:\n  dependencies:\n' +
+      '    - { path: a.md, select: { x: 1, y: 2 }, match: all }\n' +
+      '    - { path: a.md, select: { y: 2, x: 1 } }\n' +
+      '    - { path: a.md, select: other }\n---\nbody\n';
+    const { declaration, problems } = parseBlock('doc.md', scanFrontmatter(text)!);
+    expect(problems).toEqual([]);
+    expect(declaration.selected).toEqual([
+      { path: 'a.md', select: { x: 1, y: 2 }, match: 'all' },
+      { path: 'a.md', select: 'other', match: 'one' },
+    ]);
+  });
+});
+
 describe('§9.3 mixed dependencies (YAML)', () => {
   it('splits Patterns and Selected Dependencies', () => {
     const dir = tmp();

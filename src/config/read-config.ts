@@ -4,13 +4,13 @@ import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import { closestKey, unknownKeyMessage } from '../core/did-you-mean.ts';
 import { isRepoPath } from '../core/repo-path.ts';
-import type { Declaration, Config, Diagnostic, SelectedEntry } from '../core/types.ts';
+import type { Declaration, Config, Diagnostic } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { validatePlugins } from '../plugin/plugins.ts';
 import type { DocstampPlugin } from '../plugin/types.ts';
 import { fromYaml, isYamlMap } from './from-yaml.ts';
 import { loadScript } from './script.ts';
-import { SELECTED_MESSAGE, parseSelected } from './selected.ts';
+import { SELECTED_MESSAGE, dedupeSelected, parseSelected } from './selected.ts';
 import { CONFIG_NAMES, PRESET_NAME, isMap, isStrings, type Value } from './value.ts';
 import { parseStrictYaml } from './yaml-profile.ts';
 
@@ -140,7 +140,7 @@ function collectDeclaration(
   out.push({
     file: key,
     dependencies,
-    ...(selected.length > 0 ? { selected: selected satisfies SelectedEntry[] } : {}),
+    ...(selected.length > 0 ? { selected: dedupeSelected(selected) } : {}),
     ...(isStrings(use) ? { use } : {}),
   });
 }

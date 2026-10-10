@@ -676,8 +676,12 @@ A *Selected Dependency* is { `[[Path]]`: a literal RepoPath (§8.5 NOTE), `[[Sel
 (§3.5), `[[Match]]`: `one` or `all` }. In a `dependencies` List a Selected Dependency is written as
 a Map with the keys `path`, `select` and, optionally, `match` (`one` when absent); a String is a
 Pattern (§8.1) as before. A Map with another key, a missing `path` or `select`, a `path` that is
-not a literal RepoPath, or a `match` other than `one` or `all` is `E_CONFIG` (`E_BLOCK` in an inline
-block).
+not a literal RepoPath, a `select` holding a Number that is not finite at any depth, or a `match`
+other than `one` or `all` is `E_CONFIG` (`E_BLOCK` in an inline block).
+
+Selected Dependencies with the same `[[Path]]` and the same `CanonicalJson([[Select]])` are one
+dependency: the Declaration's `[[Selected]]` holds the first of them in order of appearance, with
+its `[[Match]]`, and drops the others without a diagnostic.
 
 A *Plugin* is { `[[Name]]`: a non-empty String, `[[ApiVersion]]`: 1, `[[Files]]`: a non-empty List
 of Patterns, `[[Extract]]`: a function }, other members being ignored. Plugin names are unique.
@@ -889,7 +893,7 @@ raises `E_FILE_MISSING`.
 
 `LoadScript` returns the plain value of step 3 and, separately, the value of the top-level
 `plugins` member of *exported*, when it has one. `plugins` is not part of the plain value and is
-exempt from `ToPlain`; a function anywhere else is still `E_CONFIG` (`ToPlain` step 6). It MUST be a dense List of Plugins (§8.7);
+exempt from `ToPlain`; a function anywhere else is still `E_CONFIG` (`ToPlain` step 6). It MUST be a dense, plain (not a Proxy) List of Plugins (§8.7);
 otherwise raise `E_PLUGIN`, `[[Subject]]` the Plugin name or `plugins[i]`, with a message that names
 `apiVersion` when `[[ApiVersion]]` is not 1.
 

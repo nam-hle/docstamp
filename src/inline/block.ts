@@ -1,5 +1,5 @@
 import { fromYaml } from '../config/from-yaml.ts';
-import { SELECTED_MESSAGE, parseSelected } from '../config/selected.ts';
+import { SELECTED_MESSAGE, dedupeSelected, parseSelected } from '../config/selected.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
 import { diag } from '../core/diagnostics.ts';
 import { unknownKeyMessage } from '../core/did-you-mean.ts';
@@ -75,9 +75,10 @@ export function parseBlock(file: string, scan: Scan, defaults = false): ParsedBl
   const mapItems = items?.filter((item) => typeof item !== 'string') ?? [];
   const shapeOk = items !== null && mapItems.every(isMap);
   const parsedEntries = shapeOk ? mapItems.map((item) => parseSelected(fromYaml(item))) : [];
-  const selected = parsedEntries.filter((entry) => entry !== null);
+  const parsedSelected = parsedEntries.filter((entry) => entry !== null);
+  const selected = dedupeSelected(parsedSelected);
   const dependencies =
-    shapeOk && selected.length === parsedEntries.length
+    shapeOk && parsedSelected.length === parsedEntries.length
       ? items.filter((item) => typeof item === 'string')
       : null;
   if (dependencies === null) {
