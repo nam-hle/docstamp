@@ -53,3 +53,27 @@ jobs:
       - name: Check the package can be packed
         if: ${{ !cancelled() }}
         run: npm pack --dry-run
+
+  docstamp:
+    name: Docs gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+
+      - run: pnpm run build
+
+      - name: Pack
+        id: pack
+        run: echo "path=$RUNNER_TEMP/$(npm pack --silent --pack-destination "$RUNNER_TEMP")" >> "$GITHUB_OUTPUT"
+
+      - uses: ./
+        with:
+          version: ${{ steps.pack.outputs.path }}
