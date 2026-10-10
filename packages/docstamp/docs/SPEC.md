@@ -277,12 +277,15 @@ A Diagnostic with a non-empty `[[File]]` is *attached* to that file; any other i
 *global*.
 
 *Diagnostic order*: by `[[File]]` in path order (empty first), then `[[Code]]` in path order,
-then `[[Subject]]` in path order. Every List of Diagnostics that is output is in this order, with
-duplicates (all fields equal) removed.
+then `[[Subject]]` in path order, then `[[Message]]` in path order. Every List of Diagnostics that
+is output is in this order, with duplicates (all fields equal) removed.
 
 `[[Message]]` is one sentence naming the problem and its fix. It MUST NOT contain operating system
 error text, parser error text, or absolute paths; it MAY contain an error code name such as
-`EACCES`. The one exception is a file argument that does not resolve inside Root: the `E_USAGE` of
+`EACCES`. The `[[Message]]` of an `E_SELECT` or `W_SELECT` that a Plugin reports (§8.7 step 4) is
+the Plugin's own: docstamp passes it unchanged and does not check it for a sentence, so that rule
+binds the author of the Plugin, which MUST NOT put operating system error text, parser error text or
+an absolute path in it. The one exception is a file argument that does not resolve inside Root: the `E_USAGE` of
 §13.3 step 2, §13.8 step 3 and §13.10 step 2 names the current directory, the resolved path and
 Root, because that is what explains the failure.
 
@@ -703,10 +706,10 @@ let it be the Builtin Plugins (§8.8) that do. `E_SELECT` with `[[Subject]]` *pa
 empty; `E_PLUGIN` with `[[Subject]]` *path* if it holds more than one, its message naming each
 Plugin.
 
-`Fragments(entry, text)`, with *plugin* = `Claim(plugins, entry.[[Path]])` and *subject* the path
-of *entry*, `#` and `CanonicalJson(entry.[[Select]])`, returns a Fragment and a List of warnings,
-or raises:
+`Fragments(entry, text)`, with *subject* the path of *entry*, `#` and
+`CanonicalJson(entry.[[Select]])`, returns a Fragment and a List of warnings, or raises:
 
+0. Let *plugin* be `Claim(plugins, entry.[[Path]])`, which raises as above.
 1. If the file is a link, binary (§10.1) or not valid UTF-8, raise `E_SELECT` (`[[Subject]]` the
    path). *text* is the content of §10.2 steps 1 to 4 after the `file` tag.
 2. Call `plugin.[[Extract]]` synchronously with { `path`, `text`, `select` }. If it throws, returns
@@ -716,12 +719,14 @@ or raises:
    { `start`, `end` } integers with 1 <= `start` <= `end`, when present }, and { `diagnostics` },
    « » when absent, a List of at most 100 Maps { `severity`: `error` or `warning`, `message`: a
    non-empty String }. A `focus` or a `message` holds no code point below U+0020 and no U+007F, so
-   it is one line. Any other shape raises `E_SELECT` (`[[Subject]]` the path). Other members are
+   it is one line. The limit of 100 counts `diagnostics` as returned, before duplicates are
+   removed (§5.5). Any other shape raises `E_SELECT` (`[[Subject]]` the path). Other members are
    ignored.
 4. Let *errors* be, for each `error` of `diagnostics` in the order given, an `E_SELECT` Diagnostic
    with `[[Subject]]` *subject* and `[[Message]]` its `message`, and *warnings* the same with
    `W_SELECT` for each `warning`.
-5. If *errors* is not empty, raise *errors* and *warnings*.
+5. If *errors* is not empty, raise *errors* and *warnings*; the order the Plugin gave them in does
+   not matter (§5.5).
 6. If `parts` is empty, raise `E_SELECT_NOT_FOUND` with `[[Subject]]` *subject*, and *warnings*.
 7. Otherwise the Fragment is `parts` in the order given, each a Part { `[[Content]]`, `[[Focus]]`,
    `[[Lines]]` }, and *warnings* are returned with it.
@@ -740,6 +745,11 @@ file (CR LF is read as LF, §10.2), as several ranges when the Part is not conti
 written by the Plugin, advisory, and never part of a Hash or a verdict (§10.4 reads `content`
 only); they appear in the changed-file report (§12.3 step 11). A warning never changes a state, a
 Hash or an exit code (§5).
+
+NOTE: A file that is `invalid` shows the warnings of the Selected Dependencies that raised, and of
+no other (§12.1 step 6). A Plugin that begins to report as an `error` what it reported as a
+`warning` changes verdicts through the Plugin, not through docstamp: §17.2 does not apply, and the
+Plugin's own SPEC says what is breaking for it.
 
 NOTE: A Selected Dependency whose path is not in the Universe, or is the file itself, is
 `E_EMPTY_PATTERN` with `[[Subject]]` the path (§8.5 steps 2 and 3). A file whose `dependencies`
@@ -795,7 +805,8 @@ NOTE: Several Selected Dependencies of one file are independent (§8.7): each ha
 its own Fragment and its own `E_SELECT_NOT_FOUND`, and the Dependency Hash (§10.4 step 3) has a
 line for each.
 
-NOTE: A change to a hash these Plugins return is a change of a Hash input (§17.2).
+NOTE: A change to the `content` these Plugins return (the `CanonicalJson` of the value) is a change
+of a Hash input (§17.2).
 
 ## 9 Configuration File
 
@@ -1480,9 +1491,9 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
     selection is, in path order, a SelectionChange `added` for each path of *after* that is not in
     *before*, and `removed` for each path of *before* that is not in *after*.
 11. Let *fragments* be empty, and, for each Selected Dependency *e* of `result.[[Selected]]` in the
-    order of §10.4 step 3, add a FragmentChange { `e.[[Path]]`, `e.[[Select]]`, *status*, the
-    PartInfo of each Part of *now* } as follows. Let *now* be the Fragment of *e* in the work tree,
-    as the verdict computed it. Let
+    order of §10.4 step 3, add a FragmentChange { `e.[[Path]]`, `e.[[Select]]`, *status*,
+    `[[Parts]]` as §5.4 defines it from the Parts of *now* } as follows. Let *now* be the Fragment
+    of `Fragments(e, text)` (§8.7) on the file in the work tree, read as §10.4 step 3 reads it. Let
     *old* be the output of `git show <C>:./<path>` run in Root as step 1 does, with CR LF read as
     LF. Let *then* be the Fragment of `Fragments(e, old)` (§8.7) with the Plugins of now, its warnings
     ignored, or none if that `git`
@@ -2235,7 +2246,8 @@ STALE    <file>  (<reason>, <reason>)
   - if `[[Fragments]]` is not none, one *fragment line* per FragmentChange in order, after the change
     lines: `  fragment  `, the path, `#` and `CanonicalJson(select)` as one String of §14.2, and
     `  (changed)` or `  (new)`, then, if `[[Parts]]` is not none, two spaces and a description of
-    each Part that has a Focus or Lines, joined by `; `: its Focus String, followed by
+    each Part that has a Focus or Lines (so a Part with neither is not described here, while the
+    `"parts"` of §14.5 holds one element for each Part), joined by `; `: its Focus String, followed by
     `(lines <ranges>)` after a space when Lines is given (`lines <ranges>` alone when there is no
     Focus), the ranges `<start>-<end>` joined by `, `. They are not counted by the summary line.
 - For any other `stale`: one `depends` line per pattern, in declaration order, with the
@@ -2771,9 +2783,9 @@ command raised.
 | `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block; raised only for an argument that resolves inside Root (§13.4) |
 | `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; for `--from`, name a commit |
 | `E_PLUGIN` | error | §8.7, §9.5 | fix the Plugin in the `plugins` of the script Carrier: a non-empty `name`, `apiVersion: 1`, a non-empty `files` List of Patterns and an `extract` function, unique names, and no two Plugins claiming one path; the subject names the Plugin or `plugins[i]`, or the path claimed twice |
-| `E_SELECT` | error | §8.7 | register a Plugin whose `files` claim the path, or fix the Plugin: `extract` must return `{ parts, diagnostics }` synchronously and the file must be a UTF-8 text file (subject the path); or follow the message of an error the Plugin reports (subject the path, `#` and the selector) |
-| `E_SELECT_NOT_FOUND` | error | §8.7 | correct `select`, or the file, so the Plugin returns at least one Part; subject the path, `#` and the selector |
-| `W_SELECT` | warning | §8.7 | follow the message of the Plugin, which reports what the reader can fix while the Part still stands; attached to the file, subject the path, `#` and the selector |
+| `E_SELECT` | error | §8.7 | register a Plugin whose `files` claim the path, or fix the Plugin: `extract` must return `{ parts, diagnostics }` synchronously and the file must be a UTF-8 text file (subject the path); or, for an error the Plugin reports (subject the path, `#` and the selector), correct `select` or the file as its message says, then run `docstamp check` again |
+| `E_SELECT_NOT_FOUND` | error | §8.7 | correct `select`, or the file, so the Plugin returns at least one Part, then run `docstamp check` again; subject the path, `#` and the selector |
+| `W_SELECT` | warning | §8.7 | change `select` or the file as the Plugin's message says, or ignore it: the Part still stands and nothing else changes; attached to the file, subject the path, `#` and the selector |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 | `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
 | `W_SHADOWED_EXCLUSION` | warning | §8.5 | move the exclusion after the named later pattern (for a Preset, list it last in `use`), or narrow that pattern, unless re-selecting those files is intended; attached to the file, subject the exclusion |
@@ -2817,7 +2829,7 @@ A change to any of the following is breaking:
 
 | Area | Breaking |
 |---|---|
-| Hash inputs | the hash algorithm (§10.3); the normalization of content (§10.1, §10.2), including CR LF handling, a byte order mark, the binary sniff, the link rule and the `file`/`link` tags; anything that feeds the Dependency Hash, or its byte layout (§10.4), including the hashes of the Builtin Plugins (§8.8); the order of its entries (§3.3) |
+| Hash inputs | the hash algorithm (§10.3); the normalization of content (§10.1, §10.2), including CR LF handling, a byte order mark, the binary sniff, the link rule and the `file`/`link` tags; anything that feeds the Dependency Hash, or its byte layout (§10.4), including the `content` of the Builtin Plugins (§8.8); the order of its entries (§3.3) |
 | Selection | the pattern dialect or its parsing (§8.1); pattern matching, negation order or directory semantics (§8.2 to §8.5); the Universe: which entries it holds, ignore rules, `.gitignore` handling, the excluded names, path normalization and collisions (§7); symbolic link handling (§7.1) |
 | Formats | the `version` of the Configuration file (§9.3) or the Lockfile (§11.1); a key name of either; the accepted Configuration file names and their precedence (§9.1); the canonical form of the Lockfile (§11.2) |
 | Verdicts | what is `stale` or `ok`; the Reasons (§5.4); any Diagnostic that turns a run from passing to failing or the reverse, including a warning that becomes an error and an error that becomes a warning (§15, §16) |
@@ -2983,7 +2995,7 @@ The following are not breaking:
 - `[[Fragments]]` (§5.4, §12.3 step 11): the fragment lines of §14.3 and the member `fragments` of
   §14.5. A stale Result with Selected Dependencies had `changes` `null` and `depends` lines; its
   `changes` is now a List (possibly empty) and the block lists what changed, with the Focus and the
-  Lines of the part when its Plugin gives them (§8.7). Both are advisory. The state, the
+  Lines of each Part when its Plugin gives them (§8.7). Both are advisory. The state, the
   reasons, the Hash and the exit code are unchanged, and the report may vary with the history (§2);
 - the `-M` of the review line and the untracked line (§14.3.4), the `(preset <name>)` marker on a
   `depends` line of `check` (§14.3) and the wording of the second `next:` line for inline files
@@ -3050,10 +3062,16 @@ it with `E_UNKNOWN_KEY` (§9.6.2 step 5), as it refuses a Lockfile of another ve
 - Every breaking change MUST ship a migration note in the release notes: what changed (before and
   after) and the steps a user takes. The note is stated where the change is made, in the commit
   message, and is not inferred afterwards.
+- Selected Dependencies, Plugins (§8.7, §8.8) and the Dependency Hash lines of §10.4 step 3 are not
+  in a release before the one that first contains them, so the shape of a Plugin's result, the
+  layout of those lines, the codes `E_SELECT`, `E_SELECT_NOT_FOUND` and `W_SELECT` and the vectors
+  of §17.7 that cover them may change until that release, with no Lockfile `version` and no
+  migration note.
 
 ### 17.7 Pinned vectors
 
-The test suite of an implementation MUST pin, as literals computed once from a release:
+The test suite of an implementation MUST pin, as literals computed once from a release (§17.6 says
+which vectors may change until the release that first contains them):
 
 - the file Hashes and the Dependency Hashes (§10) of a fixed tree that covers plain text, CR LF
   against LF, a byte order mark, binary bytes, an empty file, a symbolic link, a deleted

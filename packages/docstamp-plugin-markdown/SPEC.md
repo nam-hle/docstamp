@@ -83,16 +83,17 @@ lines that follow its content.
    `{ diagnostics: « d » }`, *d* an `error` whose message names the line of each Heading and says
    to add a `level` or to rename one of them.
 5. Otherwise return `{ parts: « p » }`, *p* the Part { `content`: the Section of the match,
-   `focus`: `section "<Text>" (level <Depth>)`, `lines`: « { `start`, `end` } » }, `start` the line
+   `focus`: `section "<Text>" (level <Depth>)` with each code point of *Text* below U+0020 or equal to
+   U+007F replaced by U+0020 (SPEC §8.7 step 3 refuses a `focus` of more than one line),
+   `lines`: « { `start`, `end` } » }, `start` the line
    of the Heading and `end` the line of the last character of the Section, counted in *text* (the
    argument, frontmatter included, CR LF read as LF).
 
 NOTE: `focus` and `lines` are advisory: docstamp prints them in its changed-file report and never
-hashes them, so they are not part of the compatibility of §7. docstamp hashes `content`, so the
-Hash of a Section is the SHA-256 of its UTF-8 encoding, as it has been.
+hashes them, so they are not part of the compatibility of §7.
 
-NOTE: Two Headings with the same text are an `error` whatever the selector says: this Plugin has no
-form that selects all of them.
+NOTE: Two Headings that the selector selects are an `error`, even when it has a `level` that both
+have: this Plugin has no form that selects all of them.
 
 NOTE: Every byte of a Section counts: a reformatted line, a changed list marker or a blank line added
 before the next Heading is a change. docstamp already normalizes CR LF to LF; step 2 makes a caller
