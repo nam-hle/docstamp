@@ -21,8 +21,3 @@ export interface FileSystem {
   // removes the temporary file and throws on any failure
   writeAtomic(path: string, content: string, options?: { keepMode?: boolean }): void;
 }
-
-// What a run needs from the machine: grows as the git and the clock move behind it
-export interface Host {
-  readonly fs: FileSystem;
-}

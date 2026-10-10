@@ -20,4 +20,10 @@ describe('the host boundary', () => {
   it('only src/host/node-fs.ts imports the file system', () => {
     expect(importing(/from '(node:)?fs(\/promises)?'/u)).toEqual(['host/node-fs.ts']);
   });
+  it('only src/host/node-git.ts starts a process', () => {
+    expect(importing(/from '(node:)?child_process'/u)).toEqual(['host/node-git.ts']);
+  });
+  it('only src/host/node-git.ts reads the clock', () => {
+    expect(importing(/Date\.now\(|new Date\(\)/u)).toEqual(['host/node-git.ts']);
+  });
 });

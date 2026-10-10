@@ -2,7 +2,7 @@ import { readConfig } from '../config/read-config.ts';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import type { Declaration, Diagnostic } from '../core/types.ts';
-import type { Host } from '../host/fs.ts';
+import type { Host } from '../host/host.ts';
 import { expandPresets } from '../engine/presets.ts';
 import { readInline } from '../inline/read-inline.ts';
 import type { DocstampPlugin } from '../plugin/types.ts';

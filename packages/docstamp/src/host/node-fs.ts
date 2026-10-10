@@ -11,7 +11,9 @@ import {
   type Dirent,
   type Stats,
 } from 'node:fs';
-import type { DirEntry, EntryKind, FileSystem, Host } from './fs.ts';
+import type { DirEntry, EntryKind, FileSystem } from './fs.ts';
+import type { Host } from './host.ts';
+import { nodeGit, systemClock } from './node-git.ts';
 
 const kindOf = (entry: Dirent<Buffer> | Stats): EntryKind => {
   if (entry.isDirectory()) return 'dir';
@@ -54,4 +56,4 @@ export const nodeFs: FileSystem = {
   },
 };
 
-export const nodeHost: Host = { fs: nodeFs };
+export const nodeHost: Host = { fs: nodeFs, git: nodeGit, clock: systemClock };

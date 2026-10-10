@@ -15,12 +15,17 @@ import {
 } from 'node:fs';
 import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ScenarioRepo, type Execution, type RunOptions, type Session } from '../../harness/core.ts';
+import {
+  FIRST_COMMIT_TIME,
+  ScenarioRepo,
+  type Execution,
+  type RunOptions,
+  type Session,
+} from '../../harness/core.ts';
 
 export const E2E_DIR = fileURLToPath(new URL('..', import.meta.url));
 export const REPO_DIR = fileURLToPath(new URL('../../..', import.meta.url));
 const BIN = join(REPO_DIR, 'dist/index.js');
-const FIRST_COMMIT_TIME = 1_767_225_600;
 
 export interface DiskSession extends Session {
   home: string;
@@ -85,6 +90,14 @@ export class Repo extends ScenarioRepo {
     try {
       lstatSync(this.path(path));
       return true;
+    } catch {
+      return false;
+    }
+  }
+
+  isDirectory(path: string): boolean {
+    try {
+      return lstatSync(this.path(path)).isDirectory();
     } catch {
       return false;
     }

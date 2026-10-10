@@ -9,7 +9,7 @@ docstamp stays small on purpose. A change must keep it:
 - deterministic: the same tree gives the same verdict and the same bytes on any machine;
 - offline: no network access anywhere in `packages/docstamp/src/`;
 - free of LLM calls;
-- read-only toward git: `git` is only invoked in `packages/docstamp/src/history/`, for the advisory changed-file report, never for the verdict, the exit code or the lock.
+- read-only toward git: `git` is only invoked in `packages/docstamp/src/host/node-git.ts`, for the advisory changed-file report, never for the verdict, the exit code or the lock.
 
 New commands, states, options and dependencies need a strong reason. Open an issue before starting anything large.
 

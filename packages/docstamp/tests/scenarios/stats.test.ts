@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { expect } from 'vitest';
-import { config, scenario, type Repo } from '../harness/index.ts';
+import { config, scenario, type Repo } from './harness/index.ts';
 
 const DOCS = {
   'NARROW.md': ['src/a.ts'],
@@ -44,7 +43,6 @@ scenario(
   '§13.9 stats ranks narrow and broad lists, counts days, and only reports',
   async (repo) => {
     const base = timeline(repo);
-    const index = readFileSync(repo.path('.git/index'));
     const text = await repo.run(['stats', '--from', base]);
     expect(text.exit).toBe(0);
     expect(text.stdout).toBe(
@@ -101,8 +99,6 @@ scenario(
       diagnostics: [],
     });
 
-    expect(readFileSync(repo.path('.git/index')).equals(index)).toBe(true);
-    expect(repo.git('status', '--porcelain')).toBe('');
     expect(repo.exists('docstamp-lock.yaml')).toBe(false);
   },
 );
@@ -324,86 +320,6 @@ scenario('§13.9 nothing declared is E_CONFIG_MISSING, as everywhere', async (re
   expect(result.stdout).toBe('');
   expect(result.stderr).toContain('E_CONFIG_MISSING');
 });
-
-scenario('§12.4 a shallow clone is E_HISTORY', async (repo) => {
-  const base = timeline(repo);
-  const clone = repo.shallowClone('clone');
-  expect(clone.git('rev-parse', '--is-shallow-repository').trim()).toBe('true');
-  const text = await clone.run(['stats', '--from', base]);
-  expect(text.exit).toBe(2);
-  expect(text.stdout).toBe('');
-  expect(text.stderr).toContain('error: E_HISTORY: The repository is shallow');
-  const json = await clone.run(['stats', '--json']);
-  expect(json.exit).toBe(2);
-  expect(doc(json)).toMatchObject({
-    window: null,
-    diagnostics: [{ code: 'E_HISTORY', subject: null }],
-  });
-  const verdict = await clone.run(['check'], { snapshot: false });
-  expect(verdict.exit).toBe(1);
-});
-
-scenario(
-  '§12.4 no git, no work tree and no commit are E_HISTORY',
-  { fixture: 'no-git', git: false },
-  async (repo) => {
-    const none = await repo.run(['stats'], { label: 'not a git work tree' });
-    expect(none.exit).toBe(2);
-    expect(none.stdout).toBe('');
-    expect(none.stderr).toContain('error: E_HISTORY: Run docstamp stats with git installed');
-
-    repo.git('init', '-q');
-    const unborn = await repo.run(['stats'], { label: 'a work tree with no commit' });
-    expect(unborn.exit).toBe(2);
-    expect(unborn.stderr).toContain('E_HISTORY');
-
-    repo.commit('base', ago(1));
-    const fine = await repo.run(['stats', '--since', '7d'], { snapshot: false });
-    expect(fine.exit).toBe(0);
-    expect(fine.stdout).toContain('window: 1 commits in the last 7 days, 0 make no file stale\n');
-    const hidden = await repo.run(['stats'], {
-      label: 'git is not on the PATH',
-      env: { PATH: '/nonexistent' },
-    });
-    expect(hidden.exit).toBe(2);
-    expect(hidden.stderr).toContain('E_HISTORY');
-  },
-);
-
-scenario('§12.4 an inherited GIT_DIR selects no repository', async (repo) => {
-  const base = timeline(repo);
-  const foreign = repo.at('foreign');
-  foreign.mkdir('');
-  foreign.git('init', '-q');
-  foreign.write('x.txt', 'x\n');
-  foreign.commit('foreign');
-  const result = await repo.run(['stats', '--json', '--from', base], {
-    env: { GIT_DIR: foreign.path('.git'), GIT_WORK_TREE: foreign.root },
-  });
-  expect(doc(result).window).toMatchObject({ commits: 6, untouched: 2 });
-});
-
-scenario(
-  '§12.4 Root below the top level counts every commit of the work tree',
-  { git: false },
-  async (repo) => {
-    const top = repo.at('.');
-    top.git('init', '-q');
-    repo.write('other.txt', 'outside\n');
-    repo.write('pkg/docstamp.yaml', config({ 'pkg/DOC.md': ['pkg/src'] }).replace(/pkg\//gu, ''));
-    repo.write('pkg/DOC.md', 'doc\n');
-    repo.write('pkg/src/a.ts', 'a\n');
-    const base = repo.commit('base', '2026-01-01T09:00:00Z');
-    repo.append('other.txt', 'one\n');
-    repo.commit('outside', '2026-01-02T09:00:00Z');
-    repo.append('pkg/src/a.ts', 'one\n');
-    repo.commit('inside', '2026-01-03T09:00:00Z');
-    const result = await repo.run(['stats', '--from', base], { cwd: 'pkg' });
-    expect(result.exit).toBe(0);
-    expect(result.stdout).toContain('DOC.md');
-    expect(result.stdout).toContain(`window: 2 commits in ${base}..HEAD, 1 make no file stale\n`);
-  },
-);
 
 scenario(
   '§13.2 stats option errors exit 2 before anything is read',

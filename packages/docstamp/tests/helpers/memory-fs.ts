@@ -1,5 +1,8 @@
 import { resolve } from 'node:path';
-import type { DirEntry, EntryKind, FileSystem, Host } from '../../src/host/fs.ts';
+import type { DirEntry, EntryKind, FileSystem } from '../../src/host/fs.ts';
+import type { Clock, Host } from '../../src/host/host.ts';
+import { systemClock } from '../../src/host/node-git.ts';
+import { MemoryGit } from './memory-git.ts';
 
 // A tree to build: a String is a file, { link } a symbolic link, { dir } an empty directory
 export type Entry =
@@ -35,7 +38,7 @@ const normalize = (path: string): string => {
 
 const parentOf = (path: string): string => path.slice(0, path.lastIndexOf('/')) || '/';
 
-class MemoryFs implements FileSystem {
+export class MemoryFs implements FileSystem {
   private readonly nodes = new Map<string, Node>([['/', { kind: 'dir', mode: 0o755 }]]);
   private readonly unreadable: Set<string>;
 
@@ -131,6 +134,20 @@ class MemoryFs implements FileSystem {
     else this.unreadable.delete(target);
   }
 
+  // every file and link under the root, with its content, as a work tree lists them; .git is skipped
+  workTree(): Array<{ path: string; kind: 'file' | 'link'; content: Buffer; mode: number }> {
+    const base = this.absolute('');
+    const found: Array<{ path: string; kind: 'file' | 'link'; content: Buffer; mode: number }> = [];
+    for (const [key, node] of this.nodes) {
+      if (!key.startsWith(`${base}/`) || (node.kind !== 'file' && node.kind !== 'link')) continue;
+      const path = key.slice(base.length + 1);
+      if (path === '.git' || path.startsWith('.git/')) continue;
+      const content = node.kind === 'link' ? Buffer.from(node.target!, 'utf8') : node.content!;
+      found.push({ path, kind: node.kind, content, mode: node.mode });
+    }
+    return found.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  }
+
   names(path = ''): string[] {
     return this.readDir(this.absolute(path))
       .map((entry) => entry.name.toString('utf8'))
@@ -190,7 +207,10 @@ class MemoryFs implements FileSystem {
   writeAtomic(path: string, content: string, options: { keepMode?: boolean } = {}): void {
     const target = normalize(path);
     const parent = this.nodes.get(parentOf(target));
-    if (parent?.kind !== 'dir' || this.unreadable.has(target)) throw new Error(`EACCES: ${path}`);
+    // a directory without the write bit takes no new file, as after chmod 555
+    if (parent?.kind !== 'dir' || (parent.mode & 0o222) === 0 || this.unreadable.has(target)) {
+      throw new Error(`EACCES: ${path}`);
+    }
     const existing = this.nodes.get(target);
     if (existing !== undefined && existing.kind !== 'file') throw new Error(`EISDIR: ${path}`);
     const mode = options.keepMode === true ? existing?.mode : undefined;
@@ -206,6 +226,8 @@ class MemoryFs implements FileSystem {
 export interface MemoryHost extends Host {
   readonly fs: MemoryFs;
   readonly root: string;
+  // the repository of the work tree; `git` answers with it whatever the root asked
+  readonly repo: MemoryGit;
 }
 
 // A Host over a tree that lives in memory: `root` is where the files are, an absolute path of the
@@ -214,8 +236,11 @@ export function memoryHost(
   tree: Readonly<Record<string, Entry>> = {},
   options: MemoryOptions = {},
   root = resolve('/repo'),
+  clock: Clock = systemClock,
 ): MemoryHost {
-  return { fs: new MemoryFs(root, tree, options), root };
+  const fs = new MemoryFs(root, tree, options);
+  const repo = new MemoryGit(fs);
+  return { fs, root, repo, git: () => repo, clock };
 }
 
 // `fn(...inMemory(tree))` calls a function that takes (host, root) on a tree that lives in memory

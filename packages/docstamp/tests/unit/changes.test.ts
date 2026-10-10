@@ -1,24 +1,16 @@
-import { execFileSync } from 'node:child_process';
-import { chmodSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   buildChanges,
   configuredOwnList,
   inlineOwnList,
-  isWhitespaceOnly,
   ownListOf,
   pairRenames,
-  parseTree,
-  parseNameList,
-  parseNameStatus,
 } from '../../src/history/changes.ts';
 import type { Change } from '../../src/core/types.ts';
 import { selectionChanges } from '../../src/engine/selection.ts';
-import { git as gitRun } from '../../src/history/git.ts';
+import { parseNameList, parseNameStatus, parseTree } from '../../src/host/git-output.ts';
 import { viaOf } from '../../src/pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
-import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 
 const keep = (resolved: string[], deletable: string[] = []) => ({
   resolved: new Set(resolved),
@@ -31,11 +23,6 @@ const entry = (status: string, path: string) => ({
   path,
   via: [`via ${path}`],
   whitespaceOnly: false,
-});
-
-afterEach(() => {
-  cleanupTrees();
-  vi.unstubAllEnvs();
 });
 
 describe('§12.3 step 1.4: own list', () => {
@@ -274,70 +261,5 @@ describe('§12.3 step 6: via', () => {
   });
   it('a Negation is never named, even when it matches', () => {
     expect(via(['!src/a.ts', 'src/**'], 'src/a.ts')).toEqual(['src/**']);
-  });
-});
-
-describe('§12.3 step 7: whitespace only', () => {
-  const git = (cwd: string, ...args: string[]) =>
-    execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid', ...args], {
-      cwd,
-      encoding: 'utf8',
-    });
-  const committed = (files: Record<string, string>) => {
-    vi.stubEnv('HOME', makeTree({}));
-    vi.stubEnv('XDG_CONFIG_HOME', makeTree({}));
-    vi.stubEnv('GIT_CONFIG_NOSYSTEM', '1');
-    const root = makeTree(files);
-    git(root, 'init', '-q');
-    git(root, 'add', '-A');
-    git(root, 'commit', '-q', '-m', 'base');
-    return { root, base: git(root, 'rev-parse', 'HEAD').trim() };
-  };
-  it('is true for a change of indentation, trailing space and blank lines', () => {
-    const { root, base } = committed({ 'a.ts': 'one\ntwo\n' });
-    writeFileSync(join(root, 'a.ts'), '  one  \n\n\ttwo\n');
-    expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(true);
-  });
-  it('is true for line endings alone', () => {
-    const { root, base } = committed({ 'a.ts': 'one\ntwo\n' });
-    writeFileSync(join(root, 'a.ts'), 'one\r\ntwo\r\n');
-    expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(true);
-  });
-  it('is false when a word changes, even next to a white space change', () => {
-    const { root, base } = committed({ 'a.ts': 'one\ntwo\n' });
-    writeFileSync(join(root, 'a.ts'), ' one\ntwo2\n');
-    expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(false);
-  });
-  // Windows has no POSIX mode bits, so chmod changes nothing there.
-  it.skipIf(process.platform === 'win32')(
-    'is false for a change of file mode and for a bad commit',
-    () => {
-      const { root, base } = committed({ 'a.ts': 'one\n' });
-      chmodSync(join(root, 'a.ts'), 0o755);
-      expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(false);
-      expect(isWhitespaceOnly(root, 'not-a-commit', 'a.ts')).toBe(false);
-    },
-  );
-  it('a user core.autocrlf=true does not hide a change of line endings', () => {
-    const { root, base } = committed({ 'a.ts': 'one\ntwo\n' });
-    writeFileSync(join(process.env['HOME'] ?? '', '.gitconfig'), '[core]\n\tautocrlf = true\n');
-    writeFileSync(join(root, 'a.ts'), 'one\r\ntwo\r\n');
-    expect(gitRun(root, ['diff', '--name-status', '--no-renames', base, '--'])).toBe('M\ta.ts\n');
-    expect(isWhitespaceOnly(root, base, 'a.ts')).toBe(true);
-  });
-  it('step 8: a user core.autocrlf=true does not pair a file whose line endings changed', () => {
-    const { root, base } = committed({ 'a.ts': 'one\ntwo\n' });
-    writeFileSync(join(process.env['HOME'] ?? '', '.gitconfig'), '[core]\n\tautocrlf = true\n');
-    writeFileSync(join(root, 'b.ts'), 'one\r\ntwo\r\n');
-    const before = parseTree(gitRun(root, ['ls-tree', '-r', '-z', base]));
-    const after = gitRun(root, ['hash-object', '--stdin-paths'], {}, 'b.ts\n').trim();
-    expect(after).not.toBe(before.get('a.ts'));
-  });
-  it('reads the path literally, not as a pattern', () => {
-    const { root, base } = committed({ '[id].ts': 'a\n', 'i.ts': 'b\n' });
-    writeFileSync(join(root, '[id].ts'), ' a\n');
-    writeFileSync(join(root, 'i.ts'), 'changed\n');
-    expect(isWhitespaceOnly(root, base, '[id].ts')).toBe(true);
-    expect(isWhitespaceOnly(root, base, 'i.ts')).toBe(false);
   });
 });

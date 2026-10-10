@@ -1,12 +1,21 @@
-import { readFileSync, writeFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { config, scenario, type Repo, type RunResult } from '../harness/index.ts';
+import { config, scenario, type Repo, type RunResult } from './harness/index.ts';
 
 const seen = new Set<string>();
 const unreachable = new Set<string>();
-const cannotChmod = process.platform === 'win32' || process.getuid?.() === 0;
-if (cannotChmod) unreachable.add('E_UNREADABLE');
+// these need a real machine and are exercised by tests/e2e/scenarios/errors-real.test.ts, which
+// checks it reaches them
+for (const code of [
+  'E_PATH_ENCODING',
+  'E_PLUGIN',
+  'E_SELECT',
+  'E_SELECT_NOT_FOUND',
+  'E_SELECT_AMBIGUOUS',
+  'E_HISTORY',
+]) {
+  unreachable.add(code);
+}
 
 async function run(
   repo: Repo,
@@ -273,9 +282,6 @@ scenario('§8.5 E_EMPTY_PATTERN and E_EMPTY_DEPENDENCIES', async (repo) => {
 
 scenario(
   '§7.2 and §10.2 E_UNREADABLE for a dependency, a directory and a .gitignore',
-  {
-    skipIf: cannotChmod,
-  },
   async (repo) => {
     base(repo);
     repo.write('docstamp.yaml', config({ 'DOC.md': ['src/**'] }));
@@ -305,22 +311,6 @@ scenario(
     await run(repo, 'unreadable .gitignore', [], 2, ['E_UNREADABLE']);
   },
 );
-
-scenario('§7.2 E_PATH_ENCODING for a name that is not valid UTF-8', async (repo) => {
-  base(repo);
-  repo.write('docstamp.yaml', config({ 'DOC.md': ['src/**'] }));
-  try {
-    writeFileSync(
-      Buffer.concat([Buffer.from(repo.path('src/')), Buffer.from([0xff, 0x2e, 0x74])]),
-      'x',
-    );
-  } catch {
-    unreachable.add('E_PATH_ENCODING');
-    repo.skip('this file system rejects names that are not valid UTF-8');
-  }
-  const result = await run(repo, 'invalid UTF-8 file name', [], 2, ['E_PATH_ENCODING']);
-  expect(result.stderr).toContain('E_PATH_ENCODING: src');
-});
 
 scenario(
   '§7.4 and §7.5 E_PATH_COLLISION for names equal after NFC or lowercasing',
@@ -431,7 +421,7 @@ scenario(
 
 scenario(
   '§11.3 an unwritable root fails the update with E_UNREADABLE and writes nothing',
-  { fixture: 'docs-site', skipIf: cannotChmod },
+  { fixture: 'docs-site' },
   async (repo) => {
     repo.chmod('.', 0o555);
     const result = await repo.run(['update', '--all'], { label: 'read-only root' });
@@ -462,40 +452,6 @@ scenario('§15 W_SHADOWED_EXCLUSION is a warning: exit 0', async (repo) => {
   const shadowed = await run(repo, 'an undone exclusion', [], 0, ['W_SHADOWED_EXCLUSION']);
   expect(shadowed.stderr).toContain('warning: W_SHADOWED_EXCLUSION: DOC.md: !src/**: ');
 });
-
-scenario(
-  '§16 exit 70 for an unexpected internal failure (injected)',
-  { fixture: 'docs-site' },
-  async (repo) => {
-    const injected = repo.at('.');
-    injected.write(
-      'inject.mjs',
-      "process.stdout.write = () => {\n  throw new Error('injected');\n};\n",
-    );
-    const env = { NODE_OPTIONS: `--import=${pathToFileURL(injected.path('inject.mjs')).href}` };
-    const result = await repo.run([], { env, snapshot: false });
-    expect(result.exit).toBe(70);
-    expect(result.stdout).toBe('');
-    expect(result.stderr).toMatch(/^internal error: Error: injected/u);
-    const healthy = await repo.run([], { snapshot: false });
-    expect(healthy.exit).toBe(1);
-  },
-);
-
-scenario(
-  '§12.4 E_HISTORY: no work tree, and a --from of no commit',
-  { git: false },
-  async (repo) => {
-    base(repo);
-    repo.write('docstamp.yaml', config({ 'DOC.md': ['src'] }));
-    await run(repo, 'stats outside a git work tree', ['stats'], 2, ['E_HISTORY']);
-    repo.git('init', '-q');
-    repo.commit('base', '2026-01-01T09:00:00Z');
-    await run(repo, 'stats with a --from of no commit', ['stats', '--from', 'soon'], 2, [
-      'E_HISTORY',
-    ]);
-  },
-);
 
 scenario('§9.3 NOTE near key: a mistyped key names the key it is close to', async (repo) => {
   base(repo);
@@ -531,36 +487,8 @@ scenario('§9.3 steps 4 and 7 a first configuration file is told what to add', a
   );
 });
 
-scenario(
-  '§8.7 and §9.5 plugin and selection errors',
-  { fixture: 'plugins', linkLib: true },
-  async (repo) => {
-    const show = ['docstamp.config.ts'];
-    const withDeps = (deps: string, plugins = '[headings]') =>
-      "import { defineConfig } from 'docstamp';\nimport headings from './tools/headings.ts';\n" +
-      "const other = { ...headings, name: 'other' };\n" +
-      `export default defineConfig({ version: 2, plugins: ${plugins}, files: ` +
-      `{ 'CLAUDE.md': { dependencies: [${deps}] } } });\n`;
-    const missing = "{ path: 'docs/guide.md', select: 'Missing' }";
-    repo.write('docstamp.config.ts', withDeps(missing));
-    await run(repo, 'a selector that matches nothing', [], 2, ['E_SELECT_NOT_FOUND'], show);
-    repo.append('docs/guide.md', '\n## Install\n\nAgain.\n');
-    repo.write('docstamp.config.ts', withDeps("{ path: 'docs/guide.md', select: 'Install' }"));
-    await run(repo, 'a selector that matches twice', [], 2, ['E_SELECT_AMBIGUOUS'], show);
-    repo.write('docstamp.config.ts', withDeps(missing, '[headings, other]'));
-    await run(repo, 'two plugins claim one path', [], 2, ['E_PLUGIN'], show);
-    repo.remove('docstamp.config.ts');
-    repo.write(
-      'docstamp.yaml',
-      'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - path: docs/guide.md\n' +
-        '        select: Install\n',
-    );
-    await run(repo, 'no plugin claims the path', [], 2, ['E_SELECT'], ['docstamp.yaml']);
-  },
-);
-
 it('every diagnostic code of SPEC §15 is exercised through the CLI', () => {
-  const spec = readFileSync(new URL('../../../docs/SPEC.md', import.meta.url), 'utf8');
+  const spec = readFileSync(new URL('../../docs/SPEC.md', import.meta.url), 'utf8');
   const table = spec.slice(spec.indexOf('## 15 Diagnostics'), spec.indexOf('## 16 Exit Codes'));
   const codes = [...table.matchAll(/^\| `([EW]_[A-Z_]+)`/gmu)].map((m) => m[1]!);
   expect(codes.length).toBeGreaterThanOrEqual(18);

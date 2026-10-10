@@ -2,7 +2,13 @@ import { lstatSync, readdirSync, readFileSync, readlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { run, type Io } from '../../../src/cli/run.ts';
 import { memoryHost, type Entry, type MemoryHost } from '../../helpers/memory-fs.ts';
-import { ScenarioRepo, type Execution, type RunOptions, type Session } from '../../harness/core.ts';
+import {
+  FIRST_COMMIT_TIME,
+  ScenarioRepo,
+  type Execution,
+  type RunOptions,
+  type Session,
+} from '../../harness/core.ts';
 
 const needsRealGit = (what: string): never => {
   throw new Error(`${what} needs a real repository: write this scenario under tests/e2e`);
@@ -29,6 +35,7 @@ export function loadTree(dir: string, prefix = ''): Record<string, Entry> {
 // CLI in this process. There is no git: a scenario that needs history is an e2e test.
 export class MemoryRepo extends ScenarioRepo {
   private readonly host: MemoryHost;
+  private commits = 0;
 
   constructor(
     host: MemoryHost,
@@ -59,6 +66,10 @@ export class MemoryRepo extends ScenarioRepo {
 
   exists(path: string): boolean {
     return this.host.fs.has(path);
+  }
+
+  isDirectory(path: string): boolean {
+    return this.host.fs.kind(this.path(path)) === 'dir';
   }
 
   list(path = ''): string[] {
@@ -98,12 +109,22 @@ export class MemoryRepo extends ScenarioRepo {
     return needsRealGit('at()');
   }
 
-  git(): never {
-    return needsRealGit('git()');
+  // only what a scenario asks of the history it made: the id of HEAD
+  git(...args: string[]): string {
+    if (args.join(' ') === 'rev-parse HEAD') return `${this.host.repo.resolve('HEAD') ?? 'HEAD'}\n`;
+    if (args[0] === 'tag' && args.length === 3) {
+      this.host.repo.tag(args[1]!, args[2]!);
+      return '';
+    }
+    return needsRealGit(`git ${args.join(' ')}`);
   }
 
-  commit(): never {
-    return needsRealGit('commit()');
+  // `at` pins the commit time, an ISO instant such as 2026-02-03T10:00:00Z
+  commit(message: string, at?: string): string {
+    const seconds =
+      at === undefined ? FIRST_COMMIT_TIME + this.commits * 60 : Date.parse(at) / 1000;
+    this.commits += 1;
+    return this.host.repo.commit(message, seconds);
   }
 
   copyTo(): never {

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
-import type { Host } from '../host/fs.ts';
+import type { Host } from '../host/host.ts';
 import type { Universe } from '../universe/walk.ts';
 
 // SPEC §10.3

@@ -5,7 +5,7 @@ import { sortPaths } from '../core/order.ts';
 import { quote } from '../core/quote.ts';
 import { isRepoPath } from '../core/repo-path.ts';
 import type { Lock } from '../core/types.ts';
-import type { Host } from '../host/fs.ts';
+import type { Host } from '../host/host.ts';
 
 const LOCK = 'docstamp-lock.yaml';
 // Historical name from before the rename to docstamp; kept on purpose (§11.1).

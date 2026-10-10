@@ -1,6 +1,6 @@
 import { dirname } from 'node:path';
 import { expect } from 'vitest';
-import { config, scenario } from '../harness/index.ts';
+import { config, scenario } from './harness/index.ts';
 
 scenario(
   '§6 and §13.4 monorepo: root found by walking up, file arguments against cwd',
