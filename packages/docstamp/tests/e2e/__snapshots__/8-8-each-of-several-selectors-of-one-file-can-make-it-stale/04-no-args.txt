@@ -2,9 +2,8 @@ $ docstamp
 exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
-  depends   "package.json#\"scripts.build\""
-  depends   "package.json#\"scripts.test\""
-  depends   "ci.yml#\"jobs.test.steps.1.run\""
+  fragment  "ci.yml#\"jobs.test.steps.1.run\""  (changed)
+  review: git diff -M e4c9ad969194966ad9bc8efae403cf5d806a7ffd -- ci.yml
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
   run update only after the review, never --all just to pass; see docstamp help agents

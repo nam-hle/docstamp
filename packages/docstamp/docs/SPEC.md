@@ -234,6 +234,7 @@ identical needs no Review (Principle 4).
 | `[[Base]]` | a commit Id, or none | the commit *C* of §12.3 when `[[Changes]]` is known, else none |
 | `[[Edited]]` | RepoPath, or none | the *carrier* of §12.3 step 1.4 when `[[Changes]]` is known and that step found the Declaration's own list edited since *C*, else none |
 | `[[Selection]]` | List of SelectionChange in path order, or none | the files that entered or left the selection with that edit (§12.3 step 10), when `[[Edited]]` is not none and it is known, else none |
+| `[[Fragments]]` | List of FragmentChange, or none | the Selected Dependencies whose Fragment changed since *C* (§12.3 step 11), when `[[Changes]]` is known and the Declaration has Selected Dependencies, else none |
 
 A *Reason* is `unrecorded` or `content-changed`; exactly one applies to a `stale` Result.
 
@@ -248,6 +249,10 @@ non-empty List of String, `[[WhitespaceOnly]]`: Boolean, `[[Pair]]`: RepoPath or
 
 A *SelectionChange* is { `[[Status]]`: `added` or `removed`, `[[Path]]`: RepoPath }: a file that the
 edited own list selects and the own list at *C* did not (`added`), or the reverse (`removed`).
+
+A *FragmentChange* is { `[[Path]]`: RepoPath, `[[Select]]`: a plain value (§3.5), `[[Status]]`:
+`changed` or `new` }: a Selected Dependency (§8.7) whose Fragment differs from the one at *C*
+(`changed`), or that has none to compare with at *C* (`new`).
 
 NOTE: The Lockfile keeps one Hash per file, so a Declaration over thousands of files costs one
 entry and the verdict cannot say which dependencies changed. `[[Changes]]` is a best-effort report
@@ -711,9 +716,9 @@ NOTE: A Plugin is user code run in the host runtime, like a script Carrier (§9.
 deterministic and independent of the environment, the clock and the network (§2). Its hashes are
 opaque to docstamp.
 
-NOTE: `list-dependencies` (§13.7) does not call a Plugin. `ChangedSince` (§12.3), `stats` (§13.9)
-and `suggest` (§13.10) do not know Selected Dependencies yet: a stale file with Selected
-Dependencies has `[[Changes]]` *unknown*; `stats` counts a commit that touches the path.
+NOTE: `list-dependencies` (§13.7) does not call a Plugin. `ChangedSince` (§12.3) reports the
+Selected Dependencies whose Fragment changed (step 11); `stats` (§13.9) and `suggest` (§13.10) do
+not know Selected Dependencies yet: `stats` counts a commit that touches the path.
 
 ### 8.8 Builtin Plugins
 
@@ -1359,11 +1364,10 @@ without changing any verdict.
 ### 12.3 ChangedSince
 
 `ChangedSince(root, result, entry)` returns a List of Change, the commit *C* below, and the
-`[[Edited]]` and `[[Selection]]` of step 9, or *unknown*. It is
+`[[Edited]]`, `[[Selection]]` and `[[Fragments]]` of step 9, or *unknown*. It is
 run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
 contain `content-changed`, and whose file has a LockEntry *entry*, or an inline `[[Recorded]]`
-Hash *entry*, and whose Declaration has no Selected Dependency (§8.7 NOTE); for every other Result
-`[[Changes]]` is *unknown*.
+Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
 
 1. Run `git` in Root with every environment variable starting with `GIT_` removed and
    `GIT_OPTIONAL_LOCKS=0` set, so that no inherited repository or index selection applies and
@@ -1403,8 +1407,11 @@ Hash *entry*, and whose Declaration has no Selected Dependency (§8.7 NOTE); for
 4. Keep a Change only if its path is selected by the Declaration's patterns: for `added` and
    `modified`, the path is in `result.[[Resolved]]`; for `deleted`, the path is not
    `result.[[File]]` and `Select(result.[[Dependencies]], « path »)` selects it, since a deleted
-   file is no longer a dependency.
-5. If the Changes are empty and *edited* is false, return *unknown*.
+   file is no longer a dependency. For `added` and `modified` the path must also be selected by
+   `result.[[Dependencies]]`, so a path that only a Selected Dependency names is not a Change
+   (step 11 reports its Fragment).
+5. If the Changes are empty, *edited* is false and the *fragments* of step 11 are empty, return
+   *unknown*.
 6. Set `[[Via]]` of each Change to the patterns of `result.[[Dependencies]]` that have no Negation
    and satisfy `PatternMatches(pattern, path)`, in declaration order (as §13.8 step 4.2 does).
 7. Set `[[WhitespaceOnly]]` of each Change: true iff its status is `modified`,
@@ -1424,8 +1431,9 @@ Hash *entry*, and whose Declaration has no Selected Dependency (§8.7 NOTE); for
    *after*; if there is one, set `[[Pair]]` of *d* to the path of *a* and `[[Pair]]` of *a* to the
    path of *d*. Every other Change has `[[Pair]]` none.
 9. Return the Changes in path order, *C*, which is `[[Base]]` of the Result, the carrier if
-   *edited* is true, else none, which is its `[[Edited]]`, and the selection of step 10, which is
-   its `[[Selection]]`.
+   *edited* is true, else none, which is its `[[Edited]]`, the selection of step 10, which is
+   its `[[Selection]]`, and, when the Declaration has Selected Dependencies, the *fragments* of
+   step 11, which are its `[[Fragments]]`.
 10. If *edited* is false, the selection is none. Otherwise let *old* be the effective patterns
     (§8.6) of the own list as of *C*, its `use` expanded with the Presets of the Configuration now
     (with `config.[[DefaultPresets]]` now when that list has no `use`);
@@ -1434,6 +1442,14 @@ Hash *entry*, and whose Declaration has no Selected Dependency (§8.7 NOTE); for
     `result.[[Resolved]]`, where *U* is the Universe now (§7) without `result.[[File]]`. The
     selection is, in path order, a SelectionChange `added` for each path of *after* that is not in
     *before*, and `removed` for each path of *before* that is not in *after*.
+11. Let *fragments* be empty, and, for each Selected Dependency *e* of `result.[[Selected]]` in the
+    order of §10.4 step 3, add a FragmentChange { `e.[[Path]]`, `e.[[Select]]`, *status* } as
+    follows. Let *now* be the Fragment of *e* in the work tree, as the verdict computed it. Let
+    *old* be the output of `git show <C>:./<path>` run in Root as step 1 does, with CR LF read as
+    LF. Let *then* be `Fragments(e, old)` (§8.7) with the Plugins of now, or none if that `git`
+    command fails, *old* holds a NUL in its first 8192 bytes, or `Fragments` raises. *status* is
+    `new` if *then* is none; `changed` if *then* is not equal to *now* (the same Strings in the
+    same order); otherwise nothing is added.
 
 NOTE: Step 10 resolves the old list against the Universe of now, not of *C*: a file deleted since
 *C* cannot be resolved, so it is never in the selection (it is a `deleted` Change when the edited
@@ -1442,6 +1458,13 @@ side. The selection reads no history beyond the own list at *C* and no file cont
 "which files does this list edit add or drop today", which an `added` or `deleted` Change does not,
 since a file that entered the selection unchanged is no Change. A path can be both a Change and a
 SelectionChange.
+
+NOTE: Step 11 runs a Plugin (user code, §8.7 NOTE) on the old text, in the host, as the verdict
+does on the new. It lists what a reviewer must look at, and never changes a state or a Hash. Its
+limits: the old text is the stored one, so the `hash:` line of an inline file (§10.2 step 4) is not
+removed from it; and step 1.4 reads String patterns only, so a Selected Dependency added to the own
+list since *C* is `new` only when its file or its part did not exist at *C*, and is otherwise
+absent from `[[Fragments]]`.
 
 NOTE: Two paths are paired only when the file was deleted at one and added at the other with
 exactly the same content, as git stores it: a renamed file that was also edited stays a `deleted`
@@ -2151,6 +2174,7 @@ STALE    <file>  (<reason>, <reason>)
   modified  <path>
   added     <path>
   deleted   <dir>  (5 files)
+  fragment  <path>#<select>  (changed)
 ```
 
 - The first line is `STALE` or `INVALID`, padded with spaces to 9 characters, then the
@@ -2167,12 +2191,14 @@ STALE    <file>  (<reason>, <reason>)
     `<n> <status>` with *n* the number of entries of that status, separated by `, `;
   - the *change lines* of §14.3.1. Each is two spaces, the status padded with spaces to 8
     characters, two spaces, and the path as in §14.2 (`  modified  <path>`, `  added     <path>`,
-    `  deleted   <path>`, `  renamed   <from> -> <to>`), or a group line.
+    `  deleted   <path>`, `  renamed   <from> -> <to>`), or a group line;
+  - if `[[Fragments]]` is not none, one *fragment line* per FragmentChange in order, after the change
+    lines: `  fragment  `, the path, `#` and `CanonicalJson(select)` as one String of §14.2, and
+    `  (changed)` or `  (new)`. They are not counted by the summary line.
 - For any other `stale`: one `depends` line per pattern, in declaration order, with the
   `(preset <name>)` marker of §14.6 for a pattern that comes from a Preset, then one `depends` line
   per Selected Dependency (§8.7), in order of appearance: the path, `#` and `CanonicalJson(select)`,
-  as one String of §14.2. A stale Result with Selected Dependencies has no known `[[Changes]]`
-  (§8.7 NOTE), so it always uses `depends` lines.
+  as one String of §14.2.
 
 Then one summary line:
 
@@ -2307,7 +2333,7 @@ Updating the first 10 stale files and running `docstamp` again lists the next 10
 #### 14.3.4 Review Line
 
 For a stale Result with a known `[[Changes]]` that is not empty, or with an `[[Edited]]` that is
-not none, the block ends with one line:
+not none, or with `[[Fragments]]` that are not empty, the block ends with one line:
 
 ```
   review: git diff -M <C> -- <arg> <arg>
@@ -2328,7 +2354,9 @@ renamed file as one rename rather than a deletion and an addition. The *args* ar
   pattern contains `{`, the line is not output.
 
 When `[[Edited]]` is not none and no Change has its path, that path follows the other *args*,
-written as a Change's path is in the first form; it does not count toward the path cap.
+written as a Change's path is in the first form; it does not count toward the path cap. The path of
+each FragmentChange follows in the same way, in order, once, unless a Change or the `[[Edited]]`
+path is already one of the *args*.
 
 When the review line is output in the first form and some of its Change *args* are the path of an
 `added` Change that came from *untracked* (§12.3 step 2, not from *diff*), the review line is
@@ -2406,6 +2434,10 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - `"selection"` follows `dependenciesEdited` when the Result's `[[Selection]]` is not none, and is
   absent otherwise: a List of `{ "status", "path" }`, `status` being `added` or `removed`, in path
   order (§12.3 step 10).
+- `"fragments"` follows `selection` (or `dependenciesEdited`, or `changes`, as far as they are
+  present) when the Result's `[[Fragments]]` is not none, and is absent otherwise: a List of
+  `{ "path", "select", "status" }` in order, `select` written as in `selected` below and `status`
+  being `changed` or `new` (§12.3 step 11).
 - An element of `files` whose Declaration uses a Preset (§8.6) has the members `use` and `origins`
   between `dependencies` and `changes`, as `list-dependencies` has them (below).
 - A member `"selected"` follows `dependencies` (after `use` and `origins` when present) in an
@@ -2903,6 +2935,10 @@ The following are not breaking:
   inline block that has no `hash` line.
 - `[[Selection]]` (§5.4, §12.3 step 10): the selection lines of §14.3 and the member `selection` of
   §14.5, part of the changed-file report; no `changes`, verdict or exit code changes;
+- `[[Fragments]]` (§5.4, §12.3 step 11): the fragment lines of §14.3 and the member `fragments` of
+  §14.5. A stale Result with Selected Dependencies had `changes` `null` and `depends` lines; its
+  `changes` is now a List (possibly empty) and the block lists what changed. The state, the
+  reasons, the Hash and the exit code are unchanged, and the report may vary with the history (§2);
 - the `-M` of the review line and the untracked line (§14.3.4), the `(preset <name>)` marker on a
   `depends` line of `check` (§14.3) and the wording of the second `next:` line for inline files
   (§14.3.3): text layout of §14.3; and the members `use` and `origins` in `check` and `update`

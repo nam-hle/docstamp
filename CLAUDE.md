@@ -148,7 +148,7 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
 - **Fixture**: a plain tree under `tests/e2e/fixtures/<use case>/`; add one when a use case needs
   files the existing ones lack (cwd, nesting, ignore rules). Fixture sources are never formatted,
   linted, type-checked, collected by vitest or scanned by knip; a `docstamp.config.ts` there imports `docstamp` through
-  `linkLib: true`, which links the repo as `node_modules/docstamp`. A fixture file that the fixture's own `.gitignore` ignores (it is the point of the file) is added with `git add -f`, or a fresh `git archive` loses it.
+  `linkLib: true`, which links the repo as `node_modules/docstamp` and keeps it out of git (`.git/info/exclude`), because a committed link would make commit ids differ per machine. A fixture file that the fixture's own `.gitignore` ignores (it is the point of the file) is added with `git add -f`, or a fresh `git archive` loses it.
 - **Snapshots**: only the temp root becomes `<root>`; hashes stay real, which pins hash
   stability. After a deliberate behavior change run `pnpm nadle testE2e -- -u`, then read every changed
   snapshot: a snapshot of a bug is not a test. Obsolete snapshots fail the run: a scenario
@@ -290,7 +290,9 @@ writes them one by one, in that order: never all of stdout first. Each stream al
 §14.1 says; `tests/unit/run.test.ts` pins the interleaving. `reviewLine` (§14.3.4) only builds the
 text of a git command for the reader; `git` still runs in `src/history/` alone, read-only, and
 `isWhitespaceOnly` (§12.3 step 7) makes two more read-only calls there, `renamed` (step 8) three
-(`rev-parse`, `ls-tree`, `hash-object --stdin-paths`), and `editedCarrier` (step 1.4) one `git show`;
+(`rev-parse`, `ls-tree`, `hash-object --stdin-paths`), and `editedCarrier` (step 1.4) one `git show`, and
+`fragmentChanges` (step 11, `src/history/fragments.ts`) one `git show` per selected dependency. It
+never runs a plugin: `cli/run.ts` hands it a `FragmentProbe`, so a plugin still runs only from there;
 `renamedTo` (§12.7) uses `rev-parse`, `ls-tree`, `log -1` and `hash-object --stdin-paths`.
 Every one goes through `git` in `src/history/git.ts`, which applies step 1: no `GIT_*` variables,
 `GIT_OPTIONAL_LOCKS=0` and `-c core.autocrlf=false`.

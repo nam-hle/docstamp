@@ -115,6 +115,13 @@ function withoutRepeatedRenames(
   return [...lines.slice(0, at), same, ...lines.filter((l, i) => i > at && !renames.includes(l))];
 }
 
+// SPEC §14.3: one line per FragmentChange, after the change lines
+function fragmentLines(r: Result): string {
+  return (r.fragments ?? [])
+    .map((f) => `  fragment  ${shown(`${f.path}#${canonicalJson(f.select)}`)}  (${f.status})\n`)
+    .join('');
+}
+
 // SPEC §14.3.4
 function pathspecsOf(dependencies: readonly string[]): string[] | null {
   if (dependencies.some((pattern) => pattern.includes('{'))) return null;
@@ -148,13 +155,15 @@ function headLines(r: Result): string {
 // SPEC §14.3.4
 export function reviewLine(r: Result, rootArg?: string): string {
   if (r.base === undefined || !r.changes) return '';
-  if (r.changes.length === 0 && r.edited === undefined) return '';
+  const fragmentPaths = (r.fragments ?? []).map((f) => f.path);
+  if (r.changes.length === 0 && r.edited === undefined && fragmentPaths.length === 0) return '';
   const byPath = r.changes.length <= REVIEW_PATH_MAX;
   const listed = byPath ? r.changes.map((c) => pathArg(c.path)) : pathspecsOf(r.dependencies);
   if (listed === null) return '';
   const { edited } = r;
-  const extra =
-    edited !== undefined && !r.changes.some((c) => c.path === edited) ? [pathArg(edited)] : [];
+  const extra = [...new Set([...(edited === undefined ? [] : [edited]), ...fragmentPaths])]
+    .filter((path) => !r.changes!.some((c) => c.path === path))
+    .map(pathArg);
   const args = [...listed, ...extra];
   const git = rootArg === undefined ? 'git' : `git -C ${shellQuote(rootArg)}`;
   const review = `  review: ${git} diff -M ${r.base} -- ${args.map(shellQuote).join(' ')}\n`;
@@ -198,9 +207,12 @@ export function checkChunks(
       let block = `${LABEL[r.state].padEnd(9)}${shown(r.file)}`;
       block += r.state === 'stale' ? `  (${r.reasons.join(', ')})\n` : '\n';
       if (r.state === 'stale') {
-        if (r.changes && (r.changes.length > 0 || r.edited !== undefined)) {
+        if (
+          r.changes &&
+          (r.changes.length > 0 || r.edited !== undefined || (r.fragments?.length ?? 0) > 0)
+        ) {
           const lines = withoutRepeatedRenames(changeLines(r.changes), r, renamesShownBy);
-          block += headLines(r) + lines.join('') + reviewLine(r, rootArg);
+          block += headLines(r) + lines.join('') + fragmentLines(r) + reviewLine(r, rootArg);
         } else block += dependsLines(r);
       }
       emit('stdout', block);

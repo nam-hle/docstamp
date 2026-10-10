@@ -78,7 +78,11 @@ describe('§14.3 check text', () => {
   });
   it('an edited own list is its own line, before the summary line', () => {
     const changes = [change('modified', 'src/a.ts')];
-    const edited = res('a.md', 'stale', { changes, edited: 'docstamp.yaml', base: 'c0ffee' });
+    const edited = res('a.md', 'stale', {
+      changes,
+      edited: 'docstamp.yaml',
+      base: 'c0ffee',
+    });
     expect(checkText([edited])).toContain(
       'STALE    a.md  (content-changed)\n  edited    docstamp.yaml  (dependency list)\n' +
         '  modified  src/a.ts\n' +
@@ -86,7 +90,11 @@ describe('§14.3 check text', () => {
     );
   });
   it('an edited own list with no Change prints the edited line and its review line only', () => {
-    const edited = res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee' });
+    const edited = res('a.md', 'stale', {
+      changes: [],
+      edited: 'a.md',
+      base: 'c0ffee',
+    });
     expect(checkText([edited])).toContain(
       'STALE    a.md  (content-changed)\n  edited    a.md  (dependency list)\n' +
         '  review: git diff -M c0ffee -- a.md\n0 ok',
@@ -102,7 +110,12 @@ describe('§14.3 check text', () => {
       { status: 'added' as const, path: 'src/x.test.ts' },
       { status: 'removed' as const, path: 'src/y.ts' },
     ];
-    const r = res('a.md', 'stale', { changes: [], edited: 'a.md', base: 'c0ffee', selection });
+    const r = res('a.md', 'stale', {
+      changes: [],
+      edited: 'a.md',
+      base: 'c0ffee',
+      selection,
+    });
     expect(checkText([r])).toContain(
       '  edited    a.md  (dependency list)\n' +
         '  added     src/x.test.ts  (selection)\n' +
@@ -268,7 +281,10 @@ describe('§14.3.1 renamed lines', () => {
   it('rename lines an earlier block printed become one same line; the review stays', () => {
     const renames = moved('src/old/', 'src/new/', 2);
     const block = (file: string, extra: Change[]) =>
-      res(file, 'stale', { base: 'c0ffee', changes: sorted([...renames, ...extra]) });
+      res(file, 'stale', {
+        base: 'c0ffee',
+        changes: sorted([...renames, ...extra]),
+      });
     const text = checkText([
       block('a.md', []),
       block('b.md', [change('modified', 'src/m.ts')]),
@@ -323,6 +339,54 @@ describe('§14.3.1 whitespace marker', () => {
       '  modified  src/b.ts\n',
       '  modified  "src/my c.ts" (whitespace only)\n',
     ]);
+  });
+});
+
+describe('§14.3 fragment lines', () => {
+  const fragments = [
+    {
+      path: 'package.json',
+      select: 'scripts.build',
+      status: 'changed' as const,
+    },
+    {
+      path: 'docs/a b.md',
+      select: { heading: 'Install' },
+      status: 'new' as const,
+    },
+  ];
+  const base = { changes: [], dependencies: [], base: 'c0ffee', fragments };
+
+  it('follow the change lines, one per fragment, with the canonical select', () => {
+    const text = checkText([
+      res('a.md', 'stale', {
+        ...base,
+        changes: [change('modified', 'src/a.ts')],
+      }),
+    ]);
+    expect(text).toContain(
+      '  modified  src/a.ts\n' +
+        '  fragment  "package.json#\\"scripts.build\\""  (changed)\n' +
+        '  fragment  "docs/a b.md#{\\"heading\\":\\"Install\\"}"  (new)\n',
+    );
+    expect(text).not.toContain('depends');
+  });
+
+  it('make a block with no change a block of fragment lines and a review line', () => {
+    const text = checkText([res('a.md', 'stale', base)]);
+    expect(text).toContain('  fragment  "package.json#\\"scripts.build\\""  (changed)\n');
+    expect(text).toContain("  review: git diff -M c0ffee -- package.json 'docs/a b.md'\n");
+  });
+
+  it('add their paths to the review line once, after the changed paths', () => {
+    const review = reviewLine(
+      res('a.md', 'stale', {
+        ...base,
+        changes: [change('modified', 'package.json')],
+        dependencies: ['package.json'],
+      }),
+    );
+    expect(review).toBe("  review: git diff -M c0ffee -- package.json 'docs/a b.md'\n");
   });
 });
 
@@ -391,7 +455,10 @@ describe('§14.3.4 review line', () => {
   it('an untracked line follows for the untracked paths of the first form', () => {
     const changes = [
       change('added', 'src/my b.ts', { untracked: true }),
-      change('added', 'src/new/a.ts', { pair: 'src/old/a.ts', untracked: true }),
+      change('added', 'src/new/a.ts', {
+        pair: 'src/old/a.ts',
+        untracked: true,
+      }),
       change('deleted', 'src/old/a.ts', { pair: 'src/new/a.ts' }),
     ];
     expect(reviewLine(stale(changes), 'r')).toBe(
@@ -462,8 +529,16 @@ describe('§14.3.3 next lines', () => {
 });
 
 describe('§14.3.2 order of output', () => {
-  const warning = diag('W_EMPTY_EXCLUSION', { file: 'ok.md', subject: '!x', message: 'w.' });
-  const error = diag('E_EMPTY_PATTERN', { file: 'inv.md', subject: 'p', message: 'e.' });
+  const warning = diag('W_EMPTY_EXCLUSION', {
+    file: 'ok.md',
+    subject: '!x',
+    message: 'w.',
+  });
+  const error = diag('E_EMPTY_PATTERN', {
+    file: 'inv.md',
+    subject: 'p',
+    message: 'e.',
+  });
   const orphan = diag('W_ORPHAN', { subject: 'gone.md', message: 'o.' });
   const selected = [
     res('inv.md', 'invalid', { diagnostics: [error] }),
@@ -619,7 +694,10 @@ describe('§14.5 JSON', () => {
       'dependenciesEdited',
       'diagnostics',
     ]);
-    expect(doc.files[0]).toMatchObject({ reasons: ['content-changed'], dependenciesEdited: true });
+    expect(doc.files[0]).toMatchObject({
+      reasons: ['content-changed'],
+      dependenciesEdited: true,
+    });
     expect(doc.files[1]).not.toHaveProperty('dependenciesEdited');
   });
   it('selection follows dependenciesEdited, and use and origins follow dependencies', () => {
@@ -661,7 +739,10 @@ describe('§14.5 JSON', () => {
   });
   it('a change has via, and whitespaceOnly only when true, in this order', () => {
     const changes = [
-      change('modified', 'src/a.ts', { via: ['src', 'src/*.ts'], whitespaceOnly: true }),
+      change('modified', 'src/a.ts', {
+        via: ['src', 'src/*.ts'],
+        whitespaceOnly: true,
+      }),
       change('modified', 'src/b.ts'),
     ];
     const out = jsonText({
@@ -699,7 +780,12 @@ describe('§14.5 JSON', () => {
     );
     expect(doc.files[0].changes).toEqual([
       { status: 'added', path: 'lib/a.ts', via: ['src/**'], pair: 'src/a.ts' },
-      { status: 'deleted', path: 'src/a.ts', via: ['src/**'], pair: 'lib/a.ts' },
+      {
+        status: 'deleted',
+        path: 'src/a.ts',
+        via: ['src/**'],
+        pair: 'lib/a.ts',
+      },
     ]);
   });
   it('onlyStale omits the ok files and still counts them', () => {
@@ -754,7 +840,12 @@ describe('§14.5 JSON', () => {
   });
   it('null for empty file/subject', () => {
     const doc = JSON.parse(
-      jsonText({ mode: 'check', exitCode: 2, selected: [], diagnostics: [diag('E_ROOT')] }),
+      jsonText({
+        mode: 'check',
+        exitCode: 2,
+        selected: [],
+        diagnostics: [diag('E_ROOT')],
+      }),
     );
     expect(doc.diagnostics[0].file).toBeNull();
     expect(doc.diagnostics[0].subject).toBeNull();
@@ -813,10 +904,30 @@ describe('§14.9 suggest text', () => {
           entry(
             'README.md',
             [
-              { pattern: 'src/cli', resolvedCount: 12, staleRate: 1234, status: null },
-              { pattern: '!src/cli/**/*.test.*', resolvedCount: 3, staleRate: null, status: null },
-              { pattern: 'docs', resolvedCount: 140, staleRate: null, status: null },
-              { pattern: 'x.md', resolvedCount: 1, staleRate: 10000, status: null },
+              {
+                pattern: 'src/cli',
+                resolvedCount: 12,
+                staleRate: 1234,
+                status: null,
+              },
+              {
+                pattern: '!src/cli/**/*.test.*',
+                resolvedCount: 3,
+                staleRate: null,
+                status: null,
+              },
+              {
+                pattern: 'docs',
+                resolvedCount: 140,
+                staleRate: null,
+                status: null,
+              },
+              {
+                pattern: 'x.md',
+                resolvedCount: 1,
+                staleRate: 10000,
+                status: null,
+              },
             ],
             ['dist/out.js'],
           ),
@@ -840,15 +951,30 @@ describe('§14.9 suggest text', () => {
   });
   it('a declared file gets a status column and its only declared patterns', () => {
     const rows = [
-      { pattern: 'src/cli', resolvedCount: 12, staleRate: 1234, status: 'declared' as const },
+      {
+        pattern: 'src/cli',
+        resolvedCount: 12,
+        staleRate: 1234,
+        status: 'declared' as const,
+      },
       {
         pattern: '!src/cli/**/*.test.*',
         resolvedCount: 3,
         staleRate: null,
         status: 'declared' as const,
       },
-      { pattern: 'src/cli/a.ts', resolvedCount: 1, staleRate: null, status: 'covered' as const },
-      { pattern: 'x.md', resolvedCount: 1, staleRate: null, status: 'new' as const },
+      {
+        pattern: 'src/cli/a.ts',
+        resolvedCount: 1,
+        staleRate: null,
+        status: 'covered' as const,
+      },
+      {
+        pattern: 'x.md',
+        resolvedCount: 1,
+        staleRate: null,
+        status: 'new' as const,
+      },
     ];
     const declared = ['src/cli', 'old dir', 'src/cli', '!src/cli/**/*.test.*'];
     expect(suggestText([entry('README.md', rows, ['dist/out.js'], declared)], false)).toBe(
@@ -890,7 +1016,12 @@ describe('§14.5 suggest JSON', () => {
         file: 'a.md',
         suggestions: [
           { pattern: 'src', resolvedCount: 2, staleRate: 1234, status: null },
-          { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null, status: null },
+          {
+            pattern: '!src/**/*.test.*',
+            resolvedCount: 1,
+            staleRate: null,
+            status: null,
+          },
         ],
         ignored: ['dist'],
         declared: null,
@@ -906,7 +1037,12 @@ describe('§14.5 suggest JSON', () => {
       file: 'a.md',
       suggestions: [
         { pattern: 'src', resolvedCount: 2, staleRate: 0.1234, status: null },
-        { pattern: '!src/**/*.test.*', resolvedCount: 1, staleRate: null, status: null },
+        {
+          pattern: '!src/**/*.test.*',
+          resolvedCount: 1,
+          staleRate: null,
+          status: null,
+        },
       ],
       ignored: ['dist'],
       declared: null,
@@ -930,7 +1066,12 @@ describe('§14.5 suggest JSON', () => {
             ...files[0]!,
             declared: ['src/**'],
             suggestions: [
-              { pattern: 'src', resolvedCount: 2, staleRate: null, status: 'covered' as const },
+              {
+                pattern: 'src',
+                resolvedCount: 2,
+                staleRate: null,
+                status: 'covered' as const,
+              },
             ],
           },
         ],

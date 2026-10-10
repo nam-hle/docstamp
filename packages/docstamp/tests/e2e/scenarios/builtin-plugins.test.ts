@@ -47,10 +47,15 @@ scenario('§8.8 each of several selectors of one file can make it stale', option
   const test = await repo.run([]);
   expect(test.exit).toBe(1);
   expect(test.stdout).toContain('(content-changed)');
+  expect(test.stdout).toContain('fragment  "package.json#\\"scripts.test\\""  (changed)');
+  expect(test.stdout).not.toContain('scripts.build');
   repo.write('package.json', repo.read('package.json').replace('"jest"', '"vitest"'));
   expect(await repo.run([])).toMatchObject({ exit: 0 });
   repo.write('ci.yml', repo.read('ci.yml').replace('pnpm test', 'pnpm run test'));
-  expect((await repo.run([])).exit).toBe(1);
+  const ci = await repo.run([]);
+  expect(ci.exit).toBe(1);
+  expect(ci.stdout).toContain('(changed)');
+  expect(ci.stdout).toContain('jobs.test.steps.1.run');
 });
 
 scenario('§8.8 a missing value is E_SELECT_NOT_FOUND, one per selector', options, async (repo) => {
