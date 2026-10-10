@@ -132,6 +132,20 @@ export function jsonText(doc: JsonDoc): string {
               ),
             ] as [string, Json],
           ]),
+      ...(r.fragments === undefined
+        ? []
+        : [
+            [
+              'fragments',
+              r.fragments.map((f) =>
+                obj([
+                  ['path', f.path],
+                  ['select', selectJson(f.select)],
+                  ['status', f.status],
+                ]),
+              ),
+            ] as [string, Json],
+          ]),
       ['diagnostics', sortDiagnostics(r.diagnostics).map(diagJson)],
     ];
     if (doc.mode === 'update') members.push(['written', doc.written?.has(r.file) ?? false]);

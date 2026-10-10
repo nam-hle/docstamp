@@ -26,13 +26,19 @@ scenario('§8.7 selected dependency: unrecorded, update, ok', options, async (re
   const update = await repo.run(['update', 'CLAUDE.md']);
   expect(update).toMatchObject({ exit: 0, stdout: 'written  CLAUDE.md\n' });
   repo.commit('review');
-  expect(await repo.run([])).toMatchObject({ exit: 0, stdout: '1 ok, 0 stale, 0 invalid\n' });
+  expect(await repo.run([])).toMatchObject({
+    exit: 0,
+    stdout: '1 ok, 0 stale, 0 invalid\n',
+  });
 });
 
 scenario('§8.7 a change outside the fragment keeps the file ok', options, async (repo) => {
   await reviewed(repo);
   repo.write('docs/guide.md', '# Guide\n\n## Install\n\nRun the installer.\n\n## Usage\n\nNew.\n');
-  expect(await repo.run([])).toMatchObject({ exit: 0, stdout: '1 ok, 0 stale, 0 invalid\n' });
+  expect(await repo.run([])).toMatchObject({
+    exit: 0,
+    stdout: '1 ok, 0 stale, 0 invalid\n',
+  });
 });
 
 scenario('§8.7 a change inside the fragment makes the file stale', options, async (repo) => {
@@ -44,11 +50,60 @@ scenario('§8.7 a change inside the fragment makes the file stale', options, asy
   const stale = await repo.run([]);
   expect(stale.exit).toBe(1);
   expect(stale.stdout).toContain('STALE    CLAUDE.md  (content-changed)');
-  expect(stale.stdout).toContain('depends   "docs/guide.md#\\"Install\\""');
+  expect(stale.stdout).toContain('  fragment  "docs/guide.md#\\"Install\\""  (changed)\n');
+  expect(stale.stdout).toContain('  review: git diff -M ');
+  expect(stale.stdout).not.toContain('depends');
   expect(stale.stdout).not.toMatch(/^ {2}(modified|added|removed)/mu);
   const json = (await repo.run(['--json'])).json();
-  expect(json.files[0].changes).toBeNull();
+  expect(json.files[0].changes).toEqual([]);
+  expect(json.files[0].fragments).toEqual([
+    { path: 'docs/guide.md', select: 'Install', status: 'changed' },
+  ]);
   expect(json.files[0].selected[0].select).toBe('Install');
+});
+
+scenario(
+  '§12.3 step 11 a patterns change and a fragment change are both listed',
+  options,
+  async (repo) => {
+    await reviewed(repo);
+    repo.append('src/a.ts', '// edit\n');
+    repo.write(
+      'docs/guide.md',
+      '# Guide\n\n## Install\n\nRun it twice.\n\n## Usage\n\nRun the tool.\n',
+    );
+    const stale = await repo.run([]);
+    expect(stale.exit).toBe(1);
+    expect(stale.stdout).toContain('  modified  src/a.ts\n');
+    expect(stale.stdout).toContain('  fragment  "docs/guide.md#\\"Install\\""  (changed)\n');
+    expect(stale.stdout).toContain('review: git diff -M ');
+    expect(stale.stdout).toContain('src/a.ts');
+    expect(stale.stdout).toContain('docs/guide.md');
+  },
+);
+
+scenario('§12.3 step 11 an unchanged fragment is not listed', options, async (repo) => {
+  await reviewed(repo);
+  repo.append('src/a.ts', '// edit\n');
+  repo.write('docs/guide.md', '# Guide\n\n## Install\n\nRun the installer.\n\n## Usage\n\nNew.\n');
+  const stale = await repo.run([]);
+  expect(stale.exit).toBe(1);
+  expect(stale.stdout).toContain('  modified  src/a.ts\n');
+  expect(stale.stdout).not.toContain('fragment');
+  const json = (await repo.run(['--json'])).json();
+  expect(json.files[0].fragments).toEqual([]);
+});
+
+scenario('§12.3 step 11 a part that did not exist at the review is new', options, async (repo) => {
+  repo.write('docs/guide.md', '# Guide\n\n## Usage\n\nRun the tool.\n');
+  repo.write('docstamp.config.ts', configWith(`['src/**']`));
+  await reviewed(repo);
+  repo.write('docstamp.config.ts', configWith(`['src/**', ${selectInstall}]`));
+  repo.write('docs/guide.md', '# Guide\n\n## Install\n\nRun it.\n\n## Usage\n\nRun the tool.\n');
+  repo.append('src/a.ts', '// edit\n');
+  const stale = await repo.run([]);
+  expect(stale.exit).toBe(1);
+  expect(stale.stdout).toContain('  fragment  "docs/guide.md#\\"Install\\""  (new)\n');
 });
 
 scenario('§8.7 E_SELECT_NOT_FOUND', options, async (repo) => {
@@ -151,6 +206,6 @@ scenario('§10.4 whole and fragment on one path', options, async (repo) => {
   repo.write('docs/guide.md', '# Guide\n\n## Install\n\nRun the installer.\n\n## Usage\n\nNew.\n');
   const stale = await repo.run([]);
   expect(stale.exit).toBe(1);
-  expect(stale.stdout).toContain('depends   docs/**');
-  expect(stale.stdout).toContain('depends   "docs/guide.md#\\"Install\\""');
+  expect(stale.stdout).toContain('  modified  docs/guide.md\n');
+  expect(stale.stdout).not.toContain('fragment');
 });

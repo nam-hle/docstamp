@@ -97,6 +97,13 @@ export interface SelectionChange {
   readonly path: string;
 }
 
+// SPEC §5.4
+export interface FragmentChange {
+  readonly path: string;
+  readonly select: Json;
+  readonly status: 'changed' | 'new';
+}
+
 export interface Result {
   readonly file: string;
   readonly dependencies: readonly string[];
@@ -112,6 +119,7 @@ export interface Result {
   readonly base?: string;
   readonly edited?: string;
   readonly selection?: readonly SelectionChange[];
+  readonly fragments?: readonly FragmentChange[];
 }
 
 // SPEC §13.8: `dependents`, `cycle` and `repeated` are set only by --transitive

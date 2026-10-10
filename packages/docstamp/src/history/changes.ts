@@ -1,6 +1,7 @@
 import { comparePaths } from '../core/order.ts';
-import type { Change, Result } from '../core/types.ts';
+import type { Change, FragmentChange, Result } from '../core/types.ts';
 import { git } from './git.ts';
+import { fragmentChanges, type FragmentProbe } from './fragments.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
 import { parseBlock } from '../inline/block.ts';
 import { recordedHash as inlineHash, scanFrontmatter } from '../inline/frontmatter.ts';
@@ -239,6 +240,8 @@ export interface ChangedReport {
   readonly edited?: string;
   // SPEC §12.3 step 10: the own list at the base commit, when it was edited since
   readonly ownThen?: OwnList;
+  // SPEC §12.3 step 11: present when the Declaration has Selected Dependencies
+  readonly fragments?: readonly FragmentChange[];
 }
 
 // SPEC §12.3; `entry` is the LockEntry, or the recorded Hash of an inline file; `whitespace`
@@ -249,6 +252,7 @@ export function changedSince(
   entry: string,
   inline = false,
   whitespace: Map<string, boolean> = new Map(),
+  probe?: FragmentProbe,
 ): ChangedReport | null {
   try {
     if (git(root, ['rev-parse', '--is-shallow-repository']).trim() !== 'false') return null;
@@ -265,13 +269,14 @@ export function changedSince(
     if (patterns.some((p) => p === null)) return null;
     const parsed = patterns as ParsedPattern[];
     const changes = buildChanges(diff, untracked, {
-      resolved: new Set(result.resolved),
+      resolved: new Set(result.resolved.filter((path) => select(parsed, [path]).length === 1)),
       selectsDeleted: (path) => path !== result.file && select(parsed, [path]).length === 1,
       viaOf: (path) => viaOf(result.dependencies, parsed, path),
     });
     if (changes === null) return null;
     const edited = editedCarrier(root, id, result, inline);
-    if (changes.length === 0 && edited === null) return null;
+    const fragments = probe === undefined ? undefined : fragmentChanges(root, id, probe);
+    if (changes.length === 0 && edited === null && !fragments?.length) return null;
     const whitespaceOnly = (path: string): boolean => {
       const key = `${id}\0${path}`;
       const known = whitespace.get(key) ?? isWhitespaceOnly(root, id, path);
@@ -284,6 +289,7 @@ export function changedSince(
     return {
       changes: renamed(root, id, marked),
       base: id,
+      ...(fragments === undefined ? {} : { fragments }),
       ...(edited === null ? {} : { edited: edited.carrier, ownThen: edited.ownThen }),
     };
   } catch {

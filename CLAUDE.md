@@ -290,7 +290,9 @@ writes them one by one, in that order: never all of stdout first. Each stream al
 §14.1 says; `tests/unit/run.test.ts` pins the interleaving. `reviewLine` (§14.3.4) only builds the
 text of a git command for the reader; `git` still runs in `src/history/` alone, read-only, and
 `isWhitespaceOnly` (§12.3 step 7) makes two more read-only calls there, `renamed` (step 8) three
-(`rev-parse`, `ls-tree`, `hash-object --stdin-paths`), and `editedCarrier` (step 1.4) one `git show`;
+(`rev-parse`, `ls-tree`, `hash-object --stdin-paths`), and `editedCarrier` (step 1.4) one `git show`, and
+`fragmentChanges` (step 11, `src/history/fragments.ts`) one `git show` per selected dependency. It
+never runs a plugin: `cli/run.ts` hands it a `FragmentProbe`, so a plugin still runs only from there;
 `renamedTo` (§12.7) uses `rev-parse`, `ls-tree`, `log -1` and `hash-object --stdin-paths`.
 Every one goes through `git` in `src/history/git.ts`, which applies step 1: no `GIT_*` variables,
 `GIT_OPTIONAL_LOCKS=0` and `-c core.autocrlf=false`.

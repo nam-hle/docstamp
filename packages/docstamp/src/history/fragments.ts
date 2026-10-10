@@ -1,0 +1,40 @@
+import type { FragmentChange, SelectedEntry } from '../core/types.ts';
+import { git } from './git.ts';
+
+// What the CLI gives the history: the plugin calls, which never run in this module
+export interface FragmentProbe {
+  readonly entries: readonly SelectedEntry[];
+  readonly now: (entry: SelectedEntry) => readonly string[] | null;
+  readonly earlier: (entry: SelectedEntry, text: string) => readonly string[] | null;
+}
+
+const sameStrings = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((value, index) => value === b[index]);
+
+// SPEC §12.3 step 11: the text of a path at a commit as a plugin reads it, null when not text
+function textAt(root: string, commit: string, path: string): string | null {
+  try {
+    const old = git(root, ['show', `${commit}:./${path}`]);
+    return old.slice(0, 8192).includes('\0') ? null : old.replaceAll('\r\n', '\n');
+  } catch {
+    return null;
+  }
+}
+
+// SPEC §12.3 step 11
+export function fragmentChanges(
+  root: string,
+  commit: string,
+  { entries, now, earlier }: FragmentProbe,
+): FragmentChange[] {
+  const changes: FragmentChange[] = [];
+  for (const entry of entries) {
+    const current = now(entry);
+    if (current === null) continue;
+    const old = textAt(root, commit, entry.path);
+    const before = old === null ? null : earlier(entry, old);
+    const status = before === null ? 'new' : sameStrings(before, current) ? null : 'changed';
+    if (status !== null) changes.push({ path: entry.path, select: entry.select, status });
+  }
+  return changes;
+}

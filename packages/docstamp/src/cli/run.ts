@@ -1,10 +1,10 @@
 import { lstatSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
-import type { Json } from '../core/types.ts';
+import type { Json, SelectedEntry } from '../core/types.ts';
 import { canonicalJson } from '../plugin/canonical.ts';
 import { claim, runExtract } from '../plugin/plugins.ts';
-import { sortPaths } from '../core/order.ts';
+import { comparePaths, sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
 import { dependentTree, dependentsOf } from '../engine/reverse.ts';
@@ -12,6 +12,7 @@ import { selectionChanges } from '../engine/selection.ts';
 import { statistics, type FileStats } from '../engine/stats.ts';
 import { fileHash, selectableText } from '../hash/hash.ts';
 import { changedSince } from '../history/changes.ts';
+import type { FragmentProbe } from '../history/fragments.ts';
 import { renamedTo } from '../history/renamed.ts';
 import { replay } from '../history/replay.ts';
 import { stampFile } from '../inline/read-inline.ts';
@@ -71,6 +72,7 @@ function isEntry(path: string): boolean {
 
 interface Evaluated {
   results: Result[];
+  fragmentProbe: (entries: readonly SelectedEntry[]) => FragmentProbe;
   declarations: Declaration[];
   universe: Universe;
   presets: ReadonlyMap<string, readonly string[]>;
@@ -114,6 +116,30 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
         text: selectableText(root, universe, path),
       }),
   );
+  // SPEC §12.3 step 11: the Fragments rule of §8.7, with null where it would raise
+  const fragmentOf = (hashes: () => string[], entry: SelectedEntry): readonly string[] | null => {
+    try {
+      const found = hashes();
+      return found.length === 1 || (found.length > 1 && entry.match === 'all') ? found : null;
+    } catch (e) {
+      if (e instanceof Raised) return null;
+      throw e;
+    }
+  };
+  const fragmentProbe = (entries: readonly SelectedEntry[]): FragmentProbe => ({
+    entries: [...entries].sort(
+      (a, b) =>
+        comparePaths(a.path, b.path) ||
+        comparePaths(canonicalJson(a.select), canonicalJson(b.select)),
+    ),
+    now: (entry) => fragmentOf(() => extract([entry.path, entry.select]), entry),
+    earlier: (entry, text) =>
+      fragmentOf(
+        () =>
+          runExtract(claim(plugins, entry.path), { path: entry.path, select: entry.select, text }),
+        entry,
+      ),
+  });
   const lock = readLockFor();
   const renames = new Map<string, string | null>();
   const fs: EngineFs = {
@@ -136,7 +162,7 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
       fs,
     ),
   );
-  return { declarations, universe, presets, defaultPresets, results, lock };
+  return { declarations, universe, presets, defaultPresets, results, lock, fragmentProbe };
 }
 
 // SPEC §12.2
@@ -171,9 +197,10 @@ function withChanges(
   if (result.state !== 'stale' || !result.reasons.includes('content-changed') || !entry) {
     return result;
   }
-  // §8.7 NOTE: no changed-file report for fragments yet
-  if (declaration?.selected?.length) return { ...result, changes: null };
-  const report = changedSince(root, result, entry, inline !== undefined, whitespace);
+  const probe = declaration?.selected?.length
+    ? evaluated.fragmentProbe(declaration.selected)
+    : undefined;
+  const report = changedSince(root, result, entry, inline !== undefined, whitespace, probe);
   if (report === null) return { ...result, changes: null };
   const { universe, presets, defaultPresets } = evaluated;
   const { ownThen } = report;
@@ -194,6 +221,7 @@ function withChanges(
     base: report.base,
     ...(report.edited === undefined ? {} : { edited: report.edited }),
     ...(selection === null ? {} : { selection }),
+    ...(report.fragments === undefined ? {} : { fragments: report.fragments }),
   };
 }
 

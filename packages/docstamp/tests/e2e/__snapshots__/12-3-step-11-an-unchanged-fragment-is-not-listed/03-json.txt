@@ -27,14 +27,16 @@ exit: 1
           "match": "one"
         }
       ],
-      "changes": [],
-      "fragments": [
+      "changes": [
         {
-          "path": "docs/guide.md",
-          "select": "Install",
-          "status": "changed"
+          "status": "modified",
+          "path": "src/a.ts",
+          "via": [
+            "src/**"
+          ]
         }
       ],
+      "fragments": [],
       "diagnostics": []
     }
   ],

@@ -109,7 +109,12 @@ describe('action comment renderer', () => {
         stale({
           changes: [
             { status: 'added', path: 'src/b.ts', via: ['src/**'] },
-            { status: 'deleted', path: 'src/a.ts', via: ['src/**'], pair: 'src/b.ts' },
+            {
+              status: 'deleted',
+              path: 'src/a.ts',
+              via: ['src/**'],
+              pair: 'src/b.ts',
+            },
           ],
         }),
       ],
@@ -146,6 +151,28 @@ describe('action comment renderer', () => {
     });
     expect(body).toContain('dependency list was edited');
     expect(body).toContain('added `src/new.ts` (selection)');
+  });
+
+  it('lists the selected parts whose fragment changed', () => {
+    const body = renderComment({
+      ...base,
+      exitCode: 1,
+      summary: { ok: 0, stale: 1, invalid: 0 },
+      files: [
+        stale({
+          changes: [],
+          fragments: [
+            {
+              path: 'package.json',
+              select: 'scripts.build',
+              status: 'changed',
+            },
+          ],
+        }),
+      ],
+    });
+    expect(body).toContain('- fragment `package.json#"scripts.build"` (changed)');
+    expect(body).not.toContain('Git history is not available');
   });
 
   it('keeps the update command and the footer when the changes are capped', () => {

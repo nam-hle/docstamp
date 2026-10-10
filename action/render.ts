@@ -24,6 +24,7 @@ interface FileReport {
   changes: Change[] | null;
   dependenciesEdited?: boolean;
   selection?: { status: string; path: string }[];
+  fragments?: { path: string; select: unknown; status: string }[];
   diagnostics: Diagnostic[];
 }
 
@@ -74,13 +75,17 @@ const renderStale = (file: FileReport): string[] => {
   const selection = (file.selection ?? []).map(
     (entry) => `- ${entry.status} ${code(entry.path)} (selection)`,
   );
+  const fragments = (file.fragments ?? []).map(
+    (entry) =>
+      `- fragment ${code(`${entry.path}#${JSON.stringify(entry.select)}`)} (${entry.status})`,
+  );
   const unknown = file.reasons.includes('unrecorded')
     ? 'No lock entry yet, so the file was never reviewed. Review it against these dependencies:'
     : 'Git history is not available, so the changed files are unknown. Diff these dependencies:';
   const body =
     file.changes === null
       ? [...edited, ...selection, ...patternLines(file, unknown)]
-      : [...edited, ...selection, ...capped(changeLines(file.changes))];
+      : [...edited, ...selection, ...capped(changeLines(file.changes)), ...fragments];
   const next = `After review: ${code(`docstamp update ${file.file}`)}`;
   return [`#### ${code(file.file)} (stale)`, '', ...body, '', next];
 };
