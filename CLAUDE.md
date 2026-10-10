@@ -309,28 +309,40 @@ first, bump the Lockfile version, then regenerate the literals and review each d
   are all named `docstamp`.
 - `.github/workflows/ci.yml` runs `pnpm test` (the whole gate, one step) on every pull request and
   push to `main`, in one `Test (<os>)` matrix job for Linux, macOS and Windows, then
-  `npm pack ./packages/docstamp --dry-run` to prove the tarball builds. It does not dry-run
-  `npm publish`: that fails once the version in `packages/docstamp/package.json` is already on npm,
-  which is true after every release. A `Docs gate`
+  `npm pack --dry-run` of each package (`packages/docstamp`, `packages/docstamp-plugin-markdown`)
+  to prove the tarballs build. It does not dry-run `npm publish`: that fails once the version in a
+  package's `package.json` is already on npm, which is true after every release. A `Docs gate`
   job packs the build and runs `action.yml` on this repository (`uses: ./`), the same file users
   call, so the Action is dogfooded and the PR comment appears on our own pull requests.
-- `.github/workflows/release-please.yml` keeps a `chore: release vX.Y.Z` pull request open from
-  the commits on `main` that touch `packages/docstamp`; it writes the version and `CHANGELOG.md`
-  there. Never edit either by hand.
-- Merging that pull request tags `vX.Y.Z` and creates the GitHub release, then starts
-  `.github/workflows/publish.yml` for that tag. It builds, runs the unit, end-to-end and pack
-  tests (`pnpm nadle verifyRelease`, not the docs self-check) and **stages** the version on npm
-  with `npm stage publish --provenance`, run in `packages/docstamp`. There is no npm token: npm trusts this workflow through a
-  Trusted Publisher configured on npmjs.com for `nam-hle/docstamp` and `publish.yml` (the job holds
-  `id-token: write`; npm 11.5.1 or newer, with `npm stage`, is checked first). That Trusted
-  Publisher may only stage: the version goes live when a person approves it with 2FA, with
-  `npm stage list docstamp` then `npm stage approve <stage-id>`, or on npmjs.com. A release is not
-  done until it is approved. Provenance requires the repository to be public.
+- Each package has its own release. `.github/workflows/release-please.yml` keeps one pull request
+  per package open from the commits on `main` that touch that package's folder
+  (`separate-pull-requests`); it writes the version and `CHANGELOG.md` there. Never edit either by
+  hand. A commit that touches no package folder (the root docs, the Action, CI) releases nothing.
+- Tags: `docstamp` keeps the plain `vX.Y.Z`, because that tag is the ref of the GitHub Action
+  (`nam-hle/docstamp@vX.Y.Z`); every other package is tagged `<package>-vX.Y.Z`
+  (`docstamp-plugin-markdown-v0.1.0`). A package outside the repository root has its release
+  outputs prefixed with its path, so `release-please.yml` reads `packages/<name>--tag_name`; the
+  unprefixed `release_created` and `tag_name` are never set.
+- Merging a release pull request tags the release and creates the GitHub release, then starts
+  `.github/workflows/publish.yml` for that tag. The workflow resolves the package from the tag,
+  builds and runs its tests (`pnpm nadle verifyRelease` for `docstamp`, `verifyReleaseMarkdown` for
+  the plugin, never the docs self-check) and **stages** the version on npm with
+  `npm stage publish --provenance`, run in the package folder. There is no npm token: npm trusts
+  this workflow through a Trusted Publisher configured on npmjs.com for `nam-hle/docstamp` and
+  `publish.yml`, one per package (the job holds `id-token: write`; npm 11.5.1 or newer, with
+  `npm stage`, is checked first). That Trusted Publisher may only stage: the version goes live when
+  a person approves it with 2FA, with `npm stage list <package>` then
+  `npm stage approve <stage-id>`, or on npmjs.com. A release is not done until it is approved.
+  Provenance requires the repository to be public. A new package needs its Trusted Publisher
+  created on npmjs.com before its first release.
 - To retry a failed publish, run the Publish workflow from `main` with the release tag as input.
-  It refuses a tag that is not on `main` or whose version differs from
-  `packages/docstamp/package.json`. Nothing else stages.
-- Version bumps edit `packages/docstamp/package.json`, so the docs deliberately do not depend on
-  it: a release must not make the docs check fail.
+  It refuses a tag that is not on `main`, that names no package, or whose version differs from the
+  package's `package.json`. Nothing else stages.
+- Version bumps edit each package's `package.json`, so the docs deliberately do not depend on it: a
+  release must not make the docs check fail.
+- `docstamp-plugin-markdown` declares `docstamp` as a peer (`>=0.6.0`, the first version with the
+  plugin API) and a `workspace:*` development dependency for its types; consumers ignore the
+  development dependency.
 
 ## Public repository
 
