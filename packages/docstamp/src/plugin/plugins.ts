@@ -4,7 +4,14 @@ import { Raised, diag } from '../core/diagnostics.ts';
 import { select as selectPaths } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 import { builtinPlugins } from './builtin.ts';
-import type { DocstampPlugin, ExtractInput, ExtractResult } from './types.ts';
+import type { DocstampPlugin, ExtractInput, ExtractResult, LineRange } from './types.ts';
+
+// SPEC §8.7: what a plugin returned, validated
+export interface Extracted {
+  readonly hashes: string[];
+  readonly focus?: readonly string[];
+  readonly lines?: readonly LineRange[];
+}
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -88,8 +95,15 @@ export function claim(plugins: readonly DocstampPlugin[], path: string): Docstam
   throw new Raised([diag('E_PLUGIN', { subject: path, message })]);
 }
 
+const isLineRange = (value: unknown): value is LineRange =>
+  isObject(value) &&
+  Number.isInteger(value['start']) &&
+  Number.isInteger(value['end']) &&
+  (value['start'] as number) >= 1 &&
+  (value['end'] as number) >= (value['start'] as number);
+
 // SPEC §8.7: the host's error text never reaches a message (§5.5)
-export function runExtract(plugin: DocstampPlugin, input: ExtractInput): string[] {
+export function runExtract(plugin: DocstampPlugin, input: ExtractInput): Extracted {
   const fail = (why: string): never => {
     const message = `Plugin "${plugin.name}" ${why} for "${input.path}".`;
     throw new Raised([diag('E_SELECT', { subject: input.path, message })]);
@@ -102,10 +116,17 @@ export function runExtract(plugin: DocstampPlugin, input: ExtractInput): string[
   }
   let promised: boolean;
   let hashes: unknown;
+  let focus: unknown;
+  let lines: unknown;
   try {
     promised = isObject(result) && typeof result['then'] === 'function';
-    hashes = isObject(result) ? result['hashes'] : undefined;
-    if (Array.isArray(hashes)) hashes = Array.from(hashes as unknown[]);
+    const read = (name: string): unknown => {
+      const member = isObject(result) ? result[name] : undefined;
+      return Array.isArray(member) ? Array.from(member as unknown[]) : member;
+    };
+    hashes = read('hashes');
+    focus = read('focus');
+    lines = read('lines');
   } catch {
     return fail('returned a value that could not be read');
   }
@@ -121,5 +142,21 @@ export function runExtract(plugin: DocstampPlugin, input: ExtractInput): string[
   if (!hashes.every((hash) => typeof hash === 'string' && hash !== '')) {
     return fail('returned a hash that is not a non-empty string');
   }
-  return hashes as string[];
+  const same = (list: unknown[]) => list.length === hashes.length;
+  if (
+    focus !== undefined &&
+    !(Array.isArray(focus) && same(focus) && focus.every((f) => typeof f === 'string' && f !== ''))
+  ) {
+    return fail('returned a focus that is not one non-empty string per hash');
+  }
+  if (lines !== undefined && !(Array.isArray(lines) && same(lines) && lines.every(isLineRange))) {
+    return fail('returned lines that are not one { start, end } per hash');
+  }
+  return {
+    hashes: hashes as string[],
+    ...(focus === undefined ? {} : { focus: focus as string[] }),
+    ...(lines === undefined
+      ? {}
+      : { lines: (lines as LineRange[]).map(({ start, end }) => ({ start, end })) }),
+  };
 }

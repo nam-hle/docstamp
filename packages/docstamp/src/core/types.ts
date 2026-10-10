@@ -102,6 +102,9 @@ export interface FragmentChange {
   readonly path: string;
   readonly select: Json;
   readonly status: 'changed' | 'new';
+  // SPEC §8.7, §5.4: what the plugin says the part is and where it is; advisory
+  readonly focus?: readonly string[];
+  readonly lines?: readonly { readonly start: number; readonly end: number }[];
 }
 
 export interface Result {

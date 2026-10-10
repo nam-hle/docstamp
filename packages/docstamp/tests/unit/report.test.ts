@@ -390,6 +390,43 @@ describe('§14.3 fragment lines', () => {
   });
 });
 
+describe('§14.3 fragment lines: focus and lines', () => {
+  const one = (extra: object) =>
+    checkText([
+      res('a.md', 'stale', {
+        changes: [],
+        dependencies: [],
+        base: 'c0ffee',
+        fragments: [{ path: 'g.md', select: 'Install', status: 'changed' as const, ...extra }],
+      }),
+    ]);
+
+  it('adds the focus after the status', () => {
+    expect(one({ focus: ['section "Install"'] })).toContain(
+      '  fragment  "g.md#\\"Install\\""  (changed)  section "Install"\n',
+    );
+  });
+
+  it('adds the lines after the focus, and alone without one', () => {
+    expect(one({ focus: ['section'], lines: [{ start: 3, end: 9 }] })).toContain(
+      '(changed)  section (lines 3-9)\n',
+    );
+    expect(one({ lines: [{ start: 3, end: 9 }] })).toContain('(changed)  lines 3-9\n');
+  });
+
+  it('joins the parts of a match all selector with a semicolon', () => {
+    expect(
+      one({
+        focus: ['a', 'b'],
+        lines: [
+          { start: 1, end: 2 },
+          { start: 7, end: 8 },
+        ],
+      }),
+    ).toContain('(changed)  a (lines 1-2); b (lines 7-8)\n');
+  });
+});
+
 describe('§14.3.4 review line', () => {
   const stale = (changes: Change[], dependencies = ['src/**']) =>
     res('a.md', 'stale', { changes, dependencies, base: 'c0ffee' });

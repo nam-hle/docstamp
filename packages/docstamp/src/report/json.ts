@@ -142,6 +142,20 @@ export function jsonText(doc: JsonDoc): string {
                   ['path', f.path],
                   ['select', selectJson(f.select)],
                   ['status', f.status],
+                  ...(f.focus === undefined ? [] : [['focus', [...f.focus]] as [string, Json]]),
+                  ...(f.lines === undefined
+                    ? []
+                    : [
+                        [
+                          'lines',
+                          f.lines.map((range) =>
+                            obj([
+                              ['start', range.start],
+                              ['end', range.end],
+                            ]),
+                          ),
+                        ] as [string, Json],
+                      ]),
                 ]),
               ),
             ] as [string, Json],

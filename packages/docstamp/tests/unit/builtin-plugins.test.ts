@@ -208,3 +208,28 @@ describe('§8.7 runExtract with a builtin', () => {
     expect(diagnostic?.code).toBe('E_SELECT');
   });
 });
+
+describe('§8.8 Extract: focus', () => {
+  const focus = (text: string, select: string) =>
+    json!.extract({ path: 'a.json', text, select }).focus;
+
+  it('names the value path and the type of the value', () => {
+    const text = '{"s":"x","n":1,"b":true,"z":null,"l":[1],"o":{"k":1}}';
+    expect(focus(text, 's')).toEqual(['s (string)']);
+    expect(focus(text, 'n')).toEqual(['n (number)']);
+    expect(focus(text, 'b')).toEqual(['b (boolean)']);
+    expect(focus(text, 'z')).toEqual(['z (null)']);
+    expect(focus(text, 'l')).toEqual(['l (list)']);
+    expect(focus(text, 'o')).toEqual(['o (object)']);
+  });
+
+  it('is the same for yaml', () => {
+    expect(yaml!.extract({ path: 'a.yaml', text: 'a:\n  b: 1\n', select: 'a.b' }).focus).toEqual([
+      'a.b (number)',
+    ]);
+  });
+
+  it('gives none for a path that is not there', () => {
+    expect(json!.extract({ path: 'a.json', text: '{}', select: 'x' })).toEqual({ hashes: [] });
+  });
+});

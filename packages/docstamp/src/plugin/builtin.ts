@@ -3,7 +3,7 @@ import { parseAllDocuments } from 'yaml';
 
 import type { Json } from '../core/types.ts';
 import { canonicalJson } from './canonical.ts';
-import type { DocstampPlugin, ExtractInput } from './types.ts';
+import type { DocstampPlugin, ExtractInput, ExtractResult } from './types.ts';
 
 type Step = string;
 
@@ -79,11 +79,20 @@ function toJson(value: unknown): Json {
 const digest = (value: Json): string =>
   createHash('sha256').update(canonicalJson(value), 'utf8').digest('hex');
 
+// SPEC §8.8: the type of the value, in words
+const typeName = (value: Json): string => {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'list';
+  return typeof value === 'object' ? 'object' : typeof value;
+};
+
 function extractFrom(parse: (text: string) => unknown) {
-  return ({ text, select }: ExtractInput): { hashes: string[] } => {
+  return ({ text, select }: ExtractInput): ExtractResult => {
     const steps = parseValuePath(select);
     const found = walk(parse(text), steps);
-    return { hashes: found.found ? [digest(toJson(found.value))] : [] };
+    if (!found.found) return { hashes: [] };
+    const value = toJson(found.value);
+    return { hashes: [digest(value)], focus: [`${select as string} (${typeName(value)})`] };
   };
 }
 

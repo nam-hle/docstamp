@@ -150,13 +150,13 @@ describe('§8.7 runExtract', () => {
   const run = (extract: unknown) => runExtract(validatePlugins([plugin({ extract })])[0]!, input);
 
   it('returns the hashes in order', () => {
-    expect(run(() => ({ hashes: ['a', 'b'] }))).toEqual(['a', 'b']);
+    expect(run(() => ({ hashes: ['a', 'b'] }))).toEqual({ hashes: ['a', 'b'] });
   });
 
   it('passes path, text and select', () => {
-    expect(run((i: unknown) => ({ hashes: [JSON.stringify(i)] }))).toEqual([
-      '{"path":"a.md","text":"x","select":"Install"}',
-    ]);
+    expect(run((i: unknown) => ({ hashes: [JSON.stringify(i)] }))).toEqual({
+      hashes: ['{"path":"a.md","text":"x","select":"Install"}'],
+    });
   });
 
   it.each([
@@ -172,6 +172,39 @@ describe('§8.7 runExtract', () => {
     ['returns a non-string hash', () => ({ hashes: [1] })],
   ])('raises E_SELECT when the plugin %s', (_, extract) => {
     expect(raised(() => run(extract)).map((d) => d.code)).toEqual(['E_SELECT']);
+  });
+
+  it('returns the focus and the lines of each hash when the plugin gives them', () => {
+    const result = {
+      hashes: ['a', 'b'],
+      focus: ['section "A"', 'section "B"'],
+      lines: [
+        { start: 1, end: 3 },
+        { start: 5, end: 5 },
+      ],
+    };
+    expect(run(() => result)).toEqual(result);
+  });
+
+  it('leaves focus and lines out when the plugin gives none', () => {
+    expect(Object.keys(run(() => ({ hashes: ['a'] })))).toEqual(['hashes']);
+  });
+
+  it.each([
+    ['a focus that is not a list', { hashes: ['a'], focus: 'x' }],
+    ['a focus of the wrong length', { hashes: ['a'], focus: ['x', 'y'] }],
+    ['an empty focus string', { hashes: ['a'], focus: [''] }],
+    ['a non-string focus', { hashes: ['a'], focus: [1] }],
+    ['lines that are not a list', { hashes: ['a'], lines: { start: 1, end: 1 } }],
+    ['lines of the wrong length', { hashes: ['a'], lines: [] }],
+    ['a line range that starts at 0', { hashes: ['a'], lines: [{ start: 0, end: 1 }] }],
+    ['a line range that ends before it starts', { hashes: ['a'], lines: [{ start: 3, end: 2 }] }],
+    ['a fractional line', { hashes: ['a'], lines: [{ start: 1.5, end: 2 }] }],
+    ['a line range without an end', { hashes: ['a'], lines: [{ start: 1 }] }],
+  ])('raises E_SELECT for %s', (_, result) => {
+    const [diagnostic] = raised(() => run(() => result));
+    expect(diagnostic?.code).toBe('E_SELECT');
+    expect(diagnostic?.message).toMatch(/focus|lines/u);
   });
 
   it('says synchronous when the plugin returns a promise', () => {

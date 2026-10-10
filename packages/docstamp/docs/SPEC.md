@@ -251,8 +251,9 @@ A *SelectionChange* is { `[[Status]]`: `added` or `removed`, `[[Path]]`: RepoPat
 edited own list selects and the own list at *C* did not (`added`), or the reverse (`removed`).
 
 A *FragmentChange* is { `[[Path]]`: RepoPath, `[[Select]]`: a plain value (§3.5), `[[Status]]`:
-`changed` or `new` }: a Selected Dependency (§8.7) whose Fragment differs from the one at *C*
-(`changed`), or that has none to compare with at *C* (`new`).
+`changed` or `new`, `[[Focus]]`: List of String or none, `[[Lines]]`: List of { `start`, `end` } or none }: a
+Selected Dependency (§8.7) whose Fragment differs from the one at *C* (`changed`), or that has none to
+compare with at *C* (`new`). `[[Focus]]` and `[[Lines]]` are those of its Fragment now.
 
 NOTE: The Lockfile keeps one Hash per file, so a Declaration over thousands of files costs one
 entry and the verdict cannot say which dependencies changed. `[[Changes]]` is a best-effort report
@@ -701,12 +702,20 @@ Plugin.
 
 `Fragments(entry, text)`, with *plugin* = `Claim(plugins, entry.[[Path]])`, calls
 `plugin.[[Extract]]` synchronously with { `path`, `text`, `select` } and reads { `hashes` }, a List
-of non-empty Strings, in the order given. It raises `E_SELECT` (`[[Subject]]` the path) if the call
+of non-empty Strings, in the order given, and, when present, { `focus` }, a List of non-empty Strings,
+and { `lines` }, a List of { `start`, `end` } integers with 1 <= `start` <= `end`, each List of the length of
+`hashes`. It raises `E_SELECT` (`[[Subject]]` the path) if the call
 throws, returns a Promise, does not return such a List, or if the file is a link, binary (§10.1) or
-not valid UTF-8. *text* is the content of §10.2 steps 1 to 4 after the `file` tag. Then, with *n*
+not valid UTF-8, or if `focus` or `lines` is present and not such a List. *text* is the content of §10.2
+steps 1 to 4 after the `file` tag. Then, with *n*
 the length of `hashes`: `E_SELECT_NOT_FOUND` if *n* is 0; `E_SELECT_AMBIGUOUS` if *n* > 1 and
-`[[Match]]` is `one`; else the Fragment is `hashes`. For both, `[[Subject]]` is the path, `#` and
-`CanonicalJson(select)`.
+`[[Match]]` is `one`; else the Fragment is `hashes`, with its *Focus* (`focus`) and *Lines* (`lines`) when
+given. For both errors, `[[Subject]]` is the path, `#` and `CanonicalJson(select)`.
+
+NOTE: *Focus* says in words what a hash is of, as a reader of the report needs it (`section "Install"
+(level 2)`, `function createUser`), and *Lines* where it is in *text*, which has the line count of the
+file (CR LF is read as LF, §10.2). Both are written by the Plugin, advisory, and never part of a Hash
+or a verdict (§10.4 reads `hashes` only); they appear in the changed-file report (§12.3 step 11).
 
 NOTE: A Selected Dependency whose path is not in the Universe, or is the file itself, is
 `E_EMPTY_PATTERN` with `[[Subject]]` the path (§8.5 steps 2 and 3). A file whose `dependencies`
@@ -749,8 +758,10 @@ Paths.
    which docstamp reports as `E_SELECT_NOT_FOUND`.
 3. If *value* holds anywhere a Number that is not finite, or a value that is not a null, Boolean,
    Number, String, List or Map with String keys, throw.
-4. Return `{ hashes: « h » }` with *h* the SHA-256 of the UTF-8 encoding of `CanonicalJson(value)`
-   (§3.5), as 64 lowercase hexadecimal digits.
+4. Return `{ hashes: « h », focus: « f » }` with *h* the SHA-256 of the UTF-8 encoding of
+   `CanonicalJson(value)` (§3.5), as 64 lowercase hexadecimal digits, and *f* the *select*, a space and
+   in parentheses the type of *value*: `null`, `boolean`, `number`, `string`, `list` or `object`
+   (`scripts.build (string)`). They give no `lines`.
 
 So a key reordered, a comment, the quoting style and the indentation never change a Fragment, and a
 changed value does. `null` at the path is a value like any other. `match` has no effect: the
@@ -1443,8 +1454,8 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
     selection is, in path order, a SelectionChange `added` for each path of *after* that is not in
     *before*, and `removed` for each path of *before* that is not in *after*.
 11. Let *fragments* be empty, and, for each Selected Dependency *e* of `result.[[Selected]]` in the
-    order of §10.4 step 3, add a FragmentChange { `e.[[Path]]`, `e.[[Select]]`, *status* } as
-    follows. Let *now* be the Fragment of *e* in the work tree, as the verdict computed it. Let
+    order of §10.4 step 3, add a FragmentChange { `e.[[Path]]`, `e.[[Select]]`, *status*, the Focus and
+    the Lines of *now* } as follows. Let *now* be the Fragment of *e* in the work tree, as the verdict computed it. Let
     *old* be the output of `git show <C>:./<path>` run in Root as step 1 does, with CR LF read as
     LF. Let *then* be `Fragments(e, old)` (§8.7) with the Plugins of now, or none if that `git`
     command fails, *old* holds a NUL in its first 8192 bytes, or `Fragments` raises. *status* is
@@ -2194,7 +2205,10 @@ STALE    <file>  (<reason>, <reason>)
     `  deleted   <path>`, `  renamed   <from> -> <to>`), or a group line;
   - if `[[Fragments]]` is not none, one *fragment line* per FragmentChange in order, after the change
     lines: `  fragment  `, the path, `#` and `CanonicalJson(select)` as one String of §14.2, and
-    `  (changed)` or `  (new)`. They are not counted by the summary line.
+    `  (changed)` or `  (new)`, then, if the FragmentChange has a Focus or Lines, two spaces and a
+    description of each part, joined by `; `: its Focus String, followed by `(lines <start>-<end>)`
+    after a space when Lines is given (`lines <start>-<end>` alone when there is no Focus). They are
+    not counted by the summary line.
 - For any other `stale`: one `depends` line per pattern, in declaration order, with the
   `(preset <name>)` marker of §14.6 for a pattern that comes from a Preset, then one `depends` line
   per Selected Dependency (§8.7), in order of appearance: the path, `#` and `CanonicalJson(select)`,
@@ -2437,7 +2451,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - `"fragments"` follows `selection` (or `dependenciesEdited`, or `changes`, as far as they are
   present) when the Result's `[[Fragments]]` is not none, and is absent otherwise: a List of
   `{ "path", "select", "status" }` in order, `select` written as in `selected` below and `status`
-  being `changed` or `new` (§12.3 step 11).
+  being `changed` or `new` (§12.3 step 11), then `"focus"` (a List of String) and `"lines"` (a List of
+  `{ "start", "end" }`) when the FragmentChange has them, and without them otherwise.
 - An element of `files` whose Declaration uses a Preset (§8.6) has the members `use` and `origins`
   between `dependencies` and `changes`, as `list-dependencies` has them (below).
 - A member `"selected"` follows `dependencies` (after `use` and `origins` when present) in an
@@ -2937,7 +2952,8 @@ The following are not breaking:
   §14.5, part of the changed-file report; no `changes`, verdict or exit code changes;
 - `[[Fragments]]` (§5.4, §12.3 step 11): the fragment lines of §14.3 and the member `fragments` of
   §14.5. A stale Result with Selected Dependencies had `changes` `null` and `depends` lines; its
-  `changes` is now a List (possibly empty) and the block lists what changed. The state, the
+  `changes` is now a List (possibly empty) and the block lists what changed, with the Focus and the
+  Lines of the part when its Plugin gives them (§8.7). Both are advisory. The state, the
   reasons, the Hash and the exit code are unchanged, and the report may vary with the history (§2);
 - the `-M` of the review line and the untracked line (§14.3.4), the `(preset <name>)` marker on a
   `depends` line of `check` (§14.3) and the wording of the second `next:` line for inline files

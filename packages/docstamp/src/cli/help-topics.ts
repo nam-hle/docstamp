@@ -247,7 +247,7 @@ document starts with version (2), mode (the command) and exitCode, and ends with
 global ones, each { code, severity, file, subject, message }, file and subject null when empty.
 Consumers must ignore members they do not know: later releases only add members.
 
-- check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited; fragments (a list of { path, select, status }) appears when it has selected dependencies; use and origins when it uses presets (use is [] when they are only default-presets).
+- check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited; fragments (a list of { path, select, status }, with focus and lines when the plugin gives them) appears when it has selected dependencies; use and origins when it uses presets (use is [] when they are only default-presets).
 - update: as check, with written true or false on each file and a top-level removed list. A written file reports state ok.
 - list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and origins with presets, default-presets included.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive each dependent also has dependents, cycle and repeated.

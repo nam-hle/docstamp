@@ -50,14 +50,22 @@ scenario('§8.7 a change inside the fragment makes the file stale', options, asy
   const stale = await repo.run([]);
   expect(stale.exit).toBe(1);
   expect(stale.stdout).toContain('STALE    CLAUDE.md  (content-changed)');
-  expect(stale.stdout).toContain('  fragment  "docs/guide.md#\\"Install\\""  (changed)\n');
+  expect(stale.stdout).toContain(
+    '  fragment  "docs/guide.md#\\"Install\\""  (changed)  section "Install" (level 2) (lines 3-6)\n',
+  );
   expect(stale.stdout).toContain('  review: git diff -M ');
   expect(stale.stdout).not.toContain('depends');
   expect(stale.stdout).not.toMatch(/^ {2}(modified|added|removed)/mu);
   const json = (await repo.run(['--json'])).json();
   expect(json.files[0].changes).toEqual([]);
   expect(json.files[0].fragments).toEqual([
-    { path: 'docs/guide.md', select: 'Install', status: 'changed' },
+    {
+      path: 'docs/guide.md',
+      select: 'Install',
+      status: 'changed',
+      focus: ['section "Install" (level 2)'],
+      lines: [{ start: 3, end: 6 }],
+    },
   ]);
   expect(json.files[0].selected[0].select).toBe('Install');
 });
@@ -75,7 +83,9 @@ scenario(
     const stale = await repo.run([]);
     expect(stale.exit).toBe(1);
     expect(stale.stdout).toContain('  modified  src/a.ts\n');
-    expect(stale.stdout).toContain('  fragment  "docs/guide.md#\\"Install\\""  (changed)\n');
+    expect(stale.stdout).toContain(
+      '  fragment  "docs/guide.md#\\"Install\\""  (changed)  section "Install" (level 2) (lines 3-6)\n',
+    );
     expect(stale.stdout).toContain('review: git diff -M ');
     expect(stale.stdout).toContain('src/a.ts');
     expect(stale.stdout).toContain('docs/guide.md');
@@ -103,7 +113,9 @@ scenario('§12.3 step 11 a part that did not exist at the review is new', option
   repo.append('src/a.ts', '// edit\n');
   const stale = await repo.run([]);
   expect(stale.exit).toBe(1);
-  expect(stale.stdout).toContain('  fragment  "docs/guide.md#\\"Install\\""  (new)\n');
+  expect(stale.stdout).toContain(
+    '  fragment  "docs/guide.md#\\"Install\\""  (new)  section "Install" (level 2) (lines 3-6)\n',
+  );
 });
 
 scenario('§8.7 E_SELECT_NOT_FOUND', options, async (repo) => {

@@ -3,7 +3,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import type { Json, SelectedEntry } from '../core/types.ts';
 import { canonicalJson } from '../plugin/canonical.ts';
-import { claim, runExtract } from '../plugin/plugins.ts';
+import { claim, runExtract, type Extracted } from '../plugin/plugins.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
@@ -117,10 +117,11 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
       }),
   );
   // SPEC §12.3 step 11: the Fragments rule of §8.7, with null where it would raise
-  const fragmentOf = (hashes: () => string[], entry: SelectedEntry): readonly string[] | null => {
+  const fragmentOf = (found: () => Extracted, entry: SelectedEntry): Extracted | null => {
     try {
-      const found = hashes();
-      return found.length === 1 || (found.length > 1 && entry.match === 'all') ? found : null;
+      const extracted = found();
+      const { length } = extracted.hashes;
+      return length === 1 || (length > 1 && entry.match === 'all') ? extracted : null;
     } catch (e) {
       if (e instanceof Raised) return null;
       throw e;
@@ -151,7 +152,7 @@ function evaluateDeclarations(root: string, readLockFor: () => Lock, hashFiles: 
     },
     fileHash: hashFiles ? memoizeHash((p) => fileHash(root, universe, p)) : () => '',
     // list mode never calls a plugin (§13.7)
-    extractHashes: hashFiles ? (path, select) => extract([path, select]) : () => [''],
+    extractHashes: hashFiles ? (path, select) => extract([path, select]).hashes : () => [''],
   };
   const results = declarations.map((b) =>
     evaluate(

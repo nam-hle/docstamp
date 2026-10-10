@@ -1,11 +1,12 @@
 import type { FragmentChange, SelectedEntry } from '../core/types.ts';
+import type { Extracted } from '../plugin/plugins.ts';
 import { git } from './git.ts';
 
 // What the CLI gives the history: the plugin calls, which never run in this module
 export interface FragmentProbe {
   readonly entries: readonly SelectedEntry[];
-  readonly now: (entry: SelectedEntry) => readonly string[] | null;
-  readonly earlier: (entry: SelectedEntry, text: string) => readonly string[] | null;
+  readonly now: (entry: SelectedEntry) => Extracted | null;
+  readonly earlier: (entry: SelectedEntry, text: string) => Extracted | null;
 }
 
 const sameStrings = (a: readonly string[], b: readonly string[]): boolean =>
@@ -33,8 +34,17 @@ export function fragmentChanges(
     if (current === null) continue;
     const old = textAt(root, commit, entry.path);
     const before = old === null ? null : earlier(entry, old);
-    const status = before === null ? 'new' : sameStrings(before, current) ? null : 'changed';
-    if (status !== null) changes.push({ path: entry.path, select: entry.select, status });
+    const status =
+      before === null ? 'new' : sameStrings(before.hashes, current.hashes) ? null : 'changed';
+    if (status === null) continue;
+    const { focus, lines } = current;
+    changes.push({
+      path: entry.path,
+      select: entry.select,
+      status,
+      ...(focus === undefined ? {} : { focus }),
+      ...(lines === undefined ? {} : { lines }),
+    });
   }
   return changes;
 }

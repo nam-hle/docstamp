@@ -2,7 +2,14 @@ import { sortDiagnostics } from '../core/diagnostics.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
 import { needsQuoting, quote, shellQuote } from '../core/quote.ts';
 import { canonicalJson } from '../plugin/canonical.ts';
-import type { Change, Diagnostic, Result, ReverseDependent, ReverseEntry } from '../core/types.ts';
+import type {
+  Change,
+  Diagnostic,
+  FragmentChange,
+  Result,
+  ReverseDependent,
+  ReverseEntry,
+} from '../core/types.ts';
 import type { FileStats } from '../engine/stats.ts';
 import type { StatsWindow } from './json.ts';
 
@@ -115,10 +122,26 @@ function withoutRepeatedRenames(
   return [...lines.slice(0, at), same, ...lines.filter((l, i) => i > at && !renames.includes(l))];
 }
 
+// SPEC §14.3: the Focus and Lines of each part, in words
+function partsOf(f: FragmentChange): string {
+  const count = Math.max(f.focus?.length ?? 0, f.lines?.length ?? 0);
+  const parts = Array.from({ length: count }, (_, index) => {
+    const range = f.lines?.[index];
+    const lines = range === undefined ? '' : `lines ${range.start}-${range.end}`;
+    const focus = f.focus?.[index];
+    if (focus === undefined) return lines;
+    return lines === '' ? focus : `${focus} (${lines})`;
+  });
+  return parts.length === 0 ? '' : `  ${parts.join('; ')}`;
+}
+
 // SPEC §14.3: one line per FragmentChange, after the change lines
 function fragmentLines(r: Result): string {
   return (r.fragments ?? [])
-    .map((f) => `  fragment  ${shown(`${f.path}#${canonicalJson(f.select)}`)}  (${f.status})\n`)
+    .map((f) => {
+      const subject = shown(`${f.path}#${canonicalJson(f.select)}`);
+      return `  fragment  ${subject}  (${f.status})${partsOf(f)}\n`;
+    })
     .join('');
 }
 
