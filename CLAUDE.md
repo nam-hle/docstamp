@@ -105,7 +105,7 @@ Inside `packages/docstamp/`:
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
 │   ├── inline/           # inline declarations: frontmatter scan, block parse, keys, schema, stamp, block write (§5.6, §9.6)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
-│   ├── plugin/           # plugin types, canonical JSON, validation, claim, guarded extract (§8.7, §9.5)
+│   ├── plugin/           # plugin types, canonical JSON, validation, claim, guarded extract, the builtin JSON and YAML plugins (§8.7, §8.8, §9.5)
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)

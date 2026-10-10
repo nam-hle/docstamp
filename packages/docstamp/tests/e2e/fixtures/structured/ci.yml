@@ -1,0 +1,6 @@
+# CI
+jobs:
+  test:
+    steps:
+      - uses: actions/checkout
+      - run: pnpm test

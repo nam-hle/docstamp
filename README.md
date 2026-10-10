@@ -223,6 +223,39 @@ A doc's patterns are its own `dependencies`, then each preset's patterns in `use
 - **Warnings.** A preset exclusion that matches no file raises no `W_EMPTY_EXCLUSION`; a preset inclusion that matches nothing is `E_EMPTY_PATTERN` naming the preset. List exclusion presets last: `use: [no-tests, more-src]` selects the tests again and warns `W_SHADOWED_EXCLUSION`.
 - **`dependencies` stays required**, with at least one pattern of the doc's own. With `--json`, a doc that uses presets also has `use` and `origins`. Details: [SPEC §8.6](packages/docstamp/docs/SPEC.md#86-presets), `docstamp help presets`.
 
+## Depend on one value of a JSON or YAML file
+
+`package.json`, a CI workflow or any `.json`, `.yaml` or `.yml` file can be depended on by value, with no plugin and in any configuration file or inline block. `select` is a dotted path, and the same file may appear in as many entries as you like:
+
+```yaml
+version: 2
+files:
+  CLAUDE.md:
+    dependencies:
+      - { path: package.json, select: scripts.build }
+      - { path: package.json, select: scripts.test }
+      - { path: ci.yml, select: jobs.test.steps.1.run }
+```
+
+```console
+$ docstamp
+STALE    CLAUDE.md  (unrecorded)
+  depends   "package.json#\"scripts.build\""
+  depends   "package.json#\"scripts.test\""
+  depends   "ci.yml#\"jobs.test.steps.1.run\""
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+$ docstamp update CLAUDE.md
+written  CLAUDE.md
+```
+
+Editing `scripts.lint` or `version` of `package.json` leaves `CLAUDE.md` `ok`; editing `scripts.test` makes it stale.
+
+- **The value is hashed, not its text.** Key order, comments, quoting and indentation never matter; a changed value, or a changed type (`"1"` is not `1`), does. A selected object or list counts as a whole.
+- **Dotted path.** `scripts.build`, `items.0.name` (a list index), and `["a.b"].c` for a key that holds a dot. A path that is not there is `E_SELECT_NOT_FOUND`, one per entry. Text that does not parse, a repeated YAML key, or a YAML file with several documents is `E_SELECT`. YAML merge keys (`<<`) are an ordinary key.
+- **A plugin of your own wins.** A registered plugin that claims a file replaces the builtin one for it ([SPEC §8.8](packages/docstamp/docs/SPEC.md#88-builtin-plugins)).
+
 ## Depend on part of a file (plugins)
 
 A pattern depends on a whole file. When a doc rests on one section of a long guide, an edit to any other section still makes it stale. A *plugin* teaches docstamp to hash one part of a file: you write it, register it in a script configuration, and name the part with `select`. docstamp stays format-agnostic; the plugin decides what a selector means ([SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies)).
@@ -307,12 +340,12 @@ next: review each stale file against its dependencies, then run: docstamp update
   run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
-- **One part, by default.** `select` is any plain value with finite numbers only, passed to the plugin as it is. Two entries with the same `path` and `select` are one dependency: the first wins, with its `match`. The plugin returning no hash is `E_SELECT_NOT_FOUND`, and more than one is `E_SELECT_AMBIGUOUS`, unless the entry says `match: 'all'`, which hashes every part found. An invalid plugin, or two claiming one file, is `E_PLUGIN`; no plugin claiming the file, or a plugin that throws on it, is `E_SELECT` ([SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies)).
+- **One part, by default.** `select` is any plain value with finite numbers only, passed to the plugin as it is. Two entries with the same `path` and `select` are one dependency: the first wins, with its `match`. The plugin returning no hash is `E_SELECT_NOT_FOUND`, and more than one is `E_SELECT_AMBIGUOUS`, unless the entry says `match: 'all'`, which hashes every part found. An invalid plugin, or two claiming one file, is `E_PLUGIN`; no plugin claiming the file (JSON and YAML files are claimed by builtin ones), or a plugin that throws on it, is `E_SELECT` ([SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies)).
 - **Script configuration only.** `plugins` is a key of `docstamp.config.ts` or `.js`, not of `docstamp.yaml` or an inline block ([SPEC §9.5](packages/docstamp/docs/SPEC.md#95-script-carriers)).
 - **A literal path.** `path` names one file, never a glob.
 - **No changed-file list yet.** A stale file with selected dependencies prints its declaration, as above, and `changes` in `--json` is `null`; read the part yourself.
 - **Determinism is the plugin author's duty.** A plugin runs in your process and docstamp trusts its hashes. Keep it independent of the clock, the network and the environment.
-- **Ready-made plugins.** `docstamp-plugin-markdown` selects a section by its heading, so you need not write the one above: [packages/docstamp-plugin-markdown](packages/docstamp-plugin-markdown#readme), with its own [SPEC](packages/docstamp-plugin-markdown/SPEC.md). `docstamp-plugin-js` selects a top-level declaration of a JavaScript or TypeScript file by its name: [packages/docstamp-plugin-js](packages/docstamp-plugin-js#readme), with its own [SPEC](packages/docstamp-plugin-js/SPEC.md). Neither is published yet. docstamp itself ships no plugin.
+- **Ready-made plugins.** `docstamp-plugin-markdown` selects a section by its heading, so you need not write the one above: [packages/docstamp-plugin-markdown](packages/docstamp-plugin-markdown#readme), with its own [SPEC](packages/docstamp-plugin-markdown/SPEC.md). `docstamp-plugin-js` selects a top-level declaration of a JavaScript or TypeScript file by its name: [packages/docstamp-plugin-js](packages/docstamp-plugin-js#readme), with its own [SPEC](packages/docstamp-plugin-js/SPEC.md). Neither is published yet. docstamp itself ships only the JSON and YAML plugins described above.
 
 ## Proposing dependencies
 
