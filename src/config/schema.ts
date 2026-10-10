@@ -1,4 +1,7 @@
-import { PATTERN_SCHEMA, PRESET_NAME } from './value.ts';
+import { PATTERN_SCHEMA, PRESET_NAME, SELECTED_SCHEMA } from './value.ts';
+
+// SPEC §8.7, §9.3: a Pattern or a Selected Dependency
+const DEPENDENCY = { anyOf: [PATTERN_SCHEMA, SELECTED_SCHEMA] } as const;
 
 // SPEC §9.3
 const USE = { type: 'array', uniqueItems: true, items: { type: 'string' } } as const;
@@ -30,7 +33,7 @@ const configSchema = {
         additionalProperties: false,
         required: ['dependencies'],
         properties: {
-          dependencies: { type: 'array', minItems: 1, items: PATTERN_SCHEMA },
+          dependencies: { type: 'array', minItems: 1, items: DEPENDENCY },
           use: USE,
         },
       },

@@ -18,3 +18,15 @@ export const PRESET_NAME = /^[a-z][a-z0-9-]*$/u;
 
 // SPEC §8.1: the schemas reject the two invalid patterns a typo most often leaves
 export const PATTERN_SCHEMA = { type: 'string', minLength: 1, not: { const: '!' } } as const;
+
+// SPEC §8.7
+export const SELECTED_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['path', 'select'],
+  properties: {
+    path: { type: 'string', minLength: 1 },
+    select: {},
+    match: { enum: ['one', 'all'] },
+  },
+} as const;

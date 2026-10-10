@@ -1,7 +1,9 @@
+import { fromYaml } from '../config/from-yaml.ts';
+import { SELECTED_MESSAGE, parseSelected } from '../config/selected.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
 import { diag } from '../core/diagnostics.ts';
 import { unknownKeyMessage } from '../core/did-you-mean.ts';
-import type { Declaration, Diagnostic } from '../core/types.ts';
+import type { Declaration, Diagnostic, SelectedEntry } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { hashOnLine, type Scan } from './frontmatter.ts';
 import { BLOCK_KEYS, HASH } from './keys.ts';
@@ -26,8 +28,15 @@ export function parseBlock(file: string, scan: Scan, defaults = false): ParsedBl
     dependencies: readonly string[],
     recorded: string | null,
     use: readonly string[] | null = null,
+    selected: readonly SelectedEntry[] = [],
   ): ParsedBlock => ({
-    declaration: { file, dependencies, ...(use === null ? {} : { use }), inline: { recorded } },
+    declaration: {
+      file,
+      dependencies,
+      ...(selected.length > 0 ? { selected } : {}),
+      ...(use === null ? {} : { use }),
+      inline: { recorded },
+    },
     problems,
   });
 
@@ -61,13 +70,22 @@ export function parseBlock(file: string, scan: Scan, defaults = false): ParsedBl
   }
 
   const listed = keys.get('dependencies')?.value;
+  // §9.6.2 step 6, §8.7: Strings are Patterns, maps are Selected Dependencies
+  const items = Array.isArray(listed) && listed.length > 0 ? listed : null;
+  const mapItems = items?.filter((item) => typeof item !== 'string') ?? [];
+  const shapeOk = items !== null && mapItems.every(isMap);
+  const parsedEntries = shapeOk ? mapItems.map((item) => parseSelected(fromYaml(item))) : [];
+  const selected = parsedEntries.filter((entry) => entry !== null);
   const dependencies =
-    Array.isArray(listed) && listed.length > 0 && listed.every((p) => typeof p === 'string')
-      ? (listed as string[])
+    shapeOk && selected.length === parsedEntries.length
+      ? items.filter((item) => typeof item === 'string')
       : null;
   if (dependencies === null) {
     if (listed !== undefined || unknown.length === 0) {
-      block('dependencies', 'The dependencies key must hold a non-empty list of patterns.');
+      block(
+        'dependencies',
+        shapeOk ? SELECTED_MESSAGE : 'The dependencies key must hold a non-empty list of patterns.',
+      );
     }
   } else {
     for (const pattern of dependencies) {
@@ -105,5 +123,5 @@ export function parseBlock(file: string, scan: Scan, defaults = false): ParsedBl
   if (value !== undefined && !wellFormed) {
     block('hash', 'Write the hash as "hash:" and 64 lowercase hex digits on one line.');
   }
-  return done(dependencies ?? [], wellFormed ? (value as string) : null, use);
+  return done(dependencies ?? [], wellFormed ? (value as string) : null, use, selected);
 }

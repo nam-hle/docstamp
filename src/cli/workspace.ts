@@ -4,6 +4,7 @@ import { comparePaths } from '../core/order.ts';
 import type { Declaration, Diagnostic } from '../core/types.ts';
 import { expandPresets } from '../engine/presets.ts';
 import { readInline } from '../inline/read-inline.ts';
+import type { DocstampPlugin } from '../plugin/types.ts';
 import { computeUniverse, type Universe } from '../universe/walk.ts';
 
 export interface Workspace {
@@ -12,11 +13,12 @@ export interface Workspace {
   attached: Diagnostic[];
   presets: ReadonlyMap<string, readonly string[]>;
   defaultPresets: readonly string[];
+  plugins: readonly DocstampPlugin[];
 }
 
 // SPEC §12.2 steps 1 to 5: configured and inline Declarations over one Universe
 export function loadWorkspace(root: string): Workspace {
-  const { config, attached, present } = readConfig(root);
+  const { config, attached, present, plugins } = readConfig(root);
   const universe = computeUniverse(root, config);
   const inline = readInline(root, universe, config.include, config.defaultPresets.length > 0);
   universe.marked = inline.marked;
@@ -44,6 +46,7 @@ export function loadWorkspace(root: string): Workspace {
     universe,
     presets: config.presets,
     defaultPresets: config.defaultPresets,
+    plugins,
     declarations,
     attached: [
       ...attached,
