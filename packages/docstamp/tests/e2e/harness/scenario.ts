@@ -18,9 +18,12 @@ import {
   copyFixture,
   hermeticEnv,
   restoreModes,
-  type Session,
+  type DiskSession,
 } from './repo.ts';
 import { spawnSync } from 'node:child_process';
+import { slugOf } from '../../harness/core.ts';
+
+export { config } from '../../harness/core.ts';
 
 export interface ScenarioOptions {
   fixture?: string;
@@ -31,15 +34,9 @@ export interface ScenarioOptions {
 
 type Body = (repo: Repo) => Promise<void> | void;
 
-export const slugOf = (name: string): string =>
-  name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/gu, '-')
-    .replace(/^-+|-+$/gu, '');
-
 const seen = new Set<string>();
 
-function prepare(options: ScenarioOptions, session: Session): Repo {
+function prepare(options: ScenarioOptions, session: DiskSession): Repo {
   const root = join(session.base, 'repo');
   mkdirSync(root);
   mkdirSync(session.home);
@@ -63,8 +60,8 @@ function prepare(options: ScenarioOptions, session: Session): Repo {
   return new Repo(root, session);
 }
 
-function assertNoObsoleteSnapshots(session: Session): void {
-  const folder = join(E2E_DIR, '__snapshots__', session.slug);
+function assertNoObsoleteSnapshots(session: DiskSession): void {
+  const folder = session.snapshotDir;
   const present = existsSync(folder) ? readdirSync(folder) : [];
   const obsolete = present.filter((file) => !session.produced.has(file));
   if (obsolete.length > 0) {
@@ -84,11 +81,12 @@ export function scenario(name: string, second: ScenarioOptions | Body, third?: B
   const register = options.skipIf === true ? it.skip : it;
   register(name, async (context) => {
     const base = realpathSync(mkdtempSync(join(tmpdir(), 'docstamp-e2e-')));
-    const session: Session = {
+    const session: DiskSession = {
       expect: context.expect,
       skip: (reason) => context.skip(reason),
       slug,
       base,
+      snapshotDir: join(E2E_DIR, '__snapshots__', slug),
       home: join(base, 'home'),
       counter: 0,
       produced: new Set<string>(),
@@ -104,12 +102,3 @@ export function scenario(name: string, second: ScenarioOptions | Body, third?: B
     }
   });
 }
-
-export const config = (files: Record<string, string[]>, extra = ''): string => {
-  const entries = Object.entries(files).map(
-    ([file, patterns]) =>
-      `  ${JSON.stringify(file)}:\n    dependencies:\n` +
-      patterns.map((pattern) => `      - ${JSON.stringify(pattern)}\n`).join(''),
-  );
-  return `version: 2\n${extra}files:\n${entries.join('')}`;
-};

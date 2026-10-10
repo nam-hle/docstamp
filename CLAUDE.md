@@ -65,7 +65,7 @@ Node.js >= 24. ESM only.
 ## The gate
 
 `pnpm test` is `nadle test --continue`: it runs format check, lint, types, knip, the build, every
-test suite (unit, Action, end-to-end, pack) and `docstamp` itself, in parallel where the task graph
+test suite (unit and scenarios, Action, end-to-end, pack) and `docstamp` itself, in parallel where the task graph
 allows, and reports every failure. Run it before committing.
 Nothing narrower is a substitute: a single vitest file or a successful build is iteration, not
 verification. If the gate cannot run, say which steps did.
@@ -115,8 +115,13 @@ Inside `packages/docstamp/`:
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json and schema-frontmatter.json
 ├── tests/
-│   ├── helpers/          # temp-repo fixture builder, golden tree (§17.7)
+│   ├── helpers/          # temp-repo fixture builder, in-memory host, golden tree (§17.7)
+│   ├── harness/          # core.ts: what a scenario repo shares, on disk or in memory
 │   ├── unit/             # unit tests, grouped by module
+│   ├── scenarios/        # behavior of the CLI, in this process on a memory tree (see Scenarios)
+│   │   ├── harness/      # scenario() and the memory Repo
+│   │   ├── *.test.ts     # one file per area, each test a scenario
+│   │   └── __snapshots__/<scenario>/NN-<args>.txt
 │   └── e2e/              # the built CLI, spawned as a child process (see End-to-end tests)
 │       ├── harness/      # scenario(), the Repo helpers, snapshot format
 │       ├── scenarios/    # one file per area, each test a scenario
@@ -128,6 +133,17 @@ Inside `packages/docstamp/`:
 ├── tsup.config.ts, tsconfig.json, tsconfig.lib.json, vitest.config.ts
 └── package.json, README.md (the short npm page), CHANGELOG.md, LICENSE
 ```
+
+## Scenarios
+
+Most behavior is tested as a scenario: `scenario(name, { fixture?, git? }, async (repo) => ...)` from
+`tests/scenarios/harness`, with the same `repo` helpers and snapshot format as an end-to-end
+test below, but the tree is built in memory and `repo.run` calls `run(host, ...)` in this process,
+so a scenario takes milliseconds and needs neither a temp directory nor the built CLI. A scenario
+cannot use `git`, `commit`, `at`, `copyTo` or `shallowClone` (they throw), a script Carrier, a plugin
+loaded from `node_modules`, `--version`, or a property of a real file (its mode, inode or mtime):
+that scenario is an end-to-end test. `pnpm nadle testUnit` runs the unit tests and the scenarios.
+`tests/e2e/scenarios/snapshot-guard.test.ts` checks the snapshots of both suites.
 
 ## End-to-end tests
 

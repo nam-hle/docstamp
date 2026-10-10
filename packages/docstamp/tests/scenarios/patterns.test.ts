@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { config, scenario, type Repo } from '../harness/index.ts';
+import { config, scenario, type Repo } from './harness/index.ts';
 
 const fixture = 'patterns';
 

@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { scenario, type Repo } from '../harness/index.ts';
+import { scenario, type Repo } from './harness/index.ts';
 
 const fixture = 'crlf-and-license';
 

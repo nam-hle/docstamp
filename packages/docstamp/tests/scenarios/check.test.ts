@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { scenario } from '../harness/index.ts';
+import { scenario } from './harness/index.ts';
 
 const fixture = 'docs-site';
 

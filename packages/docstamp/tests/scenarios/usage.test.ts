@@ -1,12 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { expect } from 'vitest';
-import { config, scenario } from '../harness/index.ts';
-
-const packageVersion = (
-  JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8')) as {
-    version: string;
-  }
-).version;
+import { config, scenario } from './harness/index.ts';
 
 scenario('§13.1 help: every spelling of the index exits 0', { git: false }, async (repo) => {
   const help = await repo.run(['help']);
@@ -24,27 +17,6 @@ scenario('§13.1 help: every spelling of the index exits 0', { git: false }, asy
   const afterDashes = await repo.run(['--', '--help'], { snapshot: false });
   expect(afterDashes.exit).toBe(2);
 });
-
-scenario(
-  '§13.1 version: every spelling prints the package version',
-  { git: false },
-  async (repo) => {
-    for (const args of [
-      ['version'],
-      ['--version'],
-      ['version', '--bogus'],
-      ['--version', 'update'],
-    ]) {
-      const result = await repo.run(args, { snapshot: false });
-      expect(result, args.join(' ')).toMatchObject({
-        exit: 0,
-        stdout: `${packageVersion}\n`,
-        stderr: '',
-      });
-    }
-    expect(packageVersion).toMatch(/^\d+\.\d+\.\d+/u);
-  },
-);
 
 scenario('§13.2 usage errors exit 2 before any root discovery', { git: false }, async (repo) => {
   const cases: [string[], string][] = [

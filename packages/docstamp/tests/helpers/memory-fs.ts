@@ -37,7 +37,7 @@ const parentOf = (path: string): string => path.slice(0, path.lastIndexOf('/')) 
 
 class MemoryFs implements FileSystem {
   private readonly nodes = new Map<string, Node>([['/', { kind: 'dir', mode: 0o755 }]]);
-  private readonly unreadable: ReadonlySet<string>;
+  private readonly unreadable: Set<string>;
 
   constructor(
     readonly root: string,
@@ -91,6 +91,54 @@ class MemoryFs implements FileSystem {
 
   remove(path: string): void {
     this.nodes.delete(this.absolute(path));
+  }
+
+  // what a scenario does to its working tree
+  removeTree(path: string): void {
+    const target = this.absolute(path);
+    for (const key of this.nodes.keys()) {
+      if (key === target || key.startsWith(`${target}/`)) this.nodes.delete(key);
+    }
+  }
+
+  rename(from: string, to: string): void {
+    const source = this.absolute(from);
+    const target = this.absolute(to);
+    const moved = [...this.nodes].filter(([key]) => key === source || key.startsWith(`${source}/`));
+    if (moved.length === 0) throw new Error(`ENOENT: ${from}`);
+    this.makeDirectories(parentOf(target));
+    for (const [key] of moved) this.nodes.delete(key);
+    for (const [key, node] of moved) this.nodes.set(target + key.slice(source.length), node);
+  }
+
+  makeDirectory(path: string): void {
+    this.makeDirectories(this.absolute(path));
+  }
+
+  append(path: string, text: string): void {
+    const node = this.nodes.get(this.absolute(path));
+    if (node?.kind !== 'file') throw new Error(`ENOENT: ${path}`);
+    node.content = Buffer.concat([node.content!, Buffer.from(text, 'utf8')]);
+  }
+
+  // a mode without read permission makes the entry unreadable, as chmod 000 does
+  setMode(path: string, mode: number): void {
+    const target = this.absolute(path);
+    const node = this.nodes.get(target);
+    if (node === undefined) throw new Error(`ENOENT: ${path}`);
+    node.mode = mode;
+    if ((mode & 0o444) === 0) this.unreadable.add(target);
+    else this.unreadable.delete(target);
+  }
+
+  names(path = ''): string[] {
+    return this.readDir(this.absolute(path))
+      .map((entry) => entry.name.toString('utf8'))
+      .sort();
+  }
+
+  has(path: string): boolean {
+    return this.nodes.has(this.absolute(path));
   }
 
   private resolve(path: string): { path: string; node: Node } | undefined {
