@@ -46,10 +46,13 @@ makes it stale:
 ```
 $ docstamp
 STALE    CLAUDE.md  (content-changed)
-  depends   "api.ts#\"createUser\""
+  fragment  "api.ts#\"createUser\""  (changed)  function createUser (shape) (lines 1-3)
+  review: git diff -M <commit> -- api.ts
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 ```
+
+The report names the declaration, its part and its lines because this plugin returns them with the hash (`focus` and `lines`, [SPEC §8](SPEC.md#8-extract)).
 
 ## The selector
 
