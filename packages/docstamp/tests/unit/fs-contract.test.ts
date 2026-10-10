@@ -63,7 +63,8 @@ describe.each(Object.entries(providers))('FileSystem contract: %s', (_, provide)
 
   it('reads the target of a link as written', () => {
     const p = provide({ l: { link: '../up/x' } });
-    expect(p.fs.readLink(`${p.root}/l`)).toBe('../up/x');
+    // Windows writes a link target with its own separators
+    expect(p.fs.readLink(`${p.root}/l`).replaceAll('\\', '/')).toBe('../up/x');
     expect(() => p.fs.readLink(`${p.root}/missing`)).toThrow();
   });
 

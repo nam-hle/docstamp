@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import type { DirEntry, EntryKind, FileSystem, Host } from '../../src/host/fs.ts';
 
 // A tree to build: a String is a file, { link } a symbolic link, { dir } an empty directory
@@ -159,11 +160,12 @@ export interface MemoryHost extends Host {
   readonly root: string;
 }
 
-// A Host over a tree that lives in memory: `root` is where the files are
+// A Host over a tree that lives in memory: `root` is where the files are, an absolute path of the
+// platform (`/repo`, or `D:\repo` on Windows) so that path arithmetic on it behaves as in production
 export function memoryHost(
   tree: Readonly<Record<string, Entry>> = {},
   options: MemoryOptions = {},
-  root = '/repo',
+  root = resolve('/repo'),
 ): MemoryHost {
   return { fs: new MemoryFs(root, tree, options), root };
 }
