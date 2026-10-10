@@ -71,14 +71,20 @@ lines that follow its content.
 
 ## 6 Extract
 
-`Extract({ path, text, select })` returns { `hashes` }:
+`Extract({ path, text, select })` returns { `hashes`, `focus`, `lines` }:
 
 1. Let *selector* be ? `ParseSelector(select)`.
 2. Let *body* be `Body(text)` with every CR LF replaced by LF, and *headings* be `Headings(body)`.
 3. Let *matches* be the Headings *h* with `h.[[Text]]` equal to `selector.[[Heading]]` and, unless
    `selector.[[Level]]` is *none*, `h.[[Depth]]` equal to it.
-4. Return the List, in source order, of the lower-case hexadecimal SHA-256 of the UTF-8 encoding of the
-   Section of each match.
+4. Return `hashes`, the List, in source order, of the lower-case hexadecimal SHA-256 of the UTF-8
+   encoding of the Section of each match; and, when there is a match, `focus`, the List of the Strings
+   `section "<Text>" (level <Depth>)` of the matches, and `lines`, the List of { `start`, `end` } of
+   their Sections: the line of the Heading and the line of the last character of the Section, counted
+   in *text* (the argument, frontmatter included, CR LF read as LF).
+
+NOTE: `focus` and `lines` are advisory: docstamp prints them in its changed-file report and never
+hashes them, so they are not part of the compatibility of §7.
 
 NOTE: Two Headings with the same text give two hashes, so docstamp reports `E_SELECT_AMBIGUOUS`
 unless the dependency says `match: all`, which depends on every one.

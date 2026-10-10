@@ -44,10 +44,13 @@ An edit to `## Usage` leaves it `ok`. An edit to the `Install` section makes it 
 ```
 $ docstamp
 STALE    CLAUDE.md  (content-changed)
-  depends   "guide.md#\"Install\""
+  fragment  "guide.md#\"Install\""  (changed)  section "Install" (level 2) (lines 3-6)
+  review: git diff -M <commit> -- guide.md
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 ```
+
+The report names the section and its lines because this plugin returns them with the hash (`focus` and `lines`, [SPEC §6](SPEC.md#6-extract)).
 
 ## The selector
 

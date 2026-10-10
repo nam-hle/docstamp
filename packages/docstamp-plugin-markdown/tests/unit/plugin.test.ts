@@ -194,3 +194,46 @@ describe('§6 Extract', () => {
     expect(extract(`preamble\n\n${DOC}`, 'Two')).toEqual(base);
   });
 });
+
+describe('§6 Extract: focus and lines', () => {
+  const full = (text: string, select: unknown) =>
+    plugin.extract({ path: 'guide.md', text, select: select as never });
+
+  it('names the section and gives its lines, one of each per hash', () => {
+    expect(full(DOC, 'Sub')).toMatchObject({
+      focus: ['section "Sub" (level 2)'],
+      lines: [{ start: 4, end: 6 }],
+    });
+    expect(full(DOC, 'One').lines).toEqual([{ start: 1, end: 6 }]);
+    expect(full(DOC, 'Two').lines).toEqual([{ start: 7, end: 8 }]);
+  });
+
+  it('counts the lines of the whole text, frontmatter included', () => {
+    const text = `---\ntitle: x\n---\n${DOC}`;
+    expect(full(text, 'Sub').lines).toEqual([{ start: 7, end: 9 }]);
+    expect(full(text, 'Two').lines).toEqual([{ start: 10, end: 11 }]);
+  });
+
+  it('ends a section on its last line when the file has no final newline', () => {
+    expect(full('# A\ntext', 'A').lines).toEqual([{ start: 1, end: 2 }]);
+  });
+
+  it('gives one focus and one range per matching heading', () => {
+    const text = '## Install\nfirst\n\n## Other\nx\n\n## Install\nsecond\n';
+    expect(full(text, 'Install')).toMatchObject({
+      focus: ['section "Install" (level 2)', 'section "Install" (level 2)'],
+      lines: [
+        { start: 1, end: 3 },
+        { start: 7, end: 8 },
+      ],
+    });
+  });
+
+  it('counts CR LF text the same', () => {
+    expect(full(DOC.replaceAll('\n', '\r\n'), 'Sub').lines).toEqual([{ start: 4, end: 6 }]);
+  });
+
+  it('gives neither when nothing matches', () => {
+    expect(full(DOC, 'Missing')).toEqual({ hashes: [] });
+  });
+});
