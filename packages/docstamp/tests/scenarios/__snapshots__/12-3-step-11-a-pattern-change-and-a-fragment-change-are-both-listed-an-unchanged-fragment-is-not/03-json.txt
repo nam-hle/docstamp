@@ -48,8 +48,10 @@ exit: 1
           "path": "package.json",
           "select": "scripts.test",
           "status": "changed",
-          "focus": [
-            "scripts.test (string)"
+          "parts": [
+            {
+              "focus": "scripts.test (string)"
+            }
           ]
         }
       ],

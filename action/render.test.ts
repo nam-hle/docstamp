@@ -295,8 +295,7 @@ describe('action comment renderer: focus and lines of a fragment', () => {
       path: 'docs/guide.md',
       select: 'Install',
       status: 'changed',
-      focus: ['section "Install" (level 2)'],
-      lines: [{ start: 3, end: 6 }],
+      parts: [{ focus: 'section "Install" (level 2)', lines: { start: 3, end: 6 } }],
     });
     expect(body).toContain(
       '- fragment `docs/guide.md#"Install"` (changed): section "Install" (level 2) (lines 3-6)',
@@ -308,8 +307,18 @@ describe('action comment renderer: focus and lines of a fragment', () => {
       path: 'a.md',
       select: 'x',
       status: 'new',
-      lines: [{ start: 1, end: 2 }],
+      parts: [{ lines: { start: 1, end: 2 } }],
     });
     expect(body).toContain('- fragment `a.md#"x"` (new): lines 1-2');
+  });
+
+  it('joins the parts with a semicolon and skips one with neither', () => {
+    const body = withFragment({
+      path: 'a.md',
+      select: 'x',
+      status: 'changed',
+      parts: [{ focus: 'a', lines: { start: 1, end: 2 } }, {}, { focus: 'b' }],
+    });
+    expect(body).toContain('- fragment `a.md#"x"` (changed): a (lines 1-2); b');
   });
 });

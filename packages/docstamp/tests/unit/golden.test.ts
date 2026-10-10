@@ -303,17 +303,19 @@ describe('§17.7 golden inline files', () => {
 
 describe('§17.7 fragment vectors', () => {
   it('pins a Dependency Hash with whole-file and fragment input', () => {
-    const fragments = [{ path: 'docs/guide.md', select: '"Install"', hashes: ['abc'] }];
+    const fragments = [{ path: 'docs/guide.md', select: '"Install"', parts: [{ content: 'abc' }] }];
     expect(dependencyHashFrom([['src/a.ts', 'a'.repeat(64)]], fragments)).toBe(
-      'bcd4f23fd8ddf98e99b882cb80ec425b8745e93f420748b606e1e7f639b6b87f',
+      'b97e1bef5907d4a4827ee34fcb74350137d74e7d8fd0c02db21bcd0b6a8e6ba5',
     );
   });
 
-  it('pins a Dependency Hash with an object selector, two hashes and no whole files', () => {
+  it('pins a Dependency Hash with an object selector, two parts and no whole files', () => {
     const select = canonicalJson({ name: 'abc', kind: 'function' });
-    const fragments = [{ path: 'docs/guide.md', select, hashes: ['abc', 'def'] }];
+    const fragments = [
+      { path: 'docs/guide.md', select, parts: [{ content: 'abc' }, { content: 'def' }] },
+    ];
     expect(dependencyHashFrom([], fragments)).toBe(
-      '27a11cb64839d5d0038aaf73f64ac2e4df995ae08cc2a4218159369940d1d29b',
+      'cf13425d12b91e9f192502bb184d8d8f30e0e6b3a8828a4f1ac2e5fcc4ee977c',
     );
   });
 });

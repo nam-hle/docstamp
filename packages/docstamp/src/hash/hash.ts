@@ -81,13 +81,13 @@ export function fileHash(host: Host, root: string, u: Universe, path: string): s
 export interface Fragment {
   readonly path: string;
   readonly select: string;
-  readonly hashes: readonly string[];
+  readonly parts: readonly { readonly content: string }[];
 }
 
 // SPEC §10.4 step 3: one section per Selected Dependency, only when there is one
 const fragmentSection = (fragment: Fragment): string => {
-  const head = `select\u0000${fragment.path}\u0000${fragment.select}\u0000${fragment.hashes.length}\n`;
-  const body = fragment.hashes.map((hash) => `${Buffer.byteLength(hash, 'utf8')}\u0000${hash}\n`);
+  const head = `select\u0000${fragment.path}\u0000${fragment.select}\u0000${fragment.parts.length}\n`;
+  const body = fragment.parts.map(({ content }) => `${sha256Hex(Buffer.from(content, 'utf8'))}\n`);
   return head + body.join('');
 };
 

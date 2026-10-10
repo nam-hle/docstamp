@@ -1,0 +1,6 @@
+$ docstamp update CLAUDE.md
+exit: 0
+--- stdout ---
+written  CLAUDE.md
+--- stderr ---
+warning: W_SELECT: CLAUDE.md: "docs/guide.md#\"Install\"": The section "Install" is empty; write it.

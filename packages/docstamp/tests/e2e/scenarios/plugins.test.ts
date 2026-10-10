@@ -39,8 +39,7 @@ scenario(
         path: 'docs/guide.md',
         select: 'Install',
         status: 'changed',
-        focus: ['section "Install" (level 2)'],
-        lines: [{ start: 3, end: 6 }],
+        parts: [{ focus: 'section "Install" (level 2)', lines: { start: 3, end: 6 } }],
       },
     ]);
   },
@@ -60,3 +59,30 @@ scenario('§9.3 step 5 a bad plugin of a script Carrier is reported', options, a
   expect(result.stderr).toContain('apiVersion');
   expect(result.stderr).toContain('E_UNKNOWN_KEY');
 });
+
+scenario(
+  '§8.7 a script plugin reports a warning and an error of its own',
+  options,
+  async (repo) => {
+    repo.write('docs/guide.md', '# Guide\n\n## Install\n\n## Usage\n\nRun the tool.\n');
+    const warned = await repo.run([]);
+    expect(warned.exit).toBe(1);
+    expect(warned.stderr).toContain(
+      'warning: W_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": The section "Install" is empty; write it.',
+    );
+    await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+    const recorded = await repo.run([]);
+    expect(recorded.exit).toBe(0);
+    expect(recorded.stderr).toContain('W_SELECT');
+
+    repo.write(
+      'docs/guide.md',
+      '# Guide\n\n## Install\n\nOne.\n\n## Usage\n\n### Install\n\nTwo.\n',
+    );
+    const refused = await repo.run([]);
+    expect(refused.exit).toBe(2);
+    expect(refused.stderr).toContain(
+      'error: E_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": "Install" is a heading at lines 3, 9; rename one.',
+    );
+  },
+);
