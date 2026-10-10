@@ -209,3 +209,74 @@ describe('action comment renderer', () => {
     expect(body).toMatch(/and \d+ more/);
   });
 });
+
+describe('action comment renderer: commands under a working directory', () => {
+  const failing: Report = {
+    ...base,
+    exitCode: 1,
+    summary: { ok: 0, stale: 1, invalid: 0 },
+    files: [stale()],
+  };
+
+  it('names the file from the repository top and the root', () => {
+    const body = renderComment(failing, 'docs/site');
+    expect(body).toContain('`docstamp update docs/site/CLAUDE.md --root docs/site`');
+  });
+
+  it('keeps the plain command for the repository root', () => {
+    for (const root of ['.', './', '']) {
+      expect(renderComment(failing, root)).toContain('`docstamp update CLAUDE.md`');
+    }
+  });
+
+  it('normalizes a leading ./ and a trailing / of the root', () => {
+    expect(renderComment(failing, './docs/')).toContain(
+      '`docstamp update docs/CLAUDE.md --root docs`',
+    );
+  });
+
+  it('quotes a path the shell would split', () => {
+    const body = renderComment(failing, 'my docs');
+    expect(body).toContain("`docstamp update 'my docs/CLAUDE.md' --root 'my docs'`");
+  });
+
+  it('uses --root in the check command of an invalid file too', () => {
+    const body = renderComment(
+      {
+        ...base,
+        exitCode: 2,
+        summary: { ok: 0, stale: 0, invalid: 1 },
+        files: [{ ...stale(), state: 'invalid', changes: null }],
+      },
+      'docs',
+    );
+    expect(body).toContain('`docstamp check docs/CLAUDE.md --root docs`');
+  });
+});
+
+describe('action comment renderer: renames and silent failures', () => {
+  it('shows a rename once, from its deleted side, and not its added side', () => {
+    const body = renderComment({
+      ...base,
+      exitCode: 1,
+      summary: { ok: 0, stale: 1, invalid: 0 },
+      files: [
+        stale({
+          changes: [
+            { status: 'deleted', path: 'src/old.ts', via: ['src/**'], pair: 'src/new.ts' },
+            { status: 'added', path: 'src/new.ts', via: ['src/**'], pair: 'src/old.ts' },
+          ],
+        }),
+      ],
+    });
+    expect(body).toContain('- renamed `src/old.ts` -> `src/new.ts`');
+    expect(body).not.toContain('added `src/new.ts`');
+    expect(body).not.toContain('deleted `src/old.ts`');
+  });
+
+  it('says so when it failed with no stale file, invalid file or error', () => {
+    const body = renderComment({ ...base, exitCode: 2 });
+    expect(body).toContain('docstamp exited with code 2');
+    expect(body).toContain('job log');
+  });
+});

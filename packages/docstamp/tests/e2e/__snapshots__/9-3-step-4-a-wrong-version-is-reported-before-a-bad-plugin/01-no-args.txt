@@ -1,0 +1,10 @@
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG_VERSION: Rename "dependents" to "files" and "covers" to "dependencies", set "version: 2".
+--- setup: docstamp.config.ts ---
+import { defineConfig } from 'docstamp';
+import headings from './tools/headings.ts';
+
+export default defineConfig({ version: 1, plugins: [{ ...headings, apiVersion: 2 }], files: { 'CLAUDE.md': { dependencies: ['src/**'] } } } as never);

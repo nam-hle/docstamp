@@ -11,6 +11,7 @@ export interface Env {
   GITHUB_API_URL?: string;
   DOCSTAMP_REPORT: string;
   DOCSTAMP_COMMENT: string;
+  DOCSTAMP_ROOT?: string;
 }
 
 interface Api {
@@ -28,9 +29,13 @@ interface PullRequest {
 interface Comment {
   id: number;
   body: string;
+  user?: { login?: string };
 }
 
+const BOT_LOGIN = 'github-actions[bot]';
+
 const PAGE_SIZE = 100;
+const SUPPORTED_VERSION = 2;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -67,7 +72,9 @@ const findComment = async (
   for (let page = 1; ; page++) {
     const url = `${base}/issues/${number}/comments?per_page=${PAGE_SIZE}&page=${page}`;
     const comments = (await call(api, env, 'GET', url)) as Comment[];
-    const found = comments.find((comment) => comment.body.includes(MARKER));
+    const found = comments.find(
+      (comment) => comment.user?.login === BOT_LOGIN && comment.body.includes(MARKER),
+    );
     if (found !== undefined) return found;
     if (comments.length < PAGE_SIZE) return undefined;
   }
@@ -75,15 +82,29 @@ const findComment = async (
 
 export const run = async (env: Env, api: Api): Promise<void> => {
   const summaryPath = env.GITHUB_STEP_SUMMARY;
+  const note = (text: string) => summaryPath && api.appendFile(summaryPath, `docstamp: ${text}\n`);
+  let text: string;
+  try {
+    text = api.readFile(env.DOCSTAMP_REPORT);
+  } catch {
+    note('no report was written; see the job log.');
+    return;
+  }
   let report: Report;
   try {
-    report = JSON.parse(api.readFile(env.DOCSTAMP_REPORT)) as Report;
+    report = JSON.parse(text) as Report;
   } catch {
-    if (summaryPath) api.appendFile(summaryPath, 'docstamp: the report is not valid JSON.\n');
+    note('the report is not valid JSON.');
+    return;
+  }
+  if (report.version !== SUPPORTED_VERSION) {
+    note(
+      `this Action reads report version ${SUPPORTED_VERSION}, not report version ${String(report.version)}.`,
+    );
     return;
   }
 
-  const body = renderComment(report);
+  const body = renderComment(report, env.DOCSTAMP_ROOT);
   if (summaryPath) api.appendFile(summaryPath, body);
 
   if (env.DOCSTAMP_COMMENT !== 'true' || env.GITHUB_EVENT_NAME !== 'pull_request') return;

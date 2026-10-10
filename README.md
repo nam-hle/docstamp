@@ -340,9 +340,9 @@ next: review each stale file against its dependencies, then run: docstamp update
   run update only after the review, never --all just to pass; see docstamp help agents
 ```
 
-- **One part, by default.** `select` is any plain value with finite numbers only, passed to the plugin as it is. Two entries with the same `path` and `select` are one dependency: the first wins, with its `match`. The plugin returning no hash is `E_SELECT_NOT_FOUND`, and more than one is `E_SELECT_AMBIGUOUS`, unless the entry says `match: 'all'`, which hashes every part found. An invalid plugin, or two claiming one file, is `E_PLUGIN`; no plugin claiming the file (JSON and YAML files are claimed by builtin ones), or a plugin that throws on it, is `E_SELECT` ([SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies)).
+- **One part, by default.** `select` is any plain value with finite numbers only, passed to the plugin as it is. Two entries with the same `path` and `select` are one dependency: the first wins, with its `match`. A plugin that finds no part, several parts (unless `match: 'all'`), or throws, and a plugin that is invalid or claimed twice, each make the file `invalid` with their own code: [SPEC §8.7](packages/docstamp/docs/SPEC.md#87-selected-dependencies), `docstamp help diagnostics`.
 - **Script configuration only.** `plugins` is a key of `docstamp.config.ts` or `.js`, not of `docstamp.yaml` or an inline block ([SPEC §9.5](packages/docstamp/docs/SPEC.md#95-script-carriers)).
-- **A literal path.** `path` names one file, never a glob.
+- **A literal path.** `path` names one file, never a glob; escape glob characters as in a pattern (`data\[1\].json` for `data[1].json`).
 - **A stale file names the parts that changed.** The report runs the plugin on the file as it was at the review commit and prints `fragment  "docs/guide.md#\"Install\""  (changed)` for each selected part whose hash differs (`(new)` when the part did not exist then), and `--json` has a `fragments` list. Like the changed-file list it needs history, and it never changes a verdict ([SPEC §12.3](packages/docstamp/docs/SPEC.md#123-changedsince)).
 - **Determinism is the plugin author's duty.** A plugin runs in your process and docstamp trusts its hashes. Keep it independent of the clock, the network and the environment.
 - **Ready-made plugins.** `docstamp-plugin-markdown` selects a section by its heading, so you need not write the one above: [packages/docstamp-plugin-markdown](packages/docstamp-plugin-markdown#readme), with its own [SPEC](packages/docstamp-plugin-markdown/SPEC.md). `docstamp-plugin-js` selects a top-level declaration of a JavaScript or TypeScript file by its name: [packages/docstamp-plugin-js](packages/docstamp-plugin-js#readme), with its own [SPEC](packages/docstamp-plugin-js/SPEC.md). Neither is published yet. docstamp itself ships only the JSON and YAML plugins described above.
@@ -476,9 +476,9 @@ jobs:
 
 | Input | Default | Meaning |
 | --- | --- | --- |
-| `version` | required | npm version of `docstamp` to run, or a path to a packed tarball. The action installs it into a temporary directory, so your project needs no `docstamp` dependency. |
+| `version` | required | npm version of `docstamp` to run, or a path to a packed tarball (relative to the working directory of the job). The action installs it into a temporary directory, so your project needs no `docstamp` dependency. |
 | `comment` | `true` | Post the pull request comment. |
-| `working-directory` | `.` | Passed to `docstamp` as `--root`. |
+| `working-directory` | `.` | Passed to `docstamp` as `--root`; the commands in the comment then carry it (`docstamp update docs/CLAUDE.md --root docs`). |
 | `github-token` | `github.token` | Needs `pull-requests: write` for the comment. |
 
 The comment lists each stale file with its changed dependencies, and the resolving command. Here is the one for the stale `CLAUDE.md` of this repository, produced from a real `docstamp --json --only-stale` report:
@@ -498,7 +498,7 @@ Review each stale file against its dependencies, then run `docstamp update <file
 Run update only after the review, never `--all` just to pass.
 ```
 
-On a pull request from a fork the token is read-only, so no comment is posted and the same text goes to the job summary only. When the comment cannot be posted for another reason (a read-only token on a bot's pull request, say), the action prints a warning and the verdict stays the exit code of `docstamp`. The comment shows at most 50 changed files per doc, then a count. The comment never runs `update`: only a review writes the lock.
+On a pull request from a fork the token is read-only, so no comment is posted and the same text goes to the job summary only. When the comment cannot be posted for another reason (a read-only token on a bot's pull request, say), the action prints a warning and the verdict stays the exit code of `docstamp`. The comment shows at most 50 changed files per doc, then a count. The comment never runs `update`: only a review writes the lock. The action updates only a comment written by `github-actions[bot]`, so with a personal access token as `github-token` it adds a new comment on each failing run. It runs `actions/setup-node` itself and switches the job to Node 24, which `docstamp` needs; later steps of the job see that version.
 
 #### Without the action
 

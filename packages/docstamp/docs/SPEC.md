@@ -677,12 +677,14 @@ patterns. The Lockfile and its `version` are unchanged. It is not an edit of the
 
 ### 8.7 Selected Dependencies
 
-A *Selected Dependency* is { `[[Path]]`: a literal RepoPath (§8.5 NOTE), `[[Select]]`: a plain value
-(§3.5), `[[Match]]`: `one` or `all` }. In a `dependencies` List a Selected Dependency is written as
+A *Selected Dependency* is { `[[Path]]`: a RepoPath, `[[Select]]`: a plain value (§3.5), `[[Match]]`:
+`one` or `all` }. In a `dependencies` List a Selected Dependency is written as
 a Map with the keys `path`, `select` and, optionally, `match` (`one` when absent); a String is a
-Pattern (§8.1) as before. A Map with another key, a missing `path` or `select`, a `path` that is
-not a literal RepoPath, a `select` holding a Number that is not finite at any depth, or a `match`
-other than `one` or `all` is `E_CONFIG` (`E_BLOCK` in an inline block).
+Pattern (§8.1) as before. The written `path` is a literal path (§8.5 NOTE) and `[[Path]]` is the
+String it denotes, so a file named `a[1].json` is written `a\[1\].json`. A Map with another key, a
+missing `path` or `select`, a `path` that is not a valid Pattern without Negation or not a literal
+path, a `select` holding a Number that is not finite at any depth, or a `match` other than `one` or
+`all` is `E_CONFIG` (`E_BLOCK` in an inline block).
 
 Selected Dependencies with the same `[[Path]]` and the same `CanonicalJson([[Select]])` are one
 dependency: the Declaration's `[[Selected]]` holds the first of them in order of appearance, with
@@ -842,8 +844,10 @@ raises:
 4. If the key `version` is absent, or its value is not the Number 2, raise « `E_CONFIG_VERSION` »,
    whose message names the migration from version 1 when *value* has the key `version` or
    `dependents`, and otherwise (a first configuration file) says to add `version: 2`.
-5. For each key of *value* other than `version`, `gitignore`, `ignore`, `include`, `presets`,
-   `default-presets` and `files`, collect `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` the key.
+5. If step 3 returned a `plugins` member (§9.5) that is not a valid List of Plugins, collect its
+   `E_PLUGIN` into *fatal*. Then, for each key of *value* other than `version`, `gitignore`,
+   `ignore`, `include`, `presets`, `default-presets` and `files`, collect `E_UNKNOWN_KEY` into
+   *fatal*, `[[Subject]]` the key.
 6. If `gitignore` is present and not a Boolean, or `ignore` is present and not a List of
    Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` the key. If `include` is present and
    not a non-empty List of Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` `include`;
@@ -943,8 +947,9 @@ raises `E_FILE_MISSING`.
 `LoadScript` returns the plain value of step 3 and, separately, the value of the top-level
 `plugins` member of *exported*, when it has one. `plugins` is not part of the plain value and is
 exempt from `ToPlain`; a function anywhere else is still `E_CONFIG` (`ToPlain` step 6). It MUST be a dense, plain (not a Proxy) List of Plugins (§8.7);
-otherwise raise `E_PLUGIN`, `[[Subject]]` the Plugin name or `plugins[i]`, with a message that names
-`apiVersion` when `[[ApiVersion]]` is not 1.
+otherwise `ReadConfig` (§9.3 step 5) collects one `E_PLUGIN`, for the first problem, `[[Subject]]` the
+Plugin name or `plugins[i]`, with a message that names `apiVersion` when `[[ApiVersion]]` is not 1.
+It is collected with the other Diagnostics of that step, and no Plugin is used then.
 
 `ToPlain(v, ancestors)`, where *ancestors* is the List of objects being converted, raises
 `E_CONFIG` with `[[Subject]]` the top-level key whose value contains *v* (empty if *v* is the
