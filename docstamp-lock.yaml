@@ -1,6 +1,6 @@
 version: 4
 files:
-  "CLAUDE.md": 4b4ffda519d23b25d46d8982f1e99ec051f981658c4e155fd7bea7463054d9e5
+  "CLAUDE.md": 06fc750491f5b046b0cac1b8f95c0d0b37f60e7de2796de547ba58f38e5eae22
   "README.md": a8a7b284cec868abd836ca41634e54be4a54fd85471c359589495c81af3270c5
   "packages/docstamp-plugin-js/README.md": 6160073f7f3eb62d9f0baf5a227605104c761af875053af877c4f9b569436b12
   "packages/docstamp-plugin-js/SPEC.md": 6160073f7f3eb62d9f0baf5a227605104c761af875053af877c4f9b569436b12
@@ -13,13 +13,13 @@ files:
   "packages/docstamp/docs/spec/08-patterns.md": f47ef9416921f2351465345edd1c8f2e20e49569473bace2f4bf967482e8bba5
   "packages/docstamp/docs/spec/09-configuration-file.md": 68591310a100dbca4af38425577605b880cc94f87337fc33c23971a25c6f9c2b
   "packages/docstamp/docs/spec/10-hashing.md": 55e5ec4ebbcffc5a75896cbf2dbb202623b55d2af8f29fcc5a980c67d2ad2314
-  "packages/docstamp/docs/spec/11-lockfile.md": 5d92f278cda1c692222f1fcc9677c8548f8f685d9294eb89a844674e80bf7e45
+  "packages/docstamp/docs/spec/11-lockfile.md": e7f91a7164135dda1f482120fe7b107e558f13ebb390dbee4929a536c50193ca
   "packages/docstamp/docs/spec/12-evaluation.md": 3ed35bdd8ae8e1c973266567f69f0b07cdd4b3b1b85328fedc613c918d6a256f
   "packages/docstamp/docs/spec/13-command-line.md": 5a2a0a63056360ad644dfa190589aafdc65cb9070b224dfb1ccf15170710da43
   "packages/docstamp/docs/spec/14-output.md": 595aebc2f3beaa6264102bfe751fc9e27f5dff4e4b734b5f21ad7ee08386c93f
   "packages/docstamp/docs/spec/15-diagnostics.md": 88f4314e2010ff87cb75af8281972c1ee792715252bfa343fbb13ccc1e4a79a5
   "packages/docstamp/docs/spec/16-exit-codes.md": 5a2a0a63056360ad644dfa190589aafdc65cb9070b224dfb1ccf15170710da43
-  "packages/docstamp/docs/spec/17-compatibility.md": f0eeaf1049f876374940a0c9b6e2863f18faa8589213afaef09da8630a58e8bd
+  "packages/docstamp/docs/spec/17-compatibility.md": decf64a130e893b504bf0a4730d41266a57cca196e976ddaac13f23cd674f463
   "packages/site/content/get-started.md": a8a7b284cec868abd836ca41634e54be4a54fd85471c359589495c81af3270c5
   "packages/site/content/guide/ci.md": 9cfe6fe7414ce7f5037aa5ce29121e702866358e33ec2ba70e678622a4851450
   "packages/site/content/guide/declare.md": 57c9071eeb9793d5f0b65dfcada98c2ef20e3c9635fd9cb09041d7ed56b64eec
