@@ -281,7 +281,7 @@ A Commit *touches* a Result when a path of its `[[Paths]]` is selected by the pa
 Result's `[[Dependencies]]`, or when it changes the Fragment of one of the Result's Selected
 Dependencies *e*: a path of its `[[Paths]]` is `e.[[Path]]`, and the Fragment of `Fragments(e, text)`
 (§8.7) differs between *text* read as §12.3 step 11 reads *old*, at the first parent of the Commit
-(`<Id>^`), and at the Commit, a file that is absent, holds a NUL in its first 8192 bytes or on which
+(`<Id>^`; a root Commit has no parent, so its Fragment before is none), and at the Commit, a file that is absent, holds a NUL in its first 8192 bytes or on which
 `Fragments` raises having no Fragment, so that a Fragment differs from none and two none do not
 differ. A Commit that touches the Result is one that would make the file stale. For each Result *r*, let *touching* be the Commits of
 the Window that touch *r*:

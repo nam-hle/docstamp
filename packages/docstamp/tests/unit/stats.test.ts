@@ -4,6 +4,7 @@ import { Raised } from '../../src/core/diagnostics.ts';
 import { ratio, statistics, type CommitRecord } from '../../src/engine/stats.ts';
 import type { Git, LogEntry, LogWindow } from '../../src/host/git.ts';
 import { parseLog } from '../../src/host/git-output.ts';
+import { fragmentChangedAt, type FragmentCache } from '../../src/history/fragments.ts';
 import { replay } from '../../src/history/replay.ts';
 import { statsJsonText } from '../../src/report/json.ts';
 import { statsText } from '../../src/report/text.ts';
@@ -406,5 +407,31 @@ describe('§13.2 stats options', () => {
   });
   it('a file named stats is reached after --', () => {
     expect(parseArgs(['--', 'stats'])).toMatchObject({ mode: 'check', paths: ['stats'] });
+  });
+});
+
+describe('§12.5 Fragments are extracted once per distinct blob', () => {
+  it('a blob read as a commit and as the next one is parsed once', () => {
+    const blobs: Record<string, string> = { c1: 'x', c2: 'y', c3: 'y' };
+    const git = {
+      objectAt: (rev: string) => blobs[rev.replace('^', '')] ?? null,
+      fileAt: (rev: string) => blobs[rev.replace('^', '')]!,
+    } as unknown as Git;
+    let runs = 0;
+    const earlier = (_: unknown, text: string) => {
+      runs += 1;
+      return { parts: [{ content: text }], warnings: [] };
+    };
+    const cache: FragmentCache = new Map();
+    const entry = { path: 'a.json', select: 's' };
+    const parent = (rev: string) => (rev === 'c3' ? 'c2' : 'c1');
+    const git2 = {
+      ...git,
+      objectAt: (rev: string) => (rev.endsWith('^') ? blobs[parent(rev.slice(0, -1))] : blobs[rev]),
+      fileAt: (rev: string) => (rev.endsWith('^') ? blobs[parent(rev.slice(0, -1))]! : blobs[rev]!),
+    } as unknown as Git;
+    expect(fragmentChangedAt(git2, 'c2', entry, earlier as never, cache)).toBe(true);
+    expect(fragmentChangedAt(git2, 'c3', entry, earlier as never, cache)).toBe(false);
+    expect(runs).toBe(2);
   });
 });

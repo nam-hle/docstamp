@@ -6,7 +6,7 @@ import { resolveDependencies } from '../engine/evaluate.ts';
 import { dependentTree, dependentsOf } from '../engine/reverse.ts';
 import { statistics, type FileStats } from '../engine/stats.ts';
 import type { Host } from '../host/host.ts';
-import { fragmentChangedAt } from '../history/fragments.ts';
+import { fragmentChangedAt, type FragmentCache } from '../history/fragments.ts';
 import { replay } from '../history/replay.ts';
 import { listJsonText, reverseJsonText, statsJsonText, type StatsWindow } from '../report/json.ts';
 import { diagnosticsText, listText, reverseText, statsText } from '../report/text.ts';
@@ -151,6 +151,7 @@ function runStats(
     );
     const git = host.git(root);
     const { earlier } = workspace.fragmentProbe([]);
+    const cache: FragmentCache = new Map();
     const computed = statistics(
       selected.map((r) => {
         const declaration = workspace.declarations.find((d) => d.file === r.file)!;
@@ -165,7 +166,7 @@ function runStats(
         };
       }),
       replayed.commits,
-      (entry, commit) => fragmentChangedAt(git, commit.id, entry, earlier),
+      (entry, commit) => fragmentChangedAt(git, commit.id, entry, earlier, cache),
     );
     files = computed.files;
     window = {
