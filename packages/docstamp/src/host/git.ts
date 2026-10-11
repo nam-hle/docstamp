@@ -9,8 +9,9 @@ export interface RawChange {
   readonly path: string;
 }
 
-// SPEC §12.4 step 5: a commit of the window, with the paths it touches
+// SPEC §12.4 step 5: a commit of the window, with its id and the paths it touches
 export interface LogEntry {
+  readonly id: string;
   readonly seconds: number;
   readonly paths: readonly string[];
 }

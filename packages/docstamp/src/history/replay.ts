@@ -45,7 +45,7 @@ export function replay(git: Git, window: ReplayWindow, now: number): Window {
   try {
     const entries = git.log(range);
     if (entries === null) throw new Error('unparsable log');
-    const commits = entries.map(({ seconds, paths }) => ({ day: dayOf(seconds), paths }));
+    const commits = entries.map(({ id, seconds, paths }) => ({ id, day: dayOf(seconds), paths }));
     return { kind: window.kind === 'days' ? 'days' : 'revision', commits };
   } catch {
     throw history('git could not list the commits of the window.');

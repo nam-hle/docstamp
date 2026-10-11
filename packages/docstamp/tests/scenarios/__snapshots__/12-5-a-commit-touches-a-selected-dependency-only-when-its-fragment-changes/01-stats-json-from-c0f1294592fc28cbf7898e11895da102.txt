@@ -1,0 +1,29 @@
+$ docstamp stats --json --from c0f1294592fc28cbf7898e11895da1025f917c11
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 0,
+  "window": {
+    "kind": "revision",
+    "value": "c0f1294592fc28cbf7898e11895da1025f917c11",
+    "commits": 2,
+    "untouched": 1
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "patterns": 1,
+      "resolvedCount": 1,
+      "staleCommits": 1,
+      "days": 1,
+      "staleRate": 0.5,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

@@ -235,7 +235,7 @@ list the dependencies (§13.7) and review them in full.
 `Replay(root, window, now)` returns a Window or raises « `E_HISTORY` ». The argument *window* is
 `days N` (*N* from 1 to 3650) or `from R` (*R* a String), and *now* the wall-clock time in whole
 seconds since the epoch. A *Window* is { `[[Kind]]`: `days` or `revision`, `[[Commits]]`: a List of
-Commit }. A *Commit* is { `[[Day]]`: a String `YYYY-MM-DD`, `[[Paths]]`: a List of RepoPath }.
+Commit }. A *Commit* is { `[[Id]]`: its commit ID, `[[Day]]`: a String `YYYY-MM-DD`, `[[Paths]]`: a List of RepoPath }.
 
 1. Run `git` in Root as §12.3 step 1 does (every `GIT_` variable removed, `GIT_OPTIONAL_LOCKS=0`).
    If `git` is unavailable, Root is not inside a git work tree, `HEAD` does not name a commit, or
@@ -252,7 +252,8 @@ Commit }. A *Commit* is { `[[Day]]`: a String `YYYY-MM-DD`, `[[Paths]]`: a List 
    format that prints, for each commit, its Id and its committer time in seconds since the epoch,
    and with the *range*: one invocation, newest commit first. If it fails, raise `E_HISTORY` with
    an empty `[[Subject]]`.
-5. Return the Window whose Commits are those of the output in the same order: `[[Day]]` is the
+5. Return the Window whose Commits are those of the output in the same order: `[[Id]]` is the
+   commit ID it prints, `[[Day]]` is the
    calendar date in UTC of the committer time, and `[[Paths]]` the paths the commit changed,
    relative to Root, in NFC, in the order git prints them.
 
@@ -276,11 +277,17 @@ the work tree, the commits that changed nothing under Root are in the Window and
 `Statistics(results, window)` returns, for the Results (none `invalid`), a List of FileStats and the
 Number *untouched*. The *sweep size* is the constant 200.
 
-A Commit *touches* a Result when a path of its `[[Paths]]` is in the Result's `[[Resolved]]`: it
-is a commit that would make the file stale. For each Result *r*, let *touching* be the Commits of
+A Commit *touches* a Result when a path of its `[[Paths]]` is selected by the patterns of the
+Result's `[[Dependencies]]`, or when it changes the Fragment of one of the Result's Selected
+Dependencies *e*: a path of its `[[Paths]]` is `e.[[Path]]`, and the Fragment of `Fragments(e, text)`
+(§8.7) differs between *text* read as §12.3 step 11 reads *old*, at the first parent of the Commit
+(`<Id>^`), and at the Commit, a file that is absent, holds a NUL in its first 8192 bytes or on which
+`Fragments` raises having no Fragment, so that a Fragment differs from none and two none do not
+differ. A Commit that touches the Result is one that would make the file stale. For each Result *r*, let *touching* be the Commits of
 the Window that touch *r*:
 
-- `[[Patterns]]`: the number of strings in `r.[[Dependencies]]`;
+- `[[Patterns]]`: the number of strings in `r.[[Dependencies]]` plus the number of Selected
+  Dependencies of `r`;
 - `[[ResolvedCount]]`: the number of `r.[[Resolved]]`;
 - `[[StaleCommits]]`: the number of *touching*;
 - `[[Days]]`: the number of distinct `[[Day]]` among *touching*;
@@ -301,6 +308,11 @@ the file.
 NOTE: Dependencies are the ones resolved now, at `HEAD` (§12.1), not the ones of each commit: a
 file deleted or renamed inside the Window is not a dependency any more and is not seen. A Window
 that crosses a reorganization therefore understates how often a list would have been stale.
+
+NOTE: The Fragment is read with the Plugins of now, in the host, as §12.3 step 11 does, and only for
+a Commit that changes the path of a Selected Dependency that no pattern selects. It changes no
+state, Hash or exit code. A change of the file that leaves the Fragment equal (an edit outside the
+selected part) does not touch the Result, which is what a narrower dependency is for.
 
 ### 12.6 Proposal
 

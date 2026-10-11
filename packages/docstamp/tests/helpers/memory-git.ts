@@ -268,7 +268,7 @@ export class MemoryGit implements Git {
         for (const path of new Set([...commit.files.keys(), ...parent.keys()])) {
           if (commit.files.get(path)?.id !== parent.get(path)?.id) changed.add(path);
         }
-        return { seconds: commit.seconds, paths: [...changed].sort() };
+        return { id: commit.id, seconds: commit.seconds, paths: [...changed].sort() };
       });
   }
 }

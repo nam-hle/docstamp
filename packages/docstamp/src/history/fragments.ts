@@ -51,3 +51,19 @@ export function fragmentChanges(
   }
   return changes;
 }
+
+// SPEC §12.5: the Fragment of the entry differs between the first parent of a commit and the commit
+export function fragmentChangedAt(
+  git: Git,
+  commit: string,
+  entry: SelectedEntry,
+  earlier: FragmentProbe['earlier'],
+): boolean {
+  const fragmentAt = (rev: string): Extracted | null => {
+    const text = textAt(git, rev, entry.path);
+    return text === null ? null : earlier(entry, text);
+  };
+  const then = fragmentAt(`${commit}^`);
+  const now = fragmentAt(commit);
+  return then === null || now === null ? then !== now : !sameContents(then, now);
+}

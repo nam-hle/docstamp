@@ -37,6 +37,8 @@ function staleRates(
         file: `${doc}\0${s.pattern}`,
         patterns: 1,
         resolved: s.files,
+        whole: s.files,
+        selected: [],
         diagnostics: [],
       })),
   );

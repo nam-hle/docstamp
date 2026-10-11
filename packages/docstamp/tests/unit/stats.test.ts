@@ -9,11 +9,13 @@ import { statsJsonText } from '../../src/report/json.ts';
 import { statsText } from '../../src/report/text.ts';
 
 const ID = 'a'.repeat(40);
-const commit = (day: string, ...paths: string[]): CommitRecord => ({ day, paths });
+const commit = (day: string, ...paths: string[]): CommitRecord => ({ id: ID, day, paths });
 const input = (file: string, ...resolved: string[]) => ({
   file,
   patterns: 1,
   resolved,
+  whole: resolved,
+  selected: [],
   diagnostics: [],
 });
 
@@ -23,23 +25,27 @@ describe('§12.4 Replay: git log output', () => {
       `\u0001${ID}\x00${Date.UTC(2026, 0, 2, 23, 59, 59) / 1000}\x00\nsrc/a.ts\x00docs/b.md\x00` +
       `\u0001${'b'.repeat(64)}\x00${Date.UTC(2026, 0, 3) / 1000}\x00\nREADME.md\x00`;
     expect(parseLog(output)).toEqual([
-      { seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000, paths: ['src/a.ts', 'docs/b.md'] },
-      { seconds: Date.UTC(2026, 0, 3) / 1000, paths: ['README.md'] },
+      {
+        id: ID,
+        seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000,
+        paths: ['src/a.ts', 'docs/b.md'],
+      },
+      { id: 'b'.repeat(64), seconds: Date.UTC(2026, 0, 3) / 1000, paths: ['README.md'] },
     ]);
   });
   it('a commit with no paths is still a commit', () => {
     expect(parseLog(`\u0001${ID}\x00100\x00\u0001${'c'.repeat(40)}\x00200\x00`)).toEqual([
-      { seconds: 100, paths: [] },
-      { seconds: 200, paths: [] },
+      { id: ID, seconds: 100, paths: [] },
+      { id: 'c'.repeat(40), seconds: 200, paths: [] },
     ]);
-    expect(parseLog(`\u0001${ID}\x00100\x00`)).toEqual([{ seconds: 100, paths: [] }]);
+    expect(parseLog(`\u0001${ID}\x00100\x00`)).toEqual([{ id: ID, seconds: 100, paths: [] }]);
   });
   it('no output is no commits', () => {
     expect(parseLog('')).toEqual([]);
   });
   it('converts paths to NFC', () => {
     expect(parseLog(`\u0001${ID}\x00100\x00\ne\u0301.ts\x00`)).toEqual([
-      { seconds: 100, paths: ['\u00e9.ts'] },
+      { id: ID, seconds: 100, paths: ['\u00e9.ts'] },
     ]);
   });
   it('a malformed log is refused', () => {
@@ -77,9 +83,9 @@ describe('§12.4 Replay: the window', () => {
     expect(() => replay(stubGit([]), { kind: 'from', value: 'nope' }, 0)).toThrow(Raised);
   });
   it('a commit is its UTC day and its paths', () => {
-    const log = [{ seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000, paths: ['a.ts'] }];
+    const log = [{ id: ID, seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000, paths: ['a.ts'] }];
     expect(replay(stubGit(log), { kind: 'days', days: 9 }, 0).commits).toEqual([
-      { day: '2026-01-02', paths: ['a.ts'] },
+      { id: ID, day: '2026-01-02', paths: ['a.ts'] },
     ]);
   });
   it('is E_HISTORY for a shallow repository, no commit, or a log git cannot give', () => {

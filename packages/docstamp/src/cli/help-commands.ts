@@ -168,7 +168,9 @@ reads no lock, never changes the verdict of check, and exits 0 whatever the numb
 
 Columns: patterns, files they select, commits and distinct days that would make the file stale,
 stale (those commits over all commits of the window) and sweep (the share of those commits that
-touch over 200 paths). It needs the full git history (fetch-depth: 0 in CI), else E_HISTORY.`,
+touch over 200 paths). A selected dependency (path:selector) counts as a pattern, and a commit
+touches it only when the selected part changed. It needs the full git history (fetch-depth: 0 in
+CI), else E_HISTORY.`,
     options: [
       JSON_OPTION,
       ROOT_OPTION,
