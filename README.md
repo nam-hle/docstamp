@@ -6,6 +6,8 @@
 
 Stop docs from silently going stale: docstamp fails CI when code a doc depends on changed since the doc was last reviewed, and names the doc and the changed files, deterministically.
 
+Documentation: [nam-hle.github.io/docstamp](https://nam-hle.github.io/docstamp/).
+
 A doc (`README.md`, `CLAUDE.md`, `AGENTS.md`, `docs/*.md`, an ADR, a runbook) makes claims about code. When the code changes, nobody notices that the claims are now wrong. docstamp turns "someone should re-read that doc" into a build failure that says exactly which doc to re-read and against which changes.
 
 1. Declare what `docs/auth.md` depends on, here in its own frontmatter:
