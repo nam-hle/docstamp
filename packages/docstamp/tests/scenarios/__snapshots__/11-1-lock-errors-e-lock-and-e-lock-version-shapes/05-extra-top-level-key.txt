@@ -3,7 +3,7 @@ $ docstamp
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_LOCK: The Lockfile is not valid; after a merge conflict take either side, otherwise run "docstamp update --all" after reviewing every file.
+error: E_LOCK: docstamp-lock.yaml: The Lockfile is not valid; after a merge conflict take either side, otherwise run "docstamp update --all" after reviewing every file.
 --- setup: docstamp-lock.yaml ---
 version: 4
 extra: 1

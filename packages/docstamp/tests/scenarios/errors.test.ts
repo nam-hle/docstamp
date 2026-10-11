@@ -368,7 +368,7 @@ scenario(
       const result = await repo.run([], { label, show: ['docstamp-lock.yaml'] });
       seen.add(code);
       expect(result.exit, label).toBe(2);
-      expect(result.stderr, label).toContain(`error: ${code}`);
+      expect(result.stderr, label).toContain(`error: ${code}: docstamp-lock.yaml: `);
       expect(result.stdout, label).toBe('');
     }
     repo.write('docstamp-lock.yaml', good);
