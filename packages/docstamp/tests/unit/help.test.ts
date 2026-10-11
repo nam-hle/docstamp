@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { COMMANDS, OPTIONS, parseArgs } from '../../src/cli/args.ts';
 import { COMMAND_PAGES } from '../../src/cli/help-commands.ts';
@@ -7,7 +7,11 @@ import { TOPICS } from '../../src/cli/help-topics.ts';
 import { helpText } from '../../src/cli/help.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 
-const SPEC = readFileSync(new URL('../../docs/SPEC.md', import.meta.url), 'utf8');
+const SPEC_DIR = new URL('../../docs/spec/', import.meta.url);
+const SPEC = readdirSync(SPEC_DIR)
+  .sort()
+  .map((part) => `\n${readFileSync(new URL(part, SPEC_DIR), 'utf8')}`)
+  .join('');
 
 const clause = (heading: string): string => {
   const start = SPEC.indexOf(`\n${heading}\n`);
