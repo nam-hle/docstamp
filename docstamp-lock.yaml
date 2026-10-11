@@ -1,13 +1,13 @@
 version: 3
 files:
-  "CLAUDE.md": f20b6bed4259c57ac6c452068c8ba1d2a5cbcfc7a021cf174638eb461ccafbe0
-  "README.md": 03161ef6ceea650dbdba5fcc110ba193d3d9df85c05d262590dc0dbc118220ee
+  "CLAUDE.md": 80950b6def4da69c07537ce4a06667d38ca49fa184008afc19b029a13337cbb9
+  "README.md": 2081e38e39ec027ca25159b4e0ae94fa4c64cf1a11fe9ba69e495cfd18a968d1
   "packages/docstamp-plugin-js/README.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-js/SPEC.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-markdown/README.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
   "packages/docstamp-plugin-markdown/SPEC.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
-  "packages/docstamp/README.md": 96a73d0a5e9aaa6e780c21249392e3b65fdfd02dbc53c0c4c396c644b4d9c5f4
-  "packages/docstamp/docs/spec/05-records.md": 2a58da7114c83714342eb8cbde218c7ee33354cb9cd192413e8d8f369a8ee311
+  "packages/docstamp/README.md": 54bbc62553e34c857b32650a04d9e293dae12575361cc6e46d5240a36df65515
+  "packages/docstamp/docs/spec/05-records.md": 7d4ef74ce8888959ebcde46a6ef8237874747d81f54911d8b1b50820c089daf8
   "packages/docstamp/docs/spec/06-root.md": 9f3555fbd1ea4ffec03ebd681e0e610fa8982b92f493507ba349581fa69147f2
   "packages/docstamp/docs/spec/07-universe.md": 9f3555fbd1ea4ffec03ebd681e0e610fa8982b92f493507ba349581fa69147f2
   "packages/docstamp/docs/spec/08-patterns.md": 98e79f0acf61b57008e4aef81d8399ccd49455ad2a0e1e24d850aac02e7a2a4c
@@ -15,16 +15,16 @@ files:
   "packages/docstamp/docs/spec/10-hashing.md": 300085d78d2dd367969fc9c3b51fc36f5b6542dad1370f5e44dbe56901cd1f3d
   "packages/docstamp/docs/spec/11-lockfile.md": 58e714956ae41cecca1cb21b60b46dce8f733306ca610278a501f7735ed4728e
   "packages/docstamp/docs/spec/12-evaluation.md": 4fcd08243281a7a58fd4f94d7efb29778f09c65cad7c2bd45f8d09aea0faa84f
-  "packages/docstamp/docs/spec/13-command-line.md": 96a73d0a5e9aaa6e780c21249392e3b65fdfd02dbc53c0c4c396c644b4d9c5f4
+  "packages/docstamp/docs/spec/13-command-line.md": 54bbc62553e34c857b32650a04d9e293dae12575361cc6e46d5240a36df65515
   "packages/docstamp/docs/spec/14-output.md": 6aefa163f56486ab024003af4bcbf17c599c727995df3167e8f4eee129773858
-  "packages/docstamp/docs/spec/15-diagnostics.md": 5dcd8e628e7642c7c48cc88ca86f500b43afe5690e12842d914b6b5f709e5176
-  "packages/docstamp/docs/spec/16-exit-codes.md": 96a73d0a5e9aaa6e780c21249392e3b65fdfd02dbc53c0c4c396c644b4d9c5f4
+  "packages/docstamp/docs/spec/15-diagnostics.md": ff4ce61429eb0209343d0433c178027c5af7c7bca9fca1d656394bc7d4527603
+  "packages/docstamp/docs/spec/16-exit-codes.md": 54bbc62553e34c857b32650a04d9e293dae12575361cc6e46d5240a36df65515
   "packages/docstamp/docs/spec/17-compatibility.md": cf89ec84fa2c77a6cbd076f4a5f2d1a565838c88a1fa841d032099fc1841a6b7
-  "packages/site/content/get-started.md": 03161ef6ceea650dbdba5fcc110ba193d3d9df85c05d262590dc0dbc118220ee
+  "packages/site/content/get-started.md": 2081e38e39ec027ca25159b4e0ae94fa4c64cf1a11fe9ba69e495cfd18a968d1
   "packages/site/content/guide/ci.md": 1057c72d7b4194ab0d887da81c29d97b8b8a2413f74453836fb66187dbc683b6
   "packages/site/content/guide/declare.md": 84cf250df233674d7dd5da8c52470ece5993a7ac0c4486722700ef81e0b6409f
   "packages/site/content/guide/plugins.md": 4a55fe77adc381c7747645c4926d7adc1369deb82d0d97726c3657b329b4f0e9
-  "packages/site/content/guide/review.md": be2c24023cea6da55c187557de16b950a9cd55d182eda2cd17d05964f9da9c21
+  "packages/site/content/guide/review.md": 5e536812613e6705927609c16dcd5b5ce62eef752f70e27a9b5d556127c3d1f8
   "packages/site/content/guide/tune.md": 4a95312013c337b110dab25d9185446eadff9789ea94d26ae3894f727ac53383
-  "packages/site/content/index.md": af2968416344012b1016e3fbc553576a4e0036d7f89314b3971d0068f8f049c3
-  "packages/site/content/reference/index.md": 96a73d0a5e9aaa6e780c21249392e3b65fdfd02dbc53c0c4c396c644b4d9c5f4
+  "packages/site/content/index.md": bf8b6fe24a2994c37c31ddf27a26cdc49fdf5427bdffdf1f7535c42c4e193e99
+  "packages/site/content/reference/index.md": 54bbc62553e34c857b32650a04d9e293dae12575361cc6e46d5240a36df65515
