@@ -23,8 +23,8 @@ its declaration fixed, then docstamp check <file>.
 - An edit of the list that selects other files is content-changed too. The report names it (edited
   line) only once the update is committed; before that the block lists depends lines. With a script
   configuration (docstamp.config.ts) the old list is never read: the report says "edited <script>
-  (configuration)" when the script differs from the review commit, and the review: line shows its
-  diff.
+  (configuration, may concern other files)" when the script differs from the review commit, and the
+  review: line shows its diff.
 - No propagation: if C depends on B and B on code, a code change makes B stale. C becomes stale only
   when B's content changes.
 - Warnings (W_ codes) never change a state or an exit code.

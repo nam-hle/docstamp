@@ -2,7 +2,7 @@ $ docstamp
 exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
-  edited    docstamp.config.ts  (configuration)
+  edited    docstamp.config.ts  (configuration, may concern other files)
   review: git diff -M 4a5eee63d1e08c96fe97a4dcc4d9f152932b5219 -- docstamp.config.ts
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
