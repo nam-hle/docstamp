@@ -447,8 +447,51 @@ describe('§8 Extract: focus and lines', () => {
     expect(part(TEXT.replaceAll('\n', '\r\n'), 'Box')?.lines).toEqual({ start: 7, end: 9 });
   });
 
-  it('returns no part and no diagnostic when nothing matches', () => {
-    expect(plugin.extract({ path: 'file.ts', text: TEXT, select: 'Missing' })).toEqual({});
+  it('returns no part and one warning when nothing matches', () => {
+    const result = plugin.extract({ path: 'file.ts', text: TEXT, select: 'Missing' });
+    expect(result.parts).toBeUndefined();
+    expect(result.diagnostics).toMatchObject([
+      { severity: 'warning', code: 'declaration-not-found' },
+    ]);
+  });
+});
+
+describe('§8.2 NotFound', () => {
+  const hint = (text: string, select: unknown): string | undefined =>
+    plugin.extract({ path: 'a.ts', text, select: select as never }).diagnostics?.[0]?.message;
+  const FUNCTIONS = 'function foo() {}\nfunction bar() {}\n';
+
+  it('says the file has no declarations', () => {
+    expect(hint('const { a } = b;\n', 'x')).toBe(
+      'No declaration named "x"; the file has no declarations.',
+    );
+  });
+
+  it('names the declarations of the same name when only the kind is wrong', () => {
+    expect(hint(FUNCTIONS, { name: 'bar', kind: 'class' })).toBe(
+      'No class named "bar"; the file declares function bar (line 2); correct the kind.',
+    );
+  });
+
+  it('names the nearest names, by distance then line', () => {
+    expect(hint(`${FUNCTIONS}class baz {}\n`, 'Bar')).toBe(
+      'No declaration named "Bar"; nearest: function bar (line 2), class baz (line 3).',
+    );
+  });
+
+  it('lists the first 10 declarations when none is near, and counts the rest', () => {
+    const text = Array.from(
+      { length: 12 },
+      (_, i) => `function name${'x'.repeat(i + 8)}() {}`,
+    ).join('\n');
+    const message = hint(text, 'q')!;
+    expect(message).toContain('the file declares: function namexxxxxxxx (line 1)');
+    expect(message).toMatch(/, and 2 more\.$/u);
+  });
+
+  it('holds no path and one line', () => {
+    expect(hint(FUNCTIONS, 'nope')).not.toContain('a.ts');
+    expect(hint(FUNCTIONS, 'nope')).not.toMatch(/\p{Cc}/u);
   });
 });
 

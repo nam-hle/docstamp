@@ -414,6 +414,11 @@ the reader cannot tell which was meant; docstamp has no policy for it. A `warnin
 reader can fix while a Part still stands, and SHOULD NOT be output on every run for something
 harmless. Every `message` SHOULD name what to change.
 
+NOTE: A Plugin that returns no Part SHOULD also return a `warning` that says what the file does hold
+(the nearest names, or the same name of another kind), since `E_SELECT_NOT_FOUND` (step 6) carries it
+as a `W_SELECT`; the Plugin has the file, docstamp has not. That `message` follows the rules above
+and holds no absolute path.
+
 NOTE: *Focus* says in words what a Part is, as a reader of the report needs it (`section "Install"
 (level 2)`, `function createUser`), and *Lines* where it is in *text*, which has the line count of the
 file (CR LF is read as LF, §10.2). A Part has one range: what lies in several places of the file is

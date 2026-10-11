@@ -10,6 +10,7 @@ import type {
 
 import { declarations, groups } from './declarations.ts';
 import { parseFile } from './parse.ts';
+import { notFound } from './not-found.ts';
 import { parseSelect } from './parse-select.ts';
 import { parseSelector, type Selector } from './selector.ts';
 import { shapeOf, sourceOf } from './shape.ts';
@@ -44,7 +45,8 @@ function extract({ path, text, select }: ExtractInput): ExtractResult {
     );
   }
   const { source, statements } = parsed;
-  const found = groups(declarations(statements))
+  const every = groups(declarations(statements));
+  const found = every
     .filter((group) => group.name === selector.name)
     .filter((group) => selector.kind === undefined || group.kind === selector.kind)
     .map((group) => {
@@ -57,7 +59,13 @@ function extract({ path, text, select }: ExtractInput): ExtractResult {
       };
       return { part, kind: group.kind };
     });
-  if (found.length === 0) return {};
+  if (found.length === 0) {
+    const located = every.map((group) => ({
+      group,
+      line: lineAt(source, group.declarations[0]!.statement.start!),
+    }));
+    return notFound(selector, located);
+  }
   if (found.length > 1) {
     const where = found.map(({ part, kind }) => `${kind} at line ${part.lines!.start}`).join(', ');
     return problem(

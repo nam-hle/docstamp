@@ -8,6 +8,7 @@ import type {
   ValidateSelectResult,
 } from 'docstamp';
 
+import { notFound } from './not-found.ts';
 import { parseSelect } from './parse-select.ts';
 import { parseSelector, type Selector } from './selector.ts';
 import { body, headings, sectionEnd } from './sections.ts';
@@ -58,7 +59,13 @@ function extract({ text, select }: ExtractInput): ExtractResult {
     };
     return [part];
   });
-  if (found.length === 0) return {};
+  if (found.length === 0) {
+    const located = all.map((heading) => ({
+      ...heading,
+      line: skipped + lineAt(source, heading.start),
+    }));
+    return notFound(selector, located, oneLine);
+  }
   if (found.length > 1) {
     const where = found.map((part) => part.lines!.start).join(', ');
     return problem(
