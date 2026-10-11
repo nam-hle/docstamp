@@ -93,6 +93,14 @@ const plugin = {
   ],
   extract,
   validateSelect,
+  selectorFields: {
+    main: 'name',
+    fields: {
+      name: 'string',
+      kind: ['function', 'class', 'interface', 'type', 'enum', 'variable', 'namespace'],
+      part: ['shape', 'source'],
+    },
+  },
 } satisfies DocstampPlugin;
 
 export default plugin;

@@ -85,6 +85,7 @@ const plugin = {
   files: ['**/*.md', '**/*.markdown'],
   extract,
   validateSelect,
+  selectorFields: { main: 'heading', fields: { heading: 'string', level: 'integer' } },
 } satisfies DocstampPlugin;
 
 export default plugin;

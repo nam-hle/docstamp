@@ -1,5 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -43,7 +50,8 @@ function repository(entry: string, api = API) {
       stderr: result.stderr,
     };
   };
-  return { write, run };
+  const lock = () => readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8');
+  return { write, run, lock };
 }
 
 const config = (entry: string) =>
@@ -147,5 +155,33 @@ describe('§8 the plugin through the docstamp CLI', () => {
     const broken = repository(CREATE, 'export function (').run();
     expect(broken.exit).toBe(2);
     expect(broken.stderr).toContain('E_SELECT');
+  });
+
+  it('§4 NOTE reads the one-string shorthand with the hash of the written form', () => {
+    const written = repository(CREATE);
+    written.run('update', 'CLAUDE.md');
+    const bare = repository("'api.ts:createUser'");
+    expect(bare.run().exit).toBe(1);
+    bare.run('update', 'CLAUDE.md');
+    expect(bare.lock()).toBe(written.lock());
+    expect(bare.run().exit).toBe(0);
+  });
+
+  it('§4 NOTE reads name, kind and part pairs as the written Map', () => {
+    const written = repository(
+      "{ path: 'api.ts', select: { name: 'createUser', part: 'source', kind: 'function' } }",
+    );
+    written.run('update', 'CLAUDE.md');
+    const pairs = repository("'api.ts:part=source,name=createUser,kind=function'");
+    pairs.run('update', 'CLAUDE.md');
+    expect(pairs.lock()).toBe(written.lock());
+    pairs.write('api.ts', API.replace('return { name };', 'return { name, id: 1 };'));
+    expect(pairs.run().exit).toBe(1);
+  });
+
+  it('§4 NOTE refuses a kind that is not one of the plugin kinds', () => {
+    const result = repository("'api.ts:name=createUser,kind=method'").run();
+    expect(result.exit).toBe(2);
+    expect(result.stderr).toContain('E_SELECT');
   });
 });

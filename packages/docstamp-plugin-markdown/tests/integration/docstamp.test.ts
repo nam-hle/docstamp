@@ -1,5 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -43,7 +50,8 @@ function repository(entry: string, guide = GUIDE) {
       stderr: result.stderr,
     };
   };
-  return { write, run };
+  const lock = () => readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8');
+  return { write, run, lock };
 }
 
 const config = (entry: string) =>
@@ -119,6 +127,44 @@ describe('§6 the plugin through the docstamp CLI', () => {
   it('reports an invalid selector as E_SELECT', () => {
     const { run } = repository("{ path: 'guide.md', select: { heading: 'Install', level: 9 } }");
     const result = run();
+    expect(result.exit).toBe(2);
+    expect(result.stderr).toContain('E_SELECT');
+  });
+
+  it('§4 NOTE reads the one-string shorthand with the hash of the written form', () => {
+    const written = repository(INSTALL);
+    written.run('update', 'CLAUDE.md');
+    const bare = repository("'guide.md:Install'");
+    expect(bare.run().exit).toBe(1);
+    bare.run('update', 'CLAUDE.md');
+    expect(bare.lock()).toBe(written.lock());
+    expect(bare.run().exit).toBe(0);
+  });
+
+  it('§4 NOTE reads heading and level pairs, converting the level to an integer', () => {
+    const text = '# Install\none\n\n## Install\ntwo\n';
+    const pairs = repository("'guide.md:level=2,heading=Install'", text);
+    pairs.run('update', 'CLAUDE.md');
+    const written = repository(
+      "{ path: 'guide.md', select: { heading: 'Install', level: 2 } }",
+      text,
+    );
+    written.run('update', 'CLAUDE.md');
+    expect(pairs.lock()).toBe(written.lock());
+    pairs.write('guide.md', text.replace('one', 'uno'));
+    expect(pairs.run().exit).toBe(0);
+    pairs.write('guide.md', text.replace('two', 'dos'));
+    expect(pairs.run().exit).toBe(1);
+  });
+
+  it('§4 NOTE writes a comma of a heading as \\,', () => {
+    const { run } = repository("'guide.md:Q&A\\\\, part 2'", '# Q&A, part 2\ntext\n');
+    expect(run().exit).toBe(1);
+    expect(run('update', 'CLAUDE.md').exit).toBe(0);
+  });
+
+  it('§4 NOTE reports an unknown key as E_SELECT', () => {
+    const result = repository("'guide.md:title=Install'").run();
     expect(result.exit).toBe(2);
     expect(result.stderr).toContain('E_SELECT');
   });
