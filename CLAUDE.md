@@ -106,7 +106,7 @@ Inside `packages/docstamp/`:
 │   ├── lib.ts            # library entry: defineConfig, definePlugin, DocstampConfig (§9.5)
 │   ├── host/             # the machine behind ports: FileSystem, Git, Clock, Host, the Node adapters
 │   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
-│   ├── cli/              # args, path resolution, workspace load, run, suggest, help; exit codes (§13, §16)
+│   ├── cli/              # args, path resolution, workspace load, run (dispatch), check, update, evaluate, emit, io, suggest, help; exit codes (§13, §16)
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
 │   ├── inline/           # inline declarations: frontmatter scan, block parse, keys, schema, stamp, block write (§5.6, §9.6)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
@@ -114,7 +114,7 @@ Inside `packages/docstamp/`:
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
-│   ├── engine/           # evaluation, presets, reverse lookup, stats, proposal; pure, no I/O (§8.6, §12, §12.5, §12.6, §13.8)
+│   ├── engine/           # evaluation, presets, reverse lookup, stats, update plan, proposal; pure, no I/O (§8.6, §12, §12.5, §12.6, §13.8)
 │   ├── history/          # changed-file report (§12.3), stats replay (§12.4), renamed path (§12.7); ask the Git port
 │   └── report/           # text and JSON output, diagnostics (§14, §15)
 ├── scripts/              # write-schema.ts: regenerates schema.json and schema-frontmatter.json
@@ -223,10 +223,11 @@ Only what no test can check stays here.
   fails for want of it (§13.10).
 - **`engine/` does no I/O.** Everything it needs is passed in, so every state is unit-testable.
 - **Nothing writes the Lockfile automatically.** Only `docstamp update` with named files or
-  `--all` may write it, or the `hash:` line of an inline doc (§9.6.4); a Write is the record that a
+  `--all` may write it, or the `hash:` line of an inline doc (§9.6.4), from `src/cli/update.ts`
+  (it applies the pure `planUpdate` of `src/engine/update-plan.ts`); a Write is the record that a
   review happened. `Stamp` changes no other byte of a doc. `suggest --write` writes an inline block
   with no `hash`, never overwrites one that has it, and never stamps (§9.6.5, §13.10).
-- **A plugin is user code.** It runs in-process and synchronously, only from `cli/run.ts` through
+- **A plugin is user code.** It runs in-process and synchronously, only from `cli/evaluate.ts` through
   `EngineFs.extractParts`; `engine/` never calls a plugin or reads a file; it imports only the pure `canonicalJson` from `plugin/` (§8.7).
 - **The hash input rule has one exception.** A file with an inline block is hashed without its
   `hash:` line (§10.2 step 4); anything else about hashing is a breaking change (§17).
@@ -350,14 +351,14 @@ raised `E_EMPTY_PATTERN`, and it changes nothing but that message.
 ## Text output order
 
 `checkChunks` in `src/report/text.ts` returns the check report as a List of stdout and stderr writes
-in the order of SPEC §14.3.2 (an `INVALID` line, then its Diagnostics). `emit` in `src/cli/run.ts`
+in the order of SPEC §14.3.2 (an `INVALID` line, then its Diagnostics). `emit` in `src/cli/emit.ts`
 writes them one by one, in that order: never all of stdout first. Each stream alone must stay what
 §14.1 says; `tests/unit/run.test.ts` pins the interleaving. `reviewLine` (§14.3.4) only builds the
 text of a git command for the reader; `git` still runs in `src/host/node-git.ts` alone, read-only: `history/` asks the `Git` port
 (`isWhitespaceOnly` for §12.3 step 7, `objectsAt` and `hashWorkFiles` for step 8, `fileAt` for step
 1.4 and, per selected dependency, for step 11 in `src/history/fragments.ts`, `objectAt`,
 `lastCommitTouching` and `objectsAt` for `renamedTo`, §12.7) and the adapter turns each into the
-command line and parses the output. `fragmentChanges` never runs a plugin: `cli/run.ts` hands it a
+command line and parses the output. `fragmentChanges` never runs a plugin: `cli/evaluate.ts` hands it a
 `FragmentProbe`, so a plugin still runs only from there. Every command goes through one function in
 the adapter, which applies step 1: no `GIT_*` variables, `GIT_OPTIONAL_LOCKS=0` and
 `-c core.autocrlf=false`.
