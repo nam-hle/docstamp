@@ -438,7 +438,7 @@ describe('§12.5 Fragments are extracted once per distinct blob', () => {
 });
 
 describe('§12.5 Statistics: breakdown', () => {
-  const pattern = (label: string) => ({ label, pattern: parsePattern(label)! });
+  const pattern = (label: string) => ({ label, preset: null, pattern: parsePattern(label)! });
   const window = [
     commit('2026-01-03', 'src/a.ts'),
     commit('2026-01-02', 'src/a.ts', 'src/b.ts'),
@@ -452,16 +452,16 @@ describe('§12.5 Statistics: breakdown', () => {
   it('orders by commits descending, then by declaration order', () => {
     const { files } = statistics([withBreakdown('src/b.ts', 'src/a.ts', 'nope')], window);
     expect(files[0]?.dependencies).toEqual([
-      { dependency: 'src/b.ts', commits: 2, only: 1 },
-      { dependency: 'src/a.ts', commits: 2, only: 1 },
-      { dependency: 'nope', commits: 0, only: 0 },
+      { dependency: 'src/b.ts', preset: null, commits: 2, only: 1 },
+      { dependency: 'src/a.ts', preset: null, commits: 2, only: 1 },
+      { dependency: 'nope', preset: null, commits: 0, only: 0 },
     ]);
   });
   it('a commit of several dependencies counts for each and is only for none', () => {
     const { files } = statistics([withBreakdown('src', 'src/a.ts')], window);
     expect(files[0]?.dependencies).toEqual([
-      { dependency: 'src', commits: 3, only: 1 },
-      { dependency: 'src/a.ts', commits: 2, only: 0 },
+      { dependency: 'src', preset: null, commits: 3, only: 1 },
+      { dependency: 'src/a.ts', preset: null, commits: 2, only: 0 },
     ]);
   });
   it('has no dependencies unless asked', () => {
