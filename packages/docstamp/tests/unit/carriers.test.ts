@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { readConfig } from '../../src/config/read-config.ts';
+import { cause } from '../../src/config/script.ts';
 import { CONFIG_NAMES } from '../../src/config/value.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import { defineConfig } from '../../src/lib.ts';
@@ -217,6 +218,34 @@ describe('§9.5 script carriers', () => {
         'let v = []; for (let i = 0; i < 100000; i++) v = [v];\nexport default { version: 2, files: {}, x: v };',
       ),
     ).toEqual([['E_CONFIG', '']]);
+  });
+});
+
+describe('§9.5 step 1 cause', () => {
+  const failure = (code: string, message: string) => Object.assign(new Error(message), { code });
+
+  it('names an unresolved package specifier', () => {
+    const error = failure('ERR_MODULE_NOT_FOUND', "Cannot find package 'x' imported from /a/b.ts");
+    expect(cause(error)).toBe('it imports "x", which cannot be resolved');
+  });
+
+  it.each([
+    "Cannot find module 'C:\\repo\\x.js'",
+    "Cannot find module '/repo/x.js'",
+    "Cannot find module 'file:///repo/x.js'",
+    "Cannot find module '\\\\host\\share\\x.js'",
+  ])('never leaks a location: %s', (message) => {
+    expect(cause(failure('MODULE_NOT_FOUND', message))).toBe('evaluation threw Error');
+  });
+
+  it('names the package of an unexported path, on either separator', () => {
+    for (const root of ['/a/node_modules/@s/p', 'C:\\a\\node_modules\\@s\\p']) {
+      const error = failure(
+        'ERR_PACKAGE_PATH_NOT_EXPORTED',
+        `not defined by "exports" in ${root}/package.json`,
+      );
+      expect(cause(error)).toBe('it imports "@s/p", which does not export that path');
+    }
   });
 });
 

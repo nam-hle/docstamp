@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module';
+import { basename } from 'node:path';
 import { types } from 'node:util';
 import { Raised, diag } from '../core/diagnostics.ts';
 import type { Value } from './value.ts';
@@ -67,6 +68,36 @@ function readPlugins(exported: unknown): unknown {
   return descriptor.value;
 }
 
+const UNRESOLVED = /^Cannot find (?:package|module) '([^']+)'/;
+const NOT_EXPORTED = /node_modules[\\/]((?:@[^\\/]+[\\/])?[^\\/]+)[\\/]package\.json/;
+const LOCATION = /^(?:[/\\]|[A-Za-z]:|file:)/;
+
+function codeOf(error: unknown): unknown {
+  return error instanceof Error ? (error as { code?: unknown }).code : undefined;
+}
+
+export function cause(error: unknown): string {
+  const code = codeOf(error);
+  const message = error instanceof Error ? error.message : '';
+  if (code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND') {
+    const specifier = UNRESOLVED.exec(message)?.[1];
+    if (specifier !== undefined && !LOCATION.test(specifier)) {
+      return `it imports "${specifier}", which cannot be resolved`;
+    }
+  }
+  if (code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
+    const name = NOT_EXPORTED.exec(message)?.[1]?.replaceAll('\\', '/');
+    if (name !== undefined) return `it imports "${name}", which does not export that path`;
+  }
+  return `evaluation threw ${error instanceof Error ? error.name : 'a value'}`;
+}
+
+// SPEC §9.5 step 1
+function loadFailure(absPath: string, error: unknown) {
+  const file = basename(absPath);
+  return diag('E_CONFIG', { file, message: `The script cannot be loaded: ${cause(error)}.` });
+}
+
 // SPEC §9.5
 export function loadScript(absPath: string): { value: Value; plugins: unknown } {
   let exported: unknown;
@@ -82,7 +113,7 @@ export function loadScript(absPath: string): { value: Value; plugins: unknown } 
     exported = fallback ?? loaded;
   } catch (error) {
     if (error instanceof Raised) throw error;
-    throw new Raised([diag('E_CONFIG')]);
+    throw new Raised([loadFailure(absPath, error)]);
   }
   try {
     const plugins = readPlugins(exported);
