@@ -20,7 +20,7 @@ exit: 0
           "severity": "warning",
           "file": null,
           "subject": "src/utl.ts",
-          "message": "The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory)."
+          "message": "The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the working directory)."
         }
       ]
     }
