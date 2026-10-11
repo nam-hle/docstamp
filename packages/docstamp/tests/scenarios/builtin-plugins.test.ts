@@ -173,6 +173,19 @@ scenario('§8.8 a missing value is E_SELECT_NOT_FOUND, one per selector', option
   expect(result.stderr).toContain('"package.json#\\"scripts.test\\""');
 });
 
+scenario('§12.1 an empty pattern does not hide a missing selected value', options, async (repo) => {
+  repo.write('package.json', '{"scripts":{"lint":"oxlint"}}\n');
+  repo.write(
+    'docstamp.yaml',
+    'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - nomatch/**\n' +
+      '      - path: package.json\n        select: nope\n',
+  );
+  const result = await repo.run([], { show: ['docstamp.yaml'] });
+  expect(result.exit).toBe(2);
+  expect(result.stderr).toContain('E_EMPTY_PATTERN');
+  expect(result.stderr).toContain('E_SELECT_NOT_FOUND');
+});
+
 scenario('§8.8 text that does not parse is E_SELECT', options, async (repo) => {
   repo.write('package.json', '{"scripts": ');
   const result = await repo.run([], { show: ['package.json'] });

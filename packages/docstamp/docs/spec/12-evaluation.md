@@ -21,6 +21,11 @@ of §9.5 (« » when the Configuration file is not a script Carrier):
 5. If *problems* is empty, let *current* be `DependencyHash(resolved, declaration.[[Selected]],
    plugins)` including its Fragments (§10.4 step 3); if it raises, add its Diagnostics, warnings
    included, to *problems*; otherwise add the warnings it returns to *warnings*.
+   If *problems* is not empty and *attached* is empty, resolve the Fragments of each Selected
+   Dependency whose `[[Path]]` is in *universe* (§10.4 step 3) as well, and add the Diagnostics of
+   those that raise to *problems*; the Dependency Hash is not computed and no Fragment is used.
+   A Declaration with an `E_EMPTY_PATTERN` and a missing selected value so reports both; the
+   order is that of §15.
 6. If *problems* is not empty, set *r*.`[[State]]` to `invalid` and *r*.`[[Diagnostics]]` to
    *problems*, each with `[[File]]` set to `declaration.[[File]]`, and return *r*.
 7. Set *r*.`[[Resolved]]` to *all*, *r*.`[[Current]]` to *current* and *r*.`[[Diagnostics]]`

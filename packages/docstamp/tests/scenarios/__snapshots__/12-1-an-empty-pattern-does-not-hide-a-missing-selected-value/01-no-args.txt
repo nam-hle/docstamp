@@ -1,0 +1,17 @@
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  CLAUDE.md
+0 ok, 0 stale, 1 invalid
+next: fix the configuration of each invalid file, then run: docstamp check CLAUDE.md
+--- stderr ---
+error: E_EMPTY_PATTERN: CLAUDE.md: nomatch/**: Correct or remove the pattern; it matches no file.
+error: E_SELECT_NOT_FOUND: CLAUDE.md: "package.json#\"nope\"": The plugin found nothing for the selector; correct "select" or the file, then run "docstamp check" again.
+--- setup: docstamp.yaml ---
+version: 2
+files:
+  CLAUDE.md:
+    dependencies:
+      - nomatch/**
+      - path: package.json
+        select: nope
