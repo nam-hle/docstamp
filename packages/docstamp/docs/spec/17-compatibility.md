@@ -29,7 +29,7 @@ A change to any of the following is breaking:
 | Formats | the `version` of the Configuration file (§9.3) or the Lockfile (§11.1); a key name of either; the accepted Configuration file names and their precedence (§9.1); the canonical form of the Lockfile (§11.2) |
 | Verdicts | what is `stale` or `ok`; the Reasons (§5.4); any Diagnostic that turns a run from passing to failing or the reverse, including a warning that becomes an error and an error that becomes a warning (§15, §16) |
 | Contract | an exit code or its meaning (§16); the name, severity or meaning of a Diagnostic code (§15); a member of the JSON output removed, renamed or given another meaning, or the JSON output `version` (§14.5); a command name, an option name, or the meaning of an argument (§13) |
-| Platform | the minimum Node.js version (the `engines` field of the package); how a script Carrier is loaded or what it may export (§9.5) |
+| Platform | the minimum Node.js version (the `engines` field of the package); how a script Carrier is loaded or what it may export (§9.5); a member of the Plugin API removed or given another meaning, or an `[[ApiVersion]]` no longer accepted (§8.7) |
 
 NOTE: An exclusion that matches nothing was `E_EMPTY_PATTERN` and is `W_EMPTY_EXCLUSION` (§8.5): an
 error that becomes a warning, so a *Verdicts* change and breaking. A file that was `invalid` for

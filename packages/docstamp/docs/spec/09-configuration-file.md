@@ -206,6 +206,10 @@ exported value itself):
 NOTE: `plugins` is accepted only in a script Carrier; in `docstamp.yaml` it is `E_UNKNOWN_KEY`, and
 its message says Plugins are registered in a script Carrier (§9.3 NOTE).
 
+NOTE: A repository whose Configuration file is `docstamp.yaml`, or that has only inline blocks and
+no Configuration file, cannot use a Plugin: it needs a script Carrier (`docstamp.config.ts`), for
+example `export default { version: 2, plugins: [markdown], files: {} }`.
+
 NOTE: A Proxy is rejected wherever it occurs, even one that wraps a plain object or an Array, since
 its traps can answer differently on each access.
 

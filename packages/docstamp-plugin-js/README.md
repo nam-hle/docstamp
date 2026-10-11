@@ -11,7 +11,9 @@ declaration changes.
 pnpm add -D docstamp docstamp-plugin-js
 ```
 
-Plugins are registered in a script configuration (`docstamp.config.ts` or `.js`):
+Plugins are registered in a script configuration (`docstamp.config.ts` or `.js`). A repository with
+only a `docstamp.yaml` or frontmatter blocks needs one to use a plugin
+([SPEC §9.5](https://github.com/nam-hle/docstamp/blob/main/packages/docstamp/docs/spec/09-configuration-file.md#95-script-carriers)):
 
 ```ts
 import { defineConfig } from 'docstamp';
