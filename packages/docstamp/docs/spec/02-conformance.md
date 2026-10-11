@@ -11,7 +11,8 @@ permitted variations are:
 - the text of a Diagnostic's `[[Message]]` (§5.5), which is informative;
 - the output of `--version`, `--help` and `help` (§13.11);
 - color escape sequences (§14.1);
-- the choice of Root by the upward search of §6, which `--root` removes;
+- the choice of Root by the upward search of §6, which depends on the working directory (§13.4)
+  and on the directories above it;
 - Unicode normalization (§7.4) and case mapping (§7.5) of code points that are unassigned in the
   Unicode version of the implementation's runtime;
 - the changed-file report (`[[Changes]]`, §5.4), which depends on the repository history available

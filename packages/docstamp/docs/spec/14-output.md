@@ -183,11 +183,10 @@ Result is inline (§5.6), and `the configuration or docstamp block` when some ar
 configured.
 
 Each lists the files of its state in path order, each written as in §14.2 as a file argument that
-§13.4 resolves, from the current directory, to that file: its RepoPath when the current directory
-is Root, else the relative path from the current directory to Root, `/`, and its RepoPath, with
-`/` as the separator on every platform (`../repo/docs/a.md`). When no relative path exists, as for
-another drive on Windows, the RepoPath is written. The list is followed by ` --root ` and the
-`--root` value as given, if one was given. At most 10 files are listed. When there are
+§13.4 resolves, from the working directory, to that file: its RepoPath when the working directory
+is Root, else the relative path from the working directory to Root (§6 NOTE), `/`, and its
+RepoPath, with `/` as the separator on every platform (`../repo/docs/a.md`). The list is followed
+by ` --cwd ` and the `--cwd` value as given, if one was given. At most 10 files are listed. When there are
 more, the line lists the first 10 and is followed by the line `  and <m> more`, two spaces, with
 *m* the number of files not listed. There is no `next:` line for a state that no selected Result
 has, and none when §13.6 step 5 refused an update (§14.4).
@@ -205,8 +204,10 @@ not none, or with `[[Fragments]]` that are not empty, the block ends with one li
 ```
 
 two spaces, `review: `, and a read-only git command that shows what changed: *C* is `[[Base]]`
-as git printed it, and each *arg* is written with `ShellQuote`. If `--root` was given, `git diff`
-is `git -C <root> diff`, *root* the value as given, written with `ShellQuote`. `-M` lets git show a
+as git printed it, and each *arg* is written with `ShellQuote`. If `--cwd` was given, `git diff`
+is `git -C <dir> diff`, *dir* the `--cwd` value as given, followed, when the working directory is
+not Root, by `/` and the relative path from it to Root (§6 NOTE), written with `ShellQuote`, so
+that the RepoPaths below are relative to the directory git acts in. `-M` lets git show a
 renamed file as one rename rather than a deletion and an addition. The *args* are:
 
 - if the Result has at most 10 Changes (the *path cap*): the `[[Path]]` of each Change in path
