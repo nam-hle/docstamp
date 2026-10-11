@@ -13,4 +13,6 @@ export interface Host {
   // git for the work tree at `root`
   readonly git: (root: string) => Git;
   readonly clock: Clock;
+  // true when paths of the machine use drive letters and backslashes (SPEC §13.4)
+  readonly windows: boolean;
 }

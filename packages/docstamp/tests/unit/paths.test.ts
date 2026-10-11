@@ -11,17 +11,17 @@ import type { Result } from '../../src/core/types.ts';
 
 describe('§13.4 toRepoPath', () => {
   it('relative to cwd, lexical', () => {
-    expect(toRepoPath('../b.md', '/r/a', '/r')).toBe('b.md');
-    expect(toRepoPath('/r/x/./y.md', '/elsewhere', '/r')).toBe('x/y.md');
+    expect(toRepoPath('../b.md', '/r/a', '/r', false)).toBe('b.md');
+    expect(toRepoPath('/r/x/./y.md', '/elsewhere', '/r', false)).toBe('x/y.md');
   });
   it('fails outside root or at root', () => {
-    expect(toRepoPath('../../x', '/r/a', '/r')).toBeNull();
-    expect(toRepoPath('.', '/r', '/r')).toBeNull();
-    expect(toRepoPath('/rx/a.md', '/r', '/r')).toBeNull();
+    expect(toRepoPath('../../x', '/r/a', '/r', false)).toBeNull();
+    expect(toRepoPath('.', '/r', '/r', false)).toBeNull();
+    expect(toRepoPath('/rx/a.md', '/r', '/r', false)).toBeNull();
   });
   it('root with trailing slash', () => {
-    expect(toRepoPath('a.md', '/r/', '/r/')).toBe('a.md');
-    expect(toRepoPath('.', '/r/', '/r/')).toBeNull();
+    expect(toRepoPath('a.md', '/r/', '/r/', false)).toBe('a.md');
+    expect(toRepoPath('.', '/r/', '/r/', false)).toBeNull();
   });
   it('windows separators and drive letters', () => {
     expect(toRepoPath('docs\\a.md', '/r', '/r', true)).toBe('docs/a.md');
@@ -32,16 +32,16 @@ describe('§13.4 toRepoPath', () => {
     expect(toRepoPath('C:/a.md', '/r', '/r', false)).toBe('C:/a.md');
   });
   it('NFC, no case folding', () => {
-    expect(toRepoPath('é.md', '/r', '/r')).toBe('é.md');
-    expect(toRepoPath('e\u0301.md', '/r', '/r')).toBe('\u00e9.md');
-    expect(toRepoPath('A.md', '/r', '/r')).toBe('A.md');
+    expect(toRepoPath('é.md', '/r', '/r', false)).toBe('é.md');
+    expect(toRepoPath('e\u0301.md', '/r', '/r', false)).toBe('\u00e9.md');
+    expect(toRepoPath('A.md', '/r', '/r', false)).toBe('A.md');
   });
 });
 
 describe('§13.4 steps 1 and 2 resolveArgument', () => {
   it('joins to cwd and normalizes lexically, also outside root', () => {
-    expect(resolveArgument('../../x/./y', '/r/a')).toBe('/x/y');
-    expect(resolveArgument('/abs/../z', '/r')).toBe('/z');
+    expect(resolveArgument('../../x/./y', '/r/a', false)).toBe('/x/y');
+    expect(resolveArgument('/abs/../z', '/r', false)).toBe('/z');
     expect(resolveArgument('.', '/r', false)).toBe('/r');
     expect(resolveArgument('docs\\a.md', '/r', true)).toBe('/r/docs/a.md');
   });
@@ -66,17 +66,17 @@ describe('§13.3 selectResults', () => {
   const results = [r('a.md'), r('b.md')];
   const raised = (args: string[]) => {
     try {
-      selectResults(args, '/r', '/r', results);
+      selectResults(args, '/r', '/r', results, false);
     } catch (error) {
       return (error as Raised).diagnostics.map((d) => [d.code, d.subject]);
     }
     return [];
   };
   it('all when no args', () => {
-    expect(selectResults([], '/r', '/r', results)).toHaveLength(2);
+    expect(selectResults([], '/r', '/r', results, false)).toHaveLength(2);
   });
   it('dedupes and keeps path order', () => {
-    const out = selectResults(['b.md', 'a.md', 'b.md'], '/r', '/r', results);
+    const out = selectResults(['b.md', 'a.md', 'b.md'], '/r', '/r', results, false);
     expect(out.map((x) => x.file)).toEqual(['a.md', 'b.md']);
   });
   it('raises for an unknown file, naming every bad argument', () => {
@@ -97,7 +97,7 @@ describe('§13.3 selectResults', () => {
   it('the message of an outside-root arg says how it was resolved; an unknown one does not', () => {
     const messages = (args: string[]) => {
       try {
-        selectResults(args, '/w', '/w/r', results);
+        selectResults(args, '/w', '/w/r', results, false);
       } catch (error) {
         return (error as Raised).diagnostics.map((d) => d.message);
       }

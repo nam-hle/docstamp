@@ -56,4 +56,9 @@ export const nodeFs: FileSystem = {
   },
 };
 
-export const nodeHost: Host = { fs: nodeFs, git: nodeGit, clock: systemClock };
+export const nodeHost: Host = {
+  fs: nodeFs,
+  git: nodeGit,
+  clock: systemClock,
+  windows: process.platform === 'win32',
+};

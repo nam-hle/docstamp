@@ -298,7 +298,7 @@ function runList(
   try {
     const cwd = resolveCwd(host, processCwd, args.cwd);
     const root = determineRoot(host, cwd);
-    selected = selectResults(args.paths, cwd, root, listAll(host, root));
+    selected = selectResults(args.paths, cwd, root, listAll(host, root), host.windows);
     exitCode = selected.some((r) => r.state === 'invalid') ? 2 : 0;
   } catch (e) {
     if (!(e instanceof Raised)) throw e;
@@ -325,12 +325,15 @@ function reverseEntries(
   const { universe: walked, declarations, attached } = loadWorkspace(host, root);
   const universe = new Set(walked.paths);
   const keyed = new Map<string, string | null>();
-  for (const arg of paths) keyed.set(toRepoPath(arg, cwd, root) ?? arg, toRepoPath(arg, cwd, root));
+  for (const arg of paths) {
+    const repoPath = toRepoPath(arg, cwd, root, host.windows);
+    keyed.set(repoPath ?? arg, repoPath);
+  }
   const outside = sortPaths([...keyed.keys()].filter((key) => keyed.get(key) === null));
   if (outside.length > 0) {
     throw new Raised(
       outside.map((subject) =>
-        diag('E_USAGE', { subject, message: resolutionMessage(subject, cwd, root) }),
+        diag('E_USAGE', { subject, message: resolutionMessage(subject, cwd, root, host.windows) }),
       ),
     );
   }
@@ -392,7 +395,7 @@ function runStats(
   try {
     const cwd = resolveCwd(host, processCwd, args.cwd);
     const root = determineRoot(host, cwd);
-    const selected = selectResults(args.paths, cwd, root, listAll(host, root));
+    const selected = selectResults(args.paths, cwd, root, listAll(host, root), host.windows);
     const invalid = selected.filter((r) => r.state === 'invalid');
     if (invalid.length > 0) throw new Raised(invalid.flatMap((r) => [...r.diagnostics]));
     const given = args.window;
@@ -481,7 +484,7 @@ export function run(host: Host, argv: readonly string[], processCwd: string, io:
     const selected =
       args.mode === 'update' && args.all
         ? evaluated.results
-        : selectResults(args.paths, cwd, root, evaluated.results);
+        : selectResults(args.paths, cwd, root, evaluated.results, host.windows);
     const global = evaluated.global;
     const refused = hasError(global) || selected.some((r) => r.state === 'invalid');
     if (mode === 'check') {
@@ -492,7 +495,7 @@ export function run(host: Host, argv: readonly string[], processCwd: string, io:
       const chunks = checkChunks(reported, global, {
         cwd: args.cwd,
         quiet: args.quiet,
-        rootFromCwd: rootFromCwd(cwd, root),
+        rootFromCwd: rootFromCwd(cwd, root, host.windows),
         inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
       });
       return emit(io, {

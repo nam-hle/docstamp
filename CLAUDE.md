@@ -199,9 +199,9 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
 Code under `src/` reaches the machine only through `Host` (`src/host/host.ts`), which every
 function that reads, writes or asks git receives as its first parameter: `Host.fs` is the file
 system, `Host.git(root)` a repository with typed, read-only questions (`src/host/git.ts`), and
-`Host.clock` the time. `src/host/node-fs.ts` and `src/host/node-git.ts` are the adapters (git is
+`Host.clock` the time, `Host.windows` the path flavor of the machine. `src/host/node-fs.ts` and `src/host/node-git.ts` are the adapters (git is
 run there, with the command lines and the parsing of its output), and `tests/unit/host-boundary.test.ts`
-fails on any other `node:fs`, `node:child_process` or clock read in `src/`.
+fails on any other `node:fs`, `node:child_process`, clock or `process.platform` read in `src/`.
 
 Unit tests build a tree in memory with `inMemory({ 'a.md': '...' })` from
 `tests/helpers/memory-fs.ts`, which also holds a git (`tests/helpers/memory-git.ts`): a straight line
