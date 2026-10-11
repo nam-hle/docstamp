@@ -12,7 +12,7 @@ import type {
 import { dependencyHashFrom, type Fragment } from '../hash/hash.ts';
 import { patternMatches, select } from '../pattern/match.ts';
 import { literalPath, parsePattern, type ParsedPattern } from '../pattern/parse.ts';
-import { canonicalJson } from '../plugin/canonical.ts';
+import { canonicalJson } from '../core/canonical.ts';
 
 export interface Extraction {
   readonly parts: readonly { readonly content: string }[];

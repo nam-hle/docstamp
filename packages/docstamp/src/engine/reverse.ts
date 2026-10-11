@@ -1,7 +1,7 @@
 import type { Declaration, ReverseDependent, Diagnostic } from '../core/types.ts';
 import { patternMatches, select } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
-import { canonicalJson } from '../plugin/canonical.ts';
+import { canonicalJson } from '../core/canonical.ts';
 
 // SPEC §13.8 step 3.2
 export function dependentsOf(

@@ -5,7 +5,7 @@ import type { Diagnostic } from '../core/types.ts';
 import { select as selectPaths } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 import { builtinPlugins } from './builtin.ts';
-import { canonicalJson } from './canonical.ts';
+import { canonicalJson } from '../core/canonical.ts';
 import type { DocstampPlugin, ExtractInput, ExtractResult, LineRange, Part } from './types.ts';
 
 // SPEC §8.7: the Fragment of a selector and the warnings the plugin reported with it

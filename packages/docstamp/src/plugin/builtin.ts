@@ -1,7 +1,7 @@
 import { parseAllDocuments } from 'yaml';
 
 import type { Json } from '../core/types.ts';
-import { canonicalJson } from './canonical.ts';
+import { canonicalJson } from '../core/canonical.ts';
 import type { DocstampPlugin, ExtractInput, ExtractResult } from './types.ts';
 
 type Step = string;

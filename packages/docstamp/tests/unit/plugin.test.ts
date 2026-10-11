@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Raised } from '../../src/core/diagnostics.ts';
 import type { Diagnostic } from '../../src/core/types.ts';
-import { canonicalJson } from '../../src/plugin/canonical.ts';
+import { canonicalJson } from '../../src/core/canonical.ts';
 import { claim, runExtract, validatePlugins } from '../../src/plugin/plugins.ts';
 
 const raised = (run: () => unknown): Diagnostic[] => {

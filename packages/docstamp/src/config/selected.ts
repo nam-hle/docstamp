@@ -1,12 +1,19 @@
-import type { SelectedEntry } from '../core/types.ts';
+import { canonicalJson } from '../core/canonical.ts';
+import type { Json, SelectedEntry } from '../core/types.ts';
 import { literalPath, parsePattern } from '../pattern/parse.ts';
-import { canonicalJson, fromValue } from '../plugin/canonical.ts';
 import { isMap, type Value } from './value.ts';
 
 export const SELECTED_MESSAGE =
   'A selected dependency is { path, select }: path is one literal file path, select any plain value.';
 
 const KEYS = ['path', 'select'];
+
+// SPEC §3.5: a configuration value as a plain value, a Map becoming an object
+const fromValue = (value: Value): Json => {
+  if (Array.isArray(value)) return value.map(fromValue);
+  if (!isMap(value)) return value;
+  return Object.fromEntries([...value].map(([key, member]) => [key, fromValue(member)]));
+};
 
 const isFinitePlain = (value: Value): boolean => {
   if (typeof value === 'number') return Number.isFinite(value);
