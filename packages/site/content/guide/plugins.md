@@ -62,6 +62,11 @@ synchronous `extract({ path, text, select })` that returns `{ parts, diagnostics
 `{ content, focus?, lines? }`: docstamp hashes `content`, and the report prints `focus` and `lines`
 so a reviewer knows where to look. A diagnostic with severity `error` makes the file `invalid`.
 
+A plugin may also have a synchronous `validateSelect(select)` that returns `{ diagnostics }` of
+errors only. docstamp calls it when the configuration loads, so a malformed selector is reported as
+`E_SELECT` for the file and pattern before any file is read. It must not read the file; a plugin
+without it behaves as before.
+
 A plugin runs in your process, so determinism is its author's duty: keep it independent of the
 clock, the network and the environment. The contract, with every error case, is
 [SPEC §8.7](/spec/patterns#87-selected-dependencies).

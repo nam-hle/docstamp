@@ -3,7 +3,8 @@ import { Raised } from '../core/diagnostics.ts';
 import type { Json, SelectedEntry } from '../core/types.ts';
 import type { Host } from '../host/host.ts';
 import { canonicalJson } from '../core/canonical.ts';
-import { claim, runExtract, type Extracted } from '../plugin/plugins.ts';
+import { claim, runExtract, runValidateSelect, type Extracted } from '../plugin/plugins.ts';
+import type { DocstampPlugin } from '../plugin/types.ts';
 import { comparePaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result } from '../core/types.ts';
 import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
@@ -61,16 +62,32 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
   return memoizeBy((path: string) => path, hash);
 }
 
+// SPEC §12.2 step 5: ValidateSelect of §8.7 for every Selected Dependency a Plugin claims
+function validatedSelects(
+  declarations: readonly Declaration[],
+  plugins: readonly DocstampPlugin[],
+): Diagnostic[] {
+  return declarations.flatMap((declaration) =>
+    (declaration.selected ?? []).flatMap((entry) => {
+      try {
+        return runValidateSelect(claim(plugins, entry.path), declaration.file, entry);
+      } catch (e) {
+        if (e instanceof Raised) return []; // an unclaimed path is Fragments step 0's to report
+        throw e;
+      }
+    }),
+  );
+}
+
 function evaluateDeclarations(
   host: Host,
   root: string,
   readLockFor: () => Lock,
   hashFiles: boolean,
 ) {
-  const { universe, declarations, attached, presets, defaultPresets, plugins } = loadWorkspace(
-    host,
-    root,
-  );
+  const workspace = loadWorkspace(host, root);
+  const { universe, declarations, presets, defaultPresets, plugins } = workspace;
+  const attached = [...workspace.attached, ...validatedSelects(declarations, plugins)];
   const extract = memoizeBy(
     ([path, select]: readonly [string, Json]) => `${path}\u0000${canonicalJson(select)}`,
     ([path, select]: readonly [string, Json]) =>

@@ -9,6 +9,7 @@ export type {
   LineRange,
   Part,
   PluginDiagnostic,
+  ValidateSelectResult,
 } from './plugin/types.ts';
 
 // SPEC §8.7

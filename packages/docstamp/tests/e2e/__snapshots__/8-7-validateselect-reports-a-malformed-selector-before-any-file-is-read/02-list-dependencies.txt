@@ -1,0 +1,6 @@
+$ docstamp list-dependencies
+exit: 2
+--- stdout ---
+CLAUDE.md
+--- stderr ---
+error: E_SELECT: CLAUDE.md: docs/guide.md#3: The selector must be a heading title.

@@ -238,7 +238,9 @@ dependency: the Declaration's `[[Selected]]` holds the first of them in order of
 drops the others without a diagnostic.
 
 A *Plugin* is { `[[Name]]`: a non-empty String, `[[ApiVersion]]`: 1, `[[Files]]`: a non-empty List
-of Patterns, `[[Extract]]`: a function }, other members being ignored. Plugin names are unique.
+of Patterns, `[[Extract]]`: a function, `[[ValidateSelect]]`: a function, when present }, other
+members being ignored. Plugin names are unique. A `validateSelect` that is present and not a function
+is an invalid Plugin (`E_PLUGIN`, §9.5).
 
 The *Plugin API* is the shape of this Map, of the Map `[[Extract]]` receives (§8.7 `Fragments` step 2)
 and of the Map it returns (step 3), and `[[ApiVersion]]` names it; version 1 is the shape defined
@@ -279,6 +281,31 @@ Plugin.
 7. Otherwise the Fragment is `parts` in the order given, each a Part { `[[Content]]`, `[[Focus]]`,
    `[[Lines]]` }, and *warnings* are returned with it.
 
+`ValidateSelect(entry, plugin)`, with *entry* a Selected Dependency of the Declaration *file*, returns
+a List of Diagnostics. It is called at load (§12.2 step 5), once for each Selected Dependency of each
+Declaration, never at evaluation, and only when `Claim(plugins, entry.[[Path]])` returns a Plugin
+that has `[[ValidateSelect]]`; a Plugin without it adds nothing, and a path no Plugin claims is left
+to `Fragments` step 0. It reads no file:
+
+1. Call `plugin.[[ValidateSelect]]` synchronously with a copy of `entry.[[Select]]` (as `Fragments`
+   step 2). If it throws or returns a Promise or not a Map, return « `E_SELECT` » with `[[File]]`
+   *file* and `[[Subject]]` the path, `#` and `CanonicalJson(entry.[[Select]])`.
+2. Read from the result `diagnostics`, « » when absent, as `Fragments` step 3 does; other members are
+   ignored. A `diagnostics` of another shape, or holding a `warning`, gives the same `E_SELECT` as
+   step 1.
+3. Return, for each `error` in the order given, an `E_SELECT` Diagnostic with `[[File]]` *file*, the
+   `[[Subject]]` of step 1 and `[[Message]]` its `message`.
+
+The Diagnostics are attached (§5.5): a Declaration that has one is `invalid` and none of its
+dependencies is resolved or hashed, as for an `E_PATTERN` (§12.1 step 6). A selector a Plugin
+validates is therefore reported with the file and the path it is written in, before any file is read.
+`E_SELECT` is the code, not `E_CONFIG`: the selector is the Plugin's (§8.7), its malformation is the
+same fact `Fragments` step 4 reports, and a Declaration stays an ordinary Declaration. No new code.
+
+NOTE: `ValidateSelect` is an early check, not a second extraction: a Plugin MUST NOT depend on the
+file's content in it, and a selector it accepts may still be `E_SELECT` or `E_SELECT_NOT_FOUND` at
+`Fragments`. `list-dependencies` (§13.7) calls it too, since it runs at load and reads no file.
+
 NOTE: A Plugin decides what a selector selects, and says so. One Part means one piece; several
 Parts mean the selector asked for all of them, and the Fragment depends on every one, in the order
 given, so a Plugin SHOULD return them in an order that does not change when an unrelated part of
@@ -307,7 +334,7 @@ NOTE: A Plugin is user code run in the host runtime, like a script Carrier (§9.
 deterministic and independent of the environment, the clock and the network (§2). The `content` of
 its Parts is hashed by docstamp (§10.4) and otherwise opaque to it.
 
-NOTE: `list-dependencies` (§13.7) does not call a Plugin. `ChangedSince` (§12.3) reports the
+NOTE: `list-dependencies` (§13.7) does not call `[[Extract]]` of a Plugin. `ChangedSince` (§12.3) reports the
 Selected Dependencies whose Fragment changed (step 11); `stats` (§13.9) and `suggest` (§13.10) do
 not know Selected Dependencies yet: `stats` counts a commit that touches the path.
 

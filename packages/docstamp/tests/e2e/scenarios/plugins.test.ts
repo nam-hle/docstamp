@@ -86,3 +86,27 @@ scenario(
     );
   },
 );
+
+const validatingConfig =
+  "import { defineConfig } from 'docstamp';\n" +
+  "import headings from './tools/headings.ts';\n\n" +
+  'const validating = { ...headings, validateSelect: (select: unknown) => ({\n' +
+  "  diagnostics: typeof select === 'string' && select !== '' ? [] : [\n" +
+  "    { severity: 'error', message: 'The selector must be a heading title.' }],\n" +
+  '}) };\n' +
+  'export default defineConfig({ version: 2, plugins: [validating as never], files: {\n' +
+  "  'CLAUDE.md': { dependencies: [{ path: 'docs/guide.md', select: 3 }] } } });\n";
+
+scenario(
+  '§8.7 ValidateSelect reports a malformed selector before any file is read',
+  options,
+  async (repo) => {
+    repo.write('docstamp.config.ts', validatingConfig);
+    const result = await repo.run([], { show: ['docstamp.config.ts'], expectExit: 2 });
+    expect(result.stderr).toContain(
+      'error: E_SELECT: CLAUDE.md: docs/guide.md#3: The selector must be a heading title.',
+    );
+    const listed = await repo.run(['list-dependencies'], { expectExit: 2 });
+    expect(listed.stderr).toContain('E_SELECT');
+  },
+);

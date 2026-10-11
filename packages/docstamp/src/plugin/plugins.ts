@@ -6,7 +6,15 @@ import { select as selectPaths } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 import { builtinPlugins } from './builtin.ts';
 import { canonicalJson } from '../core/canonical.ts';
-import type { DocstampPlugin, ExtractInput, ExtractResult, LineRange, Part } from './types.ts';
+import type { Json } from '../core/types.ts';
+import type {
+  DocstampPlugin,
+  ExtractInput,
+  ExtractResult,
+  LineRange,
+  Part,
+  ValidateSelectResult,
+} from './types.ts';
 
 // SPEC §8.7: the Fragment of a selector and the warnings the plugin reported with it
 export interface Extracted {
@@ -46,7 +54,7 @@ export function validatePlugins(raw: unknown): DocstampPlugin[] {
 
 function validateEntry(entry: unknown, label: string, names: Set<string>): DocstampPlugin {
   if (!isObject(entry)) return bad(label, 'A plugin must be an object.');
-  const { name, apiVersion, files, extract } = entry;
+  const { name, apiVersion, files, extract, validateSelect } = entry;
   if (typeof name !== 'string' || name === '') return bad(label, 'A plugin needs a "name".');
   if (apiVersion !== 1) {
     return bad(
@@ -64,6 +72,9 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
   if (typeof extract !== 'function') {
     return bad(name, `Plugin "${name}" needs an "extract" function.`);
   }
+  if (validateSelect !== undefined && typeof validateSelect !== 'function') {
+    return bad(name, `Plugin "${name}" has a "validateSelect" that is not a function.`);
+  }
   if (names.has(name)) return bad(name, `Two plugins are named "${name}"; names must be unique.`);
   names.add(name);
   // read once: later calls never touch a getter of the user object again
@@ -73,6 +84,12 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
     apiVersion: 1,
     files: snapshot,
     extract: (input) => Reflect.apply(extract, entry, [input]) as ExtractResult,
+    ...(validateSelect === undefined
+      ? {}
+      : {
+          validateSelect: (select: Json) =>
+            Reflect.apply(validateSelect, entry, [select]) as ValidateSelectResult,
+        }),
   };
 }
 
@@ -133,6 +150,26 @@ function readRaw(result: unknown): Raw {
   };
 }
 
+// SPEC §8.7 steps 3 and 4: the Diagnostics a Plugin reported, as E_SELECT or W_SELECT
+function readDiagnostics(
+  reported: readonly unknown[],
+  subject: string,
+  file: string,
+  fail: (why: string) => never,
+): Diagnostic[] {
+  return reported.map((item: unknown) => {
+    if (
+      !isObject(item) ||
+      (item['severity'] !== 'error' && item['severity'] !== 'warning') ||
+      !isOneLine(item['message'])
+    ) {
+      return fail('returned a diagnostic that is not { severity, message } of one line');
+    }
+    const code = item['severity'] === 'error' ? 'E_SELECT' : 'W_SELECT';
+    return diag(code, { file, subject, message: item['message'] });
+  });
+}
+
 // SPEC §8.7: the Parts and the warnings of a selector, or a Raised; the host's error text never
 // reaches a message (§5.5)
 export function runExtract(plugin: DocstampPlugin, input: ExtractInput): Extracted {
@@ -189,17 +226,7 @@ export function runExtract(plugin: DocstampPlugin, input: ExtractInput): Extract
     };
   });
   const subject = `${input.path}#${canonicalJson(input.select)}`;
-  const diagnostics = reported.map((item: unknown) => {
-    if (
-      !isObject(item) ||
-      (item['severity'] !== 'error' && item['severity'] !== 'warning') ||
-      !isOneLine(item['message'])
-    ) {
-      return fail('returned a diagnostic that is not { severity, message } of one line');
-    }
-    const code = item['severity'] === 'error' ? 'E_SELECT' : 'W_SELECT';
-    return diag(code, { subject, message: item['message'] });
-  });
+  const diagnostics = readDiagnostics(reported, subject, '', fail);
   const errors = diagnostics.filter((d) => d.severity === 'error');
   const warnings = diagnostics.filter((d) => d.severity === 'warning');
   if (errors.length > 0) throw new Raised([...errors, ...warnings]);
@@ -207,4 +234,58 @@ export function runExtract(plugin: DocstampPlugin, input: ExtractInput): Extract
     throw new Raised([diag('E_SELECT_NOT_FOUND', { subject }), ...warnings]);
   }
   return { parts: checked, warnings };
+}
+
+// SPEC §8.7 ValidateSelect: attached E_SELECT Diagnostics of one Selected Dependency, never raised
+export function runValidateSelect(
+  plugin: DocstampPlugin,
+  file: string,
+  entry: { readonly path: string; readonly select: Json },
+): Diagnostic[] {
+  if (plugin.validateSelect === undefined) return [];
+  const subject = `${entry.path}#${canonicalJson(entry.select)}`;
+  const failed = (why: string): Diagnostic[] => [
+    diag('E_SELECT', {
+      file,
+      subject,
+      message: `Plugin "${plugin.name}" ${why} for "${entry.path}".`,
+    }),
+  ];
+  let result: unknown;
+  try {
+    result = plugin.validateSelect(structuredClone(entry.select)); // §8.7 ValidateSelect step 1
+  } catch {
+    return failed('threw in validateSelect');
+  }
+  let raw: Raw;
+  try {
+    raw = readRaw(result);
+  } catch {
+    return failed('returned a value from validateSelect that could not be read');
+  }
+  if (raw.promised) {
+    try {
+      (result as PromiseLike<unknown>).then(undefined, () => {});
+    } catch {
+      // the failure is reported below; nothing else to contain
+    }
+    return failed('returned a promise; validateSelect must be synchronous');
+  }
+  const reported = raw.diagnostics === undefined ? [] : raw.diagnostics;
+  if (!isObject(result)) return failed('did not return { diagnostics } from validateSelect');
+  if (!Array.isArray(reported) || reported.length > MAX_DIAGNOSTICS) {
+    return failed(`returned diagnostics that are not a list of at most ${MAX_DIAGNOSTICS}`);
+  }
+  try {
+    const read = readDiagnostics(reported, subject, file, (why) => {
+      throw new Raised(failed(why));
+    });
+    if (read.some((d) => d.severity === 'warning')) {
+      return failed('returned a warning from validateSelect, which reports errors only');
+    }
+    return read;
+  } catch (error) {
+    if (error instanceof Raised) return [...error.diagnostics];
+    throw error;
+  }
 }

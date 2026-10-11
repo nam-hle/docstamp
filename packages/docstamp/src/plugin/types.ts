@@ -31,9 +31,15 @@ export interface ExtractResult {
   readonly diagnostics?: readonly PluginDiagnostic[];
 }
 
+// SPEC §8.7 ValidateSelect: only `diagnostics`, and only errors
+export interface ValidateSelectResult {
+  readonly diagnostics?: readonly PluginDiagnostic[];
+}
+
 export interface DocstampPlugin {
   readonly name: string;
   readonly apiVersion: 1;
   readonly files: readonly string[];
   extract(input: ExtractInput): ExtractResult;
+  validateSelect?(select: Json): ValidateSelectResult;
 }

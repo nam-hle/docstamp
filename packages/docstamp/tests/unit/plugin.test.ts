@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Raised } from '../../src/core/diagnostics.ts';
 import type { Diagnostic } from '../../src/core/types.ts';
 import { canonicalJson } from '../../src/core/canonical.ts';
-import { claim, runExtract, validatePlugins } from '../../src/plugin/plugins.ts';
+import { claim, runExtract, runValidateSelect, validatePlugins } from '../../src/plugin/plugins.ts';
 
 const raised = (run: () => unknown): Diagnostic[] => {
   try {
@@ -409,5 +409,67 @@ describe('§9.5 validated plugins are snapshots', () => {
     expect(valid!.extract({ path: 'a.md', text: '', select: 'x' })).toEqual({
       parts: [{ content: 'mine' }],
     });
+  });
+});
+
+describe('§8.7 ValidateSelect', () => {
+  const subject = 'a.md#"x"';
+  const entry = { path: 'a.md', select: 'x' };
+  const validate = (validateSelect: unknown) =>
+    runValidateSelect(validatePlugins([plugin({ validateSelect })])[0]!, 'doc.md', entry);
+
+  it('adds nothing for a plugin without validateSelect', () => {
+    expect(runValidateSelect(validatePlugins([plugin()])[0]!, 'doc.md', entry)).toEqual([]);
+  });
+
+  it('attaches each error as E_SELECT to the file with the path and selector', () => {
+    const [first, ...rest] = validate(() => ({
+      diagnostics: [{ severity: 'error', message: 'Write a heading title.' }],
+    }));
+    expect(rest).toEqual([]);
+    expect(first).toMatchObject({
+      code: 'E_SELECT',
+      file: 'doc.md',
+      subject,
+      message: 'Write a heading title.',
+    });
+  });
+
+  it('passes a copy of select', () => {
+    const select = { keys: ['a'] };
+    const mutating = (given: { keys: string[] }) => {
+      given.keys.push('b');
+      return {};
+    };
+    const plugged = validatePlugins([plugin({ validateSelect: mutating })])[0]!;
+    runValidateSelect(plugged, 'doc.md', { path: 'a.md', select });
+    expect(canonicalJson(select)).toBe(canonicalJson({ keys: ['a'] }));
+  });
+
+  it.each([
+    [
+      'throws',
+      () => {
+        throw new Error('secret');
+      },
+    ],
+    ['returns a promise', () => Promise.resolve({})],
+    ['returns nothing', () => undefined],
+    ['returns diagnostics that are not a list', () => ({ diagnostics: 1 })],
+    ['returns a warning', () => ({ diagnostics: [{ severity: 'warning', message: 'm' }] })],
+    [
+      'returns a message of two lines',
+      () => ({ diagnostics: [{ severity: 'error', message: 'a\nb' }] }),
+    ],
+  ])('reports one E_SELECT when validateSelect %s', (_, validateSelect) => {
+    const [first, ...rest] = validate(validateSelect);
+    expect(rest).toEqual([]);
+    expect(first).toMatchObject({ code: 'E_SELECT', file: 'doc.md', subject });
+    expect(first?.message).not.toContain('secret');
+  });
+
+  it('rejects a validateSelect that is not a function with E_PLUGIN', () => {
+    const diagnostics = raised(() => validatePlugins([plugin({ validateSelect: 'x' })]));
+    expect(diagnostics.map((d) => d.code)).toEqual(['E_PLUGIN']);
   });
 });
