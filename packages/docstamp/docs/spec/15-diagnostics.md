@@ -23,7 +23,7 @@ default message of a code (one with no detail of its own) may name only its firs
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |
-| `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 Lockfile, `docstamp update --all` rewrites it as version 3 (hashes are unchanged); otherwise as `E_LOCK` |
+| `E_LOCK_VERSION` | error | §11.1 | for `docsync.lock`, delete it, review every file, then `docstamp update --all`; for a version 2 or 3 Lockfile, review every file, then `docstamp update --all` rewrites it as version 4; otherwise as `E_LOCK` |
 | `E_UNKNOWN_FILE` | error | §13.3 | name a file listed under `files` in the Configuration file, or one with a `docstamp` block; raised only for an argument that resolves inside Root (§13.4) |
 | `E_HISTORY` | error | §12.4 | run in a git work tree with its full history; for `--from`, name a commit |
 | `E_PLUGIN` | error | §8.7, §9.5 | fix the Plugin in the `plugins` of the script Carrier: a non-empty `name`, `apiVersion: 1`, a non-empty `files` List of Patterns and an `extract` function (and a `validateSelect` that is a function, when present), unique names, and no two Plugins claiming one path; the subject names the Plugin or `plugins[i]`, or the path claimed twice |

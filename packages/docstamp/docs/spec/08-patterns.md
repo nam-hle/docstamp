@@ -26,8 +26,8 @@ Additional rules:
 - In a Class, `-` is literal when it is the first or last ClassItem. A range whose first code
   point is greater than its second is invalid. `[!]` is invalid.
 - A Pattern is *invalid* if it does not match the grammar, is empty after the Negation, starts
-  with `/` after the Negation, ends with `/`, has a segment that is exactly `.` or `..`, or is not
-  in NFC.
+  with `/` after the Negation, ends with `/`, has a segment whose text, with Escapes resolved, is
+  exactly `.` or `..` (so `\.` is invalid), or is not in NFC.
 
 NOTE: `\` is the escape character, so a Windows path such as `src\cli` is the literal `srccli`.
 Patterns always use `/`.

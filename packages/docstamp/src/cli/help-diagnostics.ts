@@ -122,7 +122,7 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
     meaning: 'The lock is of another version, or a legacy docsync.lock is present.',
     fix:
       'For docsync.lock: delete it, review every file, then docstamp update --all. For a ' +
-      'version 2 lock: docstamp update --all rewrites it as version 3 (hashes are unchanged).',
+      'version 2 or 3 lock: review every file, then docstamp update --all rewrites it as version 4.',
   },
   E_UNKNOWN_FILE: {
     meaning:

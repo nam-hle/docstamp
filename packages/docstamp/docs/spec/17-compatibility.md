@@ -37,6 +37,14 @@ this reason alone becomes `ok` or `stale`, and exit code 2 becomes 0 or 1; nothi
 migrate. No Hash input and no selection changes (§8.4 is unchanged), so the Lockfile `version`, the
 Dependency Hashes and the pinned vectors of §17.7 stay as they are.
 
+NOTE: An ignore rule was matched against the name as stored on disk and kept a space after an
+escaped backslash; it is now matched against the NFC form (§7.2 step 3.4) and trims that space
+(§7.3 step 2). The Universe changes, so *Selection* applies and the Lockfile `version` is 4
+(§17.4 step 2). The migration is to review every file and run `docstamp update --all` (§11.1 step
+4). The Hash algorithm and the pinned vectors of §17.7 are unchanged, since their trees hold no
+such name or rule. An inline `hash:` line (§5.6) is not refused: a doc whose selection changed
+reports stale; review it and run `docstamp update <file>`.
+
 NOTE: An unknown key in an inline block was reported as `E_UNKNOWN_KEY` and, when it stood in for
 `dependencies`, also as `E_BLOCK` (§9.6.2); it is now `E_UNKNOWN_KEY` alone. The file is `invalid`
 and the exit code is 2 before and after, so no verdict changes, but the set of Diagnostic codes of
@@ -243,8 +251,9 @@ The following are not breaking:
 
 A release supports exactly one Lockfile version, the one in the header of this document, and
 refuses every other with `E_LOCK_VERSION` (§11.1). It keeps no algorithm of an older version. When
-the Hash is unchanged between two versions, as between versions 2 and 3, the message says so and
-`docstamp update --all` migrates.
+the Hash algorithm is unchanged between two versions, as between versions 3 and 4, which differ
+only in the selection (§11.1 NOTE), the message says what changed, and `docstamp update --all`
+after a review migrates.
 
 A release that keeps verifying an older Lockfile version MUST, before it ships:
 
