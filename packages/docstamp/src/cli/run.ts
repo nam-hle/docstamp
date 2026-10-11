@@ -1,282 +1,39 @@
-import { basename, dirname, join, resolve } from 'node:path';
+
+import { resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
-import type { Json, SelectedEntry } from '../core/types.ts';
-import type { Host } from '../host/host.ts';
-import { canonicalJson } from '../plugin/canonical.ts';
-import { claim, runExtract, type Extracted } from '../plugin/plugins.ts';
-import { comparePaths, sortPaths } from '../core/order.ts';
-import type { Declaration, Diagnostic, Lock, Result, ReverseEntry } from '../core/types.ts';
-import { evaluate, orphans, type EngineFs } from '../engine/evaluate.ts';
+import { sortPaths } from '../core/order.ts';
+import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
 import { dependentTree, dependentsOf } from '../engine/reverse.ts';
-import { selectionChanges } from '../engine/selection.ts';
 import { statistics, type FileStats } from '../engine/stats.ts';
-import { fileHash, selectableText } from '../hash/hash.ts';
-import { changedSince } from '../history/changes.ts';
-import type { FragmentProbe } from '../history/fragments.ts';
-import { renamedTo } from '../history/renamed.ts';
+import type { Host } from '../host/host.ts';
 import { replay } from '../history/replay.ts';
 import { stampFile } from '../inline/read-inline.ts';
-import { lockExists, readLock, writeLock } from '../lock/lock.ts';
-import {
-  jsonText,
-  listJsonText,
-  reverseJsonText,
-  statsJsonText,
-  type StatsWindow,
-} from '../report/json.ts';
+import { lockExists, writeLock } from '../lock/lock.ts';
+import { listJsonText, reverseJsonText, statsJsonText, type StatsWindow } from '../report/json.ts';
 import {
   checkChunks,
-  type Chunk,
   diagnosticsText,
   listText,
   reverseText,
   statsText,
   updateText,
 } from '../report/text.ts';
-import {
-  determineRoot,
-  existsUnderRoot,
-  isIgnoredPath,
-  resolveCwd,
-  type Universe,
-} from '../universe/walk.ts';
+import { determineRoot, existsUnderRoot, resolveCwd } from '../universe/walk.ts';
 import { parseArgs, type Args } from './args.ts';
+import { runCheck } from './check.ts';
+import { emit, hasError, type Output } from './emit.ts';
+import { evaluateAll, listAll } from './evaluate.ts';
 import { helpText } from './help.ts';
 import type { Io } from './io.ts';
-import { resolutionMessage, rootFromCwd, selectResults, toRepoPath } from './paths.ts';
+import { resolutionMessage, selectResults, toRepoPath } from './paths.ts';
 import { runSuggest } from './suggest.ts';
 import { loadWorkspace } from './workspace.ts';
 
 declare const VERSION: string | undefined;
 
-// SPEC §9.4: exact-name match in the parent's listing, and a file, not a link
-function isStampedFile(host: Host, root: string, path: string): boolean {
-  const dir = dirname(join(root, path));
-  try {
-    const entry = host.fs
-      .readDir(dir)
-      .find((e) => e.name.toString('utf8').normalize('NFC') === basename(path));
-    return entry?.kind === 'file';
-  } catch {
-    return false;
-  }
-}
-
 // SPEC §13.2 step 2: an entry of any kind, not followed
 function isEntry(host: Host, path: string): boolean {
   return host.fs.kind(path) !== null;
-}
-
-interface Evaluated {
-  results: Result[];
-  fragmentProbe: (entries: readonly SelectedEntry[]) => FragmentProbe;
-  declarations: Declaration[];
-  universe: Universe;
-  presets: ReadonlyMap<string, readonly string[]>;
-  defaultPresets: readonly string[];
-  lock: Lock;
-  global: Diagnostic[];
-}
-
-function memoizeBy<K, V>(key: (arg: K) => string, fn: (arg: K) => V): (arg: K) => V {
-  const cache = new Map<string, V | Raised>();
-  return (arg) => {
-    const id = key(arg);
-    let cached = cache.get(id);
-    if (cached === undefined) {
-      try {
-        cached = fn(arg);
-      } catch (e) {
-        if (!(e instanceof Raised)) throw e;
-        cached = e;
-      }
-      cache.set(id, cached);
-    }
-    if (cached instanceof Raised) throw cached;
-    return cached;
-  };
-}
-
-export function memoizeHash(hash: (path: string) => string): (path: string) => string {
-  return memoizeBy((path: string) => path, hash);
-}
-
-function evaluateDeclarations(
-  host: Host,
-  root: string,
-  readLockFor: () => Lock,
-  hashFiles: boolean,
-) {
-  const { universe, declarations, attached, presets, defaultPresets, plugins } = loadWorkspace(
-    host,
-    root,
-  );
-  const extract = memoizeBy(
-    ([path, select]: readonly [string, Json]) => `${path}\u0000${canonicalJson(select)}`,
-    ([path, select]: readonly [string, Json]) =>
-      runExtract(claim(plugins, path), {
-        path,
-        select,
-        text: selectableText(host, root, universe, path),
-      }),
-  );
-  // SPEC §12.3 step 11: Fragments of §8.7, with null where it would raise
-  const fragmentOf = (found: () => Extracted): Extracted | null => {
-    try {
-      return found();
-    } catch (e) {
-      if (e instanceof Raised) return null;
-      throw e;
-    }
-  };
-  const fragmentProbe = (entries: readonly SelectedEntry[]): FragmentProbe => ({
-    entries: [...entries].sort(
-      (a, b) =>
-        comparePaths(a.path, b.path) ||
-        comparePaths(canonicalJson(a.select), canonicalJson(b.select)),
-    ),
-    now: (entry) => fragmentOf(() => extract([entry.path, entry.select])),
-    earlier: (entry, text) =>
-      fragmentOf(() =>
-        runExtract(claim(plugins, entry.path), { path: entry.path, select: entry.select, text }),
-      ),
-  });
-  const lock = readLockFor();
-  const renames = new Map<string, string | null>();
-  const fs: EngineFs = {
-    isStampedFile: (p) => isStampedFile(host, root, p),
-    isIgnoredPath: (p) => isIgnoredPath(host, root, universe, p),
-    renamedTo: (p) => {
-      if (!renames.has(p)) renames.set(p, renamedTo(host.git(root), universe, p));
-      return renames.get(p)!;
-    },
-    fileHash: hashFiles ? memoizeHash((p) => fileHash(host, root, universe, p)) : () => '',
-    // list mode never calls a plugin (§13.7)
-    extractParts: hashFiles
-      ? (path, select) => extract([path, select])
-      : () => ({ parts: [{ content: '' }], warnings: [] }),
-  };
-  const results = declarations.map((b) =>
-    evaluate(
-      b,
-      universe.paths,
-      lock,
-      attached.filter((d) => d.file === b.file),
-      fs,
-    ),
-  );
-  return { declarations, universe, presets, defaultPresets, results, lock, fragmentProbe };
-}
-
-// SPEC §12.2
-function evaluateAll(host: Host, root: string, policy: 'strict' | 'discard-invalid'): Evaluated {
-  const readLockFor = (): Lock => {
-    try {
-      return readLock(host, root);
-    } catch (e) {
-      if (!(e instanceof Raised) || policy === 'strict') throw e;
-      return { entries: new Map() };
-    }
-  };
-  const evaluated = evaluateDeclarations(host, root, readLockFor, true);
-  return { ...evaluated, global: orphans(evaluated.declarations, evaluated.lock) };
-}
-
-// SPEC §13.7
-function listAll(host: Host, root: string): Result[] {
-  return evaluateDeclarations(host, root, () => ({ entries: new Map() }), false).results;
-}
-
-// SPEC §12.3
-function withChanges(
-  host: Host,
-  root: string,
-  result: Result,
-  evaluated: Evaluated,
-  whitespace: Map<string, boolean>,
-): Result {
-  const declaration = evaluated.declarations.find((b) => b.file === result.file);
-  const inline = declaration?.inline;
-  const entry = inline ? inline.recorded : evaluated.lock.entries.get(result.file);
-  if (result.state !== 'stale' || !result.reasons.includes('content-changed') || !entry) {
-    return result;
-  }
-  const probe = declaration?.selected?.length
-    ? evaluated.fragmentProbe(declaration.selected)
-    : undefined;
-  const report = changedSince(
-    host.git(root),
-    result,
-    entry,
-    inline !== undefined,
-    whitespace,
-    probe,
-  );
-  if (report === null) return { ...result, changes: null };
-  const { universe, presets, defaultPresets } = evaluated;
-  const { ownThen } = report;
-  const selection =
-    ownThen === undefined
-      ? null
-      : selectionChanges(
-          result.file,
-          ownThen,
-          presets,
-          defaultPresets,
-          universe.paths,
-          result.resolved,
-        );
-  return {
-    ...result,
-    changes: report.changes,
-    base: report.base,
-    ...(report.edited === undefined ? {} : { edited: report.edited }),
-    ...(selection === null ? {} : { selection }),
-    ...(report.fragments === undefined ? {} : { fragments: report.fragments }),
-  };
-}
-
-const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'error');
-
-interface Output {
-  json: boolean;
-  mode: 'check' | 'update';
-  evaluated: boolean;
-  onlyStale?: boolean;
-  exitCode: number;
-  selected: Result[];
-  global: Diagnostic[];
-  text: string;
-  chunks?: Chunk[];
-  written?: Set<string>;
-  removed?: string[];
-}
-
-function emit(io: Io, o: Output): number {
-  if (o.json) {
-    io.stdout(
-      jsonText({
-        mode: o.mode,
-        evaluated: o.evaluated,
-        onlyStale: o.onlyStale === true,
-        exitCode: o.exitCode,
-        selected: o.selected,
-        diagnostics: o.global,
-        ...(o.written === undefined ? {} : { written: o.written }),
-        ...(o.removed === undefined ? {} : { removed: o.removed }),
-      }),
-    );
-  } else {
-    const chunks = o.chunks ?? [
-      { stream: 'stdout' as const, text: o.text },
-      {
-        stream: 'stderr' as const,
-        text: diagnosticsText([...o.global, ...o.selected.flatMap((r) => r.diagnostics)]),
-      },
-    ];
-    for (const { stream, text } of chunks) io[stream](text);
-  }
-  return o.exitCode;
 }
 
 // SPEC §13.7
@@ -453,52 +210,27 @@ export function run(host: Host, argv: readonly string[], processCwd: string, io:
   if (args.mode === 'list-dependents') return runReverse(host, args, processCwd, io);
   if (args.mode === 'stats') return runStats(host, args, processCwd, io);
   if (args.mode === 'suggest') return runSuggest(host, args, processCwd, io);
-  const { mode, json } = args;
+  if (args.mode === 'check') return runCheck(host, args, processCwd, io);
   const empty: Output = {
-    json,
-    mode,
+    json: args.json,
+    mode: 'update',
     evaluated: false,
     exitCode: 2,
     selected: [],
     global: [],
     text: '',
-    ...(mode === 'update' ? { written: new Set<string>(), removed: [] } : {}),
+    written: new Set<string>(),
+    removed: [],
   };
   try {
     const cwd = resolveCwd(host, processCwd, args.cwd);
     const root = determineRoot(host, cwd);
-    const evaluated = evaluateAll(
-      host,
-      root,
-      args.mode === 'update' && args.all ? 'discard-invalid' : 'strict',
-    );
-    const selected =
-      args.mode === 'update' && args.all
-        ? evaluated.results
-        : selectResults(args.paths, cwd, root, evaluated.results);
+    const evaluated = evaluateAll(host, root, args.all ? 'discard-invalid' : 'strict');
+    const selected = args.all
+      ? evaluated.results
+      : selectResults(args.paths, cwd, root, evaluated.results);
     const global = evaluated.global;
     const refused = hasError(global) || selected.some((r) => r.state === 'invalid');
-    if (mode === 'check') {
-      const stale = selected.some((r) => r.state === 'stale');
-      const exitCode = refused ? 2 : stale ? 1 : 0;
-      const whitespace = new Map<string, boolean>();
-      const reported = selected.map((r) => withChanges(host, root, r, evaluated, whitespace));
-      const chunks = checkChunks(reported, global, {
-        cwd: args.cwd,
-        quiet: args.quiet,
-        rootFromCwd: rootFromCwd(cwd, root),
-        inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
-      });
-      return emit(io, {
-        ...empty,
-        evaluated: true,
-        onlyStale: args.onlyStale,
-        exitCode,
-        selected: reported,
-        global,
-        chunks,
-      });
-    }
     if (refused) {
       const chunks = checkChunks(selected, global, { cwd: args.cwd, next: false });
       return emit(io, { ...empty, evaluated: true, selected, global, chunks });
