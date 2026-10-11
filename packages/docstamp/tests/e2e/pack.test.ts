@@ -87,7 +87,7 @@ describe('§9.5 the packed tarball works from node_modules', () => {
     for (const leaked of ['src', 'tests', 'scripts', 'node_modules']) {
       expect(top).not.toContain(leaked);
     }
-    expect(readdirSync(join(packaged(), 'docs'))).toEqual(['SPEC.md', 'spec']);
+    expect(readdirSync(join(packaged(), 'docs')).sort()).toEqual(['SPEC.md', 'spec']);
   });
 
   it('help names the files the package ships, offline', () => {
