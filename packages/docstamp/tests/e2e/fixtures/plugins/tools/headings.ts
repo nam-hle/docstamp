@@ -32,7 +32,11 @@ export default definePlugin({
       const where = found.map((part) => part.lines!.start).join(', ');
       return {
         diagnostics: [
-          { severity: 'error', message: `"${String(select)}" is a heading at lines ${where}; rename one.` },
+          {
+            severity: 'error',
+            code: 'duplicate-heading',
+            message: `"${String(select)}" is a heading at lines ${where}; rename one.`,
+          },
         ],
       };
     }
@@ -45,7 +49,11 @@ export default definePlugin({
       ...(empty
         ? {
             diagnostics: [
-              { severity: 'warning', message: `The section "${String(select)}" is empty; write it.` },
+              {
+                severity: 'warning',
+                code: 'empty-section',
+                message: `The section "${String(select)}" is empty; write it.`,
+              },
             ],
           }
         : {}),

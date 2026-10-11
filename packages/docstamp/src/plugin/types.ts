@@ -24,10 +24,16 @@ export interface Part {
 export interface PluginDiagnostic {
   readonly severity: 'error' | 'warning';
   readonly message: string;
+  readonly code?: string;
 }
 
 export interface ExtractResult {
   readonly parts?: readonly Part[];
+  readonly diagnostics?: readonly PluginDiagnostic[];
+}
+
+// SPEC §8.7 ValidateSelect: only `diagnostics`, and only errors
+export interface ValidateSelectResult {
   readonly diagnostics?: readonly PluginDiagnostic[];
 }
 
@@ -36,4 +42,5 @@ export interface DocstampPlugin {
   readonly apiVersion: 1;
   readonly files: readonly string[];
   extract(input: ExtractInput): ExtractResult;
+  validateSelect?(select: Json): ValidateSelectResult;
 }

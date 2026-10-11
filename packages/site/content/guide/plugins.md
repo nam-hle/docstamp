@@ -60,7 +60,14 @@ described in [Declare dependencies](/guide/declare#depend-on-one-value-of-a-json
 A plugin is an object with a `name`, `apiVersion: 1`, the `files` patterns it handles, and a
 synchronous `extract({ path, text, select })` that returns `{ parts, diagnostics }`. A part is
 `{ content, focus?, lines? }`: docstamp hashes `content`, and the report prints `focus` and `lines`
-so a reviewer knows where to look. A diagnostic with severity `error` makes the file `invalid`.
+so a reviewer knows where to look. A diagnostic with severity `error` makes the file `invalid`. A diagnostic may carry a `code` (`a-z`, `0-9` and `-`, from a letter, up to 64 characters),
+a stable identifier such as `heading-not-found`: it is printed after the message and is the
+`pluginCode` of `--json`, and changes no state, hash or exit code.
+
+A plugin may also have a synchronous `validateSelect(select)` that returns `{ diagnostics }` of
+errors only. docstamp calls it when the configuration loads, so a malformed selector is reported as
+`E_SELECT` for the file and pattern before any file is read. It must not read the file; a plugin
+without it behaves as before.
 
 A plugin runs in your process, so determinism is its author's duty: keep it independent of the
 clock, the network and the environment. The contract, with every error case, is

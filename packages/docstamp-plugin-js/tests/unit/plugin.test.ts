@@ -476,3 +476,26 @@ describe('§4 Selector: errors and a file that does not parse', () => {
     expect(message).toContain('could not be parsed');
   });
 });
+
+describe('§8.1 ValidateSelect and codes', () => {
+  it.each(['abc', { name: 'abc', kind: 'function', part: 'source' }])('accepts %j', (select) => {
+    expect(plugin.validateSelect(select as never)).toEqual({});
+  });
+
+  it.each(['', 3, { name: 'a', kind: 'nope' }, { name: 'a', part: 'x' }])(
+    'rejects %j',
+    (select) => {
+      const result = plugin.validateSelect(select as never);
+      expect(result.diagnostics).toMatchObject([{ severity: 'error', code: 'invalid-selector' }]);
+    },
+  );
+
+  const codeOf = (text: string, select: unknown): string | undefined =>
+    plugin.extract({ path: 'a.ts', text, select: select as never }).diagnostics?.[0]?.code;
+
+  it('gives a code to each error of Extract', () => {
+    expect(codeOf('export const a = 1;', '')).toBe('invalid-selector');
+    expect(codeOf('export const = ;;{', 'a')).toBe('unparsable-file');
+    expect(codeOf('function abc() {}\ninterface abc { x: 1 }\n', 'abc')).toBe('ambiguous-name');
+  });
+});

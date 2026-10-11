@@ -27,7 +27,7 @@ part of the shape of the declaration that holds them (§7.2) but cannot be selec
 
 The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugin-js`, `apiVersion` 1
 and `files` « `**/*.js`, `**/*.mjs`, `**/*.cjs`, `**/*.jsx`, `**/*.ts`, `**/*.mts`, `**/*.cts`,
-`**/*.tsx` ». Its `extract` is `Extract` (§8).
+`**/*.tsx` ». Its `extract` is `Extract` (§8) and its `validateSelect` is `ValidateSelect` (§8.1).
 
 ## 4 Selector
 
@@ -142,9 +142,24 @@ hashes them, so they are not part of the compatibility of §9.
 NOTE: A `const k = 1, l = 2` statement has two Declarations (`k`, `l`) in one Statement; each is its own
 Group and both give the same text.
 
+### 8.1 ValidateSelect and codes
+
+`ValidateSelect(select)` returns `{ }` if `ParseSelector(select)` (§4) does not raise, and otherwise
+the selector `error` of §4 NOTE. docstamp calls it when the configuration loads (SPEC §8.7), so a
+selector that is not valid is reported before any file is read; it never reads or parses the file.
+
+Every Diagnostic of this Plugin has a code (SPEC §8.7 step 3), stable across versions:
+
+| Code | Severity | Where |
+|---|---|---|
+| `invalid-selector` | `error` | §4 NOTE, in `Extract` step 1 and in `ValidateSelect` |
+| `unparsable-file` | `error` | §4 NOTE, in `Extract` step 1 when `Parse` raises |
+| `ambiguous-name` | `error` | `Extract` step 4, more than one Group selected |
+
 ## 9 Compatibility
 
 The hash of a declaration is part of the Dependency Hash of every file that depends on it, so a change
 to what `Shape` or `Source` contain, to which Declarations exist or are grouped, to the selector forms of
 §4 or to `files` in §3 is breaking. So is a parser upgrade that changes where a Statement or a body
-starts or ends.
+starts or ends. Removing or renaming a code of §8.1 is breaking for those who act on it; adding one
+is not.

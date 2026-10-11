@@ -265,6 +265,9 @@ Dependency Hash, so a change that alters an existing hash is breaking for the pl
   advisory and never hashed. A selector that selects several parts by accident is an `error` of the
   plugin, which docstamp does not judge, and a message names what to change and carries no parser
   text or absolute path (§5.5).
+  A diagnostic may carry a stable `code`, and an optional `validateSelect(select)` reports a
+  malformed `select` at load, as an attached `E_SELECT` (`validatedSelects` in `src/cli/evaluate.ts`);
+  neither changes `apiVersion`.
 
 ## Inline declarations
 

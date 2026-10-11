@@ -228,7 +228,11 @@ The following are not breaking:
   changes, and `suggest` without `--write` writes nothing, as before;
 - the indent of a block that `suggest --write` adds to an existing frontmatter (§9.6.5 step 3): it
   writes a file that was not stamped, the block declares the same patterns, and §9.6.5 step 5 still
-  checks it.
+  checks it;
+- the optional `validateSelect` member of a Plugin (§8.7 `ValidateSelect`) and the optional `code` of
+  a Plugin diagnostic, with `[[PluginCode]]` of a Diagnostic (§5.5), its bracketed tail in §14.3 and
+  its member `pluginCode` in §14.5: optional members of the Plugin API, which keeps `[[ApiVersion]]`
+  1; a Plugin that gives neither behaves as before, and no code, state, Hash or exit code changes.
 
 ### 17.4 The Hash Guarantee
 

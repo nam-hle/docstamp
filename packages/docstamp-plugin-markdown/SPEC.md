@@ -22,7 +22,7 @@ sections begin and end; it hashes the source text of the section, never a render
 ## 3 The Plugin
 
 The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugin-markdown`,
-`apiVersion` 1 and `files` « `**/*.md`, `**/*.markdown` ». Its `extract` is `Extract` (§6).
+`apiVersion` 1 and `files` « `**/*.md`, `**/*.markdown` ». Its `extract` is `Extract` (§6) and its `validateSelect` is `ValidateSelect` (§6.1).
 
 ## 4 Selector
 
@@ -100,9 +100,23 @@ before the next Heading is a change. docstamp already normalizes CR LF to LF; st
 that does not get the same hashes.
 Text above the Heading, other Sections and the frontmatter never change the hash.
 
+### 6.1 ValidateSelect and codes
+
+`ValidateSelect(select)` returns `{ }` if `ParseSelector(select)` (§4) does not raise, and otherwise
+the `error` of §4 NOTE. docstamp calls it when the configuration loads (SPEC §8.7), so a selector that
+is not valid is reported before any file is read; it never reads the file.
+
+Every Diagnostic of this Plugin has a code (SPEC §8.7 step 3), stable across versions:
+
+| Code | Severity | Where |
+|---|---|---|
+| `invalid-selector` | `error` | §4 NOTE, in `Extract` step 1 and in `ValidateSelect` |
+| `ambiguous-heading` | `error` | `Extract` step 4, more than one Heading selected |
+
 ## 7 Compatibility
 
 The hash of a Section is part of the Dependency Hash of every file that depends on it, so a change to
 `Body`, `Headings` or `SectionEnd` that changes the hash of an existing Section is breaking, as is a
-change to the selector forms accepted in §4 or to `files` in §3. A parser upgrade that changes where a
+change to the selector forms accepted in §4 or to `files` in §3. Removing or renaming a code of §6.1
+is breaking for those who act on it; adding one is not. A parser upgrade that changes where a
 Heading starts or ends is such a change.

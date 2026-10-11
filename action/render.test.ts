@@ -81,6 +81,34 @@ describe('action comment renderer', () => {
     expect(body).not.toContain('docstamp update README.md');
   });
 
+  it('appends the plugin code of a diagnostic in square brackets', () => {
+    const body = renderComment({
+      ...base,
+      exitCode: 2,
+      summary: { ok: 0, stale: 0, invalid: 1 },
+      files: [
+        {
+          file: 'README.md',
+          state: 'invalid',
+          reasons: [],
+          dependencies: [],
+          changes: null,
+          diagnostics: [
+            {
+              code: 'E_SELECT',
+              severity: 'error',
+              file: 'README.md',
+              subject: 'a.md#"x"',
+              message: 'Rename one.',
+              pluginCode: 'ambiguous-heading',
+            },
+          ],
+        },
+      ],
+    });
+    expect(body).toContain('Rename one. [ambiguous-heading]');
+  });
+
   it('shows global diagnostics when nothing was evaluated', () => {
     const body = renderComment({
       ...base,

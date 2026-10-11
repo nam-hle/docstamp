@@ -99,12 +99,13 @@ computed from the repository history (§12.3); it is *unknown* whenever that his
 | `[[File]]` | RepoPath or empty | the file it concerns |
 | `[[Subject]]` | String or empty | the pattern, path, key or argument it concerns |
 | `[[Message]]` | String | informative; see below |
+| `[[PluginCode]]` | String, optional | the stable identifier a Plugin gave the Diagnostic (§8.7 step 3); absent for every other |
 
 A Diagnostic with a non-empty `[[File]]` is *attached* to that file; any other is
 *global*.
 
 *Diagnostic order*: by `[[File]]` in path order (empty first), then `[[Code]]` in path order,
-then `[[Subject]]` in path order, then `[[Message]]` in path order. Every List of Diagnostics that
+then `[[Subject]]` in path order, then `[[Message]]` in path order, then `[[PluginCode]]` (absent first). Every List of Diagnostics that
 is output is in this order, with duplicates (all fields equal) removed.
 
 `[[Message]]` is one sentence naming the problem and its fix. It MUST NOT contain operating system

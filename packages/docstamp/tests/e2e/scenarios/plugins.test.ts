@@ -68,8 +68,13 @@ scenario(
     const warned = await repo.run([]);
     expect(warned.exit).toBe(1);
     expect(warned.stderr).toContain(
-      'warning: W_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": The section "Install" is empty; write it.',
+      'warning: W_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": The section "Install" is empty; write it. [empty-section]',
     );
+    const json = (await repo.run(['--json'])).json();
+    expect(json.files[0].diagnostics[0]).toMatchObject({
+      code: 'W_SELECT',
+      pluginCode: 'empty-section',
+    });
     await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
     const recorded = await repo.run([]);
     expect(recorded.exit).toBe(0);
@@ -82,7 +87,45 @@ scenario(
     const refused = await repo.run([]);
     expect(refused.exit).toBe(2);
     expect(refused.stderr).toContain(
-      'error: E_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": "Install" is a heading at lines 3, 9; rename one.',
+      'error: E_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": "Install" is a heading at lines 3, 9; rename one. [duplicate-heading]',
     );
+  },
+);
+
+const validatingConfig =
+  "import { defineConfig } from 'docstamp';\n" +
+  "import headings from './tools/headings.ts';\n\n" +
+  'const validating = { ...headings, validateSelect: (select: unknown) => ({\n' +
+  "  diagnostics: typeof select === 'string' && select !== '' ? [] : [\n" +
+  "    { severity: 'error', message: 'The selector must be a heading title.' }],\n" +
+  '}) };\n' +
+  'export default defineConfig({ version: 2, plugins: [validating as never], files: {\n' +
+  "  'CLAUDE.md': { dependencies: [{ path: 'docs/guide.md', select: 3 }] } } });\n";
+
+scenario(
+  '§8.7 ValidateSelect reports a malformed selector before any file is read',
+  options,
+  async (repo) => {
+    repo.write('docstamp.config.ts', validatingConfig);
+    const result = await repo.run([], { show: ['docstamp.config.ts'], expectExit: 2 });
+    expect(result.stderr).toContain(
+      'error: E_SELECT: CLAUDE.md: docs/guide.md#3: The selector must be a heading title.',
+    );
+    const listed = await repo.run(['list-dependencies'], { expectExit: 2 });
+    expect(listed.stderr).toContain('E_SELECT');
+  },
+);
+
+scenario(
+  '§12.2 step 5 ValidateSelect skips a Declaration that already raised',
+  options,
+  async (repo) => {
+    repo.write(
+      'docstamp.config.ts',
+      validatingConfig.replace('dependencies: [', "dependencies: ['src/[', "),
+    );
+    const result = await repo.run([], { expectExit: 2 });
+    expect(result.stderr).toContain('E_PATTERN');
+    expect(result.stderr).not.toContain('E_SELECT');
   },
 );

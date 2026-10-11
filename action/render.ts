@@ -6,6 +6,7 @@ interface Diagnostic {
   file: string | null;
   subject: string | null;
   message: string;
+  pluginCode?: string;
 }
 
 interface Change {
@@ -59,7 +60,8 @@ const plural = (count: number, noun: string): string => `${count} ${noun}${count
 
 const renderDiagnostic = (diagnostic: Diagnostic): string => {
   const subject = diagnostic.subject === null ? '' : ` ${code(diagnostic.subject)}`;
-  return `- ${code(diagnostic.code)}${subject}: ${diagnostic.message}`;
+  const tag = diagnostic.pluginCode === undefined ? '' : ` [${diagnostic.pluginCode}]`;
+  return `- ${code(diagnostic.code)}${subject}: ${diagnostic.message}${tag}`;
 };
 
 const changeLines = (changes: Change[]): string[] => {

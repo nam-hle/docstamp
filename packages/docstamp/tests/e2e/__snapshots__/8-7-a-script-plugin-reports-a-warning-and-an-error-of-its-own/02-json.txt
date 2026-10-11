@@ -1,0 +1,44 @@
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 0,
+    "stale": 1,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "stale",
+      "reasons": [
+        "unrecorded"
+      ],
+      "dependencies": [
+        "src/**"
+      ],
+      "selected": [
+        {
+          "path": "docs/guide.md",
+          "select": "Install"
+        }
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "W_SELECT",
+          "severity": "warning",
+          "file": "CLAUDE.md",
+          "subject": "docs/guide.md#\"Install\"",
+          "message": "The section \"Install\" is empty; write it.",
+          "pluginCode": "empty-section"
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

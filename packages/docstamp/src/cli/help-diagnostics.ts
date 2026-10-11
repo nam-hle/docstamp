@@ -147,7 +147,8 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
   E_SELECT: {
     meaning:
       'No plugin claims a file that has a selector, the plugin failed on it, or the plugin ' +
-      'reported an error of its own (its message says what).',
+      'reported an error of its own, from extract or from validateSelect at load (its message ' +
+      'says what).',
     fix:
       'Register a plugin whose files select the path, or fix the plugin, select or the file as ' +
       'the message says, then run docstamp check again.',

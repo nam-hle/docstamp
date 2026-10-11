@@ -53,7 +53,9 @@ raises:
    collect `E_DUPLICATE_DECLARATION` into *attached*, `[[File]]` that file. Then, for each remaining
    Declaration *d* that uses a Preset, call
    `ExpandPresets(d, config.[[Presets]], config.[[DefaultPresets]], present)` (§8.6): when it returns, the effective patterns and their origins are those of *d* from here on;
-   when it raises, collect its Diagnostics into *attached*, `[[File]]` the file of *d*.
+   when it raises, collect its Diagnostics into *attached*, `[[File]]` the file of *d*. Then, for
+   each Selected Dependency of each remaining Declaration, collect `ValidateSelect` (§8.7) into
+   *attached*.
 6. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
    entries. Otherwise let *lock* be `? ReadLock(root)`.
 7. Let *results* be `Evaluate(b, universe, lock, attached of b, plugins)` for each *b* of *declarations*,
