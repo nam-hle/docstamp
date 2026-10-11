@@ -41,6 +41,13 @@ describe('§8.7 selectableText', () => {
     );
   });
 
+  it('§8.7 §10.1 tests the binary rule on the file bytes, not on the CR LF stripped body', () => {
+    const bytes = Buffer.concat([Buffer.from('a\r\n'.repeat(2800)), Buffer.from('\u0000x')]);
+    const { host, root } = tree({ a: bytes });
+    const text = selectableText(host, root, computeUniverse(host, root, cfg), 'a');
+    expect(text).toBe('a\n'.repeat(2800) + '\u0000x');
+  });
+
   it('raises E_SELECT for invalid UTF-8', () => {
     const { host, root } = tree({ a: Buffer.from([0xff, 0xfe, 0x41]) });
     const u = computeUniverse(host, root, cfg);
