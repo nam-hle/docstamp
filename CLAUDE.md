@@ -230,8 +230,10 @@ Only what no test can check stays here.
   review happened. `Stamp` changes no other byte of a doc. `suggest --write` writes an inline block
   with no `hash`, never overwrites one that has it, and never stamps (§9.6.5, §13.10).
 - **A plugin is user code.** It runs in-process and synchronously, only from `cli/evaluate.ts`
-  through `EngineFs.extractParts`; `engine/` never calls a plugin or reads a file; it imports only
-  the pure `canonicalJson` from `core/` (§8.7).
+  through `EngineFs.extractParts` and, for `validateSelect` and `parseSelect`, from the cli layer
+  (`resolveSelector` in `config/shorthand.ts`, called by `cli/workspace.ts` at load and by
+  `cli/check.ts` for §12.3 step 1.4); `engine/` never calls a plugin or reads a file; it imports
+  only the pure `canonicalJson` from `core/` (§8.7).
 - **The hash input rule has one exception.** A file with an inline block is hashed without its
   `hash:` line (§10.2 step 4); anything else about hashing is a breaking change (§17).
 
@@ -284,8 +286,10 @@ adds or extends), `src/cli/workspace.ts` (merge with `files`, duplicate check) a
 A `dependencies` String `path:selector` is a Shorthand; the rules are
 [SPEC §8.7](packages/docstamp/docs/spec/08-patterns.md#87-selected-dependencies). Code:
 `src/pattern/split.ts` (a leaf the engine may import), `src/config/shorthand.ts`; `loadWorkspace`
-resolves them and reads a plugin's `selectorFields` as data, never running `extract`. Tests:
-`tests/unit/shorthand.test.ts`, `tests/scenarios/shorthand.test.ts`.
+resolves them through the plugin's `parseSelect`, never running `extract`. The plugin's
+`meta.schema` subset is `src/plugin/schema.ts`, checked in `runValidateSelect`
+(`src/plugin/plugins.ts`) before `validateSelect`. Tests: `tests/unit/shorthand.test.ts`,
+`tests/unit/select-schema.test.ts`, `tests/scenarios/shorthand.test.ts`.
 
 ## Suggest
 
