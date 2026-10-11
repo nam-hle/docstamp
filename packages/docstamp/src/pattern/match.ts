@@ -1,46 +1,107 @@
 import { sortPaths } from '../core/order.ts';
 import type { Atom, ParsedPattern, Segment } from './parse.ts';
 
-const escapeLiteral = (s: string) => s.replace(/[\\^$.*+?()[\]{}|/]/gu, '\\$&');
-const escapeInClass = (s: string) => s.replace(/[\\^\]\-[/]/gu, '\\$&');
+type Node =
+  | { kind: 'char'; accepts: (cp: string) => boolean; next: number }
+  | { kind: 'star'; next: number }
+  | { kind: 'eps'; nexts: number[] }
+  | { kind: 'match' };
 
-function atomSource(atom: Atom): string {
-  switch (atom.kind) {
-    case 'lit':
-      return escapeLiteral(atom.value);
-    case 'star':
-      return '[^/]*';
-    case 'any':
-      return '[^/]';
-    case 'class': {
-      const body = atom.items
-        .map(([lo, hi]) =>
-          lo === hi ? escapeInClass(lo) : `${escapeInClass(lo)}-${escapeInClass(hi)}`,
-        )
-        .join('');
-      return atom.negated ? `[^/${body}]` : `(?:(?!/)[${body}])`;
+export interface Glob {
+  test(path: string): boolean;
+}
+
+const isSlash = (cp: string) => cp === '/';
+const notSlash = (cp: string) => cp !== '/';
+
+function classAccepts(atom: Extract<Atom, { kind: 'class' }>): (cp: string) => boolean {
+  const inItems = (cp: string) => {
+    const code = cp.codePointAt(0) ?? 0;
+    return atom.items.some(
+      ([lo, hi]) => code >= (lo.codePointAt(0) ?? 0) && code <= (hi.codePointAt(0) ?? 0),
+    );
+  };
+  return (cp) => cp !== '/' && inItems(cp) !== atom.negated;
+}
+
+class Builder {
+  readonly nodes: Node[] = [];
+  add(node: Node): number {
+    this.nodes.push(node);
+    return this.nodes.length - 1;
+  }
+  atom(atom: Atom, next: number): number {
+    switch (atom.kind) {
+      case 'lit':
+        return this.add({ kind: 'char', accepts: (cp) => cp === atom.value, next });
+      case 'star':
+        return this.add({ kind: 'star', next });
+      case 'any':
+        return this.add({ kind: 'char', accepts: notSlash, next });
+      case 'class':
+        return this.add({ kind: 'char', accepts: classAccepts(atom), next });
+      case 'alt':
+        return this.add({ kind: 'eps', nexts: atom.alts.map((alt) => this.atoms(alt, next)) });
     }
-    case 'alt':
-      return `(?:${atom.alts.map((alt) => alt.map(atomSource).join('')).join('|')})`;
+  }
+  atoms(atoms: Atom[], next: number): number {
+    return atoms.reduceRight((following, atom) => this.atom(atom, following), next);
   }
 }
 
-// SPEC §8.2
-export function compileGlob(segments: Segment[]): RegExp {
-  let source = '';
-  segments.forEach((segment, index) => {
-    const last = index === segments.length - 1;
-    if (segment.kind === 'globstar') {
-      source += last ? '[^/]+(?:/[^/]+)*' : '(?:[^/]+/)*';
+// SPEC §8.2: a position-set simulation, linear in the path for a pattern, never backtracking
+export function compileGlob(segments: Segment[]): Glob {
+  const b = new Builder();
+  let next = b.add({ kind: 'match' });
+  const slashTo = (target: number) => b.add({ kind: 'char', accepts: isSlash, next: target });
+  segments.toReversed().forEach((segment, offset) => {
+    const last = offset === 0;
+    if (segment.kind === 'parts') {
+      next = b.atoms(segment.atoms, last ? next : slashTo(next));
       return;
     }
-    source += segment.atoms.map(atomSource).join('') + (last ? '' : '/');
+    const body = b.add({ kind: 'eps', nexts: [] });
+    const first = b.add({ kind: 'char', accepts: notSlash, next: body });
+    const more = b.add({ kind: 'char', accepts: notSlash, next: body });
+    if (last) {
+      b.nodes[body] = { kind: 'eps', nexts: [more, next, slashTo(first)] };
+      next = first;
+      return;
+    }
+    const loop = b.add({ kind: 'eps', nexts: [next, first] });
+    b.nodes[body] = { kind: 'eps', nexts: [more, slashTo(loop)] };
+    next = loop;
   });
-  return new RegExp(`^${source}$`, 'u');
+  const start = next;
+  const { nodes } = b;
+  const close = (into: Set<number>, id: number): void => {
+    if (into.has(id)) return;
+    into.add(id);
+    const node = nodes[id]!;
+    if (node.kind === 'eps') node.nexts.forEach((n) => close(into, n));
+    else if (node.kind === 'star') close(into, node.next);
+  };
+  return {
+    test(path) {
+      let states = new Set<number>();
+      close(states, start);
+      for (const cp of path) {
+        const advanced = new Set<number>();
+        for (const id of states) {
+          const node = nodes[id]!;
+          if (node.kind === 'char' && node.accepts(cp)) close(advanced, node.next);
+          else if (node.kind === 'star' && cp !== '/') close(advanced, id);
+        }
+        if (advanced.size === 0) return false;
+        states = advanced;
+      }
+      return [...states].some((id) => nodes[id]!.kind === 'match');
+    },
+  };
 }
 
-const cache = new WeakMap<ParsedPattern, RegExp>();
-function regexOf(pattern: ParsedPattern): RegExp {
+const cache = new WeakMap<ParsedPattern, Glob>();
+function regexOf(pattern: ParsedPattern): Glob {
   let regex = cache.get(pattern);
   if (!regex) {
     regex = compileGlob(pattern.segments);
