@@ -80,6 +80,18 @@ files:
       - { path: ci.yml, select: jobs.test.steps.1.run }
 ```
 
+The same dependency fits in one string, `path:selector`, anywhere a pattern is accepted, including an
+inline block:
+
+```yaml
+    dependencies:
+      - package.json:scripts.build
+      - ci.yml:jobs.test.steps.1.run
+```
+
+The path is one literal file and the selector is the text after the first `:` that is not escaped, so
+a value path may hold `,` and `=`. Write a `:` in a file name as `\:` (`notes\:2024.md`), or it splits.
+
 Editing `scripts.lint` or `version` of `package.json` leaves `CLAUDE.md` `ok`; editing
 `scripts.test` makes it stale. The value is hashed, not its text: key order, comments and quoting
 never matter ([SPEC §8.8](/spec/patterns#88-builtin-plugins)).

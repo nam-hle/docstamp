@@ -169,6 +169,7 @@ to the root and use / as the separator on every platform.
     src/[a-c]*.ts     a class of characters; [!a-c] is its complement
     src/{cli,core}    alternation
     !src/gen          a leading ! excludes; \\! is a literal leading !
+    docs/g.md:Install the shorthand path:selector, one part of a file (see below)
 
 - The last matching pattern wins: write an exclusion after the patterns it cuts from. A later inclusion selects the excluded files again (W_SHADOWED_EXCLUSION).
 - A pattern without ! must select a file (E_EMPTY_PATTERN), and the list together too (E_EMPTY_DEPENDENCIES, only when no pattern is E_EMPTY_PATTERN). An exclusion that matches nothing is only W_EMPTY_EXCLUSION.
@@ -176,6 +177,7 @@ to the root and use / as the separator on every platform.
 - Matching is case-sensitive, and a leading . is not special. No leading or trailing /, no . or .. segment.
 - A file is never its own dependency. An ignored file cannot be a dependency: depend on its source.
 - In YAML, quote a pattern that starts with ! or *.
+- path:selector depends on one part of a file, as the map { path, select } does: the path is one literal file (E_CONFIG for a glob), the selector is everything after the first : that is not escaped. package.json:scripts.build and ci.yml:jobs.test.steps.1.run take the text as a value path. A plugin that declares its fields also reads a bare value (docs/guide.md:Install) or key=value pairs (docs/guide.md:heading=Install,level=2). In a value, \\, \\= and \\\\ mean , = and a backslash. A : in a file name is written \\: (notes\\:2024.md), or it is a path:selector.
 
 docstamp list-dependencies <file> shows what a list selects.`,
   },
