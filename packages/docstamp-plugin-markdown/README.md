@@ -10,7 +10,9 @@ Markdown file, by its heading, so a doc goes stale only when that section change
 pnpm add -D docstamp docstamp-plugin-markdown
 ```
 
-Plugins are registered in a script configuration (`docstamp.config.ts` or `.js`):
+Plugins are registered in a script configuration (`docstamp.config.ts` or `.js`). A repository with
+only a `docstamp.yaml` or frontmatter blocks needs one to use a plugin; `export default { version: 2,
+plugins: [markdown], files: {} }` is enough:
 
 ```ts
 import { defineConfig } from 'docstamp';

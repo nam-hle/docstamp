@@ -41,7 +41,9 @@ STALE    CLAUDE.md  (content-changed)
 0 ok, 1 stale, 0 invalid
 ```
 
-`plugins` is a key of a script configuration only, not of `docstamp.yaml` or an inline block
+`plugins` is a key of a script configuration only, not of `docstamp.yaml` or an inline block, so a
+YAML-only or frontmatter-only repository needs a `docstamp.config.ts` (`export default { version: 2,
+plugins: [headings], files: {} }` is enough) to use a plugin
 ([SPEC §9.5](/spec/configuration-file#95-script-carriers)).
 
 ## Ready-made plugins
