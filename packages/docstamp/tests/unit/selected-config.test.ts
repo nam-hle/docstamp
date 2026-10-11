@@ -203,6 +203,16 @@ describe('§9.5 script plugins', () => {
     expect(diagnosticsOf(() => readConfig(nodeHost, dir))[0]?.code).toBe('E_CONFIG');
   });
 
+  it('§8.7 rejects a select that holds a function with E_CONFIG, not at the plugin', () => {
+    const dir = tmp();
+    writeScript(
+      dir,
+      "export default { version: 2, files: { 'a.md': { dependencies: " +
+        "[{ path: 'b.md', select: { run: () => 1 } }] } } };",
+    );
+    expect(diagnosticsOf(() => readConfig(nodeHost, dir))[0]?.code).toBe('E_CONFIG');
+  });
+
   it('rejects a function in a nested plugins key', () => {
     const dir = tmp();
     writeScript(dir, "export default { version: 2, files: { 'a.md': { plugins: () => 1 } } };");

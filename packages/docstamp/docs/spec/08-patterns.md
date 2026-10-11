@@ -252,8 +252,10 @@ Plugin.
 0. Let *plugin* be `Claim(plugins, entry.[[Path]])`, which raises as above.
 1. If the file is a link, binary (§10.1) or not valid UTF-8, raise `E_SELECT` (`[[Subject]]` the
    path). *text* is the content of §10.2 steps 1 to 4 after the `file` tag.
-2. Call `plugin.[[Extract]]` synchronously with { `path`, `text`, `select` }. If it throws, returns
-   a Promise or does not return a Map, raise `E_SELECT` (`[[Subject]]` the path).
+2. Call `plugin.[[Extract]]` synchronously with { `path`, `text`, `select` }, *select* being a copy
+   of `entry.[[Select]]`, so what the Plugin does to it changes neither the Declaration nor any
+   Hash. If it throws, returns a Promise or does not return a Map, raise `E_SELECT`
+   (`[[Subject]]` the path).
 3. Read from the result { `parts` }, « » when absent, a List of Maps { `content`: a String without
    a lone surrogate, `focus`: a non-empty String, when present, `lines`: a Map { `start`, `end` }
    of integers with 1 <= `start` <= `end`, when present }, and { `diagnostics` },

@@ -262,7 +262,8 @@ raises a List of Diagnostics attached to *file*:
 7. If `hash` is present, let *recorded* be it. Collect `E_BLOCK`, `[[Subject]]` `hash`, unless
    *recorded* is a String of 64 characters of `[0-9a-f]`, the scan has exactly one
    line of *hashLines*, and that line, after `hash:`, is one or more blanks, *recorded* itself,
-   optional blanks, an optional `#` comment and its terminator.
+   then either optional blanks, or one or more blanks and a `#` comment (a `#` with no blank
+   before it is part of the scalar, as in YAML), and its terminator.
 8. If *problems* is empty, return the Declaration { `[[File]]` *file*, `[[Dependencies]]` the
    strings of `dependencies`, `[[Selected]]` its Maps as Selected Dependencies (§8.7), each in order
    of appearance, `[[Use]]` the strings of `use`, or none if it is absent, `[[Origin]]`
