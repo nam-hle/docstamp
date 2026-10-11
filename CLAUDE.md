@@ -279,6 +279,18 @@ adds or extends), `src/cli/workspace.ts` (merge with `files`, duplicate check) a
 `src/hash/hash.ts`. Tests: `tests/unit/inline.test.ts`, `tests/e2e/scenarios/inline.test.ts` on the
 `inline-docs` fixture.
 
+## Selected shorthand
+
+A `dependencies` String `path:selector` (SPEC §8.7) is a Shorthand. `splitDependency`
+(`src/pattern/split.ts`, a leaf the engine may import) finds the first unescaped `:`;
+`parseShorthand` (`src/config/shorthand.ts`) validates the literal path, and `readConfig` and
+`parseBlock` keep the results in `Declaration.shorthands`, off `dependencies`. `loadWorkspace` calls
+`resolveShorthands` (§12.2 step 5), which reads the plugin's `selectorFields` as data and never runs
+`extract`, so the invariant on plugins above holds. A new plugin's grammar is its `selectorFields`;
+core owns the `key=value` syntax. `suggest` never proposes a path with a `:`. Tests:
+`tests/unit/shorthand.test.ts` (with the §17.7 vectors), `tests/scenarios/shorthand.test.ts` and the
+`plugins` e2e scenarios.
+
 ## Suggest
 
 `docstamp suggest` (SPEC §12.6, §13.10) proposes a doc's `dependencies` from the paths it mentions.
