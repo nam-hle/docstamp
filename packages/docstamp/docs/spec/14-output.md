@@ -30,6 +30,7 @@ or, for a stale Result with a known `[[Changes]]`:
 ```
 STALE    <file>  (<reason>, <reason>)
   edited    <carrier>  (dependency list)
+  edited    <script>  (configuration)
   added     <path>  (selection)
   changed   1 modified, 1 added, 5 deleted
   modified  <path>
@@ -43,6 +44,9 @@ STALE    <file>  (<reason>, <reason>)
 - For `stale` with a known `[[Changes]]`, instead of the `depends` lines:
   - if `[[Edited]]` is not none, the *edited line*: `  edited    `, `[[Edited]]` as in §14.2, and
     `  (dependency list)`;
+  - if `[[ConfigEdited]]` is not none, the *configuration line*, in the same place as the edited
+    line (they are never both present): `  edited    `, `[[ConfigEdited]]` as in §14.2, and
+    `  (configuration)`;
   - if `[[Selection]]` is not none, one *selection line* per SelectionChange in order: two spaces,
     the status padded with spaces to 8 characters, two spaces, the path as in §14.2, and
     `  (selection)` (`  added     <path>  (selection)`, `  removed   <path>  (selection)`). They
@@ -198,7 +202,7 @@ Updating the first 10 stale files and running `docstamp` again lists the next 10
 #### 14.3.4 Review Line
 
 For a stale Result with a known `[[Changes]]` that is not empty, or with an `[[Edited]]` that is
-not none, or with `[[Fragments]]` that are not empty, the block ends with one line:
+not none, or with a `[[ConfigEdited]]` that is not none, or with `[[Fragments]]` that are not empty, the block ends with one line:
 
 ```
   review: git diff -M <C> -- <arg> <arg>
@@ -220,10 +224,10 @@ renamed file as one rename rather than a deletion and an addition. The *args* ar
   wildcard); for a pattern with a Negation, `:(exclude,glob)` in place of `:(glob)`. If any
   pattern contains `{`, the line is not output.
 
-When `[[Edited]]` is not none and no Change has its path, that path follows the other *args*,
-written as a Change's path is in the first form; it does not count toward the path cap. The path of
-each FragmentChange follows in the same way, in order, once, unless a Change or the `[[Edited]]`
-path is already one of the *args*.
+When `[[Edited]]` or `[[ConfigEdited]]` is not none and no Change has its path, that path follows
+the other *args*, written as a Change's path is in the first form; it does not count toward the
+path cap. The path of each FragmentChange follows in the same way, in order, once, unless a Change
+or the `[[Edited]]` or `[[ConfigEdited]]` path is already one of the *args*.
 
 When the review line is output in the first form and some of its Change *args* are the path of an
 `added` Change that came from *untracked* (§12.3 step 2, not from *diff*), the review line is
@@ -298,6 +302,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   none (§12.3 step 8), and is absent otherwise; both Changes of a pair stay in the List.
 - `"dependenciesEdited": true` follows `changes` when the Result's `[[Edited]]` is not none, and
   is absent otherwise. The summary line of §14.3 is text only: its counts follow from `changes`.
+- `"configurationEdited": true` follows `dependenciesEdited` (or `changes`) when the Result's
+  `[[ConfigEdited]]` is not none, and is absent otherwise.
 - `"selection"` follows `dependenciesEdited` when the Result's `[[Selection]]` is not none, and is
   absent otherwise: a List of `{ "status", "path" }`, `status` being `added` or `removed`, in path
   order (§12.3 step 10).

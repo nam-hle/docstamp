@@ -121,6 +121,7 @@ export function jsonText(doc: JsonDoc): string {
           : null,
       ],
       ...(r.edited === undefined ? [] : [['dependenciesEdited', true] as [string, Json]]),
+      ...(r.configEdited === undefined ? [] : [['configurationEdited', true] as [string, Json]]),
       ...(r.selection === undefined
         ? []
         : [

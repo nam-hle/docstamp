@@ -64,6 +64,7 @@ identical needs no Review (Principle 4).
 | `[[Changes]]` | List of Change in path order, or *unknown* | known only as defined in §12.3 |
 | `[[Base]]` | a commit Id, or none | the commit *C* of §12.3 when `[[Changes]]` is known, else none |
 | `[[Edited]]` | RepoPath, or none | the *carrier* of §12.3 step 1.4 when `[[Changes]]` is known and that step found the Declaration's own list edited since *C*, else none |
+| `[[ConfigEdited]]` | RepoPath, or none | the script Configuration file when `[[Changes]]` is known and §12.3 step 1.4 found it differs from *C* and could not compare the list, else none |
 | `[[Selection]]` | List of SelectionChange in path order, or none | the files that entered or left the selection with that edit (§12.3 step 10), when `[[Edited]]` is not none and it is known, else none |
 | `[[Fragments]]` | List of FragmentChange, or none | the Selected Dependencies whose Fragment changed since *C* (§12.3 step 11), when `[[Changes]]` is known and the Declaration has Selected Dependencies, else none |
 

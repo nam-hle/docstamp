@@ -1,30 +1,30 @@
 version: 4
 files:
-  "CLAUDE.md": 4b4ffda519d23b25d46d8982f1e99ec051f981658c4e155fd7bea7463054d9e5
-  "README.md": a8a7b284cec868abd836ca41634e54be4a54fd85471c359589495c81af3270c5
+  "CLAUDE.md": 22a37a60f90201b941f0f61b97c578569bc51672a8ad64994f28dfc78965781d
+  "README.md": 1a3688a18f0ddc5677f0de7b60db4038e6f144ce838261faa3b28159e29cbf1e
   "packages/docstamp-plugin-js/README.md": 6160073f7f3eb62d9f0baf5a227605104c761af875053af877c4f9b569436b12
   "packages/docstamp-plugin-js/SPEC.md": 6160073f7f3eb62d9f0baf5a227605104c761af875053af877c4f9b569436b12
   "packages/docstamp-plugin-markdown/README.md": 16425cf3e3689e98c41d5f32bddb4121f357d081896c3441f35cf311902b60db
   "packages/docstamp-plugin-markdown/SPEC.md": 16425cf3e3689e98c41d5f32bddb4121f357d081896c3441f35cf311902b60db
-  "packages/docstamp/README.md": 5a2a0a63056360ad644dfa190589aafdc65cb9070b224dfb1ccf15170710da43
-  "packages/docstamp/docs/spec/05-records.md": 25ac8f8271a277d363c9f1a8bfd891d40b832e6ce30e283acdb8abf46657da48
+  "packages/docstamp/README.md": 28982da1c16950a7dc5bce2c39dc1c74c0690a965114ea65a6eb60d4e18ea01e
+  "packages/docstamp/docs/spec/05-records.md": 71916744701f2443c58251126b090598c18eef0843c677967b1ae76cbb6863be
   "packages/docstamp/docs/spec/06-root.md": 062025720327214fde3ae16471fba616dc8eb3ccce3771126c27b5a2f35a5d28
   "packages/docstamp/docs/spec/07-universe.md": 062025720327214fde3ae16471fba616dc8eb3ccce3771126c27b5a2f35a5d28
   "packages/docstamp/docs/spec/08-patterns.md": f47ef9416921f2351465345edd1c8f2e20e49569473bace2f4bf967482e8bba5
   "packages/docstamp/docs/spec/09-configuration-file.md": 68591310a100dbca4af38425577605b880cc94f87337fc33c23971a25c6f9c2b
   "packages/docstamp/docs/spec/10-hashing.md": 55e5ec4ebbcffc5a75896cbf2dbb202623b55d2af8f29fcc5a980c67d2ad2314
   "packages/docstamp/docs/spec/11-lockfile.md": 5d92f278cda1c692222f1fcc9677c8548f8f685d9294eb89a844674e80bf7e45
-  "packages/docstamp/docs/spec/12-evaluation.md": 3ed35bdd8ae8e1c973266567f69f0b07cdd4b3b1b85328fedc613c918d6a256f
-  "packages/docstamp/docs/spec/13-command-line.md": 5a2a0a63056360ad644dfa190589aafdc65cb9070b224dfb1ccf15170710da43
-  "packages/docstamp/docs/spec/14-output.md": 595aebc2f3beaa6264102bfe751fc9e27f5dff4e4b734b5f21ad7ee08386c93f
-  "packages/docstamp/docs/spec/15-diagnostics.md": 88f4314e2010ff87cb75af8281972c1ee792715252bfa343fbb13ccc1e4a79a5
-  "packages/docstamp/docs/spec/16-exit-codes.md": 5a2a0a63056360ad644dfa190589aafdc65cb9070b224dfb1ccf15170710da43
+  "packages/docstamp/docs/spec/12-evaluation.md": b556355d417c678fe24cb0c82c031ddae810a37784855f79771c722b8cde7da2
+  "packages/docstamp/docs/spec/13-command-line.md": 28982da1c16950a7dc5bce2c39dc1c74c0690a965114ea65a6eb60d4e18ea01e
+  "packages/docstamp/docs/spec/14-output.md": 9719f8bbeef6318f45d3fa9cc2b78ffc098a8330e8940f289e2d6b0a65416b42
+  "packages/docstamp/docs/spec/15-diagnostics.md": 295838f5fbcfcc58f0ea597c7c4b8573763e8b6643907454a4bad2fa4bed7fb1
+  "packages/docstamp/docs/spec/16-exit-codes.md": 28982da1c16950a7dc5bce2c39dc1c74c0690a965114ea65a6eb60d4e18ea01e
   "packages/docstamp/docs/spec/17-compatibility.md": f0eeaf1049f876374940a0c9b6e2863f18faa8589213afaef09da8630a58e8bd
-  "packages/site/content/get-started.md": a8a7b284cec868abd836ca41634e54be4a54fd85471c359589495c81af3270c5
+  "packages/site/content/get-started.md": 1a3688a18f0ddc5677f0de7b60db4038e6f144ce838261faa3b28159e29cbf1e
   "packages/site/content/guide/ci.md": 9cfe6fe7414ce7f5037aa5ce29121e702866358e33ec2ba70e678622a4851450
   "packages/site/content/guide/declare.md": 57c9071eeb9793d5f0b65dfcada98c2ef20e3c9635fd9cb09041d7ed56b64eec
   "packages/site/content/guide/plugins.md": e22aa830f4f7249f3b91015044f91fa2aa548222754754fa06b5f3c2cbe50752
-  "packages/site/content/guide/review.md": 18d418835899e4410eab0d1cf523ce8d40e258dfdbad460fe00eba8c5fc936b8
-  "packages/site/content/guide/tune.md": 5016c4a0933b2dafb3771b4f2861973766053a7065add1eb71a2767814110eb9
-  "packages/site/content/index.md": 726a4bcf114740dee2992598a3eb08c7b255a0ec241b9eca2d8d9bfde6045068
-  "packages/site/content/reference/index.md": 5a2a0a63056360ad644dfa190589aafdc65cb9070b224dfb1ccf15170710da43
+  "packages/site/content/guide/review.md": 174d3049a02e8cb4b63cc00e41de68d250414c057fd70a7c5f692bdf74ff6552
+  "packages/site/content/guide/tune.md": edea996d0a61b96d71aa19d3802ee7c849d80b33b1bec96b7e918c99e63af159
+  "packages/site/content/index.md": 1d2d5fb05e74c14c7556ea47dd47ed46ce721a7d6bb1947d33171dff587a8208
+  "packages/site/content/reference/index.md": 28982da1c16950a7dc5bce2c39dc1c74c0690a965114ea65a6eb60d4e18ea01e

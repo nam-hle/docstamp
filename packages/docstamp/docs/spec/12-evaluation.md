@@ -44,7 +44,8 @@ leaves the file `ok`.
 NOTE: An edit of the dependency list is named only by the changed-file report (§12.3 step 1.4),
 which needs the commit that holds the Write. While the Write is not committed the report is
 unknown and the block lists `depends` lines (§14.3), so the edit reads like any change: commit the
-Write before editing the list.
+Write before editing the list. With a script Carrier the report cannot name the edit even then: it
+names the script as `[[ConfigEdited]]` when it differs from *C*, and the list is not compared.
 
 ### 12.2 EvaluateAll
 
@@ -126,6 +127,11 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
       The *carrier* is `docstamp.yaml` for a configured file and `result.[[File]]` for an inline
       one.
 
+   Running the script as of *C* would execute old code, so a script is never read there. Instead,
+   when the Declaration is a configured one, the Configuration file is a script Carrier and
+   *edited* is false, let *configEdited* be that file's RepoPath iff it is a path of *diff* or of
+   *untracked* (step 2): the script differs from *C*, and what it changed is not compared.
+
    For an inline file, steps 1.1 to 1.3 are instead: list the commits of
    `git log --format=%H -S<entry> -- <file>`, newest first; the recorded Hash of the file as of a
    commit or its first parent is the Hash on the one line of *hashLines* of
@@ -145,8 +151,8 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
    file is no longer a dependency. For `added` and `modified` the path must also be selected by
    `result.[[Dependencies]]`, so a path that only a Selected Dependency names is not a Change
    (step 11 reports its Fragment).
-5. If the Changes are empty, *edited* is false and the *fragments* of step 11 are empty, return
-   *unknown*.
+5. If the Changes are empty, *edited* is false, *configEdited* is none and the *fragments* of
+   step 11 are empty, return *unknown*.
 6. Set `[[Via]]` of each Change to the patterns of `result.[[Dependencies]]` that have no Negation
    and satisfy `PatternMatches(pattern, path)`, in declaration order (as §13.8 step 4.2 does).
 7. Set `[[WhitespaceOnly]]` of each Change: true iff its status is `modified`,
@@ -166,7 +172,8 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
    *after*; if there is one, set `[[Pair]]` of *d* to the path of *a* and `[[Pair]]` of *a* to the
    path of *d*. Every other Change has `[[Pair]]` none.
 9. Return the Changes in path order, *C*, which is `[[Base]]` of the Result, the carrier if
-   *edited* is true, else none, which is its `[[Edited]]`, the selection of step 10, which is
+   *edited* is true, else none, which is its `[[Edited]]`, *configEdited*, which is its
+   `[[ConfigEdited]]`, the selection of step 10, which is
    its `[[Selection]]`, and, when the Declaration has Selected Dependencies, the *fragments* of
    step 11, which are its `[[Fragments]]`.
 10. If *edited* is false, the selection is none. Otherwise let *old* be the effective patterns

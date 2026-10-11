@@ -234,7 +234,7 @@ its declaration fixed, then docstamp check <file>.
 
 - Every byte counts, except that CR LF is read as LF in text files: whitespace, a final newline, a license header.
 - An edit of the pattern list that selects the same files changes nothing.
-- An edit of the list that selects other files is content-changed too. The report names it (edited line) only once the update is committed; before that the block lists depends lines.
+- An edit of the list that selects other files is content-changed too. The report names it (edited line) only once the update is committed; before that the block lists depends lines. With a script configuration (docstamp.config.ts) the old list is never read: the report says "edited <script> (configuration)" when the script differs from the review commit, and the review: line shows its diff.
 - No propagation: if C depends on B and B on code, a code change makes B stale. C becomes stale only when B's content changes.
 - Warnings (W_ codes) never change a state or an exit code.
 - The changed-file report (modified, added, deleted, renamed lines and the review: line) reads git history and is advisory; without history the block lists depends lines instead.`,
@@ -258,7 +258,7 @@ document starts with version (2), mode (the command) and exitCode, and ends with
 global ones, each { code, severity, file, subject, message }, file and subject null when empty.
 Consumers must ignore members they do not know: later releases only add members.
 
-- check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited; fragments (a list of { path, select, status }, with focus and lines when the plugin gives them) appears when it has selected dependencies; use and origins when it uses presets (use is [] when they are only default-presets).
+- check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited (configurationEdited when a script configuration changed instead); fragments (a list of { path, select, status }, with focus and lines when the plugin gives them) appears when it has selected dependencies; use and origins when it uses presets (use is [] when they are only default-presets).
 - update: as check, with written true or false on each file and a top-level removed list. A written file reports state ok.
 - list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and origins with presets, default-presets included.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive each dependent also has dependents, cycle and repeated.
