@@ -357,6 +357,10 @@ scenario('§12.3 unknown when the written lock was never committed', { fixture }
   const result = await repo.run([]);
   expect(result.stdout).toContain('  depends   src/**\n');
   expect((await repo.run(['--json'])).json().files[0].changes).toBeNull();
+  repo.write('docstamp.yaml', config({ 'CLAUDE.md': ['src/**', '!src/c.ts'] }));
+  const edited = await repo.run([], { label: 'list edited before the commit' });
+  expect(edited.stdout).toContain('  depends   src/**\n  depends   !src/c.ts\n');
+  expect(edited.stdout).not.toContain('(dependency list)');
 });
 
 scenario(
