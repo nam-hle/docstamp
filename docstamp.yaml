@@ -23,9 +23,8 @@ files:
   README.md:
     dependencies:
       - packages/docstamp/src/cli
-      - packages/docstamp/docs/spec
-      - action
-      - action.yml
+      - packages/docstamp/src/config
+      - packages/docstamp/src/report
   packages/docstamp/README.md:
     dependencies:
       - packages/docstamp/src/cli
