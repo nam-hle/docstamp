@@ -1,11 +1,11 @@
-# on the rebased feature branch
+# after merging feature into main
 $ docstamp
 exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
+  modified  src/c.ts
   modified  src/d.ts
-  modified  src/util.ts
-  review: git diff -M e7f26864cdedce76bfe4fe6e0c807c6fabb9a9b7 -- src/d.ts src/util.ts
+  review: git diff -M 6eff57282542cf9d373c2934764350e274eadf1a -- src/c.ts src/d.ts
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
   run update only after the review, never --all just to pass; see docstamp help agents
