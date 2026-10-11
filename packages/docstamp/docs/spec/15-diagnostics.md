@@ -19,7 +19,7 @@ default message of a code (one with no detail of its own) may name only its firs
 | `E_FILE_MISSING` | error | §12.1 | rename the key or restore the file |
 | `E_EMPTY_PATTERN` | error | §8.5, §8.7 | correct or remove the pattern; it has no Negation; when it names an existing but ignored path, depend on its source or remove the ignore rule; when git shows the path renamed (§12.7), depend on the new path, which the message names; when it holds `\` followed by a letter, use `/` as the separator (`\` escapes the next character) |
 | `E_EMPTY_DEPENDENCIES` | error | §8.5 | correct the patterns in `dependencies`: no inclusion is empty, but together they select no file (there is no inclusion, or the exclusions deselect every file); never raised beside an `E_EMPTY_PATTERN` of the same file |
-| `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3, §13.10 | fix permissions, or make the Root writable |
+| `E_UNREADABLE` | error | §7.2, §9.6.3, §9.6.4, §10.2, §11.3, §13.10 | fix permissions; for a write of the Lockfile or a doc, also make the Root writable |
 | `E_PATH_ENCODING` | error | §7.2 | rename the file to valid UTF-8 |
 | `E_PATH_COLLISION` | error | §7.4, §7.5 | rename one of the files |
 | `E_LOCK` | error | §9.2, §11.1 | resolve the conflict, or `docstamp update --all` after reviewing every file |

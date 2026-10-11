@@ -3,7 +3,7 @@ $ docstamp
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_UNREADABLE: src: Fix the permissions, or make the root writable.
+error: E_UNREADABLE: src: Fix the permissions.
 --- setup: docstamp.yaml ---
 version: 2
 files:
