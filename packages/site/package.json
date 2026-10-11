@@ -1,0 +1,9 @@
+{
+  "name": "docstamp-site",
+  "private": true,
+  "type": "module",
+  "description": "The documentation site of docstamp, built with VitePress and published on GitHub Pages.",
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  }
+}

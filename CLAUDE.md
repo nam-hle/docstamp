@@ -62,7 +62,8 @@ Node.js >= 24. ESM only.
   as wired by string.
 - No commit hooks are installed; the gate is the only enforcement.
 - The only runtime dependency is **yaml**. Any other dependency needs a stated reason and the
-  user's approval.
+  user's approval. **vitepress** is a development dependency of the private `packages/site`, which
+  is not published, so the package still has one dependency.
 
 ## The gate
 
@@ -84,7 +85,8 @@ docstamp/                   # private workspace root
 ├── packages/
 │   ├── docstamp/           # the published package `docstamp`; its tree is below
 │   ├── docstamp-plugin-markdown/   # plugin: sections of a Markdown file; SPEC.md, src/, tests/
-│   └── docstamp-plugin-js/         # plugin: declarations of a JS/TS file; SPEC.md, src/, tests/
+│   ├── docstamp-plugin-js/         # plugin: declarations of a JS/TS file; SPEC.md, src/, tests/
+│   └── site/               # private: the documentation site (VitePress); content/, scripts/, tests/
 ├── action.yml              # the composite GitHub Action (GitHub needs it at the root)
 ├── action/                 # render.ts (report to PR comment, pure), run.ts (summary, comment
 │                           #   upsert) and their tests, run under Node's type stripping
@@ -292,6 +294,20 @@ page), to SPEC §15, §16, §5.4 and the section list, and to 100 columns of ASC
 `tests/e2e/scenarios/help.test.ts` runs every example that shows output on the `help-examples`
 fixture, committed twice in the last days so `suggest` shows a real stale rate. A behavior change that a page describes changes the page in the same change.
 
+## The site
+
+`packages/site/` builds the documentation site with VitePress and publishes it on GitHub Pages
+(`.github/workflows/pages.yml`). It owns no spec text: `scripts/assemble.ts` writes the Markdown that
+VitePress renders into `.generated/` (gitignored), from the spec parts, `docs/`, the community files,
+the plugin READMEs and the output of `docstamp help`, so the reference is the help of the release
+and never a copy. `scripts/links.ts` points repository links at routes of the site, or at GitHub for
+files it does not publish. Only the task pages are hand-written, in `packages/site/content/`: each
+is short, shows one workflow and links to the clause instead of restating it, and is bound to the
+code it describes in `docstamp.yaml`. Raw HTML is off in Markdown, because the spec writes `<file>`
+in prose. `pnpm nadle buildSite` builds docstamp, assembles and renders; it is part of the gate, so
+a dead link fails the pull request. A command added to the CLI must be added to `COMMANDS` in
+`scripts/pages.ts`, which the assembly checks against `docstamp help`.
+
 ## Presets
 
 `presets` and `default-presets` in the configuration and `use` on a file or block (SPEC §8.6).
@@ -366,6 +382,9 @@ first, bump the Lockfile version, then regenerate the literals and review each d
   package's `package.json` is already on npm, which is true after every release. A `Docs gate`
   job packs the build and runs `action.yml` on this repository (`uses: ./`), the same file users
   call, so the Action is dogfooded and the PR comment appears on our own pull requests.
+- `.github/workflows/pages.yml` builds the site (`pnpm nadle buildSite`) on every push to `main`
+  and deploys it to GitHub Pages at `https://nam-hle.github.io/docstamp/`; the repository's Pages
+  source must be "GitHub Actions". It publishes no package and has no release.
 - Each package has its own release. `.github/workflows/release-please.yml` keeps one pull request
   per package open from the commits on `main` that touch that package's folder
   (`separate-pull-requests`); it writes the version and `CHANGELOG.md` there. Never edit either by

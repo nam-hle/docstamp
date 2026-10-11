@@ -29,6 +29,44 @@ files:
   packages/docstamp/README.md:
     dependencies:
       - packages/docstamp/src/cli
+  packages/site/content/index.md:
+    dependencies:
+      - packages/docstamp/src/cli
+      - packages/docstamp/src/report
+  packages/site/content/get-started.md:
+    dependencies:
+      - packages/docstamp/src/cli
+      - packages/docstamp/src/config
+      - packages/docstamp/src/report
+  packages/site/content/guide/declare.md:
+    dependencies:
+      - packages/docstamp/src/pattern
+      - packages/docstamp/src/config
+      - packages/docstamp/src/inline
+      - packages/docstamp/src/engine/presets.ts
+  packages/site/content/guide/review.md:
+    dependencies:
+      - packages/docstamp/src/report
+      - packages/docstamp/src/history
+      - packages/docstamp/src/cli
+  packages/site/content/guide/ci.md:
+    dependencies:
+      - action.yml
+      - action
+  packages/site/content/guide/tune.md:
+    dependencies:
+      - packages/docstamp/src/engine/suggest.ts
+      - packages/docstamp/src/engine/stats.ts
+      - packages/docstamp/src/cli/suggest.ts
+      - packages/docstamp/src/history
+  packages/site/content/guide/plugins.md:
+    dependencies:
+      - packages/docstamp/src/plugin
+      - packages/docstamp-plugin-markdown/src
+      - packages/docstamp-plugin-js/src
+  packages/site/content/reference/index.md:
+    dependencies:
+      - packages/docstamp/src/cli
   packages/docstamp/docs/spec/05-records.md:
     dependencies:
       - packages/docstamp/src/core

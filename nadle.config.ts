@@ -9,6 +9,7 @@ const AT_TERMINAL = Boolean(process.stdout.isTTY) && !process.env['CI'];
 configure({ reporter: AT_TERMINAL ? 'default' : 'agent' });
 
 const DOCSTAMP = 'packages/docstamp';
+const SITE = 'packages/site';
 
 // A plugin builds after docstamp, whose declarations it types against, and is tested with the real
 // CLI. Each one gets the same tasks, suffixed with its id (`typecheckMarkdown`, `testJs`, ...).
@@ -28,6 +29,9 @@ const CODE = [
   `${DOCSTAMP}/tests`,
   `${DOCSTAMP}/scripts`,
   ...PLUGINS.flatMap(({ dir }) => [`${dir}/src`, `${dir}/tests`]),
+  `${SITE}/scripts`,
+  `${SITE}/tests`,
+  `${SITE}/.vitepress`,
 ];
 
 // What can change the verdict of a check: the code, and the configuration of every tool.
@@ -41,7 +45,7 @@ const verdictInputs = [
     '*.config.ts',
     '.oxfmtrc.json',
     'knip.json',
-    ...[DOCSTAMP, ...PLUGINS.map(({ dir }) => dir)].flatMap((dir) => [
+    ...[DOCSTAMP, SITE, ...PLUGINS.map(({ dir }) => dir)].flatMap((dir) => [
       `${dir}/package.json`,
       `${dir}/tsconfig*.json`,
       `${dir}/*.config.ts`,
@@ -108,9 +112,23 @@ for (const { id, name, dir } of PLUGINS) {
   });
 }
 
+tasks.register('typecheckSite', {
+  run: PnpxTask,
+  group: 'Checking',
+  cacheVerdict: true,
+  description: 'Type-check the site: its scripts, tests and VitePress config (read-only)',
+  options: { command: 'tsc', args: ['--noEmit', '-p', `${SITE}/tsconfig.json`] },
+  inputs: verdictInputs,
+});
+
 tasks.register('typecheck', {
   group: 'Checking',
-  dependsOn: ['typecheckRoot', 'typecheckDocstamp', ...PLUGINS.map(({ id }) => `typecheck${id}`)],
+  dependsOn: [
+    'typecheckRoot',
+    'typecheckDocstamp',
+    'typecheckSite',
+    ...PLUGINS.map(({ id }) => `typecheck${id}`),
+  ],
   description: 'Type-check every project (read-only)',
 });
 
@@ -189,12 +207,38 @@ tasks.register('schema', {
   options: { script: 'scripts/write-schema.ts' },
 });
 
+// The site is the repository's own Markdown plus `docstamp help`, assembled and then rendered. It
+// builds docstamp first, which the reference pages are made from.
+tasks.register('siteContent', {
+  run: NodeTask,
+  group: 'Building',
+  workingDir: SITE,
+  dependsOn: ['buildDocstamp'],
+  description: 'Assemble the Markdown of the documentation site into packages/site/.generated',
+  options: { script: 'scripts/assemble.ts' },
+});
+
+tasks.register('buildSite', {
+  run: PnpxTask,
+  group: 'Building',
+  workingDir: SITE,
+  dependsOn: ['siteContent'],
+  description: 'Build the documentation site with VitePress (writes packages/site/.vitepress/dist)',
+  options: { command: 'vitepress', args: ['build'] },
+});
+
 tasks.register('clean', {
   run: DeleteTask,
   group: 'Building',
-  description: 'Delete dist (writes)',
+  description: 'Delete dist and the generated site (writes)',
   options: {
-    paths: [DOCSTAMP, ...PLUGINS.map(({ dir }) => dir)].map((dir) => `${dir}/dist`),
+    paths: [
+      ...[DOCSTAMP, ...PLUGINS.map(({ dir }) => dir)].map((dir) => `${dir}/dist`),
+      `${SITE}/.generated`,
+      `${SITE}/.manifest.json`,
+      `${SITE}/.vitepress/dist`,
+      `${SITE}/.vitepress/cache`,
+    ],
   },
 });
 
@@ -221,6 +265,14 @@ tasks.register('testAction', {
   run: PnpxTask,
   group: 'Testing',
   description: 'Run the GitHub Action tests (read-only)',
+  options: { command: 'vitest', args: ['run'] },
+});
+
+tasks.register('testSite', {
+  run: PnpxTask,
+  group: 'Testing',
+  workingDir: SITE,
+  description: 'Run the site tests: link rewriting (read-only)',
   options: { command: 'vitest', args: ['run'] },
 });
 
@@ -280,12 +332,14 @@ tasks.register('test', {
     'docstamp',
     'testUnit',
     'testAction',
+    'testSite',
+    'buildSite',
     ...PLUGINS.map(({ id }) => `test${id}`),
     'testE2e',
     'testPack',
   ],
   description:
-    'The gate: format, lint, types, knip, the build, the self-check and every test suite',
+    'The gate: format, lint, types, knip, the builds, the self-check and every test suite',
 });
 
 // --- Formatting ---

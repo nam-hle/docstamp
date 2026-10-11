@@ -1,6 +1,6 @@
 version: 3
 files:
-  "CLAUDE.md": 81864a8439355aa2ba2704c03b2620da5dc190f86401389ff345d3ae8a3e1ab1
+  "CLAUDE.md": 7caa491f76f2d1c9c8a9a86285c225f37694f5f88e4e56093cd13736567c8b46
   "README.md": 86226103b32deeb911ffb72f98423d10cf1635b20f7468310d5642e350eb1600
   "packages/docstamp-plugin-js/README.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-js/SPEC.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
@@ -20,3 +20,11 @@ files:
   "packages/docstamp/docs/spec/15-diagnostics.md": ba553fd9fb32a9f7508783063a8b23eea2a47f3dabccfdeef19d9a6ef6d3272a
   "packages/docstamp/docs/spec/16-exit-codes.md": 250264f4956b1003ba1eb7805b9fdb8765141b4f969e2c5aecc3df7477a69661
   "packages/docstamp/docs/spec/17-compatibility.md": cf89ec84fa2c77a6cbd076f4a5f2d1a565838c88a1fa841d032099fc1841a6b7
+  "packages/site/content/get-started.md": 68e15da7cb6839ee2c45bb8b191adcd2e79383d11c69b2a3cb8a82ca73a7d6f4
+  "packages/site/content/guide/ci.md": 1057c72d7b4194ab0d887da81c29d97b8b8a2413f74453836fb66187dbc683b6
+  "packages/site/content/guide/declare.md": 84cf250df233674d7dd5da8c52470ece5993a7ac0c4486722700ef81e0b6409f
+  "packages/site/content/guide/plugins.md": 4a55fe77adc381c7747645c4926d7adc1369deb82d0d97726c3657b329b4f0e9
+  "packages/site/content/guide/review.md": 19838bb74def544d6430df907d714230d5ea4ca7fe6c6f030a7e32acf7f68ef3
+  "packages/site/content/guide/tune.md": 4a95312013c337b110dab25d9185446eadff9789ea94d26ae3894f727ac53383
+  "packages/site/content/index.md": 7fec9d7f38b293fbec877f18b7c0542d795298c28e9c583679b0d670f9b99b06
+  "packages/site/content/reference/index.md": 250264f4956b1003ba1eb7805b9fdb8765141b4f969e2c5aecc3df7477a69661
