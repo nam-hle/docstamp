@@ -67,7 +67,7 @@ hashes differ.
 
 NOTE: A selector that raises, and a file that does not parse, are returned as `{ diagnostics: « d » }`,
 *d* an `error` whose message says what is wrong; docstamp reports it as `E_SELECT` (SPEC §8.7). A
-valid selector that matches nothing returns `{ }`, which docstamp reports as `E_SELECT_NOT_FOUND`;
+valid selector that matches nothing returns a `warning` (§8.2), which docstamp reports with `E_SELECT_NOT_FOUND`;
 one that matches more than one Group is an `error` as well (§8).
 
 ## 5 Parsing
@@ -149,7 +149,7 @@ modifier, decorator or `export` is a change; a changed body is not.
 2. Let *groups* be the Groups of `Declarations(statements)` (§6).
 3. Let *matches* be the Groups whose Declarations have `[[Name]]` equal to `selector.[[Name]]` and,
    unless `selector.[[Kind]]` is *none*, `[[Kind]]` equal to it.
-4. If *matches* is empty, return `{ }`. If it has more than one Group, return
+4. If *matches* is empty, return `NotFound` (§8.2). If it has more than one Group, return
    `{ diagnostics: « d » }`, *d* an `error` whose message names the kind and the line of each Group
    and says to add a `kind` or to rename one of them.
 5. Otherwise return `{ parts: « p » }`, *p* the Part { `content`: `Source` (when `selector.[[Part]]`
@@ -177,6 +177,26 @@ Every Diagnostic of this Plugin has a code (SPEC §8.7 step 3), stable across ve
 | `invalid-selector` | `error` | §4 NOTE, in `Extract` step 1 and in `ValidateSelect`; §4.1 step 3, in `ParseSelect` |
 | `unparsable-file` | `error` | §4 NOTE, in `Extract` step 1 when `Parse` raises |
 | `ambiguous-name` | `error` | `Extract` step 4, more than one Group selected |
+| `declaration-not-found` | `warning` | `NotFound`, no Group selected |
+
+### 8.2 NotFound
+
+`NotFound(selector, groups)` returns `{ diagnostics: « d » }`, *d* a `warning` with the code
+`declaration-not-found` and no part, so docstamp raises `E_SELECT_NOT_FOUND` (SPEC §8.7 step 6) and
+prints *d* with it. Its `message` is one line, names the selector as written (`No declaration named "bar"`, or
+`No class named "bar"` with a `kind`) and the first of these that applies, each Group written `<kind> <name>
+(line <n>)`, in the order of the file:
+
+1. *groups* is empty: the file has no declarations.
+2. Some Group has the name of the selector, so only the kind is wrong: those Groups, at most 5, and
+   an instruction to correct the kind.
+3. Some Group has a name within an edit distance (Levenshtein, over code points) of the larger of 2
+   and a third of the length of the name (rounded down) of it, or equal to it but for case: the
+   nearest, at most 5, ordered by distance, then by line, as `nearest: ...`.
+4. Otherwise the first 10 Groups, then `and <n> more` if there are others.
+
+The message holds no path and no code point below U+0020 (each is replaced by U+0020), so the same
+file gives the same message on every machine.
 
 ## 9 Compatibility
 

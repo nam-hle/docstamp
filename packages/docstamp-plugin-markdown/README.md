@@ -68,6 +68,7 @@ The report names the section and its lines because this plugin returns them with
   `## *Fast* path` is selected by `'*Fast* path'`. Nothing is decoded or stripped, so a formatting
   edit to the heading makes the selector match nothing (`E_SELECT_NOT_FOUND`) instead of silently
   tracking a different heading.
+- A heading that is not there is `E_SELECT_NOT_FOUND`, with a warning naming the nearest headings or the level it has.
 - A heading that appears twice is an `E_SELECT` whose message names both lines; add a `level` or rename one of them.
 
 ## What is hashed

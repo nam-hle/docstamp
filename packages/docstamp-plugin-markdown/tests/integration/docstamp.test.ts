@@ -101,6 +101,7 @@ describe('§6 the plugin through the docstamp CLI', () => {
     const result = run();
     expect(result.exit).toBe(2);
     expect(result.stderr).toContain('E_SELECT_NOT_FOUND');
+    expect(result.stderr).toContain('No heading "Missing"');
   });
 
   it('reports a heading that appears twice as E_SELECT naming its lines', () => {
