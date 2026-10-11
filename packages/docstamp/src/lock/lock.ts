@@ -14,7 +14,7 @@ const migrationMessage = (version: '2' | '3') =>
   `The version ${version} Lockfile is no longer read; ignore rules now match the NFC form of a ` +
   'name and trim a space after an escaped backslash, so a file may be selected that was not. ' +
   'Review every file, then run "docstamp update --all" to rewrite it as version 4.';
-const fail = (code: 'E_LOCK' | 'E_LOCK_VERSION') => new Raised([diag(code)]);
+const fail = (code: 'E_LOCK' | 'E_LOCK_VERSION') => new Raised([diag(code, { subject: LOCK })]);
 const isMap = (v: YamlValue | undefined): v is YamlMap =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 const hasKeys = (map: YamlMap, keys: string[]): boolean => {
@@ -65,7 +65,9 @@ export function parseLock(bytes: Buffer): Lock {
   const version = top.entries.get('version')?.plainSource;
   // §17.4 step 3, §17.5: one supported version, every other refused, never recomputed
   if (version === '2' || version === '3') {
-    throw new Raised([diag('E_LOCK_VERSION', { message: migrationMessage(version) })]);
+    throw new Raised([
+      diag('E_LOCK_VERSION', { subject: LOCK, message: migrationMessage(version) }),
+    ]);
   }
   if (version !== '4') throw fail('E_LOCK_VERSION');
   const files = top.entries.get('files')?.value;
