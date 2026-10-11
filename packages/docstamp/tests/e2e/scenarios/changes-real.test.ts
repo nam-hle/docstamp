@@ -18,16 +18,19 @@ async function reviewedRepo(repo: Repo): Promise<string> {
   return repo.commit('review');
 }
 
-scenario('§12.3 the review commit may be amended, rebased or merged', { fixture }, async (repo) => {
+scenario('§12.3 the review commit may be amended', { fixture }, async (repo) => {
   await reviewedRepo(repo);
   const before = repo.git('rev-parse', 'HEAD');
   repo.git('commit', '--amend', '-q', '-m', 'review, reworded');
   expect(repo.git('rev-parse', 'HEAD')).not.toBe(before);
   repo.append('src/util.ts', 'one\n');
   const amended = await repo.run([], { label: 'after amending the review commit' });
+  expect(amended.exit).toBe(1);
   expect(amended.stdout).toContain('  modified  src/util.ts\n');
-  repo.commit('edit one');
+});
 
+scenario('§12.3 the review commit may be rebased', { fixture }, async (repo) => {
+  await reviewedRepo(repo);
   repo.git('checkout', '-q', '-b', 'feature');
   repo.append('src/d.ts', 'feature\n');
   repo.commit('feature work');
@@ -37,8 +40,16 @@ scenario('§12.3 the review commit may be amended, rebased or merged', { fixture
   repo.git('checkout', '-q', 'feature');
   repo.git('rebase', '-q', 'main');
   const rebased = await repo.run([], { label: 'on the rebased feature branch' });
-  expect(rebased.stdout).toContain('  modified  src/d.ts\n  modified  src/util.ts\n');
+  expect(rebased.exit).toBe(1);
+  expect(rebased.stdout).toContain('  modified  src/d.ts\n');
+  expect(rebased.stdout).not.toContain('other.txt');
+});
 
+scenario('§12.3 the review commit may be merged', { fixture }, async (repo) => {
+  await reviewedRepo(repo);
+  repo.git('checkout', '-q', '-b', 'feature');
+  repo.append('src/d.ts', 'feature\n');
+  repo.commit('feature work');
   repo.git('checkout', '-q', 'main');
   repo.append('src/c.ts', 'main side\n');
   repo.commit('main side edit');
@@ -46,7 +57,7 @@ scenario('§12.3 the review commit may be amended, rebased or merged', { fixture
   const merged = await repo.run([], { label: 'after merging feature into main' });
   expect(merged.exit).toBe(1);
   expect(merged.stdout).toContain(
-    'STALE    CLAUDE.md  (content-changed)\n  modified  src/c.ts\n  modified  src/d.ts\n  modified  src/util.ts\n',
+    'STALE    CLAUDE.md  (content-changed)\n  modified  src/c.ts\n  modified  src/d.ts\n  review: git diff',
   );
 });
 
