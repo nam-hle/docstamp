@@ -115,8 +115,8 @@ namespace. Import only docstamp:
       files: { 'docs/guide.md': { dependencies: ['src', '!src/gen'] } },
     });
 
-The root is --root, else the nearest directory upward with a configuration file, else the nearest
-with .git. docstamp update writes docstamp-lock.yaml next to it; commit it. After a merge conflict
+The root is the nearest directory upward from the current one (or from --cwd) with a configuration
+file, else the nearest with .git. docstamp update writes docstamp-lock.yaml next to it; commit it. After a merge conflict
 in the lock, take either side, run docstamp, review what is stale and update again.`,
   },
   inline: {

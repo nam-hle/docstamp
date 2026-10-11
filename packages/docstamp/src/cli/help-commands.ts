@@ -18,16 +18,16 @@ const JSON_OPTION = [
   'Print one JSON document instead of text (docstamp help json).',
 ] as const;
 const ROOT_OPTION = [
-  '--root <dir>',
-  'Use <dir> as the root, instead of the nearest directory upward with a configuration ' +
-    'file, else with .git. File arguments are still resolved against the current directory.',
+  '--cwd <dir>',
+  'Act as if run from <dir>: the root is searched upward from it, and file arguments are ' +
+    'resolved against it.',
 ] as const;
 const ERROR_EXIT = ['2', 'an error diagnostic, or a usage error.'] as const;
 
 // SPEC §13.1 to §13.11: one page per command of the command table
 export const COMMAND_PAGES: Record<Command, CommandPage> = {
   check: {
-    synopsis: ['docstamp [check] [--json] [--only-stale] [--quiet] [--root <dir>] [<file>...]'],
+    synopsis: ['docstamp [check] [--json] [--only-stale] [--quiet] [--cwd <dir>] [<file>...]'],
     summary: "Check that each file's dependencies are unchanged since its last review.",
     description: `
 The default command: a bare docstamp is docstamp check. It evaluates every stamped file (or only
@@ -72,7 +72,7 @@ next: review each stale file against its dependencies, then run: docstamp update
     related: ['update', 'list-dependencies', 'states', 'agents'],
   },
   update: {
-    synopsis: ['docstamp update [--json] [--root <dir>] (--all | <file>...)'],
+    synopsis: ['docstamp update [--json] [--cwd <dir>] (--all | <file>...)'],
     summary: 'Record that you reviewed the named files against their dependencies.',
     description: `
 Records the current dependency hash of each named file: in docstamp-lock.yaml for a file declared
@@ -104,7 +104,7 @@ named file is invalid nothing is written.`,
     related: ['check', 'agents', 'states'],
   },
   'list-dependencies': {
-    synopsis: ['docstamp list-dependencies [--json] [--root <dir>] [<file>...]'],
+    synopsis: ['docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]'],
     summary: 'List each file with its dependency patterns and the files they select.',
     description: `
 For each stamped file (or the named ones): one depends line per pattern, in order, marked
@@ -131,7 +131,7 @@ read the lock and does not hash, so it works before the first update.`,
     related: ['list-dependents', 'patterns', 'check'],
   },
   'list-dependents': {
-    synopsis: ['docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...'],
+    synopsis: ['docstamp list-dependents [--json] [--transitive] [--cwd <dir>] <file>...'],
     summary: 'List the files that depend on each named file, and the patterns that select it.',
     description: `
 The reverse query: any file of the repository may be named. Run it before changing code to see
@@ -158,7 +158,7 @@ unless --transitive.`,
     related: ['list-dependencies', 'agents'],
   },
   stats: {
-    synopsis: ['docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]'],
+    synopsis: ['docstamp stats [--json] [--cwd <dir>] [--since <n>d | --from <rev>] [<file>...]'],
     summary: "Report how often each file's dependencies would have made it stale.",
     description: `
 Replays the commits of a window against the files each stamped file selects today, and counts the
@@ -186,7 +186,7 @@ touch over 200 paths). It needs the full git history (fetch-depth: 0 in CI), els
     related: ['suggest', 'patterns'],
   },
   suggest: {
-    synopsis: ['docstamp suggest [--json] [--root <dir>] [--write] <file>...'],
+    synopsis: ['docstamp suggest [--json] [--cwd <dir>] [--write] <file>...'],
     summary: 'Propose dependencies from the paths each file mentions.',
     description: `
 Reads each named file and proposes its dependencies from the repository paths it mentions (code

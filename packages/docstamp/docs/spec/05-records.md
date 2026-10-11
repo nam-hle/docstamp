@@ -113,7 +113,7 @@ error text, parser error text, or absolute paths; it MAY contain an error code n
 the Plugin's own: docstamp passes it unchanged and does not check it for a sentence, so that rule
 binds the author of the Plugin, which MUST NOT put operating system error text, parser error text or
 an absolute path in it. The one exception is a file argument that does not resolve inside Root: the `E_USAGE` of
-§13.3 step 2, §13.8 step 3 and §13.10 step 2 names the current directory, the resolved path and
+§13.3 step 2, §13.8 step 3 and §13.10 step 2 names the working directory, the resolved path and
 Root, because that is what explains the failure.
 
 ### 5.6 Inline Block

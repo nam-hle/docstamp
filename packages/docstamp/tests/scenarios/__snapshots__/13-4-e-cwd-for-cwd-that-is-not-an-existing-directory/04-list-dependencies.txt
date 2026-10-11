@@ -1,0 +1,6 @@
+# list-dependencies
+$ docstamp list-dependencies --cwd nope
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CWD: Pass an existing directory to --cwd.

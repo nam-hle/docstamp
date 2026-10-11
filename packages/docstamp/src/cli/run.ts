@@ -33,7 +33,13 @@ import {
   statsText,
   updateText,
 } from '../report/text.ts';
-import { determineRoot, existsUnderRoot, isIgnoredPath, type Universe } from '../universe/walk.ts';
+import {
+  determineRoot,
+  existsUnderRoot,
+  isIgnoredPath,
+  resolveCwd,
+  type Universe,
+} from '../universe/walk.ts';
 import { parseArgs, type Args } from './args.ts';
 import { helpText } from './help.ts';
 import { resolutionMessage, rootFromCwd, selectResults, toRepoPath } from './paths.ts';
@@ -282,15 +288,16 @@ function emit(io: Io, o: Output): number {
 // SPEC §13.7
 function runList(
   host: Host,
-  args: { json: boolean; root?: string; paths: string[] },
-  cwd: string,
+  args: { json: boolean; cwd?: string; paths: string[] },
+  processCwd: string,
   io: Io,
 ): number {
   let selected: Result[] = [];
   let global: Diagnostic[] = [];
   let exitCode = 2;
   try {
-    const root = determineRoot(host, cwd, args.root);
+    const cwd = resolveCwd(host, processCwd, args.cwd);
+    const root = determineRoot(host, cwd);
     selected = selectResults(args.paths, cwd, root, listAll(host, root));
     exitCode = selected.some((r) => r.state === 'invalid') ? 2 : 0;
   } catch (e) {
@@ -343,15 +350,16 @@ function reverseEntries(
 // SPEC §13.8
 function runReverse(
   host: Host,
-  args: { json: boolean; root?: string; paths: string[]; transitive: boolean },
-  cwd: string,
+  args: { json: boolean; cwd?: string; paths: string[]; transitive: boolean },
+  processCwd: string,
   io: Io,
 ): number {
   let entries: ReverseEntry[] = [];
   let global: Diagnostic[] = [];
   let exitCode = 2;
   try {
-    const root = determineRoot(host, cwd, args.root);
+    const cwd = resolveCwd(host, processCwd, args.cwd);
+    const root = determineRoot(host, cwd);
     // SPEC §14.7: text prints DirectFirstTree, JSON DependentTree
     const found = reverseEntries(host, root, cwd, args.paths, args.transitive, !args.json);
     entries = found.entries;
@@ -371,13 +379,19 @@ function runReverse(
 }
 
 // SPEC §13.9; the only read of the clock (§2)
-function runStats(host: Host, args: Extract<Args, { mode: 'stats' }>, cwd: string, io: Io): number {
+function runStats(
+  host: Host,
+  args: Extract<Args, { mode: 'stats' }>,
+  processCwd: string,
+  io: Io,
+): number {
   let exitCode = 2;
   let global: Diagnostic[] = [];
   let window: StatsWindow | null = null;
   let files: readonly FileStats[] = [];
   try {
-    const root = determineRoot(host, cwd, args.root);
+    const cwd = resolveCwd(host, processCwd, args.cwd);
+    const root = determineRoot(host, cwd);
     const selected = selectResults(args.paths, cwd, root, listAll(host, root));
     const invalid = selected.filter((r) => r.state === 'invalid');
     if (invalid.length > 0) throw new Raised(invalid.flatMap((r) => [...r.diagnostics]));
@@ -418,10 +432,10 @@ function runStats(host: Host, args: Extract<Args, { mode: 'stats' }>, cwd: strin
 }
 
 // SPEC §13.5, §13.6, §13.7, §13.8, §13.9
-export function run(host: Host, argv: readonly string[], cwd: string, io: Io): number {
+export function run(host: Host, argv: readonly string[], processCwd: string, io: Io): number {
   let args: ReturnType<typeof parseArgs>;
   try {
-    args = parseArgs(argv, (arg) => isEntry(host, resolve(cwd, arg)));
+    args = parseArgs(argv, (arg) => isEntry(host, resolve(processCwd, arg)));
   } catch (e) {
     if (!(e instanceof Raised)) throw e;
     io.stderr(diagnosticsText(e.diagnostics));
@@ -441,10 +455,10 @@ export function run(host: Host, argv: readonly string[], cwd: string, io: Io): n
     io.stdout(`${typeof VERSION === 'string' ? VERSION : '0.0.0'}\n`);
     return 0;
   }
-  if (args.mode === 'list-dependencies') return runList(host, args, cwd, io);
-  if (args.mode === 'list-dependents') return runReverse(host, args, cwd, io);
-  if (args.mode === 'stats') return runStats(host, args, cwd, io);
-  if (args.mode === 'suggest') return runSuggest(host, args, cwd, io);
+  if (args.mode === 'list-dependencies') return runList(host, args, processCwd, io);
+  if (args.mode === 'list-dependents') return runReverse(host, args, processCwd, io);
+  if (args.mode === 'stats') return runStats(host, args, processCwd, io);
+  if (args.mode === 'suggest') return runSuggest(host, args, processCwd, io);
   const { mode, json } = args;
   const empty: Output = {
     json,
@@ -457,7 +471,8 @@ export function run(host: Host, argv: readonly string[], cwd: string, io: Io): n
     ...(mode === 'update' ? { written: new Set<string>(), removed: [] } : {}),
   };
   try {
-    const root = determineRoot(host, cwd, args.root);
+    const cwd = resolveCwd(host, processCwd, args.cwd);
+    const root = determineRoot(host, cwd);
     const evaluated = evaluateAll(
       host,
       root,
@@ -475,7 +490,7 @@ export function run(host: Host, argv: readonly string[], cwd: string, io: Io): n
       const whitespace = new Map<string, boolean>();
       const reported = selected.map((r) => withChanges(host, root, r, evaluated, whitespace));
       const chunks = checkChunks(reported, global, {
-        root: args.root,
+        cwd: args.cwd,
         quiet: args.quiet,
         rootFromCwd: rootFromCwd(cwd, root),
         inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
@@ -491,7 +506,7 @@ export function run(host: Host, argv: readonly string[], cwd: string, io: Io): n
       });
     }
     if (refused) {
-      const chunks = checkChunks(selected, global, { root: args.root, next: false });
+      const chunks = checkChunks(selected, global, { cwd: args.cwd, next: false });
       return emit(io, { ...empty, evaluated: true, selected, global, chunks });
     }
     const inlineFiles = new Map(

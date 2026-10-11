@@ -32,7 +32,7 @@ function repository(entry: string, api = API) {
   write('docstamp.config.mjs', config(entry));
   write('api.ts', api);
   const run = (...args: string[]) => {
-    const result = spawnSync(process.execPath, [CLI, '--root', root, ...args], {
+    const result = spawnSync(process.execPath, [CLI, '--cwd', root, ...args], {
       cwd: root,
       encoding: 'utf8',
       env: { PATH: process.env['PATH'] ?? '', HOME: root, LC_ALL: 'C' },

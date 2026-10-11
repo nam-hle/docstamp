@@ -1,0 +1,6 @@
+# a file, not a directory
+$ docstamp --cwd CLAUDE.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CWD: Pass an existing directory to --cwd.

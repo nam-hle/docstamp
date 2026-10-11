@@ -151,9 +151,9 @@ describe('§14.3 check text', () => {
       'next: fix the configuration of each invalid file, then run:',
     );
   });
-  it('next line carries --root', () => {
-    expect(checkText([res('a.md', 'stale')], { root: 'sub' })).toContain(
-      'docstamp update a.md --root sub\n',
+  it('next line carries --cwd', () => {
+    expect(checkText([res('a.md', 'stale')], { cwd: 'sub' })).toContain(
+      'docstamp update a.md --cwd sub\n',
     );
   });
   it('summary is always present', () => {
@@ -455,10 +455,16 @@ describe('§14.3.4 review line', () => {
         "':(literal)src/[id].ts' ':(literal):odd.ts'\n",
     );
   });
-  it('--root becomes git -C', () => {
+  it('--cwd becomes git -C', () => {
     const changes = [change('modified', 'src/a.ts')];
     expect(reviewLine(stale(changes), 'my dir')).toBe(
       "  review: git -C 'my dir' diff -M c0ffee -- src/a.ts\n",
+    );
+  });
+  it('--cwd below the root points git -C at the root, so the paths stay relative to it', () => {
+    const changes = [change('modified', 'src/a.ts')];
+    expect(reviewLine(stale(changes), 'repo/docs', '..')).toBe(
+      '  review: git -C repo/docs/.. diff -M c0ffee -- src/a.ts\n',
     );
   });
   it('up to 10 paths are listed, from 11 the patterns become pathspecs', () => {
@@ -535,7 +541,7 @@ describe('§14.3.3 next lines', () => {
   });
   it('invalid files get their own line with another instruction, after the stale one', () => {
     const out = checkText([res('a.md', 'invalid'), res('b.md', 'stale'), res('c.md', 'invalid')], {
-      root: 'sub',
+      cwd: 'sub',
     });
     expect(out).toBe(
       'INVALID  a.md\n' +
@@ -543,27 +549,27 @@ describe('§14.3.3 next lines', () => {
         'INVALID  c.md\n' +
         '0 ok, 1 stale, 2 invalid\n' +
         'next: review each stale file against its dependencies, then run: ' +
-        'docstamp update b.md --root sub\n' +
+        'docstamp update b.md --cwd sub\n' +
         RULE +
         'next: fix the configuration of each invalid file, then run: ' +
-        'docstamp check a.md c.md --root sub\n',
+        'docstamp check a.md c.md --cwd sub\n',
     );
   });
-  it('--root follows each list, and the cap applies to the invalid line too', () => {
+  it('--cwd follows each list, and the cap applies to the invalid line too', () => {
     const invalid = Array.from({ length: 11 }, (_, i) =>
       res(`i${String(i).padStart(2, '0')}.md`, 'invalid'),
     );
-    const out = checkText(invalid, { root: 'sub' });
+    const out = checkText(invalid, { cwd: 'sub' });
     expect(out).toContain('then run: docstamp check i00.md i01.md');
-    expect(out).toContain('i09.md --root sub\n  and 1 more\n');
+    expect(out).toContain('i09.md --cwd sub\n  and 1 more\n');
   });
-  it('a file is written relative to the current directory when it is not the root', () => {
+  it('a file is written relative to the working directory when it is not the root', () => {
     const out = checkText([res('docs/b.md', 'stale'), res('a.md', 'invalid')], {
-      root: 'repo',
-      rootFromCwd: 'repo',
+      cwd: 'repo/sub',
+      rootFromCwd: '..',
     });
-    expect(out).toContain('then run: docstamp update repo/docs/b.md --root repo\n');
-    expect(out).toContain('then run: docstamp check repo/a.md --root repo\n');
+    expect(out).toContain('then run: docstamp update ../docs/b.md --cwd repo/sub\n');
+    expect(out).toContain('then run: docstamp check ../a.md --cwd repo/sub\n');
     const up = checkText([res('docs/b.md', 'stale')], { rootFromCwd: '../..' });
     expect(up).toContain('then run: docstamp update ../../docs/b.md\n');
   });
@@ -890,7 +896,7 @@ describe('§14.5 JSON', () => {
         mode: 'check',
         exitCode: 2,
         selected: [],
-        diagnostics: [diag('E_ROOT')],
+        diagnostics: [diag('E_CWD')],
       }),
     );
     expect(doc.diagnostics[0].file).toBeNull();

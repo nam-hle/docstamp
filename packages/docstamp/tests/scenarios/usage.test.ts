@@ -22,19 +22,21 @@ scenario('§13.2 usage errors exit 2 before any root discovery', { git: false },
   const cases: [string[], string][] = [
     [['--bogus'], 'E_USAGE: --bogus'],
     [['-x'], 'E_USAGE: -x'],
-    [['--root'], 'E_USAGE: --root'],
-    [['check', '--root'], '--root needs a directory'],
-    [['--root', '--json'], '--root needs a directory'],
-    [['--root', '--root', '.'], '--root needs a directory'],
-    [['--root', '--root=.'], '--root needs a directory'],
-    [['--root', '--'], '--root needs a directory'],
-    [['--root', '--all', 'update'], '--root needs a directory'],
-    [['--root='], '--root needs a directory'],
-    [['--root', '.', '--root', '.'], 'E_USAGE: --root'],
-    [['--root=.', '--root=.'], 'E_USAGE: --root'],
+    [['--cwd'], 'E_USAGE: --cwd'],
+    [['check', '--cwd'], '--cwd needs a directory'],
+    [['--cwd', '--json'], '--cwd needs a directory'],
+    [['--cwd', '--cwd', '.'], '--cwd needs a directory'],
+    [['--cwd', '--cwd=.'], '--cwd needs a directory'],
+    [['--cwd', '--'], '--cwd needs a directory'],
+    [['--cwd', '--all', 'update'], '--cwd needs a directory'],
+    [['--cwd='], '--cwd needs a directory'],
+    [['--cwd', '.', '--cwd', '.'], 'E_USAGE: --cwd'],
+    [['--cwd=.', '--cwd=.'], 'E_USAGE: --cwd'],
     [['--json', '--json'], 'E_USAGE: --json'],
     [['--write', 'CLAUDE.md'], 'docstamp update'],
     [['--files'], 'docstamp list-dependencies'],
+    [['--root', '.'], '--root was removed; use "--cwd"'],
+    [['check', '--root=.'], '--root was removed; use "--cwd"'],
     [['--all'], 'E_USAGE: --all'],
     [['check', '--all'], 'E_USAGE: --all'],
     [['list-dependencies', '--all'], 'E_USAGE: --all'],
@@ -80,8 +82,8 @@ scenario(
     const afterFile = await repo.run(['list-dependencies', 'CLAUDE.md', '--json']);
     expect(afterFile.json().mode).toBe('list-dependencies');
 
-    const rootForm = await repo.run([`--root=${repo.root}`, '../CLAUDE.md'], { cwd: 'src' });
-    expect(rootForm.exit).toBe(0);
+    const cwdForm = await repo.run(['--cwd=..', 'CLAUDE.md'], { cwd: 'src' });
+    expect(cwdForm.exit).toBe(0);
   },
 );
 

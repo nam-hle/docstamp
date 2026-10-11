@@ -4,7 +4,7 @@ exit: 0
 docstamp check: Check that each file's dependencies are unchanged since its last review.
 
 Usage:
-  docstamp [check] [--json] [--only-stale] [--quiet] [--root <dir>] [<file>...]
+  docstamp [check] [--json] [--only-stale] [--quiet] [--cwd <dir>] [<file>...]
 
 The default command: a bare docstamp is docstamp check. It evaluates every stamped file (or only the
 named ones), prints a block for each file that is not ok, a summary line, and next: lines that name
@@ -19,9 +19,8 @@ Options:
   --json        Print one JSON document instead of text (docstamp help json).
   --only-stale  With --json, leave the ok files out of files; summary still counts them.
   --quiet       Print nothing on standard output when every selected file is ok.
-  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
-                file, else with .git. File arguments are still resolved against the current
-                directory.
+  --cwd <dir>   Act as if run from <dir>: the root is searched upward from it, and file arguments
+                are resolved against it.
   <file>...     Check only these stamped files.
   -h, --help    Print this page.
 

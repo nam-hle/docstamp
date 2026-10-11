@@ -31,7 +31,7 @@ const REVIEW_PATH_MAX = 10;
 const LITERAL_NEEDED = /^:|[*?[\\]/u;
 
 export interface CheckTextOptions {
-  root?: string;
+  cwd?: string;
   next?: boolean;
   quiet?: boolean;
   rootFromCwd?: string;
@@ -173,7 +173,7 @@ function headLines(r: Result): string {
 }
 
 // SPEC §14.3.4
-export function reviewLine(r: Result, rootArg?: string): string {
+export function reviewLine(r: Result, cwdArg?: string, rootFromCwd = ''): string {
   if (r.base === undefined || !r.changes) return '';
   const fragmentPaths = (r.fragments ?? []).map((f) => f.path);
   if (r.changes.length === 0 && r.edited === undefined && fragmentPaths.length === 0) return '';
@@ -185,7 +185,9 @@ export function reviewLine(r: Result, rootArg?: string): string {
     .filter((path) => !r.changes!.some((c) => c.path === path))
     .map(pathArg);
   const args = [...listed, ...extra];
-  const git = rootArg === undefined ? 'git' : `git -C ${shellQuote(rootArg)}`;
+  const gitDir =
+    cwdArg === undefined ? undefined : rootFromCwd === '' ? cwdArg : `${cwdArg}/${rootFromCwd}`;
+  const git = gitDir === undefined ? 'git' : `git -C ${shellQuote(gitDir)}`;
   const review = `  review: ${git} diff -M ${r.base} -- ${args.map(shellQuote).join(' ')}\n`;
   const untracked = byPath ? r.changes.filter((c) => c.untracked === true) : [];
   if (untracked.length === 0) return review;
@@ -198,10 +200,10 @@ const RULE_LINE =
   '  run update only after the review, never --all just to pass; ' + 'see docstamp help agents\n';
 
 // SPEC §14.3.3
-function nextLine(lead: string, command: string, files: readonly string[], root: string): string {
+function nextLine(lead: string, command: string, files: readonly string[], option: string): string {
   const listed = files.slice(0, NEXT_MAX).map(shown).join(' ');
   const more = files.length > NEXT_MAX ? `  and ${files.length - NEXT_MAX} more\n` : '';
-  return `next: ${lead}, then run: docstamp ${command} ${listed}${root}\n${more}`;
+  return `next: ${lead}, then run: docstamp ${command} ${listed}${option}\n${more}`;
 }
 
 // SPEC §14.3, §14.3.2
@@ -209,7 +211,7 @@ export function checkChunks(
   selected: readonly Result[],
   global: readonly Diagnostic[],
   {
-    root: rootArg,
+    cwd: cwdArg,
     next: withNext = true,
     quiet = false,
     rootFromCwd = '',
@@ -232,7 +234,8 @@ export function checkChunks(
           (r.changes.length > 0 || r.edited !== undefined || (r.fragments?.length ?? 0) > 0)
         ) {
           const lines = withoutRepeatedRenames(changeLines(r.changes), r, renamesShownBy);
-          block += headLines(r) + lines.join('') + fragmentLines(r) + reviewLine(r, rootArg);
+          block +=
+            headLines(r) + lines.join('') + fragmentLines(r) + reviewLine(r, cwdArg, rootFromCwd);
         } else block += dependsLines(r);
       }
       emit('stdout', block);
@@ -248,10 +251,10 @@ export function checkChunks(
     emit('stdout', `${ok} ok, ${stale.length} stale, ${invalid.length} invalid\n`);
   }
   if (withNext) {
-    const root = rootArg === undefined ? '' : ` --root ${shown(rootArg)}`;
+    const option = cwdArg === undefined ? '' : ` --cwd ${shown(cwdArg)}`;
     if (stale.length > 0) {
       const lead = 'review each stale file against its dependencies';
-      emit('stdout', nextLine(lead, 'update', stale, root) + RULE_LINE);
+      emit('stdout', nextLine(lead, 'update', stale, option) + RULE_LINE);
     }
     if (invalid.length > 0) {
       const invalidFiles = selected.filter((r) => r.state === 'invalid').map((r) => r.file);
@@ -262,7 +265,7 @@ export function checkChunks(
           : inlineCount === invalidFiles.length
             ? 'the docstamp block'
             : 'the configuration or docstamp block';
-      emit('stdout', nextLine(`fix ${what} of each invalid file`, 'check', invalid, root));
+      emit('stdout', nextLine(`fix ${what} of each invalid file`, 'check', invalid, option));
     }
   }
   return chunks;

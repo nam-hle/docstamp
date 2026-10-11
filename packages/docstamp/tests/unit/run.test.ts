@@ -46,10 +46,10 @@ const tree = () => makeTree({ 'docstamp.yaml': CONFIG, 'doc.md': 'x', 'src/a.ts'
 
 describe('§13.5 check', () => {
   it('unrecorded is stale, exit 1, next line on stdout', () => {
-    const r = exec(tree(), '--root', '.');
+    const r = exec(tree(), '--cwd', '.');
     expect(r.code).toBe(1);
     expect(r.out).toContain('STALE    doc.md  (unrecorded)\n  depends   src/**\n');
-    expect(r.out).toContain('docstamp update doc.md --root .\n');
+    expect(r.out).toContain('docstamp update doc.md --cwd .\n');
     expect(r.err).toBe('');
   });
   it('write then check is ok, change makes it stale', () => {
@@ -79,7 +79,7 @@ describe('§13.5 check', () => {
     expect(r.out).toBe('');
   });
   it('missing config raises: no summary line', () => {
-    const r = exec(makeTree({}), '--root', '.');
+    const r = exec(makeTree({}), '--cwd', '.');
     expect(r.code).toBe(2);
     expect(r.out).toBe('');
     expect(r.err).toContain('E_CONFIG_MISSING');
@@ -251,7 +251,7 @@ describe('§13.7 list-dependencies', () => {
     });
   });
   it('--json on a raised error has empty files', () => {
-    const r = exec(makeTree({}), list, '--json', '--root', '.');
+    const r = exec(makeTree({}), list, '--json', '--cwd', '.');
     const doc = JSON.parse(r.out);
     expect(r.code).toBe(2);
     expect(doc.files).toEqual([]);

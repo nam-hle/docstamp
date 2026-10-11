@@ -218,9 +218,9 @@ describe('action comment renderer: commands under a working directory', () => {
     files: [stale()],
   };
 
-  it('names the file from the repository top and the root', () => {
+  it('names the file from the working directory and passes it as --cwd', () => {
     const body = renderComment(failing, 'docs/site');
-    expect(body).toContain('`docstamp update docs/site/CLAUDE.md --root docs/site`');
+    expect(body).toContain('`docstamp update CLAUDE.md --cwd docs/site`');
   });
 
   it('keeps the plain command for the repository root', () => {
@@ -229,18 +229,16 @@ describe('action comment renderer: commands under a working directory', () => {
     }
   });
 
-  it('normalizes a leading ./ and a trailing / of the root', () => {
-    expect(renderComment(failing, './docs/')).toContain(
-      '`docstamp update docs/CLAUDE.md --root docs`',
-    );
+  it('normalizes a leading ./ and a trailing / of the working directory', () => {
+    expect(renderComment(failing, './docs/')).toContain('`docstamp update CLAUDE.md --cwd docs`');
   });
 
   it('quotes a path the shell would split', () => {
     const body = renderComment(failing, 'my docs');
-    expect(body).toContain("`docstamp update 'my docs/CLAUDE.md' --root 'my docs'`");
+    expect(body).toContain("`docstamp update CLAUDE.md --cwd 'my docs'`");
   });
 
-  it('uses --root in the check command of an invalid file too', () => {
+  it('uses --cwd in the check command of an invalid file too', () => {
     const body = renderComment(
       {
         ...base,
@@ -250,7 +248,7 @@ describe('action comment renderer: commands under a working directory', () => {
       },
       'docs',
     );
-    expect(body).toContain('`docstamp check docs/CLAUDE.md --root docs`');
+    expect(body).toContain('`docstamp check CLAUDE.md --cwd docs`');
   });
 });
 

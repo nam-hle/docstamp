@@ -104,7 +104,7 @@ describe('§13.3 selectResults', () => {
       return [];
     };
     expect(messages(['a.md'])).toEqual([
-      'The argument is resolved against the current directory (/w) to /w/a.md, ' +
+      'The argument is resolved against the working directory (/w) to /w/a.md, ' +
         'which is outside the root /w/r; name a file inside the root.',
     ]);
     expect(messages(['r/z.md'])[0]).toMatch(/^Name a file listed under "files"/u);

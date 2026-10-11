@@ -52,7 +52,8 @@ Each message states the problem:
 
 - an unknown option, a missing value for an option with a value (none, empty, `--`, or a
   recognised option, so `--cwd --json` is an error), or an option given twice;
-- `--write` with any command but `suggest`, `--files` and `--root`, which were removed: the message
+- `--write` with any command but `suggest`, `--files` and `--root` (also written `--root=<value>`),
+  which were removed: the message
   names the replacement, `docstamp update` for `--write`, `docstamp list-dependencies` for
   `--files` and `--cwd` for `--root`, which also resolves file arguments (§13.4);
 - `--all` with any command but `update`;

@@ -4,19 +4,18 @@ exit: 0
 docstamp list-dependencies: List each file with its dependency patterns and the files they select.
 
 Usage:
-  docstamp list-dependencies [--json] [--root <dir>] [<file>...]
+  docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]
 
 For each stamped file (or the named ones): one depends line per pattern, in order, marked (preset
 <name>) when it comes from a preset, then one resolved line per selected file. It does not read the
 lock and does not hash, so it works before the first update.
 
 Options:
-  --json        Print one JSON document instead of text (docstamp help json).
-  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
-                file, else with .git. File arguments are still resolved against the current
-                directory.
-  <file>...     List only these stamped files.
-  -h, --help    Print this page.
+  --json       Print one JSON document instead of text (docstamp help json).
+  --cwd <dir>  Act as if run from <dir>: the root is searched upward from it, and file arguments are
+               resolved against it.
+  <file>...    List only these stamped files.
+  -h, --help   Print this page.
 
 Reads:
   the configuration file, the docstamp blocks and the file tree; not the lock.

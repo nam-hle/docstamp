@@ -1,0 +1,5 @@
+$ docstamp check --root=.
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --root=.: --root was removed; use "--cwd"; see docstamp help check.

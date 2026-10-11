@@ -1,0 +1,6 @@
+$ docstamp --cwd <root> update ROOT.md
+cwd: packages/a
+exit: 0
+--- stdout ---
+written  ROOT.md
+--- stderr ---

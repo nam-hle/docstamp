@@ -14,7 +14,7 @@ import { select } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 import { suggestJsonText, suggestText, type SuggestEntry } from '../report/suggest.ts';
 import { diagnosticsText } from '../report/text.ts';
-import { computeUniverse, determineRoot, isIgnoredPath } from '../universe/walk.ts';
+import { computeUniverse, determineRoot, isIgnoredPath, resolveCwd } from '../universe/walk.ts';
 import type { Args } from './args.ts';
 import type { Host } from '../host/host.ts';
 import { resolutionMessage, toRepoPath } from './paths.ts';
@@ -61,9 +61,10 @@ function staleRates(
 function suggestAll(
   host: Host,
   args: Extract<Args, { mode: 'suggest' }>,
-  cwd: string,
+  processCwd: string,
 ): SuggestEntry[] {
-  const root = determineRoot(host, cwd, args.root);
+  const cwd = resolveCwd(host, processCwd, args.cwd);
+  const root = determineRoot(host, cwd);
   const { config } = readConfig(host, root);
   const universe = computeUniverse(host, root, config);
   const problems: Diagnostic[] = [];

@@ -32,7 +32,7 @@ function repository(entry: string, guide = GUIDE) {
   write('docstamp.config.mjs', config(entry));
   writeFileSync(join(root, 'guide.md'), guide);
   const run = (...args: string[]) => {
-    const result = spawnSync(process.execPath, [CLI, '--root', root, ...args], {
+    const result = spawnSync(process.execPath, [CLI, '--cwd', root, ...args], {
       cwd: root,
       encoding: 'utf8',
       env: { PATH: process.env['PATH'] ?? '', HOME: root, LC_ALL: 'C' },

@@ -4,7 +4,7 @@ exit: 0
 docstamp update: Record that you reviewed the named files against their dependencies.
 
 Usage:
-  docstamp update [--json] [--root <dir>] (--all | <file>...)
+  docstamp update [--json] [--cwd <dir>] (--all | <file>...)
 
 Records the current dependency hash of each named file: in docstamp-lock.yaml for a file declared in
 the configuration file, in the hash: line of its docstamp block for an inline file. It prints
@@ -16,13 +16,12 @@ adoption and for recovery from an unreadable lock, never for making a failing ch
 named file is invalid nothing is written.
 
 Options:
-  --all         Record every stamped file. Not with file arguments.
-  --json        Print one JSON document instead of text (docstamp help json).
-  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
-                file, else with .git. File arguments are still resolved against the current
-                directory.
-  <file>...     The stamped files you reviewed.
-  -h, --help    Print this page.
+  --all        Record every stamped file. Not with file arguments.
+  --json       Print one JSON document instead of text (docstamp help json).
+  --cwd <dir>  Act as if run from <dir>: the root is searched upward from it, and file arguments are
+               resolved against it.
+  <file>...    The stamped files you reviewed.
+  -h, --help   Print this page.
 
 Reads:
   what check reads, without git.

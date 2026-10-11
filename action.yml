@@ -13,7 +13,7 @@ inputs:
     required: false
     default: "true"
   working-directory:
-    description: Directory passed to docstamp as --root
+    description: Directory passed to docstamp as --cwd
     required: false
     default: "."
   github-token:
@@ -44,7 +44,7 @@ runs:
         npm install --prefix "$prefix" --ignore-scripts --no-audit --no-fund "$spec" >&2
         report="$RUNNER_TEMP/docstamp-report.json"
         set +e
-        "$prefix/node_modules/.bin/docstamp" --json --only-stale --root "$ROOT" > "$report"
+        "$prefix/node_modules/.bin/docstamp" --json --only-stale --cwd "$ROOT" > "$report"
         code=$?
         set -e
         echo "report=$report" >> "$GITHUB_OUTPUT"

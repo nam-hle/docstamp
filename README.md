@@ -173,7 +173,7 @@ src/cli/run.ts
   README.md   via src/cli
 ```
 
-A file argument is resolved against the current directory, not `--root`, and the output is relative to the root. A path that is neither tracked nor on disk prints `(no dependents)` and a `W_UNKNOWN_PATH` warning, with exit 0, so a typo shows but a script keeps working. `--transitive` also lists docs that depend on those docs, the chain that goes stale one review round after another; a doc reached again is marked `(listed above)` or `(listed below)`, a cycle `(cycle)`, and neither is followed again ([SPEC §13.8](packages/docstamp/docs/spec/13-command-line.md#138-listdependents)). With `--json` each dependent also has `dependents` (nested), `cycle` and `repeated`.
+A file argument is resolved against the working directory (the current one, or `--cwd`), and the output is relative to the root. A path that is neither tracked nor on disk prints `(no dependents)` and a `W_UNKNOWN_PATH` warning, with exit 0, so a typo shows but a script keeps working. `--transitive` also lists docs that depend on those docs, the chain that goes stale one review round after another; a doc reached again is marked `(listed above)` or `(listed below)`, a cycle `(cycle)`, and neither is followed again ([SPEC §13.8](packages/docstamp/docs/spec/13-command-line.md#138-listdependents)). With `--json` each dependent also has `dependents` (nested), `cycle` and `repeated`.
 
 `docstamp list-dependencies <doc>` shows what a doc depends on and which files the patterns select, without reading the lock:
 
@@ -420,7 +420,7 @@ legend: patterns declared, files they select, commits and distinct days that wou
 | `docstamp help [<command> \| <topic>]` | The index, or one page: `help check`, `help patterns`, `help diagnostics E_EMPTY_PATTERN` (codes may be lower case). `docstamp <command> --help` (or `-h`) is that command's page. An unknown name is `E_USAGE`. |
 | `docstamp version` | The installed version. |
 
-Every command except `help` and `version` takes `--json` and `--root <dir>` (a directory, never another option). A command that fails before evaluating (bad configuration, lock, root or file argument) prints only its diagnostics, with no summary line, and never a partial report: `E_UNKNOWN_FILE` for a file inside the root that is not stamped, `E_USAGE` for an argument outside the root (arguments resolve against the current directory, not `--root`). `--files` and the old `--write` of `check` were replaced by `list-dependencies` and `update`. Command line: [SPEC §13](packages/docstamp/docs/spec/13-command-line.md#13-command-line).
+Every command except `help` and `version` takes `--json` and `--cwd <dir>` (a directory, never another option): the command acts as if run from `<dir>`, so the root is searched upward from it and file arguments resolve against it. A command that fails before evaluating (bad configuration, lock, root or file argument) prints only its diagnostics, with no summary line, and never a partial report: `E_UNKNOWN_FILE` for a file inside the root that is not stamped, `E_USAGE` for an argument outside the root (arguments resolve against the working directory), `E_CWD` for a `--cwd` that is not a directory. `--files`, `--root` and the old `--write` of `check` were replaced by `list-dependencies`, `--cwd` and `update`. Command line: [SPEC §13](packages/docstamp/docs/spec/13-command-line.md#13-command-line).
 
 ### Exit codes
 
@@ -485,7 +485,7 @@ jobs:
 | --- | --- | --- |
 | `version` | required | npm version of `docstamp` to run, or a path to a packed tarball (relative to the working directory of the job). The action installs it into a temporary directory, so your project needs no `docstamp` dependency. |
 | `comment` | `true` | Post the pull request comment. |
-| `working-directory` | `.` | Passed to `docstamp` as `--root`; the commands in the comment then carry it (`docstamp update docs/CLAUDE.md --root docs`). |
+| `working-directory` | `.` | Passed to `docstamp` as `--cwd`; the commands in the comment then carry it (`docstamp update CLAUDE.md --cwd docs`). |
 | `github-token` | `github.token` | Needs `pull-requests: write` for the comment. |
 
 The comment lists each stale file with its changed dependencies, and the resolving command. Here is the one for the stale `CLAUDE.md` of this repository, produced from a real `docstamp --json --only-stale` report:

@@ -145,7 +145,7 @@ scenario(
     const shown = repo.git('diff', '--name-only', base, '--', 'src/d.ts', 'src/util.ts');
     expect(shown).toBe('src/d.ts\nsrc/util.ts\n');
 
-    const rooted = await repo.run(['--root', repo.root]);
+    const rooted = await repo.run(['--cwd', repo.root]);
     expect(rooted.stdout).toContain(`  review: git -C ${gitPath(repo.root)} diff -M ${base} -- `);
   },
 );

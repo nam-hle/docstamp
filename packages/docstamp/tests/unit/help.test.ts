@@ -38,7 +38,7 @@ const NAMES = [
 ];
 
 // a value for each option that takes one, so that the parser judges the option itself
-const VALUES: Record<string, string> = { '--root': '.', '--since': '30d', '--from': 'HEAD' };
+const VALUES: Record<string, string> = { '--cwd': '.', '--since': '30d', '--from': 'HEAD' };
 
 function accepts(command: string, option: string): boolean {
   const written = option in VALUES ? [option, VALUES[option]!] : [option];

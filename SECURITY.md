@@ -14,7 +14,7 @@ I will acknowledge a report and keep you informed as it is investigated. This is
 
 In scope:
 
-- **Path handling.** Patterns, file arguments and `--root` that read, hash or write outside the repository root.
+- **Path handling.** Patterns, file arguments and `--cwd` that read, hash or write outside the repository root.
 - **Symlinks.** Following or hashing links in a way that escapes the root or changes the verdict.
 - **Git invocation.** `git` is called only for the advisory changed-file report, with an argument array and no shell. Any way to inject arguments or run something else is a vulnerability.
 - **Lock writing.** Any way to make `docstamp update` write outside `docstamp-lock.yaml` or write it without a named request.

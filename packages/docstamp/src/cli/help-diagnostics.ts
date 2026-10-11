@@ -14,8 +14,8 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'its replacement; a mistyped command names the command, and -- before it makes it a ' +
       'file. A file argument is resolved against the current directory, not --root.',
   },
-  E_ROOT: {
-    meaning: 'The directory given to --root does not exist.',
+  E_CWD: {
+    meaning: 'The directory given to --cwd does not exist.',
     fix: 'Pass an existing directory.',
   },
   E_CONFIG_MISSING: {

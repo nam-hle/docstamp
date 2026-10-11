@@ -3,7 +3,7 @@ import type { Code, Diagnostic } from './types.ts';
 
 const FIX: Record<Code, string> = {
   E_USAGE: 'Correct the command line; see docstamp help.',
-  E_ROOT: 'Pass an existing directory to --root.',
+  E_CWD: 'Pass an existing directory to --cwd.',
   E_CONFIG_MISSING:
     'Create docstamp.yaml with "version: 2" and a "files" mapping, ' +
     'or docstamp.config.ts exporting the same value, ' +

@@ -79,32 +79,39 @@ scenario(
 );
 
 scenario(
-  '§6 --root overrides the upward search and resolves against cwd',
+  '§13.4 --cwd runs as if from a directory: the Root is searched from it, arguments resolve against it',
   { fixture: 'monorepo' },
   async (repo) => {
-    const dotdot = await repo.run(['--root', '../..'], { cwd: 'packages/a' });
+    const dotdot = await repo.run(['--cwd', '../..'], { cwd: 'packages/a' });
     expect(dotdot.stdout).toContain('0 ok, 3 stale');
-
-    const equals = await repo.run(['--root=../..', 'ROOT.md'], { cwd: 'packages/a' });
-    expect(equals.exit).toBe(2);
-    expect(equals.stderr).toContain('E_UNKNOWN_FILE: ROOT.md');
-
-    const withFile = await repo.run(['--root=../..', '../../ROOT.md'], { cwd: 'packages/a' });
-    expect(withFile.stdout).toContain('1 stale');
-    expect(withFile.stdout).toContain(
-      'next: review each stale file against its dependencies, then run: docstamp update ../../ROOT.md --root ../..\n',
+    expect(dotdot.stdout).toContain(
+      'then run: docstamp update ROOT.md packages/a/README.md packages/b/README.md --cwd ../..\n',
     );
 
-    const absolute = await repo.run(['--root', repo.root, 'update', 'ROOT.md'], {
+    const withFile = await repo.run(['--cwd=../..', 'ROOT.md'], { cwd: 'packages/a' });
+    expect(withFile.stdout).toContain('1 stale');
+    expect(withFile.stdout).toContain(
+      'next: review each stale file against its dependencies, then run: docstamp update ROOT.md --cwd ../..\n',
+    );
+
+    const below = await repo.run(['--cwd', 'src', 'README.md'], { cwd: 'packages/a' });
+    expect(below.exit).toBe(2);
+    expect(below.stderr).toContain('E_UNKNOWN_FILE: README.md');
+
+    const absolute = await repo.run(['--cwd', repo.root, 'update', 'ROOT.md'], {
       cwd: 'packages/a',
     });
-    expect(absolute.exit).toBe(2);
+    expect(absolute.stdout).toBe('written  ROOT.md\n');
 
-    const noConfig = await repo.run(['--root', '.'], { cwd: 'packages/a' });
-    expect(noConfig.exit).toBe(2);
-    expect(noConfig.stderr).toContain('E_CONFIG_MISSING');
+    const missing = await repo.run(['--cwd', 'nope'], { cwd: 'packages/a' });
+    expect(missing.exit).toBe(2);
+    expect(missing.stderr).toContain('E_CWD');
 
-    const json = await repo.run(['update', '--all', '--json', '--root', repo.root], {
+    const removed = await repo.run(['--root', '../..'], { cwd: 'packages/a' });
+    expect(removed.exit).toBe(2);
+    expect(removed.stderr).toContain('E_USAGE: --root: --root was removed; use "--cwd"');
+
+    const json = await repo.run(['update', '--all', '--json', '--cwd', repo.root], {
       cwd: 'packages/b',
     });
     expect(json.json().files.map((f: { file: string }) => f.file)).toEqual([
@@ -120,22 +127,24 @@ const slashes = (text: string): string => text.replaceAll('\\', '/');
 const GUIDE = '---\ndocstamp:\n  dependencies:\n    - src\n---\n# Guide\n';
 
 scenario(
-  '§14.3.3 check --root from another directory prints a next line that runs from there',
+  '§14.3.3 check --cwd from another directory prints a next line that runs from there',
   async (repo) => {
     repo.write('src/x.ts', 'export const x = 1;\n');
     repo.write('docs/guide.md', GUIDE);
     repo.commit('init');
-    const check = await repo.run(['check', '--root', 'repo'], { cwd: '..', expectExit: 1 });
+    const check = await repo.run(['check', '--cwd', 'repo'], { cwd: '..', expectExit: 1 });
     expect(check.stdout).toContain(
       'next: review each stale file against its dependencies, then run: ' +
-        'docstamp update repo/docs/guide.md --root repo\n',
+        'docstamp update docs/guide.md --cwd repo\n',
     );
-    const update = await repo.run(['update', 'repo/docs/guide.md', '--root', 'repo'], {
+    const below = await repo.run(['check', '--cwd', 'repo/src'], { cwd: '..', expectExit: 1 });
+    expect(below.stdout).toContain('docstamp update ../docs/guide.md --cwd repo/src\n');
+    const update = await repo.run(['update', 'docs/guide.md', '--cwd', 'repo'], {
       cwd: '..',
       expectExit: 0,
     });
     expect(update.stdout).toBe('written  docs/guide.md\n');
-    await repo.run(['check', '--root', 'repo'], { cwd: '..', expectExit: 0 });
+    await repo.run(['check', '--cwd', 'repo'], { cwd: '..', expectExit: 0 });
 
     repo.append('src/x.ts', '// changed\n');
     const fromSrc = await repo.run(['check'], { cwd: 'src', expectExit: 1 });
@@ -146,12 +155,12 @@ scenario(
 );
 
 scenario(
-  '§13.3 update from another directory says how a file argument outside the root was resolved',
+  '§13.3 update with --cwd says how a file argument outside the root was resolved',
   async (repo) => {
     repo.write('src/x.ts', 'export const x = 1;\n');
     repo.write('docs/guide.md', GUIDE);
     repo.commit('init');
-    const update = await repo.run(['update', 'docs/guide.md', '--root', 'repo'], {
+    const update = await repo.run(['update', '../guide.md', '--cwd', 'repo'], {
       cwd: '..',
       expectExit: 2,
     });
@@ -159,22 +168,22 @@ scenario(
     const base = dirname(repo.root);
     expect(slashes(update.stderr)).toBe(
       slashes(
-        'error: E_USAGE: docs/guide.md: The argument is resolved against the current ' +
-          `directory (${base}) to ${base}/docs/guide.md, which is outside the root ` +
+        'error: E_USAGE: ../guide.md: The argument is resolved against the working ' +
+          `directory (${repo.root}) to ${base}/guide.md, which is outside the root ` +
           `${repo.root}; name a file inside the root.\n`,
       ),
     );
-    const check = await repo.run(['check', 'docs/guide.md', '--root', 'repo'], {
+    const check = await repo.run(['check', '../guide.md', '--cwd', 'repo'], {
       cwd: '..',
       expectExit: 2,
     });
-    expect(check.stderr).toContain('E_USAGE: docs/guide.md: The argument is resolved');
-    const unknown = await repo.run(['update', 'repo/src/x.ts', '--root', 'repo'], {
+    expect(check.stderr).toContain('E_USAGE: ../guide.md: The argument is resolved');
+    const unknown = await repo.run(['update', 'src/x.ts', '--cwd', 'repo'], {
       cwd: '..',
       expectExit: 2,
     });
     expect(unknown.stderr).toBe(
-      'error: E_UNKNOWN_FILE: repo/src/x.ts: Name a file listed under "files" in the ' +
+      'error: E_UNKNOWN_FILE: src/x.ts: Name a file listed under "files" in the ' +
         'configuration file, or one with a docstamp block.\n',
     );
   },
@@ -192,12 +201,12 @@ scenario('§13.4 a file argument outside the root is E_USAGE for every command',
     'stats',
     'suggest',
   ]) {
-    const result = await repo.run([command, 'docs/guide.md', '--root', 'repo'], {
+    const result = await repo.run([command, '../guide.md', '--cwd', 'repo'], {
       cwd: '..',
       expectExit: 2,
       label: command,
     });
-    expect(result.stderr).toContain('error: E_USAGE: docs/guide.md: The argument is resolved');
+    expect(result.stderr).toContain('error: E_USAGE: ../guide.md: The argument is resolved');
     expect(result.stderr).not.toContain('E_UNKNOWN_FILE');
   }
 });
@@ -221,10 +230,10 @@ scenario(
     expect(shadowed.exit).toBe(2);
     expect(shadowed.stderr).toContain('E_UNKNOWN_FILE: ROOT.md');
 
-    const escape = await repo.run(['--root', '..', '--json'], { cwd: 'sub/deep' });
-    expect(escape.json().files.map((f: { file: string }) => f.file)).toEqual(['SUB.md']);
+    const above = await repo.run(['--cwd', '..', '--json'], { cwd: 'sub/deep' });
+    expect(above.json().files.map((f: { file: string }) => f.file)).toEqual(['SUB.md']);
 
-    const upper = await repo.run(['--root', '../..', '../../ROOT.md'], { cwd: 'sub/deep' });
+    const upper = await repo.run(['--cwd', '../..', 'ROOT.md'], { cwd: 'sub/deep' });
     expect(upper.stdout).toContain('ROOT.md  (unrecorded)');
     await repo.snapFile('sub/docstamp-lock.yaml');
   },
