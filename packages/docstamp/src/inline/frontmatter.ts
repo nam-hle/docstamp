@@ -62,7 +62,7 @@ export function scanFrontmatter(text: string): Scan | null {
   return { bom, lines, close, marker, last, keyIndent, hashLines };
 }
 
-const HASH_VALUE = /^(hash:[ \t]+)([0-9a-f]{64})([ \t]*(?:#.*)?\r?\n?)$/u;
+const HASH_VALUE = /^(hash:[ \t]+)([0-9a-f]{64})((?:[ \t]*|[ \t]+#.*)\r?\n?)$/u;
 
 // SPEC §9.6.2 step 7: the recorded value when the line is `hash: <64 hex>`, else null
 export function hashOnLine(line: string, keyIndent: string): string | null {
