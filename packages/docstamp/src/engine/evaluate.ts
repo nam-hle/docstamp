@@ -245,6 +245,12 @@ export function evaluate(
     });
   }
   if (problems.length > 0) {
+    // §12.1 step 5: report the selector problems of the Selected Dependencies that exist too
+    if (attached.length === 0) {
+      const present = new Set(universe.filter((path) => path !== b.file));
+      const reachable = (b.selected ?? []).filter((entry) => present.has(entry.path));
+      fragmentsOf({ ...b, selected: reachable }, fs, problems);
+    }
     const diagnostics = sortDiagnostics(problems.map((d) => ({ ...d, file: b.file })));
     return { ...base, state: 'invalid', reasons: [], resolved: [], current: '', diagnostics };
   }
