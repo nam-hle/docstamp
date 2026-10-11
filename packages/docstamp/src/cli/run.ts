@@ -1,4 +1,3 @@
-
 import { resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
@@ -7,26 +6,18 @@ import { dependentTree, dependentsOf } from '../engine/reverse.ts';
 import { statistics, type FileStats } from '../engine/stats.ts';
 import type { Host } from '../host/host.ts';
 import { replay } from '../history/replay.ts';
-import { stampFile } from '../inline/read-inline.ts';
-import { lockExists, writeLock } from '../lock/lock.ts';
 import { listJsonText, reverseJsonText, statsJsonText, type StatsWindow } from '../report/json.ts';
-import {
-  checkChunks,
-  diagnosticsText,
-  listText,
-  reverseText,
-  statsText,
-  updateText,
-} from '../report/text.ts';
+import { diagnosticsText, listText, reverseText, statsText } from '../report/text.ts';
 import { determineRoot, existsUnderRoot, resolveCwd } from '../universe/walk.ts';
 import { parseArgs, type Args } from './args.ts';
 import { runCheck } from './check.ts';
-import { emit, hasError, type Output } from './emit.ts';
-import { evaluateAll, listAll } from './evaluate.ts';
+import { hasError } from './emit.ts';
+import { listAll } from './evaluate.ts';
 import { helpText } from './help.ts';
 import type { Io } from './io.ts';
 import { resolutionMessage, selectResults, toRepoPath } from './paths.ts';
 import { runSuggest } from './suggest.ts';
+import { runUpdate } from './update.ts';
 import { loadWorkspace } from './workspace.ts';
 
 declare const VERSION: string | undefined;
@@ -211,70 +202,5 @@ export function run(host: Host, argv: readonly string[], processCwd: string, io:
   if (args.mode === 'stats') return runStats(host, args, processCwd, io);
   if (args.mode === 'suggest') return runSuggest(host, args, processCwd, io);
   if (args.mode === 'check') return runCheck(host, args, processCwd, io);
-  const empty: Output = {
-    json: args.json,
-    mode: 'update',
-    evaluated: false,
-    exitCode: 2,
-    selected: [],
-    global: [],
-    text: '',
-    written: new Set<string>(),
-    removed: [],
-  };
-  try {
-    const cwd = resolveCwd(host, processCwd, args.cwd);
-    const root = determineRoot(host, cwd);
-    const evaluated = evaluateAll(host, root, args.all ? 'discard-invalid' : 'strict');
-    const selected = args.all
-      ? evaluated.results
-      : selectResults(args.paths, cwd, root, evaluated.results);
-    const global = evaluated.global;
-    const refused = hasError(global) || selected.some((r) => r.state === 'invalid');
-    if (refused) {
-      const chunks = checkChunks(selected, global, { cwd: args.cwd, next: false });
-      return emit(io, { ...empty, evaluated: true, selected, global, chunks });
-    }
-    const inlineFiles = new Map(
-      evaluated.declarations.filter((b) => b.inline).map((b) => [b.file, b.inline!.recorded]),
-    );
-    const entries = new Map(evaluated.lock.entries);
-    for (const t of selected) if (!inlineFiles.has(t.file)) entries.set(t.file, t.current);
-    const bound = new Set(evaluated.declarations.filter((b) => !b.inline).map((b) => b.file));
-    const removed = sortPaths([...entries.keys()].filter((d) => !bound.has(d)));
-    for (const d of removed) entries.delete(d);
-    if (bound.size > 0 || lockExists(host, root)) writeLock(host, root, { entries });
-    const written = selected
-      .filter((r) =>
-        inlineFiles.has(r.file)
-          ? inlineFiles.get(r.file) !== r.current
-          : evaluated.lock.entries.get(r.file) !== r.current,
-      )
-      .map((r) => r.file);
-    for (const file of written.filter((f) => inlineFiles.has(f))) {
-      stampFile(
-        host,
-        root,
-        evaluated.universe,
-        file,
-        selected.find((r) => r.file === file)!.current,
-      );
-    }
-    const unchanged = selected.map((r) => r.file).filter((file) => !written.includes(file));
-    const text = updateText(written, unchanged, removed);
-    const afterWrite = selected.map((r): Result => ({ ...r, state: 'ok', reasons: [] }));
-    return emit(io, {
-      ...empty,
-      evaluated: true,
-      exitCode: 0,
-      selected: afterWrite,
-      global: global.filter((d) => d.code !== 'W_ORPHAN'),
-      text,
-      written: new Set(written),
-      removed,
-    });
-  } catch (e) {
-    if (!(e instanceof Raised)) throw e;
-    return emit(io, { ...empty, global: e.diagnostics });
-  }
+  return runUpdate(host, args, processCwd, io);
 }
