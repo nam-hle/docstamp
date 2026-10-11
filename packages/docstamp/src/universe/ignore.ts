@@ -1,4 +1,4 @@
-import { compileGlob } from '../pattern/match.ts';
+import { compileGlob, type Glob } from '../pattern/match.ts';
 import { parsePattern } from '../pattern/parse.ts';
 
 export interface IgnoreRule {
@@ -6,7 +6,7 @@ export interface IgnoreRule {
   negated: boolean;
   dirOnly: boolean;
   anchored: boolean;
-  re: RegExp;
+  re: Glob;
 }
 
 function trimTrailingSpaces(line: string): string {
