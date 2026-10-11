@@ -1,8 +1,6 @@
 $ docstamp
-exit: 2
+exit: 0
 --- stdout ---
-INVALID  CLAUDE.md
-0 ok, 0 stale, 1 invalid
-next: fix the configuration of each invalid file, then run: docstamp check CLAUDE.md
+1 ok, 0 stale, 0 invalid
 --- stderr ---
-error: E_SELECT: CLAUDE.md: "docs/guide.md#\"Install\"": "Install" is a heading at lines 3, 9; rename one.
+warning: W_SELECT: CLAUDE.md: "docs/guide.md#\"Install\"": The section "Install" is empty; write it. [empty-section]

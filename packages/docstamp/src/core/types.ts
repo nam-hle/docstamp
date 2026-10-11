@@ -50,6 +50,7 @@ export interface Diagnostic {
   readonly file: string;
   readonly subject: string;
   readonly message: string;
+  readonly pluginCode?: string;
 }
 
 // SPEC §5.1: `inline` is set for an inline Declaration, with its recorded Hash or null.

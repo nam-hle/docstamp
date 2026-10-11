@@ -83,7 +83,8 @@ Each Diagnostic, global and attached, in Diagnostic order, is written to standar
 <severity>: <code>[: <file>][: <subject>]: <message>
 ```
 
-omitting the bracketed parts when empty. `<file>` is written as in §14.2, and so is `<subject>`,
+omitting the bracketed parts when empty. A Diagnostic with a `[[PluginCode]]` ends its line with
+a space and the code in square brackets (`... : <message> [heading-not-found]`). `<file>` is written as in §14.2, and so is `<subject>`,
 except that a `\` alone does not make it quoted: a pattern or argument is shown as the user wrote
 it (`src\core`, not `"src\\core"`). A Diagnostic line is read, never pasted as a command, so this
 loses nothing. §14.3.2 says when each is written.
@@ -448,7 +449,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   `[]`, kept for the shape of the other modes; the top-level `diagnostics` hold the raised
   Diagnostics, in which case `files` is empty.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
-  empty `[[File]]` or `[[Subject]]`. Diagnostic Lists are in Diagnostic order.
+  empty `[[File]]` or `[[Subject]]`, and a last member `"pluginCode"` that is present only when the
+  Diagnostic has a `[[PluginCode]]`. Diagnostic Lists are in Diagnostic order.
 - When a step raises before Results exist, `summary` is omitted (as it always is for
   `list-dependencies` and `list-dependents`) and `files` is empty, so a run that evaluated
   nothing never reports zero counts.

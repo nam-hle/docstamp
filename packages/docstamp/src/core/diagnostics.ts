@@ -84,7 +84,7 @@ function defaultMessage(code: Code, subject: string): string {
 // SPEC §5
 export function diag(
   code: Code,
-  fields: { file?: string; subject?: string; message?: string } = {},
+  fields: { file?: string; subject?: string; message?: string; pluginCode?: string } = {},
 ): Diagnostic {
   const subject = fields.subject ?? '';
   return {
@@ -93,6 +93,7 @@ export function diag(
     file: fields.file ?? '',
     subject,
     message: fields.message ?? defaultMessage(code, subject),
+    ...(fields.pluginCode === undefined ? {} : { pluginCode: fields.pluginCode }),
   };
 }
 
@@ -111,7 +112,8 @@ export function sortDiagnostics(ds: readonly Diagnostic[]): Diagnostic[] {
       prev.code === d.code &&
       prev.file === d.file &&
       prev.subject === d.subject &&
-      prev.message === d.message
+      prev.message === d.message &&
+      prev.pluginCode === d.pluginCode
     );
   });
 }

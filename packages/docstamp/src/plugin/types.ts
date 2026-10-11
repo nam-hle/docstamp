@@ -24,6 +24,7 @@ export interface Part {
 export interface PluginDiagnostic {
   readonly severity: 'error' | 'warning';
   readonly message: string;
+  readonly code?: string;
 }
 
 export interface ExtractResult {

@@ -329,7 +329,8 @@ export function diagnosticsText(ds: readonly Diagnostic[]): string {
       const parts: string[] = [d.severity, d.code];
       if (d.file !== '') parts.push(shown(d.file));
       if (d.subject !== '') parts.push(shownSubject(d.subject));
-      return `${parts.join(': ')}: ${d.message}\n`;
+      const tag = d.pluginCode === undefined ? '' : ` [${d.pluginCode}]`;
+      return `${parts.join(': ')}: ${d.message}${tag}\n`;
     })
     .join('');
 }

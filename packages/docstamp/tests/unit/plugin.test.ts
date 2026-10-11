@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { Raised } from '../../src/core/diagnostics.ts';
+import { Raised, diag, sortDiagnostics } from '../../src/core/diagnostics.ts';
 import type { Diagnostic } from '../../src/core/types.ts';
 import { canonicalJson } from '../../src/core/canonical.ts';
 import { claim, runExtract, runValidateSelect, validatePlugins } from '../../src/plugin/plugins.ts';
@@ -471,5 +471,62 @@ describe('§8.7 ValidateSelect', () => {
   it('rejects a validateSelect that is not a function with E_PLUGIN', () => {
     const diagnostics = raised(() => validatePlugins([plugin({ validateSelect: 'x' })]));
     expect(diagnostics.map((d) => d.code)).toEqual(['E_PLUGIN']);
+  });
+});
+
+describe('§8.7 Plugin Code', () => {
+  const input = { path: 'a.md', text: 'x', select: 'Install' };
+  const run = (diagnostics: unknown) =>
+    runExtract(
+      validatePlugins([
+        plugin({ extract: () => ({ parts: [{ content: 'a' }], diagnostics }) }),
+      ])[0]!,
+      input,
+    );
+
+  it('carries a code on the Diagnostic, keeping E_SELECT and W_SELECT', () => {
+    const { warnings } = run([{ severity: 'warning', message: 'm', code: 'empty-section' }]);
+    expect(warnings).toMatchObject([{ code: 'W_SELECT', pluginCode: 'empty-section' }]);
+    const [error] = raised(() => run([{ severity: 'error', message: 'm', code: 'a1-b' }]));
+    expect(error).toMatchObject({ code: 'E_SELECT', pluginCode: 'a1-b' });
+  });
+
+  it('leaves pluginCode out when the plugin gives none', () => {
+    const { warnings } = run([{ severity: 'warning', message: 'm' }]);
+    expect(Object.keys(warnings[0]!)).not.toContain('pluginCode');
+  });
+
+  it.each([1, '', 'Upper', '1a', 'a_b', 'a b', 'a'.repeat(65)])(
+    'raises E_SELECT on the path for the code %j',
+    (code) => {
+      const [first, ...rest] = raised(() => run([{ severity: 'warning', message: 'm', code }]));
+      expect(rest).toEqual([]);
+      expect([first?.code, first?.subject]).toEqual(['E_SELECT', 'a.md']);
+    },
+  );
+
+  it('accepts 64 characters', () => {
+    const code = `a${'b'.repeat(63)}`;
+    expect(run([{ severity: 'warning', message: 'm', code }]).warnings[0]?.pluginCode).toBe(code);
+  });
+
+  it('keeps two Diagnostics that differ only by code', () => {
+    const [a, b] = ['x', 'y'].map((code) => ({
+      ...diag('W_SELECT', { subject: 's', message: 'm' }),
+      pluginCode: code,
+    }));
+    expect(sortDiagnostics([a!, b!, b!])).toEqual([a, b]);
+  });
+
+  it('carries the code of a validateSelect error', () => {
+    const entry = { path: 'a.md', select: 'x' };
+    const validated = validatePlugins([
+      plugin({
+        validateSelect: () => ({
+          diagnostics: [{ severity: 'error', message: 'm', code: 'bad-selector' }],
+        }),
+      }),
+    ])[0]!;
+    expect(runValidateSelect(validated, 'doc.md', entry)[0]?.pluginCode).toBe('bad-selector');
   });
 });

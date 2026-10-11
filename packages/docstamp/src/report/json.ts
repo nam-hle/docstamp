@@ -50,6 +50,9 @@ export const diagJson = (d: Diagnostic): JsonObject =>
     ['file', d.file === '' ? null : d.file],
     ['subject', d.subject === '' ? null : d.subject],
     ['message', d.message],
+    ...(d.pluginCode === undefined
+      ? []
+      : ([['pluginCode', d.pluginCode]] as Array<[string, Json]>)),
   ]);
 
 // SPEC §14.5: `use` and `origins`, only for a file that uses a Preset, a default one included

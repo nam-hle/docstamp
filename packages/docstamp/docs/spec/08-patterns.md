@@ -268,13 +268,14 @@ Plugin.
    a lone surrogate, `focus`: a non-empty String, when present, `lines`: a Map { `start`, `end` }
    of integers with 1 <= `start` <= `end`, when present }, and { `diagnostics` },
    « » when absent, a List of at most 100 Maps { `severity`: `error` or `warning`, `message`: a
-   non-empty String }. A `focus` or a `message` holds no code point below U+0020 and no U+007F, so
+   non-empty String, `code`: a *Plugin Code*, when present }. A *Plugin Code* is a String of 1 to 64
+   characters of `a-z`, `0-9` and `-`, the first a letter (`heading-not-found`). A `focus` or a `message` holds no code point below U+0020 and no U+007F, so
    it is one line. The limit of 100 counts `diagnostics` as returned, before duplicates are
    removed (§5.5). Any other shape raises `E_SELECT` (`[[Subject]]` the path). Other members are
    ignored.
 4. Let *errors* be, for each `error` of `diagnostics` in the order given, an `E_SELECT` Diagnostic
-   with `[[Subject]]` *subject* and `[[Message]]` its `message`, and *warnings* the same with
-   `W_SELECT` for each `warning`.
+   with `[[Subject]]` *subject*, `[[Message]]` its `message` and `[[PluginCode]]` its `code` when it
+   has one, and *warnings* the same with `W_SELECT` for each `warning`.
 5. If *errors* is not empty, raise *errors* and *warnings*; the order the Plugin gave them in does
    not matter (§5.5).
 6. If `parts` is empty, raise `E_SELECT_NOT_FOUND` with `[[Subject]]` *subject*, and *warnings*.
@@ -294,7 +295,8 @@ to `Fragments` step 0. It reads no file:
    ignored. A `diagnostics` of another shape, or holding a `warning`, gives the same `E_SELECT` as
    step 1.
 3. Return, for each `error` in the order given, an `E_SELECT` Diagnostic with `[[File]]` *file*, the
-   `[[Subject]]` of step 1 and `[[Message]]` its `message`.
+   `[[Subject]]` of step 1, `[[Message]]` its `message` and `[[PluginCode]]` its `code` when it has
+   one.
 
 The Diagnostics are attached (§5.5): a Declaration that has one is `invalid` and none of its
 dependencies is resolved or hashed, as for an `E_PATTERN` (§12.1 step 6). A selector a Plugin
@@ -305,6 +307,12 @@ same fact `Fragments` step 4 reports, and a Declaration stays an ordinary Declar
 NOTE: `ValidateSelect` is an early check, not a second extraction: a Plugin MUST NOT depend on the
 file's content in it, and a selector it accepts may still be `E_SELECT` or `E_SELECT_NOT_FOUND` at
 `Fragments`. `list-dependencies` (§13.7) calls it too, since it runs at load and reads no file.
+
+NOTE: A Plugin Code is the Plugin's own identifier of a kind of Diagnostic, stable across its
+versions so that a consumer can act on it; it is advisory and is never part of a Hash. It changes
+neither the code (`E_SELECT` or `W_SELECT`, never another), the state of a file, a Hash nor an exit
+code, and two Plugins may use the same one. A Plugin that gives none behaves as before; its own
+SPEC says which it gives and which are stable (§17.1).
 
 NOTE: A Plugin decides what a selector selects, and says so. One Part means one piece; several
 Parts mean the selector asked for all of them, and the Fragment depends on every one, in the order

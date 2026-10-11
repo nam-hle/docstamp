@@ -150,6 +150,10 @@ function readRaw(result: unknown): Raw {
   };
 }
 
+// SPEC §8.7 step 3: a plugin-defined, stable identifier of a Diagnostic
+const isPluginCode = (value: unknown): value is string =>
+  typeof value === 'string' && /^[a-z][a-z0-9-]{0,63}$/u.test(value);
+
 // SPEC §8.7 steps 3 and 4: the Diagnostics a Plugin reported, as E_SELECT or W_SELECT
 function readDiagnostics(
   reported: readonly unknown[],
@@ -165,8 +169,19 @@ function readDiagnostics(
     ) {
       return fail('returned a diagnostic that is not { severity, message } of one line');
     }
+    const pluginCode = item['code'];
+    if (pluginCode !== undefined && !isPluginCode(pluginCode)) {
+      return fail(
+        'returned a diagnostic code that is not 1 to 64 of a-z, 0-9 and -, from a letter',
+      );
+    }
     const code = item['severity'] === 'error' ? 'E_SELECT' : 'W_SELECT';
-    return diag(code, { file, subject, message: item['message'] });
+    return diag(code, {
+      file,
+      subject,
+      message: item['message'],
+      ...(pluginCode === undefined ? {} : { pluginCode }),
+    });
   });
 }
 

@@ -68,8 +68,13 @@ scenario(
     const warned = await repo.run([]);
     expect(warned.exit).toBe(1);
     expect(warned.stderr).toContain(
-      'warning: W_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": The section "Install" is empty; write it.',
+      'warning: W_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": The section "Install" is empty; write it. [empty-section]',
     );
+    const json = (await repo.run(['--json'])).json();
+    expect(json.files[0].diagnostics[0]).toMatchObject({
+      code: 'W_SELECT',
+      pluginCode: 'empty-section',
+    });
     await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
     const recorded = await repo.run([]);
     expect(recorded.exit).toBe(0);
@@ -82,7 +87,7 @@ scenario(
     const refused = await repo.run([]);
     expect(refused.exit).toBe(2);
     expect(refused.stderr).toContain(
-      'error: E_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": "Install" is a heading at lines 3, 9; rename one.',
+      'error: E_SELECT: CLAUDE.md: "docs/guide.md#\\"Install\\"": "Install" is a heading at lines 3, 9; rename one. [duplicate-heading]',
     );
   },
 );

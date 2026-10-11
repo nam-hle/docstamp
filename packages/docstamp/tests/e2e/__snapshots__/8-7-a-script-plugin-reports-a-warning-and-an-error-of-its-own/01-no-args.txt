@@ -8,4 +8,4 @@ STALE    CLAUDE.md  (unrecorded)
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
   run update only after the review, never --all just to pass; see docstamp help agents
 --- stderr ---
-warning: W_SELECT: CLAUDE.md: "docs/guide.md#\"Install\"": The section "Install" is empty; write it.
+warning: W_SELECT: CLAUDE.md: "docs/guide.md#\"Install\"": The section "Install" is empty; write it. [empty-section]
