@@ -142,7 +142,7 @@ export function runExtract(plugin: DocstampPlugin, input: ExtractInput): Extract
   };
   let result: unknown;
   try {
-    result = plugin.extract(input);
+    result = plugin.extract({ ...input, select: structuredClone(input.select) }); // §8.7 step 2
   } catch {
     return fail('threw');
   }
