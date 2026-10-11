@@ -136,7 +136,17 @@ function selectedProblems(b: Declaration, universe: readonly string[]): Diagnost
   const candidates = new Set(universe.filter((path) => path !== b.file));
   return (b.selected ?? [])
     .filter((entry) => !candidates.has(entry.path))
-    .map((entry) => diag('E_EMPTY_PATTERN', { file: b.file, subject: entry.path }));
+    .map((entry) =>
+      diag('E_EMPTY_PATTERN', {
+        file: b.file,
+        subject: entry.path,
+        ...(entry.written === undefined
+          ? {}
+          : {
+              message: `Correct or remove the path; it matches no file. If "${entry.written}" is a file name, write "\\:" for each ":" of it.`,
+            }),
+      }),
+    );
 }
 
 const bySelected = (a: SelectedEntry, b: SelectedEntry) =>

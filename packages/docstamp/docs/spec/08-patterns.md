@@ -266,14 +266,14 @@ A *Selector Grammar* is the same for every Plugin that declares `[[SelectorField
    `select` that a bare String has always been, so no hash changes (§17.4).
 4. Otherwise each item is *key* `=` *value*, split at its first `=` that is not escaped, with the
    escapes of both resolved; an item without such `=`, with an empty *key* or a *key* repeated is an
-   `E_SELECT`. Let *type* be `fields[key]`; if there is none, the value stays a String and the Plugin
-   judges the key as it judges a Map (`E_SELECT` through `ValidateSelect` or `Extract`). If *type* is
-   `integer`, *value* must be `0` or a decimal integer without a leading zero or `+`, optionally
-   after `-`, of at most 15 digits, and becomes that Number; if *type* is a List, *value* must be
+   `E_SELECT`. Let *type* be `fields[key]`; if there is none, it is an `E_SELECT` whose message names the
+   fields. If *type* is `integer`, *value* must match `0` or `-`? then a digit 1 to 9 and up to 14 more
+   digits, exactly, so `02`, `1.0`, `+1`, `-0` and `1e3` are refused, and it becomes that Number; if *type* is a List, *value* must be
    one of its Strings; otherwise it is an `E_SELECT`. Return the Map of the pairs.
 
 The `E_SELECT` has `[[File]]` the file declaring it and `[[Subject]]` `[[Path]]`, `:` and `[[Raw]]`;
-its message names the item and what to write. Even a single pair (`heading=Install`) is the Map, not
+its message names the item and what to write; that of an unknown key or a wrong value also says that
+a literal `=` or `,` in a bare value is written `\=` or `\,`. Even a single pair (`heading=Install`) is the Map, not
 the String.
 
 A *Plugin* is { `[[Name]]`: a non-empty String, `[[ApiVersion]]`: 1, `[[Files]]`: a non-empty List
@@ -386,7 +386,8 @@ no other (§12.1 step 6). A Plugin that begins to report as an `error` what it r
 Plugin's own SPEC says what is breaking for it.
 
 NOTE: A Selected Dependency whose path is not in the Universe, or is the file itself, is
-`E_EMPTY_PATTERN` with `[[Subject]]` the path (§8.5 steps 2 and 3). A file whose `dependencies`
+`E_EMPTY_PATTERN` with `[[Subject]]` the path (§8.5 steps 2 and 3). When it came from a Shorthand,
+its `[[Message]]` also says: if "*path*`:`*raw*" is a file name, write `\:` for each `:` of it. A file whose `dependencies`
 hold only Selected Dependencies is not `E_EMPTY_DEPENDENCIES`.
 
 NOTE: A Plugin is user code run in the host runtime, like a script Carrier (§9.5 NOTE): it SHOULD be

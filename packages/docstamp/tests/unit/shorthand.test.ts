@@ -129,8 +129,29 @@ describe('§8.7 ResolveSelector', () => {
     expect(resolve('docs/guide.md', 'C\\D')).toEqual({ select: 'C\\D' });
   });
 
-  it('leaves an unknown key to the plugin', () => {
-    expect(resolve('docs/guide.md', 'title=Install')).toEqual({ select: { title: 'Install' } });
+  it('refuses an unknown key, naming the fields and the escapes', () => {
+    const result = resolve('docs/guide.md', 'title=Install');
+    expect(result).toMatchObject({ message: expect.stringContaining('heading, level') });
+    expect(result).toMatchObject({ message: expect.stringContaining('\\=') });
+  });
+
+  it.each([['02'], ['1.0'], ['+1'], ['-0'], ['1e3'], ['1234567890123456'], ['']])(
+    'refuses level=%s as an integer, with the escape hint',
+    (value) => {
+      const result = resolve('docs/guide.md', `heading=A,level=${value}`);
+      expect(result).toMatchObject({ message: expect.stringContaining('integer') });
+      expect(result).toMatchObject({ message: expect.stringContaining('\\,') });
+    },
+  );
+
+  it.each([
+    ['-1', -1],
+    ['0', 0],
+    ['123456789012345', 123456789012345],
+  ])('reads level=%s as the integer %i', (value, level) => {
+    expect(resolve('docs/guide.md', `heading=A,level=${value}`)).toEqual({
+      select: { heading: 'A', level },
+    });
   });
 
   it('refuses a duplicate key, an empty item, a bare item among pairs and a bad value', () => {
@@ -209,7 +230,11 @@ describe('§12.2 step 5 resolveShorthands', () => {
     );
     expect(declaration.selected).toEqual([
       { path: 'docs/guide.md', select: 'Install' },
-      { path: 'docs/guide.md', select: { heading: 'Install' } },
+      {
+        path: 'docs/guide.md',
+        select: { heading: 'Install' },
+        written: 'docs/guide.md:heading=Install',
+      },
     ]);
     expect(declaration.shorthands).toBeUndefined();
     expect(problems).toHaveLength(1);

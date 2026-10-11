@@ -107,6 +107,9 @@ scenario(
     );
     const result = await repo.run([], { expectExit: 2 });
     expect(result.stderr).toContain('E_EMPTY_PATTERN');
+    expect(result.stderr).toContain(
+      'If "notes:2024.md" is a file name, write "\\:" for each ":" of it.',
+    );
   },
 );
 

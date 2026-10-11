@@ -34,6 +34,8 @@ const unescape = (text: string): string => text.replace(/\\([,=\\])/gu, '$1');
 
 const INTEGER = /^(0|-?[1-9][0-9]{0,14})$/u;
 
+const HINT = ' A literal "=" or "," in a bare value is written "\\=" or "\\,".';
+
 type Typed = { value: Json } | { message: string };
 
 function typed(key: string, value: string, type: FieldType | undefined): Typed {
@@ -41,11 +43,11 @@ function typed(key: string, value: string, type: FieldType | undefined): Typed {
   if (type === 'integer') {
     return INTEGER.test(value)
       ? { value: Number(value) }
-      : { message: `"${key}" is an integer: write ${key}=2, not ${key}=${value}.` };
+      : { message: `"${key}" is an integer: write ${key}=2, not ${key}=${value}.${HINT}` };
   }
   return type.includes(value)
     ? { value }
-    : { message: `"${key}" is one of ${type.join(', ')}, not "${value}".` };
+    : { message: `"${key}" is one of ${type.join(', ')}, not "${value}".${HINT}` };
 }
 
 // SPEC §8.7 ResolveSelector step 4
@@ -64,6 +66,10 @@ function pairs(
     const key = unescape(item.slice(0, at));
     if (key === '') return { message: `"${unescape(item)}" has no key before "=".` };
     if (Object.hasOwn(map, key)) return { message: `The key "${key}" is written twice.` };
+    if (!Object.hasOwn(fields, key)) {
+      const known = Object.keys(fields).join(', ');
+      return { message: `"${key}" is not a field of this plugin (${known}).${HINT}` };
+    }
     const result = typed(
       key,
       unescape(item.slice(at + 1)),
@@ -116,7 +122,11 @@ export function resolveShorthands(
       const subject = `${shorthand.path}:${shorthand.raw}`;
       problems.push(diag('E_SELECT', { file: declaration.file, subject, message: result.message }));
     } else {
-      resolved.push({ path: shorthand.path, select: result.select });
+      resolved.push({
+        path: shorthand.path,
+        select: result.select,
+        written: `${shorthand.path}:${shorthand.raw}`,
+      });
     }
   }
   const selected = dedupeSelected([...(declaration.selected ?? []), ...resolved]);
