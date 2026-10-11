@@ -3,7 +3,7 @@ $ docstamp
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_CONFIG: Fix the configuration file; the key named, if any, is the problem.
+error: E_CONFIG: docstamp.config.ts: The script cannot be loaded: evaluation threw SyntaxError.
 --- setup: docstamp.config.ts ---
 enum E { A }
 export default { version: E.A };

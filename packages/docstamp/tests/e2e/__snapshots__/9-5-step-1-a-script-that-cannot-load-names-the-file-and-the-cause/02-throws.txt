@@ -1,0 +1,23 @@
+# throws
+$ docstamp --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_CONFIG",
+      "severity": "error",
+      "file": "docstamp.config.ts",
+      "subject": null,
+      "message": "The script cannot be loaded: evaluation threw TypeError."
+    }
+  ]
+}
+--- stderr ---
+--- setup: docstamp.config.ts ---
+throw new TypeError('boom');
+export default {};
