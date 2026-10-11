@@ -9,9 +9,15 @@ export interface IgnoreRule {
   re: RegExp;
 }
 
+function isEscaped(line: string, index: number): boolean {
+  let backslashes = 0;
+  while (index - backslashes > 0 && line[index - backslashes - 1] === '\\') backslashes++;
+  return backslashes % 2 === 1;
+}
+
 function trimTrailingSpaces(line: string): string {
   let end = line.length;
-  while (end > 0 && line[end - 1] === ' ' && line[end - 2] !== '\\') end--;
+  while (end > 0 && line[end - 1] === ' ' && !isEscaped(line, end - 1)) end--;
   return line.slice(0, end);
 }
 

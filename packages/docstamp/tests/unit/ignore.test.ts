@@ -15,6 +15,22 @@ describe('§7.3 ignore rules', () => {
     expect(isIgnored('a', false, rules('a  '))).toBe(true);
     expect(isIgnored('a ', false, rules('a\\ '))).toBe(true);
   });
+  it('a space after an escaped backslash is unescaped and trimmed', () => {
+    expect(isIgnored('a\\', false, rules('a\\\\ '))).toBe(true);
+    expect(isIgnored('a\\ ', false, rules('a\\\\ '))).toBe(false);
+    expect(isIgnored('a\\ ', false, rules('a\\\\\\ '))).toBe(true);
+  });
+  it('counts the whole backslash run before a trailing space', () => {
+    expect(isIgnored('a\\\\', false, rules('a\\\\\\\\ '))).toBe(true);
+    expect(isIgnored('a\\\\ ', false, rules('a\\\\\\\\ '))).toBe(false);
+    expect(isIgnored('x\\\\', false, rules('x\\\\\\\\   '))).toBe(true);
+    expect(isIgnored('b\\\\ ', false, rules('b\\\\\\\\\\ '))).toBe(true);
+  });
+  it('a backslash run that follows other text, spaces included, is counted from its own start', () => {
+    expect(isIgnored('a b\\', false, rules('a b\\\\ '))).toBe(true);
+    expect(isIgnored('a b ', false, rules('a\\ b\\ '))).toBe(true);
+    expect(isIgnored('a b', false, rules('a b\\ '))).toBe(false);
+  });
   it('unanchored rule matches name at any depth', () => {
     expect(isIgnored('x/y/node_modules', true, rules('node_modules/'))).toBe(true);
   });

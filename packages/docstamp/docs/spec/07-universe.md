@@ -50,7 +50,8 @@ An ignore rule file is read as UTF-8; a leading U+FEFF is removed; each line has
 removed. Each line then becomes at most one rule:
 
 1. A line that is empty or starts with `#` is no rule. `\#` at the start means a literal `#`.
-2. Trailing U+0020 characters are removed unless escaped with `\`.
+2. Trailing U+0020 characters are removed unless escaped with `\`. A U+0020 is escaped when an odd
+   number of consecutive `\` precede it, so `a\\ ` is the Glob `a\\` and `a\ ` keeps its space.
 3. A leading `!` makes the rule *negated*; `\!` at the start means a literal `!`.
 4. A trailing `/` makes the rule match directories only; it is then removed.
 5. If the remaining text contains `/`, the rule is *anchored* to its scope; a leading `/` is then
