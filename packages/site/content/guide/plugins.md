@@ -42,9 +42,8 @@ STALE    CLAUDE.md  (content-changed)
 ```
 
 `plugins` is a key of a script configuration only, not of `docstamp.yaml` or an inline block, so a
-YAML-only or frontmatter-only repository needs a `docstamp.config.ts` (`export default { version: 2,
-plugins: [headings], files: {} }` is enough) to use a plugin
-([SPEC §9.5](/spec/configuration-file#95-script-carriers)).
+YAML-only or frontmatter-only repository needs a `docstamp.config.ts` with `defineConfig` and the plugin
+imported, as above, to use a plugin ([SPEC §9.5](/spec/configuration-file#95-script-carriers)).
 
 ## Ready-made plugins
 

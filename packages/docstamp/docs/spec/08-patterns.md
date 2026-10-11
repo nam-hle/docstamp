@@ -243,8 +243,8 @@ of Patterns, `[[Extract]]`: a function }, other members being ignored. Plugin na
 The *Plugin API* is the shape of this Map, of the Map `[[Extract]]` receives (§8.7 `Fragments` step 2)
 and of the Map it returns (step 3), and `[[ApiVersion]]` names it; version 1 is the shape defined
 here. Adding an optional member to the input or the result keeps `[[ApiVersion]]`. Removing a
-member, or giving one another meaning, requires a new `[[ApiVersion]]`. docstamp accepts exactly the
-`[[ApiVersion]]` values this clause lists, and a Plugin with another one is `E_PLUGIN` (§9.5).
+member, or giving one another meaning, requires a new `[[ApiVersion]]`. docstamp accepts only
+`[[ApiVersion]]` 1; §9.5 says what any other value raises.
 
 `Claim(plugins, path)` returns the Plugin whose `[[Files]]` select *path* (`Select(Files, « path »)`
 is not empty, §8.4), or raises. Let *claimed* be the Plugins of *plugins* that do; if it is empty,
