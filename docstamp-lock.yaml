@@ -1,6 +1,6 @@
 version: 3
 files:
-  "CLAUDE.md": 3a26f6f8c2e93970e882465e0774be3f8967151b00eecd9b411ec5846c7d6d15
+  "CLAUDE.md": 6c3716c3992a5d04b3627f5f0a77a3d99495123b6009dc39a39dc32e3d1e48db
   "README.md": 0c6eff2d29dc3f8934027d1843edeebb42089116696cd82d10612e4e220ca763
   "packages/docstamp-plugin-js/README.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-js/SPEC.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
@@ -12,14 +12,14 @@ files:
   "packages/docstamp/docs/spec/07-universe.md": 9f3555fbd1ea4ffec03ebd681e0e610fa8982b92f493507ba349581fa69147f2
   "packages/docstamp/docs/spec/08-patterns.md": 98e79f0acf61b57008e4aef81d8399ccd49455ad2a0e1e24d850aac02e7a2a4c
   "packages/docstamp/docs/spec/09-configuration-file.md": 751e91a6a0389e671bd508c78f3b536e930f592d1e68e85621972caa5321f461
-  "packages/docstamp/docs/spec/10-hashing.md": 300085d78d2dd367969fc9c3b51fc36f5b6542dad1370f5e44dbe56901cd1f3d
+  "packages/docstamp/docs/spec/10-hashing.md": 55e5ec4ebbcffc5a75896cbf2dbb202623b55d2af8f29fcc5a980c67d2ad2314
   "packages/docstamp/docs/spec/11-lockfile.md": 58e714956ae41cecca1cb21b60b46dce8f733306ca610278a501f7735ed4728e
   "packages/docstamp/docs/spec/12-evaluation.md": 4fcd08243281a7a58fd4f94d7efb29778f09c65cad7c2bd45f8d09aea0faa84f
   "packages/docstamp/docs/spec/13-command-line.md": 83f66c9dfd794ffd1602d24f5a217727733629d187ef047b5d819d1a843001f0
   "packages/docstamp/docs/spec/14-output.md": 6aefa163f56486ab024003af4bcbf17c599c727995df3167e8f4eee129773858
   "packages/docstamp/docs/spec/15-diagnostics.md": 04bcf4fed457e762461da7dce39d952266ea7847ba1d0b79c9c14f19a698ff96
   "packages/docstamp/docs/spec/16-exit-codes.md": 83f66c9dfd794ffd1602d24f5a217727733629d187ef047b5d819d1a843001f0
-  "packages/docstamp/docs/spec/17-compatibility.md": cf89ec84fa2c77a6cbd076f4a5f2d1a565838c88a1fa841d032099fc1841a6b7
+  "packages/docstamp/docs/spec/17-compatibility.md": 83a0fb600e691fc4bb5a01ccc30f30eed46c664319406b37b06fb8fa0f38ca8f
   "packages/site/content/get-started.md": 0c6eff2d29dc3f8934027d1843edeebb42089116696cd82d10612e4e220ca763
   "packages/site/content/guide/ci.md": 1057c72d7b4194ab0d887da81c29d97b8b8a2413f74453836fb66187dbc683b6
   "packages/site/content/guide/declare.md": 84cf250df233674d7dd5da8c52470ece5993a7ac0c4486722700ef81e0b6409f
