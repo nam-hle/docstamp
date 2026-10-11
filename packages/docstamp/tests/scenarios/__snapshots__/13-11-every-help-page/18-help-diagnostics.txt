@@ -17,7 +17,7 @@ E_USAGE (error)
            unknown help name, or a suggest --write that cannot write a block.
   fix      Correct the command line as docstamp help <command> shows it. A removed option names its
            replacement; a mistyped command names the command, and -- before it makes it a file. A
-           file argument is resolved against the current directory, not --root.
+           file argument is resolved against the working directory: the current one, or --cwd.
 
 E_CWD (error)
   meaning  The directory given to --cwd does not exist.
@@ -115,8 +115,8 @@ E_LOCK_VERSION (error)
 E_UNKNOWN_FILE (error)
   meaning  A file argument resolves inside the root to a file that is not stamped. One that resolves
            outside the root is E_USAGE.
-  fix      Name a file listed under files or one with a docstamp block, resolved against the current
-           directory; docstamp list-dependencies lists them all.
+  fix      Name a file listed under files or one with a docstamp block, resolved against the working
+           directory (the current one, or --cwd); docstamp list-dependencies lists them all.
 
 E_HISTORY (error)
   meaning  stats needs git history it cannot read: no git, not a work tree, a shallow clone, no
@@ -162,5 +162,5 @@ W_DUPLICATE_PATTERN (warning)
 W_UNKNOWN_PATH (warning)
   meaning  A list-dependents argument is not in the universe and not on disk, so nothing depends on
            it.
-  fix      Check the spelling; arguments are resolved against the current directory.
+  fix      Check the spelling; arguments are resolved against the working directory.
 --- stderr ---

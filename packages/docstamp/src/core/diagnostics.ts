@@ -60,7 +60,7 @@ const FIX: Record<Code, string> = {
     'or narrow that pattern.',
   W_UNKNOWN_PATH:
     'The path is neither tracked nor on disk, so nothing depends on it; check the spelling ' +
-    '(arguments are resolved against the current directory).',
+    '(arguments are resolved against the working directory).',
 };
 
 // SPEC §8.1, §15: the two invalid patterns that name nothing get a message of their own

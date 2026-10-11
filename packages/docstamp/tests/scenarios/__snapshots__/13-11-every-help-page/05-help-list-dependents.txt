@@ -18,7 +18,7 @@ Options:
                 (listed below), a cycle (cycle).
   --cwd <dir>   Act as if run from <dir>: the root is searched upward from it, and file arguments
                 are resolved against it.
-  <file>...     Any files, resolved against the current directory. At least one.
+  <file>...     Any files, resolved against the working directory. At least one.
   -h, --help    Print this page.
 
 Reads:
