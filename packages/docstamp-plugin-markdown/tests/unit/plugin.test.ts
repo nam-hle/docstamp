@@ -222,8 +222,44 @@ describe('§6 Extract: focus and lines', () => {
     expect(part('## a\tb\nx\n', 'a\tb')?.focus).toBe('section "a b" (level 2)');
   });
 
-  it('returns no part and no diagnostic when nothing matches', () => {
-    expect(plugin.extract({ path: 'guide.md', text: DOC, select: 'Missing' })).toEqual({});
+  it('returns no part and one warning when nothing matches', () => {
+    const result = plugin.extract({ path: 'guide.md', text: DOC, select: 'Missing' });
+    expect(result.parts).toBeUndefined();
+    expect(result.diagnostics).toMatchObject([{ severity: 'warning', code: 'heading-not-found' }]);
+  });
+});
+
+describe('§6.2 NotFound', () => {
+  const hint = (text: string, select: unknown): string | undefined =>
+    plugin.extract({ path: 'guide.md', text, select: select as never }).diagnostics?.[0]?.message;
+
+  it('says the file has no headings', () => {
+    expect(hint('text\n', 'Install')).toBe('No heading "Install"; the file has no headings.');
+  });
+
+  it('names the level of a heading that has the text', () => {
+    expect(hint(DOC, { heading: 'Sub', level: 3 })).toBe(
+      'No heading "Sub" at level 3; the text is at ## Sub (line 4); correct the level.',
+    );
+  });
+
+  it('names the nearest headings, by distance then line', () => {
+    expect(hint(DOC, 'Tw')).toBe('No heading "Tw"; nearest: # Two (line 7).');
+    expect(hint('# Install\n\n## install\n', 'INSTALL')).toBe(
+      'No heading "INSTALL"; nearest: # Install (line 1), ## install (line 3).',
+    );
+  });
+
+  it('lists the first 10 headings when none is near, and counts the rest', () => {
+    const text = Array.from({ length: 12 }, (_, i) => `# ${'h'.repeat(i + 10)}`).join('\n');
+    const message = hint(text, 'q')!;
+    expect(message).toContain('the file has: # hhhhhhhhhh (line 1)');
+    expect(message).toMatch(/, and 2 more\.$/u);
+  });
+
+  it('counts lines in the whole text, frontmatter included, and holds no path', () => {
+    expect(hint(`---\na: 1\n---\n${DOC}`, 'Tw')).toBe('No heading "Tw"; nearest: # Two (line 10).');
+    expect(hint(DOC, 'nope')).not.toContain('guide.md');
   });
 });
 

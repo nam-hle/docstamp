@@ -36,6 +36,11 @@ new file the patterns select, a deleted file, a renamed or moved file, and so a 
 changes the set of dependencies. A pattern change that leaves the set of dependencies identical
 leaves the file `ok`.
 
+NOTE: An edit of the dependency list is named only by the changed-file report (§12.3 step 1.4),
+which needs the commit that holds the Write. While the Write is not committed the report is
+unknown and the block lists `depends` lines (§14.3), so the edit reads like any change: commit the
+Write before editing the list.
+
 ### 12.2 EvaluateAll
 
 `EvaluateAll(root, lockPolicy)` returns Results, the Lock, and a List of global Diagnostics, or

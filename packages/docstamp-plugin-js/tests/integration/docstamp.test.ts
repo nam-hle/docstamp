@@ -112,6 +112,7 @@ describe('§8 the plugin through the docstamp CLI', () => {
     const result = run();
     expect(result.exit).toBe(2);
     expect(result.stderr).toContain('E_SELECT_NOT_FOUND');
+    expect(result.stderr).toContain('No declaration named "missing"');
   });
 
   it('is ambiguous for a function and an interface of one name, until a kind picks one', () => {

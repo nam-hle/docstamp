@@ -58,7 +58,7 @@ are different `select` values, as `Install` and `{ heading: Install }` are, so t
 NOTE: A selector that raises is returned as `{ diagnostics: « d » }`, *d* an `error` whose message
 says what is wrong and the two forms that are accepted (`Install` and `{ heading: Install, level: 2 }`);
 docstamp reports it as `E_SELECT` (SPEC §8.7). A selector that is valid but matches nothing returns
-`{ }`, which docstamp reports as `E_SELECT_NOT_FOUND`.
+a `warning` (§6.2), which docstamp reports with `E_SELECT_NOT_FOUND`.
 
 ## 5 Body, Headings, Sections
 
@@ -98,7 +98,7 @@ lines that follow its content.
 2. Let *body* be `Body(text)` with every CR LF replaced by LF, and *headings* be `Headings(body)`.
 3. Let *matches* be the Headings *h* with `h.[[Text]]` equal to `selector.[[Heading]]` and, unless
    `selector.[[Level]]` is *none*, `h.[[Depth]]` equal to it.
-4. If *matches* is empty, return `{ }`. If it has more than one Heading, return
+4. If *matches* is empty, return `NotFound` (§6.2). If it has more than one Heading, return
    `{ diagnostics: « d » }`, *d* an `error` whose message names the line of each Heading and says
    to add a `level` or to rename one of them.
 5. Otherwise return `{ parts: « p » }`, *p* the Part { `content`: the Section of the match,
@@ -131,6 +131,26 @@ Every Diagnostic of this Plugin has a code (SPEC §8.7 step 3), stable across ve
 |---|---|---|
 | `invalid-selector` | `error` | §4 NOTE, in `Extract` step 1 and in `ValidateSelect`; §4.1 step 2, in `ParseSelect` |
 | `ambiguous-heading` | `error` | `Extract` step 4, more than one Heading selected |
+| `heading-not-found` | `warning` | `NotFound`, no Heading selected |
+
+### 6.2 NotFound
+
+`NotFound(selector, headings)` returns `{ diagnostics: « d » }`, *d* a `warning` with the code
+`heading-not-found` and no part, so docstamp raises `E_SELECT_NOT_FOUND` (SPEC §8.7 step 6) and
+prints *d* with it. Its `message` is one line, names the selector as written (`"Install"`, with `at
+level 3` when it has a `level`) and the first of these that applies, each Heading written `<#s> <Text>
+(line <n>)`, in the order of the file, the line counted as in §6 step 5:
+
+1. *headings* is empty: the file has no headings.
+2. Some Heading has the text of the selector, so only the level is wrong: those Headings, at most 5,
+   and an instruction to correct the level.
+3. Some Heading has a text within an edit distance (Levenshtein, over code points) of the larger of 2
+   and a third of the length of the text (rounded down) of it, or equal to it but for case: the
+   nearest, at most 5, ordered by distance, then by line, as `nearest: ...`.
+4. Otherwise the first 10 Headings, then `and <n> more` if there are others.
+
+The message holds no path and no code point below U+0020 (each is replaced by U+0020), so the same
+file gives the same message on every machine.
 
 ## 7 Compatibility
 

@@ -91,6 +91,41 @@ scenario(
 );
 
 scenario(
+  '§9.5 step 1: a script that cannot load names the file and the cause',
+  { fixture: 'ts-config' },
+  async (repo) => {
+    const cases: [string, string, string][] = [
+      [
+        'unresolved import',
+        "import 'nonexistent-module-xyz';\nexport default {};\n",
+        'it imports "nonexistent-module-xyz", which cannot be resolved',
+      ],
+      [
+        'throws',
+        "throw new TypeError('boom');\nexport default {};\n",
+        'evaluation threw TypeError',
+      ],
+      ['syntax error', 'export default {\n', 'evaluation threw SyntaxError'],
+      ['throws a value', "throw 'boom';\nexport default {};\n", 'evaluation threw a value'],
+    ];
+    for (const [label, source, cause] of cases) {
+      repo.write('docstamp.config.ts', source);
+      const result = await repo.run(['--json'], {
+        label,
+        show: ['docstamp.config.ts'],
+        snapshot: label !== 'throws a value',
+      });
+      expect(result.exit, label).toBe(2);
+      expect(result.json().diagnostics[0], label).toMatchObject({
+        code: 'E_CONFIG',
+        file: 'docstamp.config.ts',
+        message: `The script cannot be loaded: ${cause}.`,
+      });
+    }
+  },
+);
+
+scenario(
   '§9.5 an ES module with only named exports is E_CONFIG, CommonJS module.exports works',
   options,
   async (repo) => {

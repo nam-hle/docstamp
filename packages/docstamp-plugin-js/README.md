@@ -67,7 +67,7 @@ The report names the declaration, its part and its lines because this plugin ret
   pair list is the object form, not the bare name. Write `\,`, `\=` and `\\` for a comma, an
   equals sign and a backslash in a value ([SPEC §4.1](SPEC.md#41-parseselect)).
 - A name shared by two declarations (a function and an interface of the same name) is
-  an `E_SELECT` whose message names both kinds and lines: add `kind`. A name that is not declared is `E_SELECT_NOT_FOUND`.
+  an `E_SELECT` whose message names both kinds and lines: add `kind`. A name that is not declared is `E_SELECT_NOT_FOUND`, with a warning naming the declarations that exist (another kind, or a near name).
 - Overload signatures and their implementation are one declaration.
 - An invalid selector, or a file that does not parse, is reported as `E_SELECT`, and the message
   names the accepted forms or the file; the forms above are the only valid ones.
