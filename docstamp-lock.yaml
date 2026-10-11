@@ -1,17 +1,17 @@
 version: 3
 files:
-  "CLAUDE.md": 3a26f6f8c2e93970e882465e0774be3f8967151b00eecd9b411ec5846c7d6d15
+  "CLAUDE.md": fb0b5be31297d695283ea5ec1e7bfeb1ec2e38acd984ebc72d2bf73bb770f1d3
   "README.md": 0c6eff2d29dc3f8934027d1843edeebb42089116696cd82d10612e4e220ca763
   "packages/docstamp-plugin-js/README.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-js/SPEC.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-markdown/README.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
   "packages/docstamp-plugin-markdown/SPEC.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
   "packages/docstamp/README.md": 83f66c9dfd794ffd1602d24f5a217727733629d187ef047b5d819d1a843001f0
-  "packages/docstamp/docs/spec/05-records.md": 0f4164330faf44b1c367eaa7b3b599244348110e1230a088d7e9ec8229c845dc
+  "packages/docstamp/docs/spec/05-records.md": 2fdde3fda32913833b27681b9536b7488ff22d7f7313ed319bf1a107af62a95e
   "packages/docstamp/docs/spec/06-root.md": 9f3555fbd1ea4ffec03ebd681e0e610fa8982b92f493507ba349581fa69147f2
   "packages/docstamp/docs/spec/07-universe.md": 9f3555fbd1ea4ffec03ebd681e0e610fa8982b92f493507ba349581fa69147f2
   "packages/docstamp/docs/spec/08-patterns.md": 98e79f0acf61b57008e4aef81d8399ccd49455ad2a0e1e24d850aac02e7a2a4c
-  "packages/docstamp/docs/spec/09-configuration-file.md": 751e91a6a0389e671bd508c78f3b536e930f592d1e68e85621972caa5321f461
+  "packages/docstamp/docs/spec/09-configuration-file.md": 939dba2587623a697fed1029a355a83afe97fe764996cdc7c06fd31f4abf1d6b
   "packages/docstamp/docs/spec/10-hashing.md": 300085d78d2dd367969fc9c3b51fc36f5b6542dad1370f5e44dbe56901cd1f3d
   "packages/docstamp/docs/spec/11-lockfile.md": 58e714956ae41cecca1cb21b60b46dce8f733306ca610278a501f7735ed4728e
   "packages/docstamp/docs/spec/12-evaluation.md": 4fcd08243281a7a58fd4f94d7efb29778f09c65cad7c2bd45f8d09aea0faa84f
@@ -22,7 +22,7 @@ files:
   "packages/docstamp/docs/spec/17-compatibility.md": cf89ec84fa2c77a6cbd076f4a5f2d1a565838c88a1fa841d032099fc1841a6b7
   "packages/site/content/get-started.md": 0c6eff2d29dc3f8934027d1843edeebb42089116696cd82d10612e4e220ca763
   "packages/site/content/guide/ci.md": 1057c72d7b4194ab0d887da81c29d97b8b8a2413f74453836fb66187dbc683b6
-  "packages/site/content/guide/declare.md": 84cf250df233674d7dd5da8c52470ece5993a7ac0c4486722700ef81e0b6409f
+  "packages/site/content/guide/declare.md": c678f243255c35e73b7cf53b00c753366817f7f8ba5a2de20d5a9621b77e3c54
   "packages/site/content/guide/plugins.md": 4a55fe77adc381c7747645c4926d7adc1369deb82d0d97726c3657b329b4f0e9
   "packages/site/content/guide/review.md": a8c275de3111773c9497517b982856af8aa5a5ab326ea5e0979637b5d81d3ed6
   "packages/site/content/guide/tune.md": 4a95312013c337b110dab25d9185446eadff9789ea94d26ae3894f727ac53383
