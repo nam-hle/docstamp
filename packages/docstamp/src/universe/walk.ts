@@ -47,7 +47,7 @@ export function determineRoot(host: Host, cwd: string): string {
 const joinPath = (prefix: string, name: string) => (prefix === '' ? name : `${prefix}/${name}`);
 const isValidUtf8 = (name: Buffer) => Buffer.from(name.toString('utf8'), 'utf8').equals(name);
 
-// SPEC §7.2, §7.4, §7.5
+// SPEC §7.1, §7.2, §7.4, §7.5
 export function computeUniverse(
   host: Host,
   root: string,
