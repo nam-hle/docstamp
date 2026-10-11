@@ -131,6 +131,11 @@ describe('§9.6.2 ParseBlock', () => {
       `---\n${BLOCK}\n  hash: ${H.toUpperCase()}\n---\n`,
       [['E_BLOCK', 'hash']],
     ],
+    [
+      'a comment without a blank before it',
+      `---\n${BLOCK}\n  hash: ${H}#c\n---\n`,
+      [['E_BLOCK', 'hash']],
+    ],
     ['a short hash', `---\n${BLOCK}\n  hash: abc\n---\n`, [['E_BLOCK', 'hash']]],
     ['a quoted hash', `---\n${BLOCK}\n  hash: "${H}"\n---\n`, [['E_BLOCK', 'hash']]],
     ['a quoted hash key', `---\n${BLOCK}\n  "hash": ${H}\n---\n`, [['E_BLOCK', 'hash']]],
@@ -216,6 +221,8 @@ describe('§9.6.4 Stamp', () => {
     expect(recordedHash(stamp('---\ndocstamp:\n  dependencies: [a]\n---\n'))).toBe(OTHER);
     expect(recordedHash('---\ndocstamp:\n  dependencies: [a]\n---\n')).toBeNull();
     expect(recordedHash('# plain\n')).toBeNull();
+    expect(recordedHash(`---\n${BLOCK}\n  hash: ${H}#c\n---\n`)).toBeNull();
+    expect(recordedHash(`---\n${BLOCK}\n  hash: ${H} #c\n---\n`)).toBe(H);
   });
   it('stampFile writes atomically, keeps the mode, and leaves no temporary file', () => {
     const host = memoryHost({
