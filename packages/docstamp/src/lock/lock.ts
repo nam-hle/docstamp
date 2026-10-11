@@ -42,7 +42,7 @@ function rejectLegacyLock(host: Host, root: string): void {
   ]);
 }
 
-// SPEC §11.1
+// SPEC §5.3, §11.1
 export function readLock(host: Host, root: string): Lock {
   rejectLegacyLock(host, root);
   const path = join(root, LOCK);
@@ -62,6 +62,7 @@ export function parseLock(bytes: Buffer): Lock {
   if (!doc || !isMap(doc.value)) throw fail('E_LOCK');
   const top = doc.value;
   const version = top.entries.get('version')?.plainSource;
+  // §17.4 step 3, §17.5: one supported version, every other refused, never recomputed
   if (version === '2') {
     throw new Raised([diag('E_LOCK_VERSION', { message: V2_LOCK_MESSAGE })]);
   }
