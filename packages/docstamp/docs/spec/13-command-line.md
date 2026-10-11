@@ -311,8 +311,8 @@ read.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
-NOTE: `[[Patterns]]` (§12.5) counts the effective patterns of the file (§8.6): the Presets it uses
-are counted pattern by pattern.
+NOTE: `[[Patterns]]` (§12.5) counts the effective patterns of the file (§8.6) and its Selected
+Dependencies: the Presets it uses are counted pattern by pattern.
 
 NOTE: `stats` resolves dependencies as §13.7 does, so it reports the same warnings, such as
 `W_EMPTY_EXCLUSION`, on the same files: in text mode on standard error as §14.3 does, in `--json` as

@@ -366,3 +366,31 @@ scenario('§13.9 stats reports the warnings of list-dependencies, and exits 0', 
   );
   expect(doc(json).files[0].diagnostics[0]).toMatchObject({ code: 'W_EMPTY_EXCLUSION' });
 });
+
+scenario(
+  '§12.5 a commit touches a Selected Dependency only when its Fragment changes',
+  { fixture: 'structured' },
+  async (repo) => {
+    repo.write(
+      'docstamp.yaml',
+      'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - package.json:scripts.build\n',
+    );
+    repo.write('CLAUDE.md', 'doc\n');
+    const base = repo.commit('base', '2026-01-01T09:00:00Z');
+    repo.write('package.json', repo.read('package.json').replace('"vitest"', '"vitest run"'));
+    repo.commit('edit test script', '2026-01-02T09:00:00Z');
+    repo.write('package.json', repo.read('package.json').replace('"tsc"', '"tsc -b"'));
+    repo.commit('edit build script', '2026-01-03T09:00:00Z');
+    const json = await repo.run(['stats', '--json', '--from', base]);
+    expect(json.exit).toBe(0);
+    expect(doc(json).window).toMatchObject({ commits: 2, untouched: 1 });
+    expect(doc(json).files[0]).toMatchObject({
+      file: 'CLAUDE.md',
+      patterns: 1,
+      resolvedCount: 1,
+      staleCommits: 1,
+      days: 1,
+      staleRate: 0.5,
+    });
+  },
+);

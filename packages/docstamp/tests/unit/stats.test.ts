@@ -4,16 +4,19 @@ import { Raised } from '../../src/core/diagnostics.ts';
 import { ratio, statistics, type CommitRecord } from '../../src/engine/stats.ts';
 import type { Git, LogEntry, LogWindow } from '../../src/host/git.ts';
 import { parseLog } from '../../src/host/git-output.ts';
+import { fragmentChangedAt, type FragmentCache } from '../../src/history/fragments.ts';
 import { replay } from '../../src/history/replay.ts';
 import { statsJsonText } from '../../src/report/json.ts';
 import { statsText } from '../../src/report/text.ts';
 
 const ID = 'a'.repeat(40);
-const commit = (day: string, ...paths: string[]): CommitRecord => ({ day, paths });
+const commit = (day: string, ...paths: string[]): CommitRecord => ({ id: ID, day, paths });
 const input = (file: string, ...resolved: string[]) => ({
   file,
   patterns: 1,
   resolved,
+  whole: resolved,
+  selected: [],
   diagnostics: [],
 });
 
@@ -23,23 +26,27 @@ describe('§12.4 Replay: git log output', () => {
       `\u0001${ID}\x00${Date.UTC(2026, 0, 2, 23, 59, 59) / 1000}\x00\nsrc/a.ts\x00docs/b.md\x00` +
       `\u0001${'b'.repeat(64)}\x00${Date.UTC(2026, 0, 3) / 1000}\x00\nREADME.md\x00`;
     expect(parseLog(output)).toEqual([
-      { seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000, paths: ['src/a.ts', 'docs/b.md'] },
-      { seconds: Date.UTC(2026, 0, 3) / 1000, paths: ['README.md'] },
+      {
+        id: ID,
+        seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000,
+        paths: ['src/a.ts', 'docs/b.md'],
+      },
+      { id: 'b'.repeat(64), seconds: Date.UTC(2026, 0, 3) / 1000, paths: ['README.md'] },
     ]);
   });
   it('a commit with no paths is still a commit', () => {
     expect(parseLog(`\u0001${ID}\x00100\x00\u0001${'c'.repeat(40)}\x00200\x00`)).toEqual([
-      { seconds: 100, paths: [] },
-      { seconds: 200, paths: [] },
+      { id: ID, seconds: 100, paths: [] },
+      { id: 'c'.repeat(40), seconds: 200, paths: [] },
     ]);
-    expect(parseLog(`\u0001${ID}\x00100\x00`)).toEqual([{ seconds: 100, paths: [] }]);
+    expect(parseLog(`\u0001${ID}\x00100\x00`)).toEqual([{ id: ID, seconds: 100, paths: [] }]);
   });
   it('no output is no commits', () => {
     expect(parseLog('')).toEqual([]);
   });
   it('converts paths to NFC', () => {
     expect(parseLog(`\u0001${ID}\x00100\x00\ne\u0301.ts\x00`)).toEqual([
-      { seconds: 100, paths: ['\u00e9.ts'] },
+      { id: ID, seconds: 100, paths: ['\u00e9.ts'] },
     ]);
   });
   it('a malformed log is refused', () => {
@@ -77,9 +84,9 @@ describe('§12.4 Replay: the window', () => {
     expect(() => replay(stubGit([]), { kind: 'from', value: 'nope' }, 0)).toThrow(Raised);
   });
   it('a commit is its UTC day and its paths', () => {
-    const log = [{ seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000, paths: ['a.ts'] }];
+    const log = [{ id: ID, seconds: Date.UTC(2026, 0, 2, 23, 59, 59) / 1000, paths: ['a.ts'] }];
     expect(replay(stubGit(log), { kind: 'days', days: 9 }, 0).commits).toEqual([
-      { day: '2026-01-02', paths: ['a.ts'] },
+      { id: ID, day: '2026-01-02', paths: ['a.ts'] },
     ]);
   });
   it('is E_HISTORY for a shallow repository, no commit, or a log git cannot give', () => {
@@ -400,5 +407,31 @@ describe('§13.2 stats options', () => {
   });
   it('a file named stats is reached after --', () => {
     expect(parseArgs(['--', 'stats'])).toMatchObject({ mode: 'check', paths: ['stats'] });
+  });
+});
+
+describe('§12.5 Fragments are extracted once per distinct blob', () => {
+  it('a blob read as a commit and as the next one is parsed once', () => {
+    const blobs: Record<string, string> = { c1: 'x', c2: 'y', c3: 'y' };
+    const git = {
+      objectAt: (rev: string) => blobs[rev.replace('^', '')] ?? null,
+      fileAt: (rev: string) => blobs[rev.replace('^', '')]!,
+    } as unknown as Git;
+    let runs = 0;
+    const earlier = (_: unknown, text: string) => {
+      runs += 1;
+      return { parts: [{ content: text }], warnings: [] };
+    };
+    const cache: FragmentCache = new Map();
+    const entry = { path: 'a.json', select: 's' };
+    const parent = (rev: string) => (rev === 'c3' ? 'c2' : 'c1');
+    const git2 = {
+      ...git,
+      objectAt: (rev: string) => (rev.endsWith('^') ? blobs[parent(rev.slice(0, -1))] : blobs[rev]),
+      fileAt: (rev: string) => (rev.endsWith('^') ? blobs[parent(rev.slice(0, -1))]! : blobs[rev]!),
+    } as unknown as Git;
+    expect(fragmentChangedAt(git2, 'c2', entry, earlier as never, cache)).toBe(true);
+    expect(fragmentChangedAt(git2, 'c3', entry, earlier as never, cache)).toBe(false);
+    expect(runs).toBe(2);
   });
 });

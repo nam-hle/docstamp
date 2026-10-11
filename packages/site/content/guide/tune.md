@@ -47,7 +47,9 @@ window: 7 commits in v0.3.1..HEAD, 1 make no file stale
 legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
 ```
 
-`stale` is commits divided by the commits of the window. A `sweep` near 1 means the noise is a few
+`stale` is commits divided by the commits of the window. A selected dependency (`path:selector`)
+counts as a pattern, and a commit touches it only when the selected part changed, so narrowing to a
+selector shows up as a lower `stale`. A `sweep` near 1 means the noise is a few
 repository-wide commits, not the list. The window is `--since <n>d` (default `30d`) or
 `--from <rev>`. It needs full history: a shallow clone is `E_HISTORY`
 ([stats](/reference/commands/stats), [SPEC §13.9](/spec/command-line#139-stats)).

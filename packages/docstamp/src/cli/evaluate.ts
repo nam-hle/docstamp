@@ -167,6 +167,10 @@ export function evaluateAll(
 }
 
 // SPEC §13.7
+export function listWorkspace(host: Host, root: string) {
+  return evaluateDeclarations(host, root, () => ({ entries: new Map() }), false);
+}
+
 export function listAll(host: Host, root: string): Result[] {
-  return evaluateDeclarations(host, root, () => ({ entries: new Map() }), false).results;
+  return listWorkspace(host, root).results;
 }

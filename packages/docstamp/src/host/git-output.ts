@@ -50,6 +50,7 @@ export function parseLog(output: string): LogEntry[] | null {
     if (!isHeader(tokens[index]!) || seconds === undefined || !/^[0-9]+$/u.test(seconds)) {
       return null;
     }
+    const id = tokens[index]!.slice(1);
     index += 2;
     const paths: string[] = [];
     while (index < tokens.length && !isHeader(tokens[index]!)) {
@@ -59,7 +60,7 @@ export function parseLog(output: string): LogEntry[] | null {
       if (path !== '') paths.push(path);
       index += 1;
     }
-    commits.push({ seconds: Number(seconds), paths });
+    commits.push({ id, seconds: Number(seconds), paths });
   }
   return commits;
 }

@@ -1,5 +1,6 @@
 import type { FragmentChange, SelectedEntry } from '../core/types.ts';
 import type { Extracted } from '../plugin/plugins.ts';
+import { canonicalJson } from '../core/canonical.ts';
 import type { Git } from '../host/git.ts';
 
 // What the CLI gives the history: the plugin calls, which never run in this module
@@ -50,4 +51,39 @@ export function fragmentChanges(
     });
   }
   return changes;
+}
+
+// SPEC §12.5: the Fragment per object id and selector, for one run
+export type FragmentCache = Map<string, Extracted | null>;
+
+const objectAt = (git: Git, rev: string, path: string): string | null => {
+  try {
+    return git.objectAt(rev, path);
+  } catch {
+    return null;
+  }
+};
+
+// SPEC §12.5: the Fragment of the entry differs between the first parent of a commit and the commit
+export function fragmentChangedAt(
+  git: Git,
+  commit: string,
+  entry: SelectedEntry,
+  earlier: FragmentProbe['earlier'],
+  cache: FragmentCache,
+): boolean {
+  const select = canonicalJson(entry.select);
+  const fragmentAt = (rev: string): Extracted | null => {
+    const object = objectAt(git, rev, entry.path);
+    if (object === null) return null;
+    const key = `${object}\0${select}`;
+    if (!cache.has(key)) {
+      const text = textAt(git, rev, entry.path);
+      cache.set(key, text === null ? null : earlier(entry, text));
+    }
+    return cache.get(key)!;
+  };
+  const then = fragmentAt(`${commit}^`);
+  const now = fragmentAt(commit);
+  return then === null || now === null ? then !== now : !sameContents(then, now);
 }

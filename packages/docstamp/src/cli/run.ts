@@ -2,9 +2,11 @@ import { resolve } from 'node:path';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
+import { resolveDependencies } from '../engine/evaluate.ts';
 import { dependentTree, dependentsOf } from '../engine/reverse.ts';
 import { statistics, type FileStats } from '../engine/stats.ts';
 import type { Host } from '../host/host.ts';
+import { fragmentChangedAt, type FragmentCache } from '../history/fragments.ts';
 import { replay } from '../history/replay.ts';
 import { listJsonText, reverseJsonText, statsJsonText, type StatsWindow } from '../report/json.ts';
 import { diagnosticsText, listText, reverseText, statsText } from '../report/text.ts';
@@ -12,7 +14,7 @@ import { determineRoot, existsUnderRoot, resolveCwd } from '../universe/walk.ts'
 import { parseArgs, type Args } from './args.ts';
 import { runCheck } from './check.ts';
 import { hasError } from './emit.ts';
-import { listAll } from './evaluate.ts';
+import { listAll, listWorkspace } from './evaluate.ts';
 import { helpText } from './help.ts';
 import type { Io } from './io.ts';
 import { resolutionMessage, selectResults, toRepoPath } from './paths.ts';
@@ -137,7 +139,8 @@ function runStats(
   try {
     const cwd = resolveCwd(host, processCwd, args.cwd);
     const root = determineRoot(host, cwd);
-    const selected = selectResults(args.paths, cwd, root, listAll(host, root), host.windows);
+    const workspace = listWorkspace(host, root);
+    const selected = selectResults(args.paths, cwd, root, workspace.results, host.windows);
     const invalid = selected.filter((r) => r.state === 'invalid');
     if (invalid.length > 0) throw new Raised(invalid.flatMap((r) => [...r.diagnostics]));
     const given = args.window;
@@ -146,14 +149,24 @@ function runStats(
       given.kind === 'days' ? given : { kind: 'from', value: given.value },
       Math.floor(host.clock.now() / 1000),
     );
+    const git = host.git(root);
+    const { earlier } = workspace.fragmentProbe([]);
+    const cache: FragmentCache = new Map();
     const computed = statistics(
-      selected.map((r) => ({
-        file: r.file,
-        patterns: r.dependencies.length,
-        resolved: r.resolved,
-        diagnostics: r.diagnostics,
-      })),
+      selected.map((r) => {
+        const declaration = workspace.declarations.find((d) => d.file === r.file)!;
+        return {
+          file: r.file,
+          // SPEC §12.5: the effective patterns and the Selected Dependencies
+          patterns: r.dependencies.length + (r.selected?.length ?? 0),
+          resolved: r.resolved,
+          whole: resolveDependencies(declaration, workspace.universe.paths),
+          selected: r.selected ?? [],
+          diagnostics: r.diagnostics,
+        };
+      }),
       replayed.commits,
+      (entry, commit) => fragmentChangedAt(git, commit.id, entry, earlier, cache),
     );
     files = computed.files;
     window = {
