@@ -25,7 +25,7 @@ const FIX: Record<Code, string> = {
   E_FILE_MISSING: 'Rename the key under "files" in the configuration file or restore the file.',
   E_EMPTY_PATTERN: 'Correct or remove the pattern; it matches no file.',
   E_EMPTY_DEPENDENCIES: 'Correct the patterns in "dependencies"; together they select no file.',
-  E_UNREADABLE: 'Fix the permissions or remove the entry.',
+  E_UNREADABLE: 'Fix the permissions, or make the root writable.',
   E_PLUGIN:
     'Register valid plugins in docstamp.config.ts or .js: { name, apiVersion: 1, files, extract }.',
   E_SELECT:

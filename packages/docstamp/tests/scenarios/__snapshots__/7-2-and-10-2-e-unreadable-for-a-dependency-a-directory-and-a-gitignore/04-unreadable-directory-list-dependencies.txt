@@ -3,7 +3,7 @@ $ docstamp list-dependencies
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_UNREADABLE: src: Fix the permissions or remove the entry.
+error: E_UNREADABLE: src: Fix the permissions, or make the root writable.
 --- setup: docstamp.yaml ---
 version: 2
 files:

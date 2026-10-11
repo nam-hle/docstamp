@@ -1,5 +1,8 @@
 ## 15 Diagnostics
 
+The fix column lists every fix a code can name. A message names the one that applies, and the
+default message of a code (one with no detail of its own) may name only its first, general fix.
+
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
 | `E_USAGE` | error | §13.2, §13.3, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a mistyped command, the command name it suggests, or `--` before a file of that name; for a file argument outside Root, name a path that resolves, against the working directory, inside Root; for an unknown help name, one of those the message lists |
