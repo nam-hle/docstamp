@@ -74,7 +74,7 @@ export function computeUniverse(
     if (config.useGitignore && hasGitignore) {
       try {
         const text = host.fs.readFile(join(abs, '.gitignore')).toString('utf8');
-        rules = [...rules, ...parseIgnoreLines(text, prefix)];
+        rules = [...rules, ...parseIgnoreLines(text, prefix.normalize('NFC'))];
       } catch {
         errors.push(diag('E_UNREADABLE', { subject: joinPath(prefix, '.gitignore') }));
       }
@@ -90,8 +90,9 @@ export function computeUniverse(
       const { kind } = e;
       if (kind === 'other') continue;
       const rel = joinPath(prefix, name);
-      if (isIgnored(rel, kind === 'dir', activeRules)) {
-        ignored.push(rel.normalize('NFC'));
+      const nfcRel = rel.normalize('NFC');
+      if (isIgnored(nfcRel, kind === 'dir', activeRules)) {
+        ignored.push(nfcRel);
         continue;
       }
       if (kind !== 'dir') {

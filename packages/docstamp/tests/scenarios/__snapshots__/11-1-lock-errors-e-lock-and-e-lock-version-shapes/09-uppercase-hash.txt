@@ -5,6 +5,6 @@ exit: 2
 --- stderr ---
 error: E_LOCK: The Lockfile is not valid; after a merge conflict take either side, otherwise run "docstamp update --all" after reviewing every file.
 --- setup: docstamp-lock.yaml ---
-version: 3
+version: 4
 files:
   "CLAUDE.md": 8F88C6FA45DF5FBB7513D0E6F634794B2BED50BE9B82D742682207F66CCD96A8

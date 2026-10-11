@@ -9,9 +9,9 @@
    `docsync.lock`, review every file, then run `docstamp update --all`.
 2. If `docstamp-lock.yaml` does not exist at Root, return a Lock with no entries.
 3. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_LOCK` ».
-4. If the key `version` is absent, or its value is not the plain scalar `3`, raise
-   « `E_LOCK_VERSION` ». For a version 2 Lockfile its message names the migration: run
-   `docstamp update --all` to rewrite it as version 3; the hashes are unchanged.
+4. If the key `version` is absent, or its value is not the plain scalar `4`, raise
+   « `E_LOCK_VERSION` ». For a version 2 or 3 Lockfile its message names the migration: review
+   every file, then run `docstamp update --all` to rewrite it as version 4.
 
 5. Raise « `E_LOCK` » unless all of these hold:
    1. The document's keys are exactly `version` and `files`.
@@ -22,9 +22,12 @@
 NOTE: Unresolved merge conflict markers fail step 3. The message for `E_LOCK` names the fix:
 resolve the conflict by taking either side, then run `docstamp`.
 
-NOTE: The version 3 Lockfile differs from version 2 only in the name of its top-level key, `files`
-instead of `dependents`; the Dependency Hash (§10.4) is computed identically, so every entry of a
-version 2 Lockfile is still correct. `update --all` rewrites it without a Review (§13.6).
+NOTE: The version 4 Lockfile has the form of version 3 and the same Hash algorithm (§10.4). It
+differs in the selection: an ignore rule is matched against the NFC form of an entry name, and a
+space after an escaped backslash is trimmed (§7.2 step 3.4, §7.3 step 2), so the Universe, and
+with it a selected file list, may differ from version 3. A version 2 Lockfile differs from version 3
+only in the name of its top-level key, `dependents` instead of `files`. An inline `hash:` line is
+not refused: a doc whose selection changed reports stale; review it and run `docstamp update <file>`.
 
 NOTE: `docsync.lock` is the name of the version 1 Lockfile, written before the tool was renamed
 docstamp; the old name is kept on purpose. It also recorded the patterns.
@@ -36,7 +39,7 @@ automatically (§13.6): the error persists until the file is deleted.
 `LockText(lock)` is this text, with LF line endings and a final LF:
 
 ```
-version: 3
+version: 4
 files:
   <Quote(file)>: <hash>
 ```

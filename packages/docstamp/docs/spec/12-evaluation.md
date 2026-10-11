@@ -89,7 +89,7 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
    1. List the commits of `git log --format=%H -S<entry> -- docstamp-lock.yaml`, newest first.
    2. For each, parse `docstamp-lock.yaml` as of that commit and as of its first parent by §11.1
       steps 3 to 5. The file is *none* for a root commit, when it is absent there, or when it does
-      not parse (for example a version 1 or 2 file); that is never an error.
+      not parse (for example a version 1, 2 or 3 file); that is never an error.
    3. Let *C* be the first commit in which the file's LockEntry equals *entry* and its
       parent's does not. If there is none, return *unknown*.
    4. Let *edited* be true iff the Declaration's *own list* as of *C* is known and differs from its

@@ -3,7 +3,7 @@ exit: 1
 --- stdout ---
 STALE    README.md  (content-changed)
   renamed   src/lib/old-name.ts -> src/lib/new-name.ts
-  review: git diff -M 8571bff27092ea6ffa40d48c4a471897c6ea9052 -- src/lib/new-name.ts src/lib/old-name.ts
+  review: git diff -M dee184ad9a04c752035dc0f2d4b5dd00dca4e9f6 -- src/lib/new-name.ts src/lib/old-name.ts
   untracked: git add -N -- src/lib/new-name.ts
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update README.md

@@ -26,6 +26,8 @@ Symbolic links are never followed: a link is an entry of kind *link*, whatever i
       2. If *n* is `.git`, of any kind, skip *e*.
       3. If *e* is *other*, skip *e*.
       4. If `IsIgnored(q, kind of e, rules, config)` (§7.3), skip *e*; *q* is then an *ignored entry*.
+         *q* and every rule scope are taken in NFC here (§7.4), so a Glob, which is in NFC (§8.1),
+         matches an entry whatever form the file system stores its name in.
       5. If *e* is a *directory*: if it contains an entry named `.git`, skip *e* (a nested
          repository); otherwise call `WalkDirectory(e, q)`.
       6. If *e* is a *file* or *link*, add *q* to the Universe.
@@ -50,7 +52,8 @@ An ignore rule file is read as UTF-8; a leading U+FEFF is removed; each line has
 removed. Each line then becomes at most one rule:
 
 1. A line that is empty or starts with `#` is no rule. `\#` at the start means a literal `#`.
-2. Trailing U+0020 characters are removed unless escaped with `\`.
+2. Trailing U+0020 characters are removed unless escaped with `\`. A U+0020 is escaped when an odd
+   number of consecutive `\` precede it, so `a\\ ` is the Glob `a\\` and `a\ ` keeps its space.
 3. A leading `!` makes the rule *negated*; `\!` at the start means a literal `!`.
 4. A trailing `/` makes the rule match directories only; it is then removed.
 5. If the remaining text contains `/`, the rule is *anchored* to its scope; a leading `/` is then
