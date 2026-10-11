@@ -8,7 +8,9 @@
    « `E_LOCK_VERSION` » with `[[Subject]]` `docsync.lock`. Its message names the fix: delete
    `docsync.lock`, review every file, then run `docstamp update --all`.
 2. If `docstamp-lock.yaml` does not exist at Root, return a Lock with no entries.
-3. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_LOCK` ».
+3. Parse it under §9.2. On failure, or if the document is not a mapping, raise « `E_LOCK` ». Every
+   « `E_LOCK` » and « `E_LOCK_VERSION` » of steps 3 to 5, and one for a Lockfile that cannot be read,
+   carries `[[Subject]]` `docstamp-lock.yaml`, so the file is named without a path.
 4. If the key `version` is absent, or its value is not the plain scalar `4`, raise
    « `E_LOCK_VERSION` ». For a version 2 or 3 Lockfile its message names the migration: review
    every file, then run `docstamp update --all` to rewrite it as version 4.

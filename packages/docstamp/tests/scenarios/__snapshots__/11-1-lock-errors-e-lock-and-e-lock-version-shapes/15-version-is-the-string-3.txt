@@ -3,7 +3,7 @@ $ docstamp
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_LOCK_VERSION: Run "docstamp update --all" after reviewing every file.
+error: E_LOCK_VERSION: docstamp-lock.yaml: Run "docstamp update --all" after reviewing every file.
 --- setup: docstamp-lock.yaml ---
 version: "3"
 files: {}
