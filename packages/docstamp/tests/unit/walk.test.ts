@@ -186,6 +186,20 @@ describe('§7.4 / §7.5 collisions', () => {
     expect(u.paths).toEqual(['é.md']);
     expect(u.onDisk.get('é.md')).toMatch(/^(é|é)\.md$/);
   });
+  it('ignore rules match the NFC form of an NFD name, at any scope', () => {
+    const nfd = (text: string) => text.normalize('NFD');
+    const { host, root } = tree({
+      '.gitignore': 'é.log\n',
+      [nfd('é.log')]: '',
+      'd/.gitignore': 'ñ.tmp\n',
+      [nfd('d/ñ.tmp')]: '',
+      [nfd('ñd/.gitignore')]: 'x\n',
+      [nfd('ñd/x')]: '',
+      [nfd('ñd/y')]: '',
+    });
+    const paths = computeUniverse(host, root, config()).paths;
+    expect(paths).toEqual(['.gitignore', 'd/.gitignore', 'ñd/.gitignore', 'ñd/y']);
+  });
   it('case collision is an error', () => {
     const { host, root } = tree({ 'A.md': '', 'a.md': '' });
     expect(codes(() => computeUniverse(host, root, config()))).toEqual(['E_PATH_COLLISION']);

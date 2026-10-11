@@ -26,6 +26,8 @@ Symbolic links are never followed: a link is an entry of kind *link*, whatever i
       2. If *n* is `.git`, of any kind, skip *e*.
       3. If *e* is *other*, skip *e*.
       4. If `IsIgnored(q, kind of e, rules, config)` (§7.3), skip *e*; *q* is then an *ignored entry*.
+         *q* and every rule scope are taken in NFC here (§7.4), so a Glob, which is in NFC (§8.1),
+         matches an entry whatever form the file system stores its name in.
       5. If *e* is a *directory*: if it contains an entry named `.git`, skip *e* (a nested
          repository); otherwise call `WalkDirectory(e, q)`.
       6. If *e* is a *file* or *link*, add *q* to the Universe.
