@@ -129,12 +129,13 @@ function runReverse(
 
 // SPEC §12.5: the patterns that select, then the Selected Dependencies, as listed in §14.3
 function breakdownOf(r: Result): StatsDependency[] {
-  const patterns = r.dependencies.flatMap((label): StatsDependency[] => {
+  const patterns = r.dependencies.flatMap((label, i): StatsDependency[] => {
     const pattern = parsePattern(label)!;
-    return pattern.negated ? [] : [{ label, pattern }];
+    return pattern.negated ? [] : [{ label, preset: r.origins?.[i] ?? null, pattern }];
   });
   const selected = (r.selected ?? []).map((entry) => ({
     label: `${entry.path}#${canonicalJson(entry.select)}`,
+    preset: null,
     entry,
   }));
   return [...patterns, ...selected];

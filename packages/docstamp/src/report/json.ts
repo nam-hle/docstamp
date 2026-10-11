@@ -308,6 +308,9 @@ export function statsJsonText(doc: StatsJsonDoc): string {
                 ]),
               ),
             ] as [string, Json],
+            ...(f.dependencies.some((d) => d.preset !== null)
+              ? [['origins', f.dependencies.map((d) => d.preset)] as [string, Json]]
+              : []),
           ]),
       ['diagnostics', sortDiagnostics(f.diagnostics).map(diagJson)],
     ]),

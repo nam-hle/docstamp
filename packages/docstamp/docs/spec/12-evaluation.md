@@ -316,10 +316,10 @@ The FileStats are in descending order of `[[StaleRate]]` as reported, then ascen
 the file.
 
 When *breakdown* is true, each FileStats also has `[[Dependencies]]`, a List of DependencyStats
-{ `[[Dependency]]`: a String, `[[Commits]]`: a Number, `[[Only]]`: a Number }, one for each
+{ `[[Dependency]]`: a String, `[[Preset]]`: a Preset name or none, `[[Commits]]`: a Number, `[[Only]]`: a Number }, one for each
 non-negated pattern of `r.[[Dependencies]]`, in declaration order, then one for each Selected
 Dependency of `r`, in order of appearance (the order of §14.3): `[[Dependency]]` is the pattern, or
-the path, `#` and `CanonicalJson(select)`. A Commit *of the dependency* is a Commit of *touching*
+the path, `#` and `CanonicalJson(select)`; `[[Preset]]` is the Preset a pattern comes from (§8.6), else none. A Commit *of the dependency* is a Commit of *touching*
 that selects a path of `[[Paths]]` that is in the selection of the patterns of `r`
 (§8.4) and that the pattern matches (§8.3), or, for a Selected Dependency *e*, that changes the
 Fragment of *e* as above. `[[Commits]]` is the number of Commits of the dependency, and `[[Only]]`

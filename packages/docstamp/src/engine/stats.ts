@@ -12,8 +12,8 @@ export interface CommitRecord {
 
 // SPEC §12.5: a dependency of a file, as the breakdown counts it
 export type StatsDependency =
-  | { readonly label: string; readonly pattern: ParsedPattern }
-  | { readonly label: string; readonly entry: SelectedEntry };
+  | { readonly label: string; readonly preset: string | null; readonly pattern: ParsedPattern }
+  | { readonly label: string; readonly preset: null; readonly entry: SelectedEntry };
 
 export interface StatsInput {
   readonly file: string;
@@ -33,6 +33,7 @@ const SWEEP_SIZE = 200;
 // SPEC §12.5
 interface DependencyStats {
   readonly dependency: string;
+  readonly preset: string | null;
   readonly commits: number;
   readonly only: number;
 }
@@ -150,9 +151,10 @@ function breakdownOf(
   return dependencies
     .map((dependency, position) => ({
       dependency: dependency.label,
+      preset: dependency.preset,
       ...counts[position]!,
       position,
     }))
     .sort((a, b) => b.commits - a.commits || a.position - b.position)
-    .map(({ dependency, commits, only }) => ({ dependency, commits, only }));
+    .map(({ dependency, preset, commits, only }) => ({ dependency, preset, commits, only }));
 }

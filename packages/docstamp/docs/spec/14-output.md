@@ -404,7 +404,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   ```
 
   When files are named (§13.9) each element of `files` also has `dependencies`, before `diagnostics`:
-  the DependencyStats of §12.5 in their order, each { `dependency`, `commits`, `only` }; without a
+  the DependencyStats of §12.5 in their order, each { `dependency`, `commits`, `only` }, and, when a dependency comes from a Preset, `origins`
+  after it: the `[[Preset]]` of each, in the same order, `null` for none (as §14.5 `origins`); without a
   file argument the member is absent.
 
   It has no `summary`, `state`, `reasons` or `changes`. `window` is { `kind`: the Window's `[[Kind]]`;
@@ -540,7 +541,7 @@ dependency  commits  only
 src/a.ts          2     2
 ```
 
-The header row has the columns `dependency` (`[[Dependency]]` as in §14.2), `commits` and `only`,
+A dependency from a Preset is followed by `(preset <name>)`, as in §14.3. The header row has the columns `dependency` (`[[Dependency]]` as in §14.2), `commits` and `only`,
 separated by two spaces, padded as the table above; a row has no trailing space.
 
 ### 14.9 Suggest, Text Mode

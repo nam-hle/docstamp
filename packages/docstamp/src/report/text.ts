@@ -412,7 +412,11 @@ function breakdownText(f: FileStats): string {
   if (f.dependencies === undefined) return '';
   const table = [
     ['dependency', 'commits', 'only'],
-    ...f.dependencies.map((d) => [shown(d.dependency), String(d.commits), String(d.only)]),
+    ...f.dependencies.map((d) => [
+      `${shown(d.dependency)}${d.preset === null ? '' : ` (preset ${shown(d.preset)})`}`,
+      String(d.commits),
+      String(d.only),
+    ]),
   ];
   const widths = [0, 1, 2].map((c) => Math.max(...table.map((row) => row[c]!.length)));
   const lines = table.map((row) =>
