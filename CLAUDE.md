@@ -107,12 +107,12 @@ Inside `packages/docstamp/`:
 │   ├── index.ts          # entry; wires the CLI
 │   ├── lib.ts            # library entry: defineConfig, definePlugin, DocstampConfig (§9.5)
 │   ├── host/             # the machine behind ports: FileSystem, Git, Clock, Host, the Node adapters
-│   ├── core/             # shared types, path order, quoting, diagnostics (§3, §4, §15)
+│   ├── core/             # shared types, canonical JSON, path order, quoting, diagnostics (§3, §4, §15)
 │   ├── cli/              # args, path resolution, workspace load, run (dispatch), check, update, evaluate, emit, io, suggest, help; exit codes (§13, §16)
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
 │   ├── inline/           # inline declarations: frontmatter scan, block parse, keys, schema, stamp, block write (§5.6, §9.6)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
-│   ├── plugin/           # plugin types, canonical JSON, validation, claim, guarded extract, the builtin JSON and YAML plugins (§8.7, §8.8, §9.5)
+│   ├── plugin/           # plugin types, validation, claim, guarded extract, the builtin JSON and YAML plugins (§8.7, §8.8, §9.5)
 │   ├── pattern/          # grammar, matching, selection (§8)
 │   ├── hash/             # normalization, file and dependency hash (§10)
 │   ├── lock/             # read, canonical write (§11)
@@ -201,9 +201,9 @@ Every scenario asserts the exit code and the semantics, and snapshots the full r
 Code under `src/` reaches the machine only through `Host` (`src/host/host.ts`), which every
 function that reads, writes or asks git receives as its first parameter: `Host.fs` is the file
 system, `Host.git(root)` a repository with typed, read-only questions (`src/host/git.ts`), and
-`Host.clock` the time, `Host.windows` the path flavor of the machine. `src/host/node-fs.ts` and `src/host/node-git.ts` are the adapters (git is
-run there, with the command lines and the parsing of its output), and `tests/unit/host-boundary.test.ts`
-fails on any other `node:fs`, `node:child_process`, clock or `process.platform` read in `src/`.
+`Host.clock` the time, `Host.windows` the path flavor of the machine. `src/host/node-fs.ts` and
+`src/host/node-git.ts` are the adapters (git is run there, with the command lines and the parsing
+of its output), and `tests/unit/host-boundary.test.ts` fails on any other `node:fs`, `node:child_process`, clock or `process.platform` read in `src/`.
 
 Unit tests build a tree in memory with `inMemory({ 'a.md': '...' })` from
 `tests/helpers/memory-fs.ts`, which also holds a git (`tests/helpers/memory-git.ts`): a straight line
