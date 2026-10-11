@@ -62,7 +62,7 @@ export function memoizeHash(hash: (path: string) => string): (path: string) => s
   return memoizeBy((path: string) => path, hash);
 }
 
-// SPEC §12.2 step 5: ValidateSelect of §8.7 for every Selected Dependency a Plugin claims
+// SPEC §12.2 step 5: ValidateSelect of §8.7 for each remaining Declaration's Selected Dependencies
 function validatedSelects(
   declarations: readonly Declaration[],
   plugins: readonly DocstampPlugin[],
@@ -87,7 +87,9 @@ function evaluateDeclarations(
 ) {
   const workspace = loadWorkspace(host, root);
   const { universe, declarations, presets, defaultPresets, plugins } = workspace;
-  const attached = [...workspace.attached, ...validatedSelects(declarations, plugins)];
+  const raised = new Set(workspace.attached.map((d) => d.file));
+  const remaining = declarations.filter((d) => !raised.has(d.file));
+  const attached = [...workspace.attached, ...validatedSelects(remaining, plugins)];
   const extract = memoizeBy(
     ([path, select]: readonly [string, Json]) => `${path}\u0000${canonicalJson(select)}`,
     ([path, select]: readonly [string, Json]) =>

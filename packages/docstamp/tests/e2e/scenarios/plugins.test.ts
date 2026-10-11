@@ -115,3 +115,17 @@ scenario(
     expect(listed.stderr).toContain('E_SELECT');
   },
 );
+
+scenario(
+  '§12.2 step 5 ValidateSelect skips a Declaration that already raised',
+  options,
+  async (repo) => {
+    repo.write(
+      'docstamp.config.ts',
+      validatingConfig.replace('dependencies: [', "dependencies: ['src/[', "),
+    );
+    const result = await repo.run([], { expectExit: 2 });
+    expect(result.stderr).toContain('E_PATTERN');
+    expect(result.stderr).not.toContain('E_SELECT');
+  },
+);

@@ -516,6 +516,9 @@ describe('§8.7 Plugin Code', () => {
       pluginCode: code,
     }));
     expect(sortDiagnostics([a!, b!, b!])).toEqual([a, b]);
+    expect(sortDiagnostics([b!, a!])).toEqual([a, b]);
+    const bare = diag('W_SELECT', { subject: 's', message: 'm' });
+    expect(sortDiagnostics([a!, bare])).toEqual([bare, a]);
   });
 
   it('carries the code of a validateSelect error', () => {

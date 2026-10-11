@@ -103,7 +103,8 @@ export function sortDiagnostics(ds: readonly Diagnostic[]): Diagnostic[] {
     (a, b) =>
       comparePaths(a.file, b.file) ||
       comparePaths(a.code, b.code) ||
-      comparePaths(a.subject, b.subject),
+      comparePaths(a.subject, b.subject) ||
+      comparePaths(a.pluginCode ?? '', b.pluginCode ?? ''),
   );
   return sorted.filter((d, i) => {
     const prev = sorted[i - 1];
