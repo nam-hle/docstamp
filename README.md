@@ -96,6 +96,33 @@ $ docstamp
 
 From then on, a doc turns stale when a file it selects changes. Review it against the listed files, fix what is no longer true, run `docstamp update <doc>`, and commit the lock. Run `docstamp` in CI.
 
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `docstamp [check]` | The verdict: checks that each file's dependencies are unchanged since its last review. A bare `docstamp` is `check`. |
+| `docstamp update <file>...` or `--all` | Records that you reviewed the named files. The only command that writes the lock. |
+| `docstamp list-dependencies [<file>...]` | Lists each file with its dependency patterns and the files they select. |
+| `docstamp list-dependents <file>...` | Lists the files that depend on each named file, and the patterns that select it. |
+| `docstamp stats` | Reports how often each file's dependencies would have made it stale. |
+| `docstamp suggest <file>...` | Proposes dependencies from the paths each file mentions. |
+
+Every command except `help` and `version` takes `--json` and `--cwd <dir>` (act as if run from `<dir>`). `docstamp help <command>` shows a command with its options and examples. Exit codes: 0 ok, 1 stale (`check` only), 2 error or invalid.
+
+## Configuration
+
+`docstamp.yaml` at the repository root, or the same value as a script, `docstamp.config.ts`, with `defineConfig` from `docstamp`. Without one, only [inline declarations](https://nam-hle.github.io/docstamp/guide/declare#in-the-doc-itself) exist.
+
+| Key | |
+| --- | --- |
+| `version` | Required, exactly `2`. |
+| `files` | Required, even when empty (`files: {}`). Maps each file, by its path from the root, to its `dependencies` (a non-empty list of patterns) and optionally `use` (preset names). |
+| `presets`, `default-presets` | Named pattern lists, and the ones every file without its own `use` gets. |
+| `include` | The files searched for inline `docstamp` blocks (default `**/*.md`). |
+| `gitignore`, `ignore` | Read the `.gitignore` files (default `true`), and more ignore rules. Ignored files cannot be dependencies. |
+
+Any other key is an error (`E_UNKNOWN_KEY`). Every key, with an example, is in the [config reference](https://nam-hle.github.io/docstamp/reference/topics/config); the patterns are in the [pattern reference](https://nam-hle.github.io/docstamp/reference/topics/patterns).
+
 ## Learn more
 
 | | |
