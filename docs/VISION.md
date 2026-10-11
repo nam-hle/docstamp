@@ -63,9 +63,9 @@ Roughly in order of how settled each is:
   edit or an internal refactor does not ask for a doc review. The plugin defines what a selector
   means; docstamp only hashes the content it returns. Shipped so far: the plugin API, a value of a
   JSON or YAML file by its path (built into `docstamp`, as it needs no new dependency), and a
-  Markdown plugin (sections by heading) in its own package, not published yet.
-- **More first-party plugins** as separate packages (JavaScript and TypeScript next, by declaration
-  kind and name), once the API has met a few real plugins.
+  Markdown plugin (sections by heading) and a JavaScript and TypeScript plugin (declarations by
+  kind and name), each in its own package, not published yet.
+- **More first-party plugins** as separate packages, once the API has met a few real plugins.
 
 ## What it will not become
 
