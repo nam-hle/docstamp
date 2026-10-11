@@ -156,6 +156,9 @@ The following are not breaking:
   unchanged. `changes` may now be `[]` where it was `null`, for a file whose own list lost a
   pattern and whose dependencies did not change; `changes` was already defined as a List or
   `null`, and the changed-file report may vary with the history (§2);
+- `[[ConfigEdited]]` (§5.4, §12.3 step 1.4): the configuration line of §14.3, the review line of
+  §14.3.4 and the member `configurationEdited` of §14.5. It is not a Reason, so `reasons` and every
+  verdict are unchanged; `changes` may now be `[]` where it was `null`;
 - `[[Pair]]` (§12.3 step 8): the `renamed` change and group lines of §14.3.1, and the member `pair`
   of a Change in §14.5. Every Change is still listed in `changes` with the status it had, so a
   consumer that ignores `pair` reads what it read before;

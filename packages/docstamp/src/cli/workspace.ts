@@ -16,11 +16,12 @@ export interface Workspace {
   presets: ReadonlyMap<string, readonly string[]>;
   defaultPresets: readonly string[];
   plugins: readonly DocstampPlugin[];
+  script?: string;
 }
 
 // SPEC §12.2 steps 1 to 5: configured and inline Declarations over one Universe
 export function loadWorkspace(host: Host, root: string): Workspace {
-  const { config, attached, present, plugins } = readConfig(host, root);
+  const { config, attached, present, plugins, script } = readConfig(host, root);
   const universe = computeUniverse(host, root, config);
   const inline = readInline(host, root, universe, config.include, config.defaultPresets.length > 0);
   universe.marked = inline.marked;
@@ -55,6 +56,7 @@ export function loadWorkspace(host: Host, root: string): Workspace {
     presets: config.presets,
     defaultPresets: config.defaultPresets,
     plugins,
+    ...(script === undefined ? {} : { script }),
     declarations: resolved,
     attached: [
       ...attached,

@@ -1,0 +1,6 @@
+# two Carriers
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG_AMBIGUOUS: "docstamp.yaml, docstamp.config.ts": Keep one configuration file.

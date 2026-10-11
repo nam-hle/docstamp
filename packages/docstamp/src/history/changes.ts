@@ -223,6 +223,7 @@ export interface ChangedReport {
   readonly changes: readonly Change[];
   readonly base: string;
   readonly edited?: string;
+  readonly configEdited?: string;
   // SPEC §12.3 step 10: the own list at the base commit, when it was edited since
   readonly ownThen?: OwnList;
   // SPEC §12.3 step 11: present when the Declaration has Selected Dependencies
@@ -239,6 +240,7 @@ export function changedSince(
   whitespace: Map<string, boolean> = new Map(),
   probe?: FragmentProbe,
   resolve?: ShorthandResolver,
+  script?: string,
 ): ChangedReport | null {
   try {
     if (git.isShallow()) return null;
@@ -258,7 +260,16 @@ export function changedSince(
     if (changes === null) return null;
     const edited = editedCarrier(git, id, result, inline, resolve);
     const fragments = probe === undefined ? undefined : fragmentChanges(git, id, probe);
-    if (changes.length === 0 && edited === null && !fragments?.length) return null;
+    const configEdited =
+      edited === null &&
+      script !== undefined &&
+      !inline &&
+      (diff.some((d) => d.path === script) || untracked.includes(script))
+        ? script
+        : undefined;
+    if (changes.length === 0 && edited === null && !configEdited && !fragments?.length) {
+      return null;
+    }
     const whitespaceOnly = (path: string): boolean => {
       const key = `${id}\0${path}`;
       const known = whitespace.get(key) ?? git.isWhitespaceOnly(id, path);
@@ -273,6 +284,7 @@ export function changedSince(
       base: id,
       ...(fragments === undefined ? {} : { fragments }),
       ...(edited === null ? {} : { edited: edited.carrier, ownThen: edited.ownThen }),
+      ...(configEdited === undefined ? {} : { configEdited }),
     };
   } catch {
     return null;

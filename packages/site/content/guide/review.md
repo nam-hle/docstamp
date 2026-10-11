@@ -29,7 +29,10 @@ Never run it without the re-check, and never use `--all` to make the check pass.
 - **Renames** are one `renamed  <old> -> <new>` line, and long lists are summarised
   ([SPEC §14.3.1](/spec/output#1431-change-lines)).
 - **An edited list.** When the doc's own list was edited since the review, an `edited` line names the
-  file holding it, and `(selection)` lines show files the edit added or removed.
+  file holding it, and `(selection)` lines show files the edit added or removed. A script
+  configuration (`docstamp.config.ts`) is never run at an old commit, so its list is not compared:
+  the `edited` line then names the script as `(configuration, may concern other files)` when it
+  differs from the review commit, and the `review:` line includes it.
 - **No history.** Without usable git (no work tree, a shallow clone), the report prints the
   `depends` patterns instead. Diff the files of `docstamp list-dependencies <doc>` yourself.
 

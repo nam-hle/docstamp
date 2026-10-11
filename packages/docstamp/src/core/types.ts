@@ -134,6 +134,7 @@ export interface Result {
   readonly changes?: readonly Change[] | null;
   readonly base?: string;
   readonly edited?: string;
+  readonly configEdited?: string;
   readonly selection?: readonly SelectionChange[];
   readonly fragments?: readonly FragmentChange[];
 }

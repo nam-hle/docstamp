@@ -161,6 +161,9 @@ function headLines(r: Result): string {
   const changes = r.changes ?? [];
   const edited =
     (r.edited === undefined ? '' : `  edited    ${shown(r.edited)}  (dependency list)\n`) +
+    (r.configEdited === undefined
+      ? ''
+      : `  edited    ${shown(r.configEdited)}  (configuration, may concern other files)\n`) +
     (r.selection ?? [])
       .map((s) => `  ${s.status.padEnd(8)}  ${shown(s.path)}  (selection)\n`)
       .join('');
@@ -176,12 +179,20 @@ function headLines(r: Result): string {
 export function reviewLine(r: Result, cwdArg?: string, rootFromCwd = ''): string {
   if (r.base === undefined || !r.changes) return '';
   const fragmentPaths = (r.fragments ?? []).map((f) => f.path);
-  if (r.changes.length === 0 && r.edited === undefined && fragmentPaths.length === 0) return '';
+  const { edited, configEdited } = r;
+  if (
+    r.changes.length === 0 &&
+    edited === undefined &&
+    configEdited === undefined &&
+    fragmentPaths.length === 0
+  ) {
+    return '';
+  }
   const byPath = r.changes.length <= REVIEW_PATH_MAX;
   const listed = byPath ? r.changes.map((c) => pathArg(c.path)) : pathspecsOf(r.dependencies);
   if (listed === null) return '';
-  const { edited } = r;
-  const extra = [...new Set([...(edited === undefined ? [] : [edited]), ...fragmentPaths])]
+  const carriers = [edited, configEdited].filter((path) => path !== undefined);
+  const extra = [...new Set([...carriers, ...fragmentPaths])]
     .filter((path) => !r.changes!.some((c) => c.path === path))
     .map(pathArg);
   const args = [...listed, ...extra];
@@ -231,7 +242,10 @@ export function checkChunks(
       if (r.state === 'stale') {
         if (
           r.changes &&
-          (r.changes.length > 0 || r.edited !== undefined || (r.fragments?.length ?? 0) > 0)
+          (r.changes.length > 0 ||
+            r.edited !== undefined ||
+            r.configEdited !== undefined ||
+            (r.fragments?.length ?? 0) > 0)
         ) {
           const lines = withoutRepeatedRenames(changeLines(r.changes), r, renamesShownBy);
           block +=

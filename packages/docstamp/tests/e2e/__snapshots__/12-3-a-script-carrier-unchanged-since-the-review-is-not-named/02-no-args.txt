@@ -1,0 +1,10 @@
+$ docstamp
+exit: 1
+--- stdout ---
+STALE    CLAUDE.md  (content-changed)
+  modified  src/a.ts
+  review: git diff -M 2a21107111b4265dda3d75f4be7f1f0a0c2af036 -- src/a.ts
+0 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+--- stderr ---

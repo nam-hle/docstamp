@@ -40,6 +40,7 @@ function withChanges(
       const resolved = resolveSelector(evaluated.plugins, result.file, shorthand);
       return 'select' in resolved ? resolved.select : null;
     },
+    evaluated.script,
   );
   if (report === null) return { ...result, changes: null };
   const { universe, presets, defaultPresets } = evaluated;
@@ -60,6 +61,7 @@ function withChanges(
     changes: report.changes,
     base: report.base,
     ...(report.edited === undefined ? {} : { edited: report.edited }),
+    ...(report.configEdited === undefined ? {} : { configEdited: report.configEdited }),
     ...(selection === null ? {} : { selection }),
     ...(report.fragments === undefined ? {} : { fragments: report.fragments }),
   };
