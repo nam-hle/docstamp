@@ -22,7 +22,7 @@ sections begin and end; it hashes the source text of the section, never a render
 ## 3 The Plugin
 
 The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugin-markdown`,
-`apiVersion` 1 and `files` « `**/*.md`, `**/*.markdown` ». Its `extract` is `Extract` (§6) and its `validateSelect` is `ValidateSelect` (§6.1).
+`apiVersion` 1 and `files` « `**/*.md`, `**/*.markdown` ». Its `extract` is `Extract` (§6), its `validateSelect` is `ValidateSelect` (§6.1) and its `selectorFields` (SPEC §8.7) is { `main`: `heading`, `fields`: { `heading`: `string`, `level`: `integer` } }.
 
 ## 4 Selector
 
@@ -35,6 +35,13 @@ The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugi
 4. Remove from *heading* its leading and trailing U+0020 and U+0009. Raise if *heading* is not a
    String or is empty.
 5. Raise unless *level* is *none* or an integer from 1 to 6.
+
+NOTE: A dependency may also be written as one String, `Path ":" Selector` (SPEC §8.7), which docstamp
+turns into the `select` before this plugin sees it: `docs/guide.md:Install` is the String
+`Install`, `docs/guide.md:heading=Install,level=2` is the Map `{ heading: Install, level: 2 }` (`level`
+is read as an integer), and a heading that holds `,` or `=` is written with `\,` and `\=`. The two
+are different `select` values, as `Install` and `{ heading: Install }` are, so their hashes differ;
+the plugin accepts them all and a hash is never changed by how a dependency is written.
 
 NOTE: A selector that raises is returned as `{ diagnostics: « d » }`, *d* an `error` whose message
 says what is wrong and the two forms that are accepted (`Install` and `{ heading: Install, level: 2 }`);

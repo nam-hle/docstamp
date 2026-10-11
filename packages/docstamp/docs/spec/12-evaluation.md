@@ -54,8 +54,11 @@ raises:
    Declaration *d* that uses a Preset, call
    `ExpandPresets(d, config.[[Presets]], config.[[DefaultPresets]], present)` (§8.6): when it returns, the effective patterns and their origins are those of *d* from here on;
    when it raises, collect its Diagnostics into *attached*, `[[File]]` the file of *d*. Then, for
-   each Selected Dependency of each remaining Declaration, collect `ValidateSelect` (§8.7) into
-   *attached*.
+   each Shorthand of each remaining Declaration, call `ResolveSelector(plugins, shorthand)` (§8.7):
+   a value becomes a Selected Dependency { the Shorthand's `[[Path]]`, that value } appended to
+   `[[Selected]]`, and the identical ones are dropped as §8.7 says; an `E_SELECT` is collected into
+   *attached*. Then, for each Selected Dependency of each remaining Declaration, collect
+   `ValidateSelect` (§8.7) into *attached*.
 6. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
    entries. Otherwise let *lock* be `? ReadLock(root)`.
 7. Let *results* be `Evaluate(b, universe, lock, attached of b, plugins)` for each *b* of *declarations*,
@@ -179,7 +182,7 @@ SelectionChange.
 NOTE: Step 11 runs a Plugin (user code, §8.7 NOTE) on the old text, in the host, as the verdict
 does on the new. It lists what a reviewer must look at, and never changes a state or a Hash. Its
 limits: the old text is the stored one, so the `hash:` line of an inline file (§10.2 step 4) is not
-removed from it; and step 1.4 reads String patterns only, so a Selected Dependency added to the own
+removed from it; and step 1.4 reads String patterns only (a Shorthand is none: it is left out of both lists), so a Selected Dependency added to the own
 list since *C* is `new` only when its file or its part did not exist at *C*, and is otherwise
 absent from `[[Fragments]]`.
 

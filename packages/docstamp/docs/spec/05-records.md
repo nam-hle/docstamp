@@ -7,6 +7,7 @@
 | `[[File]]` | RepoPath | |
 | `[[Dependencies]]` | List of String | the patterns, verbatim, in declaration order |
 | `[[Selected]]` | List of Selected Dependency | the Selected Dependencies of the file, in order of appearance (§8.7), « » when none |
+| `[[Shorthands]]` | List of Shorthand | the strings of `dependencies` that `SplitDependency` splits (§8.7), in order of appearance, « » when none; `[[Dependencies]]` does not hold them, and §12.2 step 5 resolves them into `[[Selected]]` |
 | `[[Use]]` | List of String, or none | the names in its own `use` key, in order; none when it has no `use` key (§8.6) |
 | `[[Origin]]` | `config` or `inline` | where it is declared |
 | `[[Recorded]]` | Hash, or none | inline only: the Hash recorded in the block (§5.6), none if it has no `hash` key |

@@ -226,8 +226,9 @@ patterns. The Lockfile and its `version` are unchanged. It is not an edit of the
 ### 8.7 Selected Dependencies
 
 A *Selected Dependency* is { `[[Path]]`: a RepoPath, `[[Select]]`: a plain value (§3.5) }. In a
-`dependencies` List a Selected Dependency is written as a Map with the keys `path` and `select`; a
-String is a Pattern (§8.1) as before. The written `path` is a literal path (§8.5 NOTE) and
+`dependencies` List a Selected Dependency is written as a Map with the keys `path` and `select`, or
+as a String in the *shorthand* `Path ":" Selector` (below); any other String is a Pattern (§8.1)
+as before. The written `path` is a literal path (§8.5 NOTE) and
 `[[Path]]` is the String it denotes, so a file named `a[1].json` is written `a\[1\].json`. A Map
 with another key, a missing `path` or `select`, a `path` that is not a valid Pattern without
 Negation or not a literal path, or a `select` holding a Number that is not finite at any depth is
@@ -237,10 +238,52 @@ Selected Dependencies with the same `[[Path]]` and the same `CanonicalJson([[Sel
 dependency: the Declaration's `[[Selected]]` holds the first of them in order of appearance and
 drops the others without a diagnostic.
 
+A *Shorthand* is { `[[Path]]`: a RepoPath, `[[Raw]]`: a String }. `SplitDependency(s)` reads the code
+points of the String *s* in order, a `\` and the code point after it counting as one escaped unit,
+and returns none if no unit is a `:`; otherwise it splits *s* at the first `:` that is not escaped:
+*path* is the text before it, as written, and *raw* the text after it, verbatim, so *raw* may hold
+further `:` and `\`. `ParseShorthand(s)`, for an *s* that `SplitDependency` splits, returns a
+Shorthand or raises. It raises when *path* or *raw* is empty, or when *path* is not a valid Pattern
+(§8.1) without Negation or not a literal path (§8.5 NOTE), the message of a glob naming the escape
+(`\*`, `\:`). `[[Path]]` is the String *path* denotes, as for a Map, so a file named `a:b.md` is
+written `a\:b.md`. The raising is `E_CONFIG` (`E_BLOCK` in an inline block), `[[Subject]]`
+`dependencies`.
+
+NOTE: A String that has no unescaped `:` is a Pattern, and `\:` is already an Escape of §8.1 for a
+literal `:`. A Pattern is split only where it is an element of `dependencies`; a Preset (§8.6), `include`
+and `ignore` hold Patterns only.
+
+A *Selector Grammar* is the same for every Plugin that declares `[[SelectorFields]]` (below).
+`ResolveSelector(plugins, shorthand)` returns a plain value (§3.5) or an `E_SELECT` Diagnostic:
+
+1. Let *plugin* be `Claim(plugins, shorthand.[[Path]])`. If that raises, or *plugin* has no
+   `[[SelectorFields]]`, return `shorthand.[[Raw]]`, a String, verbatim: no `,`, `=` or `\` of it has a
+   meaning, which is how a Value Path (§8.8) holding them is written.
+2. Split *raw* into *items* at each `,` that is not escaped, an escape being a `\` before `,`, `=` or
+   `\`. Any other `\` is literal.
+3. If *items* has one item and it holds no `=` that is not escaped, return the item with its escapes
+   resolved, a String, which must not be empty. This is the main field, and the String is the
+   `select` that a bare String has always been, so no hash changes (§17.4).
+4. Otherwise each item is *key* `=` *value*, split at its first `=` that is not escaped, with the
+   escapes of both resolved; an item without such `=`, with an empty *key* or a *key* repeated is an
+   `E_SELECT`. Let *type* be `fields[key]`; if there is none, the value stays a String and the Plugin
+   judges the key as it judges a Map (`E_SELECT` through `ValidateSelect` or `Extract`). If *type* is
+   `integer`, *value* must be `0` or a decimal integer without a leading zero or `+`, optionally
+   after `-`, of at most 15 digits, and becomes that Number; if *type* is a List, *value* must be
+   one of its Strings; otherwise it is an `E_SELECT`. Return the Map of the pairs.
+
+The `E_SELECT` has `[[File]]` the file declaring it and `[[Subject]]` `[[Path]]`, `:` and `[[Raw]]`;
+its message names the item and what to write. Even a single pair (`heading=Install`) is the Map, not
+the String.
+
 A *Plugin* is { `[[Name]]`: a non-empty String, `[[ApiVersion]]`: 1, `[[Files]]`: a non-empty List
-of Patterns, `[[Extract]]`: a function, `[[ValidateSelect]]`: a function, when present }, other
-members being ignored. Plugin names are unique. A `validateSelect` that is present and not a function
-is an invalid Plugin (`E_PLUGIN`, §9.5).
+of Patterns, `[[Extract]]`: a function, `[[ValidateSelect]]`: a function, when present,
+`[[SelectorFields]]`: { `main`: a String, `fields`: a Map from a field name to `string`, `integer`
+or a non-empty List of Strings, the member `fields[main]` being `string` }, when present }, other
+members being ignored. Plugin names are unique. A `validateSelect` that is present and not a function,
+or a `selectorFields` that is present and not of this shape, is an invalid Plugin (`E_PLUGIN`, §9.5).
+The names of `fields` are the keys of the Map form the Plugin accepts, and `main` is the one that the
+bare String stands for.
 
 The *Plugin API* is the shape of this Map, of the Map `[[Extract]]` receives (§8.7 `Fragments` step 2)
 and of the Map it returns (step 3), and `[[ApiVersion]]` names it; version 1 is the shape defined
@@ -304,6 +347,14 @@ validates is therefore reported with the file and the path it is written in, bef
 `E_SELECT` is the code, not `E_CONFIG`: the selector is the Plugin's (§8.7), its malformation is the
 same fact `Fragments` step 4 reports, and a Declaration stays an ordinary Declaration. No new code.
 
+NOTE: A Shorthand is resolved at load (§12.2 step 5), before any hash, so it is the Selected
+Dependency the written Map would be: `docs/guide.md:Install` is `{ path: docs/guide.md, select:
+Install }`, and `docs/guide.md:heading=Install,level=2` is `{ path: docs/guide.md, select: { heading:
+Install, level: 2 } }`, with the same Dependency Hash (§10.4, §17.7). The bare form and the one-pair form
+are different values, as `Install` and `{ heading: Install }` always were; `CanonicalJson` of a Map
+orders its keys (§3.5), so the order of the pairs never matters. Reports print the resolved
+`CanonicalJson` (§14.3).
+
 NOTE: `ValidateSelect` is an early check, not a second extraction: a Plugin MUST NOT depend on the
 file's content in it, and a selector it accepts may still be `E_SELECT` or `E_SELECT_NOT_FOUND` at
 `Fragments`. `list-dependencies` (§13.7) calls it too, since it runs at load and reads no file.
@@ -358,7 +409,9 @@ names are not checked against it.
 | `docstamp-json` | `**/*.json` | one JSON value (RFC 8259); of a repeated key in an object the last wins |
 | `docstamp-yaml` | `**/*.yaml`, `**/*.yml` | one YAML 1.2 document, core schema, no merge keys |
 
-Their `[[ApiVersion]]` is 1 and their `select` is a *Value Path*: a String of one or more steps.
+Their `[[ApiVersion]]` is 1, they declare no `[[SelectorFields]]`, so a Shorthand for them is the
+Value Path verbatim (`package.json:scripts.build`, `config.yaml:items.0.name`, `a.json:["x,y"].z`), and
+their `select` is a *Value Path*: a String of one or more steps.
 The first step is a name or a bracket; each later step is `.` and a name, or a bracket. A *name* is
 one or more characters other than `.`, `[` and `]`; a *bracket* is `[`, a JSON String and `]`,
 which names a key of any characters. `scripts.build`, `items.0.name` and `["a.b"].c` are Value
