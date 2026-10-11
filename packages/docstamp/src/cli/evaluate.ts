@@ -31,6 +31,7 @@ function isStampedFile(host: Host, root: string, path: string): boolean {
 export interface Evaluated {
   results: Result[];
   plugins: readonly DocstampPlugin[];
+  script?: string;
   fragmentProbe: (entries: readonly SelectedEntry[]) => FragmentProbe;
   declarations: Declaration[];
   universe: Universe;
@@ -87,7 +88,7 @@ function evaluateDeclarations(
   hashFiles: boolean,
 ) {
   const workspace = loadWorkspace(host, root);
-  const { universe, declarations, presets, defaultPresets, plugins } = workspace;
+  const { universe, declarations, presets, defaultPresets, plugins, script } = workspace;
   const raised = new Set(workspace.attached.map((d) => d.file));
   const remaining = declarations.filter((d) => !raised.has(d.file));
   const attached = [...workspace.attached, ...validatedSelects(remaining, plugins)];
@@ -145,7 +146,17 @@ function evaluateDeclarations(
       fs,
     ),
   );
-  return { declarations, universe, presets, defaultPresets, results, lock, fragmentProbe, plugins };
+  return {
+    declarations,
+    universe,
+    presets,
+    defaultPresets,
+    results,
+    lock,
+    fragmentProbe,
+    plugins,
+    ...(script === undefined ? {} : { script }),
+  };
 }
 
 // SPEC §12.2

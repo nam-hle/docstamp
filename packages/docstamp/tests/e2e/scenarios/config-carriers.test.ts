@@ -187,7 +187,9 @@ scenario(
     repo.commit('list b');
     const result = await repo.run([], { show: ['docstamp.config.ts'] });
     expect(result.exit).toBe(1);
-    expect(result.stdout).toContain('  edited    docstamp.config.ts  (configuration)\n');
+    expect(result.stdout).toContain(
+      '  edited    docstamp.config.ts  (configuration, may concern other files)\n',
+    );
     expect(result.stdout).toContain('  review: git diff -M ');
     expect(result.stdout).not.toContain('(dependency list)');
     expect(result.stdout).not.toContain('(selection)');
@@ -209,3 +211,44 @@ scenario(
     expect(result.stdout).not.toContain('(configuration)');
   },
 );
+
+scenario(
+  '§12.3 a YAML Carrier names the list, never a script, and a script is a Carrier of its own',
+  options,
+  async (repo) => {
+    repo.remove('docstamp.config.ts');
+    const yaml = (list: string): string =>
+      `version: 2\nfiles:\n  CLAUDE.md:\n    dependencies: [${list}]\n`;
+    repo.write('docstamp.yaml', yaml("'src/a.ts'"));
+    repo.write('src/b.ts', 'export const b = 1;\n');
+    repo.commit('yaml');
+    await repo.run(['update', 'CLAUDE.md']);
+    repo.commit('stamp');
+    repo.write('docstamp.yaml', yaml("'src/a.ts', 'src/b.ts'"));
+    repo.commit('list b');
+    const result = await repo.run([]);
+    expect(result.stdout).toContain('(dependency list)');
+    expect(result.stdout).not.toContain('(configuration');
+    repo.write('docstamp.config.ts', SCRIPT("'src/a.ts'"));
+    await repo.run([], { expectExit: 2, label: 'two Carriers' });
+  },
+);
+
+scenario('§12.3 an inline doc never gets the configuration line', options, async (repo) => {
+  repo.write(
+    'docstamp.config.ts',
+    "import { defineConfig } from 'docstamp';\n\nexport default defineConfig({ version: 2, files: {} });\n",
+  );
+  repo.write('docs/G.md', '---\ndocstamp:\n  dependencies:\n    - src/a.ts\n---\n\n# G\n');
+  repo.commit('inline');
+  await repo.run(['update', 'docs/G.md']);
+  repo.commit('stamp');
+  repo.write(
+    'docstamp.config.ts',
+    "import { defineConfig } from 'docstamp';\n\nexport default defineConfig({ version: 2, files: {}, ignore: ['x'] });\n",
+  );
+  repo.append('src/a.ts', 'export const c = 3;\n');
+  const result = await repo.run([]);
+  expect(result.stdout).toContain('  modified  src/a.ts\n');
+  expect(result.stdout).not.toContain('(configuration');
+});

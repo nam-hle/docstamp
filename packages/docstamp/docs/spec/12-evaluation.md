@@ -132,6 +132,9 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
    *edited* is false, let *configEdited* be that file's RepoPath iff it is a path of *diff* or of
    *untracked* (step 2): the script differs from *C*, and what it changed is not compared.
 
+   NOTE: *configEdited* is set for every such Declaration: the script differs since the review
+   commit, and the edit may not concern this file.
+
    For an inline file, steps 1.1 to 1.3 are instead: list the commits of
    `git log --format=%H -S<entry> -- <file>`, newest first; the recorded Hash of the file as of a
    commit or its first parent is the Hash on the one line of *hashLines* of

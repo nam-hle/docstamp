@@ -163,7 +163,7 @@ function headLines(r: Result): string {
     (r.edited === undefined ? '' : `  edited    ${shown(r.edited)}  (dependency list)\n`) +
     (r.configEdited === undefined
       ? ''
-      : `  edited    ${shown(r.configEdited)}  (configuration)\n`) +
+      : `  edited    ${shown(r.configEdited)}  (configuration, may concern other files)\n`) +
     (r.selection ?? [])
       .map((s) => `  ${s.status.padEnd(8)}  ${shown(s.path)}  (selection)\n`)
       .join('');

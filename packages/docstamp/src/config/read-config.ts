@@ -66,7 +66,10 @@ function readYaml(host: Host, path: string): Value {
 }
 
 // SPEC §9.3 steps 2 and 3; undefined when there is no configuration file
-function readValue(host: Host, root: string): { value: Value; plugins: unknown } | undefined {
+function readValue(
+  host: Host,
+  root: string,
+): { value: Value; plugins: unknown; script?: string } | undefined {
   const names = CONFIG_NAMES.filter((name) => host.fs.kind(join(root, name)) !== null);
   if (names.length > 1)
     throw new Raised([diag('E_CONFIG_AMBIGUOUS', { subject: names.join(', ') })]);
@@ -76,7 +79,7 @@ function readValue(host: Host, root: string): { value: Value; plugins: unknown }
   const path = join(root, name);
   return name === 'docstamp.yaml'
     ? { value: readYaml(host, path), plugins: undefined }
-    : loadScript(path);
+    : { ...loadScript(path), script: name };
 }
 
 function collectDeclaration(
@@ -210,6 +213,7 @@ export function readConfig(
   attached: Diagnostic[];
   present: boolean;
   plugins: DocstampPlugin[];
+  script?: string;
 } {
   const loaded = readValue(host, root);
   const top = loaded?.value;
@@ -298,5 +302,6 @@ export function readConfig(
     attached,
     present: true,
     plugins,
+    ...(loaded?.script === undefined ? {} : { script: loaded.script }),
   };
 }

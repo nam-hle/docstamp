@@ -234,7 +234,7 @@ its declaration fixed, then docstamp check <file>.
 
 - Every byte counts, except that CR LF is read as LF in text files: whitespace, a final newline, a license header.
 - An edit of the pattern list that selects the same files changes nothing.
-- An edit of the list that selects other files is content-changed too. The report names it (edited line) only once the update is committed; before that the block lists depends lines. With a script configuration (docstamp.config.ts) the old list is never read: the report says "edited <script> (configuration)" when the script differs from the review commit, and the review: line shows its diff.
+- An edit of the list that selects other files is content-changed too. The report names it (edited line) only once the update is committed; before that the block lists depends lines. With a script configuration (docstamp.config.ts) the old list is never read: the report says "edited <script> (configuration, may concern other files)" when the script differs from the review commit, and the review: line shows its diff.
 - No propagation: if C depends on B and B on code, a code change makes B stale. C becomes stale only when B's content changes.
 - Warnings (W_ codes) never change a state or an exit code.
 - The changed-file report (modified, added, deleted, renamed lines and the review: line) reads git history and is advisory; without history the block lists depends lines instead.`,

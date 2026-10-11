@@ -30,7 +30,7 @@ or, for a stale Result with a known `[[Changes]]`:
 ```
 STALE    <file>  (<reason>, <reason>)
   edited    <carrier>  (dependency list)
-  edited    <script>  (configuration)
+  edited    <script>  (configuration, may concern other files)
   added     <path>  (selection)
   changed   1 modified, 1 added, 5 deleted
   modified  <path>
@@ -46,7 +46,7 @@ STALE    <file>  (<reason>, <reason>)
     `  (dependency list)`;
   - if `[[ConfigEdited]]` is not none, the *configuration line*, in the same place as the edited
     line (they are never both present): `  edited    `, `[[ConfigEdited]]` as in §14.2, and
-    `  (configuration)`;
+    `  (configuration, may concern other files)`;
   - if `[[Selection]]` is not none, one *selection line* per SelectionChange in order: two spaces,
     the status padded with spaces to 8 characters, two spaces, the path as in §14.2, and
     `  (selection)` (`  added     <path>  (selection)`, `  removed   <path>  (selection)`). They

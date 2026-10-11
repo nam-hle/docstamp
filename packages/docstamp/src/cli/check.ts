@@ -1,6 +1,4 @@
-import { join } from 'node:path';
 import { Raised } from '../core/diagnostics.ts';
-import { CONFIG_NAMES } from '../config/value.ts';
 import type { Result } from '../core/types.ts';
 import { selectionChanges } from '../engine/selection.ts';
 import type { Host } from '../host/host.ts';
@@ -42,9 +40,7 @@ function withChanges(
       const resolved = resolveSelector(evaluated.plugins, result.file, shorthand);
       return 'select' in resolved ? resolved.select : null;
     },
-    CONFIG_NAMES.find(
-      (name) => name !== 'docstamp.yaml' && host.fs.kind(join(root, name)) !== null,
-    ),
+    evaluated.script,
   );
   if (report === null) return { ...result, changes: null };
   const { universe, presets, defaultPresets } = evaluated;
