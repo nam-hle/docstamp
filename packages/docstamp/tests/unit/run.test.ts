@@ -151,20 +151,17 @@ describe('§13.6 update', () => {
     expect(exec(root, 'update', '--all').out).toBe('written  doc.md\n');
     expect(exec(root).code).toBe(0);
   });
-  it('a version 2 lock names the migration; --all rewrites it as version 3', () => {
+  it('a version 3 lock names the migration; --all rewrites it as version 4', () => {
     const root = tree();
     exec(root, 'update', 'doc.md');
-    const v3 = readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8');
-    writeFileSync(
-      join(root, 'docstamp-lock.yaml'),
-      v3.replace('version: 3\nfiles:', 'version: 2\ndependents:'),
-    );
+    const v4 = readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8');
+    writeFileSync(join(root, 'docstamp-lock.yaml'), v4.replace('version: 4', 'version: 3'));
     const check = exec(root);
     expect(check.code).toBe(2);
     expect(check.err).toContain('E_LOCK_VERSION');
-    expect(check.err).toContain('to rewrite it as version 3 (hashes are unchanged)');
+    expect(check.err).toContain('to rewrite it as version 4');
     expect(exec(root, 'update', '--all').out).toBe('written  doc.md\n');
-    expect(readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8')).toBe(v3);
+    expect(readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8')).toBe(v4);
     expect(exec(root).code).toBe(0);
   });
   it('a lock that is a directory is E_LOCK on check', () => {

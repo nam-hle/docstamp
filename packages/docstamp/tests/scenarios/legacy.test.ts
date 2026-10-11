@@ -40,16 +40,16 @@ scenario(
   async (repo) => {
     repo.write('docstamp.yaml', v2Config(repo));
     await repo.run(['update', '--all'], { expectExit: 0 });
-    const v3 = repo.read('docstamp-lock.yaml');
-    const v2 = v3.replace('version: 3\nfiles:', 'version: 2\ndependents:');
-    expect(v2).not.toBe(v3);
+    const v4 = repo.read('docstamp-lock.yaml');
+    const v2 = v4.replace('version: 4\nfiles:', 'version: 2\ndependents:');
+    expect(v2).not.toBe(v4);
     repo.write('docstamp-lock.yaml', v2);
 
     const check = await repo.run([], { show: ['docstamp-lock.yaml'] });
     expect(check.exit).toBe(2);
     expect(check.stderr).toContain('error: E_LOCK_VERSION');
     expect(check.stderr).toContain('docstamp update --all');
-    expect(check.stderr).toContain('version 3');
+    expect(check.stderr).toContain('version 4');
 
     const named = await repo.run(['update', 'CLAUDE.md']);
     expect(named.exit).toBe(2);
@@ -60,7 +60,7 @@ scenario(
 
     const migrate = await repo.run(['update', '--all']);
     expect(migrate.exit).toBe(0);
-    expect(repo.read('docstamp-lock.yaml')).toBe(v3);
+    expect(repo.read('docstamp-lock.yaml')).toBe(v4);
     expect((await repo.run([])).exit).toBe(0);
   },
 );

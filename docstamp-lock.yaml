@@ -1,30 +1,30 @@
-version: 3
+version: 4
 files:
-  "CLAUDE.md": 4065d88a4369384159a3e61c6fc1535c7569b3baba8c8115bb53dc5be37c5998
-  "README.md": 5b9dc32c29cd41fe73c8ef4a71386baf0ce8dea7c1aa5c6d801959a0e5e041bb
+  "CLAUDE.md": c9f18c95b0518b5eaaecc877be9f8b0823d54a3286e3b3fee4e5edbe3dd9c95d
+  "README.md": a68cef464fb650804774e6f0c0a899d27387fae4af972b94069c8ae985d52f05
   "packages/docstamp-plugin-js/README.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-js/SPEC.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-markdown/README.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
   "packages/docstamp-plugin-markdown/SPEC.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
-  "packages/docstamp/README.md": 02efeadd0f578bd5761f055f644796f1fbc4daeae0efe2f3021212a49b857da4
+  "packages/docstamp/README.md": e25e2f0d4d1fda9f36f5996d75f7dd1eebb66457632f24a1ff055a011c8eff5b
   "packages/docstamp/docs/spec/05-records.md": 33b70047eb390d77e967172d1039ae9b4993bddea1c4318e52b98584cad83628
   "packages/docstamp/docs/spec/06-root.md": dc6638d94fd9cd5d4bb557c57f8252d222d2ededa40e7bc483fcd1959dc1b7f9
   "packages/docstamp/docs/spec/07-universe.md": dc6638d94fd9cd5d4bb557c57f8252d222d2ededa40e7bc483fcd1959dc1b7f9
   "packages/docstamp/docs/spec/08-patterns.md": 17d0bead596bd04dc2b32138759e63cdddc2aea6e7941a667e96cee439a7939d
   "packages/docstamp/docs/spec/09-configuration-file.md": f8b12a0218c17305acf00777f222099917cdf5c6f6f0b16d782e79d2c0615728
   "packages/docstamp/docs/spec/10-hashing.md": 55e5ec4ebbcffc5a75896cbf2dbb202623b55d2af8f29fcc5a980c67d2ad2314
-  "packages/docstamp/docs/spec/11-lockfile.md": 282a9c72a2cce5b861826bbad5c57a588c6d5b6918c39dcfc9e1277646e33efb
+  "packages/docstamp/docs/spec/11-lockfile.md": 5d92f278cda1c692222f1fcc9677c8548f8f685d9294eb89a844674e80bf7e45
   "packages/docstamp/docs/spec/12-evaluation.md": 4aeccd86be8be382933155ecc7c9adf4c107c119a6bae7f9c941d77eb390faf5
-  "packages/docstamp/docs/spec/13-command-line.md": 02efeadd0f578bd5761f055f644796f1fbc4daeae0efe2f3021212a49b857da4
+  "packages/docstamp/docs/spec/13-command-line.md": e25e2f0d4d1fda9f36f5996d75f7dd1eebb66457632f24a1ff055a011c8eff5b
   "packages/docstamp/docs/spec/14-output.md": 6f82cdc5b75e1312b2a96d87d4b6ebf8ddc54be3531fc77068b3cf8b6daa1a87
   "packages/docstamp/docs/spec/15-diagnostics.md": 104eafe17cd71a2b890918ef0774f02a1198071ca4c748db0d29ac9044d0d48c
-  "packages/docstamp/docs/spec/16-exit-codes.md": 02efeadd0f578bd5761f055f644796f1fbc4daeae0efe2f3021212a49b857da4
-  "packages/docstamp/docs/spec/17-compatibility.md": ceb7af40426e891bcf56991ffaf9f1b52593be1487c369b4aa849b08319b35fb
-  "packages/site/content/get-started.md": 5b9dc32c29cd41fe73c8ef4a71386baf0ce8dea7c1aa5c6d801959a0e5e041bb
+  "packages/docstamp/docs/spec/16-exit-codes.md": e25e2f0d4d1fda9f36f5996d75f7dd1eebb66457632f24a1ff055a011c8eff5b
+  "packages/docstamp/docs/spec/17-compatibility.md": f0eeaf1049f876374940a0c9b6e2863f18faa8589213afaef09da8630a58e8bd
+  "packages/site/content/get-started.md": a68cef464fb650804774e6f0c0a899d27387fae4af972b94069c8ae985d52f05
   "packages/site/content/guide/ci.md": 1057c72d7b4194ab0d887da81c29d97b8b8a2413f74453836fb66187dbc683b6
   "packages/site/content/guide/declare.md": 9ba2af8d61be92bcb12b79eb0e4b4806de4c8244c6da38e0aea7ccc549152237
   "packages/site/content/guide/plugins.md": f10fa15a02166621a381ff86af51d5e03ac29cb5651a6d30f9a7ae8d8bc6a85a
-  "packages/site/content/guide/review.md": 9e77b377988b9d1d2b91b53e5de8e103ab6ea627bbd0d9caa807121a81459b75
+  "packages/site/content/guide/review.md": 5681b9703434b83ae9cb70ecd867ddea688cfb40f0cac3e1f9484055a76babae
   "packages/site/content/guide/tune.md": ed6ee7c00cff000c01201c290323a31ca7763f58186af3ccb8b6c64be2cd2679
-  "packages/site/content/index.md": 6b8c45495e7a06b2178bd51dd1930849df358102bf49fe5c4433995f77a4519d
-  "packages/site/content/reference/index.md": 02efeadd0f578bd5761f055f644796f1fbc4daeae0efe2f3021212a49b857da4
+  "packages/site/content/index.md": b0538d6bb046dd7360853e23bd09eabbe214dfec75748f78b3e95949114098a9
+  "packages/site/content/reference/index.md": e25e2f0d4d1fda9f36f5996d75f7dd1eebb66457632f24a1ff055a011c8eff5b

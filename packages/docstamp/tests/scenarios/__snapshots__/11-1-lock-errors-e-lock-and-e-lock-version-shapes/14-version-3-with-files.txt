@@ -1,0 +1,9 @@
+# version 3 with files
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_LOCK_VERSION: The version 3 Lockfile is no longer read; ignore rules now match the NFC form of a name and trim a space after an escaped backslash, so a file may be selected that was not. Review every file, then run "docstamp update --all" to rewrite it as version 4.
+--- setup: docstamp-lock.yaml ---
+version: 3
+files: {}

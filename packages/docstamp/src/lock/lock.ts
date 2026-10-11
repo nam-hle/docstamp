@@ -10,9 +10,10 @@ import type { Host } from '../host/host.ts';
 const LOCK = 'docstamp-lock.yaml';
 // Historical name from before the rename to docstamp; kept on purpose (§11.1).
 const LEGACY_LOCK = 'docsync.lock';
-const V2_LOCK_MESSAGE =
-  'The version 2 Lockfile is no longer read; run "docstamp update --all" to rewrite it as ' +
-  'version 3 (hashes are unchanged).';
+const migrationMessage = (version: '2' | '3') =>
+  `The version ${version} Lockfile is no longer read; ignore rules now match the NFC form of a ` +
+  'name and trim a space after an escaped backslash, so a file may be selected that was not. ' +
+  'Review every file, then run "docstamp update --all" to rewrite it as version 4.';
 const fail = (code: 'E_LOCK' | 'E_LOCK_VERSION') => new Raised([diag(code)]);
 const isMap = (v: YamlValue | undefined): v is YamlMap =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -63,10 +64,10 @@ export function parseLock(bytes: Buffer): Lock {
   const top = doc.value;
   const version = top.entries.get('version')?.plainSource;
   // §17.4 step 3, §17.5: one supported version, every other refused, never recomputed
-  if (version === '2') {
-    throw new Raised([diag('E_LOCK_VERSION', { message: V2_LOCK_MESSAGE })]);
+  if (version === '2' || version === '3') {
+    throw new Raised([diag('E_LOCK_VERSION', { message: migrationMessage(version) })]);
   }
-  if (version !== '3') throw fail('E_LOCK_VERSION');
+  if (version !== '4') throw fail('E_LOCK_VERSION');
   const files = top.entries.get('files')?.value;
   if (!hasKeys(top, ['files', 'version']) || !isMap(files)) throw fail('E_LOCK');
   const entries = new Map<string, string>();
@@ -82,8 +83,8 @@ export function parseLock(bytes: Buffer): Lock {
 
 // SPEC §11.2
 export function lockText(lock: Lock): string {
-  if (lock.entries.size === 0) return 'version: 3\nfiles: {}\n';
-  let out = 'version: 3\nfiles:\n';
+  if (lock.entries.size === 0) return 'version: 4\nfiles: {}\n';
+  let out = 'version: 4\nfiles:\n';
   for (const file of sortPaths([...lock.entries.keys()])) {
     out += `  ${quote(file)}: ${lock.entries.get(file)}\n`;
   }

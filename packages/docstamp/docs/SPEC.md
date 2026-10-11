@@ -1,6 +1,6 @@
 # docstamp Specification
 
-Version 1 (draft; Configuration version 2, Lockfile version 3, JSON output version 2). This
+Version 1 (draft; Configuration version 2, Lockfile version 4, JSON output version 2). This
 document defines the observable behavior of docstamp. It does not define implementation structure. Code and tests cite its clause numbers (for example `§8.3`).
 
 - [§1 Scope](spec/01-scope.md)

@@ -20,7 +20,7 @@ scenario('§13.6 update --all writes every entry in canonical form', { fixture }
   });
   await repo.snapFile('docstamp-lock.yaml');
   const lock = repo.read('docstamp-lock.yaml');
-  expect(lock).toMatch(/^version: 3\nfiles:\n {2}"CLAUDE\.md": [0-9a-f]{64}\n {2}"README\.md": /u);
+  expect(lock).toMatch(/^version: 4\nfiles:\n {2}"CLAUDE\.md": [0-9a-f]{64}\n {2}"README\.md": /u);
   expect(lock.endsWith('\n')).toBe(true);
   expect(lock).not.toContain('\r');
   expect(repo.list()).toEqual(ROOT_ENTRIES);
@@ -30,7 +30,7 @@ scenario('§13.6 update <file> records only the named file', { fixture }, async 
   await repo.run(['update', 'README.md'], { expectExit: 0 });
   await repo.snapFile('docstamp-lock.yaml', 'lock with README.md only');
   expect(repo.read('docstamp-lock.yaml')).toMatch(
-    /^version: 3\nfiles:\n {2}"README\.md": [0-9a-f]{64}\n$/u,
+    /^version: 4\nfiles:\n {2}"README\.md": [0-9a-f]{64}\n$/u,
   );
 
   const again = await repo.run(['update', 'README.md']);

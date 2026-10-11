@@ -4,7 +4,7 @@ exit: 1
 STALE    CLAUDE.md  (content-changed)
   modified  src/d.ts
   modified  src/mode.sh
-  review: git diff -M 5f2705d038a20addc13ebad075c3f05ad6e46252 -- src/d.ts src/mode.sh
+  review: git diff -M 007e1d6290d03adf5956d0d4ed656485d8396a12 -- src/d.ts src/mode.sh
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
   run update only after the review, never --all just to pass; see docstamp help agents
