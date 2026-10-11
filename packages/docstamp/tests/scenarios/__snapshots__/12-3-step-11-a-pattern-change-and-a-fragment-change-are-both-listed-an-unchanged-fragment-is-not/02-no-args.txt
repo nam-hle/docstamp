@@ -4,7 +4,7 @@ exit: 1
 STALE    CLAUDE.md  (content-changed)
   modified  src/a.ts
   fragment  "package.json#\"scripts.test\""  (changed)  scripts.test (string)
-  review: git diff -M 9a608b54f9ee5c108193126f342ef439f9a966f7 -- src/a.ts package.json
+  review: git diff -M aea5fc77496f64ec9f090963156f81dd74c6217a -- src/a.ts package.json
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
   run update only after the review, never --all just to pass; see docstamp help agents

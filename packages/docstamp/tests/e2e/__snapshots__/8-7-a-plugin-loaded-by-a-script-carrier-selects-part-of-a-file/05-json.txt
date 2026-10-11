@@ -32,13 +32,13 @@ exit: 1
           "path": "docs/guide.md",
           "select": "Install",
           "status": "changed",
-          "focus": [
-            "section \"Install\" (level 2)"
-          ],
-          "lines": [
+          "parts": [
             {
-              "start": 3,
-              "end": 6
+              "focus": "section \"Install\" (level 2)",
+              "lines": {
+                "start": 3,
+                "end": 6
+              }
             }
           ]
         }

@@ -5,9 +5,10 @@ import plugin from '../../src/index.ts';
 
 const sha = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex');
 
-const extract = (text: string, select: unknown): string[] => [
-  ...plugin.extract({ path: 'guide.md', text, select: select as never }).hashes,
-];
+const extract = (text: string, select: unknown): string[] =>
+  (plugin.extract({ path: 'guide.md', text, select: select as never }).parts ?? []).map((part) =>
+    sha(part.content),
+  );
 
 const DOC = '# One\nintro\n\n## Sub\nsub text\n\n# Two\ntwo text\n';
 
@@ -48,8 +49,10 @@ describe('§4 Selector', () => {
     ['a level above 6', { heading: 'Sub', level: 7 }],
     ['a level that is not an integer', { heading: 'Sub', level: 1.5 }],
     ['a level that is a string', { heading: 'Sub', level: '2' }],
-  ])('raises for %s', (_, select) => {
-    expect(() => extract(DOC, select)).toThrow();
+  ])('reports an error for %s', (_, select) => {
+    const result = plugin.extract({ path: 'guide.md', text: DOC, select: select as never });
+    expect(result.parts).toBeUndefined();
+    expect(result.diagnostics?.[0]?.severity).toBe('error');
   });
 });
 
@@ -154,20 +157,12 @@ describe('§5.3 Sections', () => {
 });
 
 describe('§6 Extract', () => {
-  it('returns one hash per matching heading, in source order', () => {
-    const text = '## Install\nfirst\n\n## Other\nx\n\n## Install\nsecond\n';
-    expect(extract(text, 'Install')).toEqual([
-      sha('## Install\nfirst\n\n'),
-      sha('## Install\nsecond\n'),
-    ]);
-  });
-
   it('picks one of several by level', () => {
     const text = '# Install\nfirst\n\n## Install\nsecond\n';
     expect(extract(text, { heading: 'Install', level: 2 })).toEqual([sha('## Install\nsecond\n')]);
   });
 
-  it('returns no hash when nothing matches', () => {
+  it('returns no part when nothing matches', () => {
     expect(extract(DOC, 'Missing')).toEqual([]);
     expect(extract('', 'Missing')).toEqual([]);
   });
@@ -196,44 +191,67 @@ describe('§6 Extract', () => {
 });
 
 describe('§6 Extract: focus and lines', () => {
-  const full = (text: string, select: unknown) =>
-    plugin.extract({ path: 'guide.md', text, select: select as never });
+  const part = (text: string, select: unknown) =>
+    plugin.extract({ path: 'guide.md', text, select: select as never }).parts?.[0];
 
-  it('names the section and gives its lines, one of each per hash', () => {
-    expect(full(DOC, 'Sub')).toMatchObject({
-      focus: ['section "Sub" (level 2)'],
-      lines: [{ start: 4, end: 6 }],
+  it('names the section and gives its lines', () => {
+    expect(part(DOC, 'Sub')).toMatchObject({
+      focus: 'section "Sub" (level 2)',
+      lines: { start: 4, end: 6 },
     });
-    expect(full(DOC, 'One').lines).toEqual([{ start: 1, end: 6 }]);
-    expect(full(DOC, 'Two').lines).toEqual([{ start: 7, end: 8 }]);
+    expect(part(DOC, 'One')?.lines).toEqual({ start: 1, end: 6 });
+    expect(part(DOC, 'Two')?.lines).toEqual({ start: 7, end: 8 });
   });
 
   it('counts the lines of the whole text, frontmatter included', () => {
     const text = `---\ntitle: x\n---\n${DOC}`;
-    expect(full(text, 'Sub').lines).toEqual([{ start: 7, end: 9 }]);
-    expect(full(text, 'Two').lines).toEqual([{ start: 10, end: 11 }]);
+    expect(part(text, 'Sub')?.lines).toEqual({ start: 7, end: 9 });
+    expect(part(text, 'Two')?.lines).toEqual({ start: 10, end: 11 });
   });
 
   it('ends a section on its last line when the file has no final newline', () => {
-    expect(full('# A\ntext', 'A').lines).toEqual([{ start: 1, end: 2 }]);
-  });
-
-  it('gives one focus and one range per matching heading', () => {
-    const text = '## Install\nfirst\n\n## Other\nx\n\n## Install\nsecond\n';
-    expect(full(text, 'Install')).toMatchObject({
-      focus: ['section "Install" (level 2)', 'section "Install" (level 2)'],
-      lines: [
-        { start: 1, end: 3 },
-        { start: 7, end: 8 },
-      ],
-    });
+    expect(part('# A\ntext', 'A')?.lines).toEqual({ start: 1, end: 2 });
   });
 
   it('counts CR LF text the same', () => {
-    expect(full(DOC.replaceAll('\n', '\r\n'), 'Sub').lines).toEqual([{ start: 4, end: 6 }]);
+    expect(part(DOC.replaceAll('\n', '\r\n'), 'Sub')?.lines).toEqual({ start: 4, end: 6 });
   });
 
-  it('gives neither when nothing matches', () => {
-    expect(full(DOC, 'Missing')).toEqual({ hashes: [] });
+  it('keeps the focus on one line when the heading holds a control character', () => {
+    expect(part('## a\tb\nx\n', 'a\tb')?.focus).toBe('section "a b" (level 2)');
+  });
+
+  it('returns no part and no diagnostic when nothing matches', () => {
+    expect(plugin.extract({ path: 'guide.md', text: DOC, select: 'Missing' })).toEqual({});
+  });
+});
+
+describe('§6 Extract: a selector that selects two headings', () => {
+  const text = '## Install\nfirst\n\n## Other\nx\n\n## Install\nsecond\n';
+
+  it('is an error naming the line of each heading', () => {
+    const result = plugin.extract({ path: 'guide.md', text, select: 'Install' });
+    expect(result.parts).toBeUndefined();
+    expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics![0]).toMatchObject({ severity: 'error' });
+    expect(result.diagnostics![0]!.message).toContain('lines 1, 7');
+    expect(result.diagnostics![0]!.message).toContain('level');
+  });
+
+  it('is an error for two headings of the same level even with that level', () => {
+    const result = plugin.extract({
+      path: 'guide.md',
+      text,
+      select: { heading: 'Install', level: 2 },
+    });
+    expect(result.diagnostics?.[0]?.severity).toBe('error');
+  });
+});
+
+describe('§4 Selector: errors', () => {
+  it('names the accepted forms', () => {
+    const result = plugin.extract({ path: 'guide.md', text: DOC, select: 7 as never });
+    expect(result.parts).toBeUndefined();
+    expect(result.diagnostics?.[0]?.message).toContain('{ heading: Install, level: 2 }');
   });
 });

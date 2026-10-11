@@ -13,11 +13,22 @@ export interface LineRange {
   readonly end: number;
 }
 
+// SPEC §8.7: one piece of a file. `content` is hashed; `focus` and `lines` are advisory
+export interface Part {
+  readonly content: string;
+  readonly focus?: string;
+  readonly lines?: LineRange;
+}
+
+// SPEC §8.7: an error makes the file invalid, a warning is only printed
+export interface PluginDiagnostic {
+  readonly severity: 'error' | 'warning';
+  readonly message: string;
+}
+
 export interface ExtractResult {
-  readonly hashes: readonly string[];
-  // SPEC §8.7: advisory, one per hash, never part of a Hash
-  readonly focus?: readonly string[];
-  readonly lines?: readonly LineRange[];
+  readonly parts?: readonly Part[];
+  readonly diagnostics?: readonly PluginDiagnostic[];
 }
 
 export interface DocstampPlugin {

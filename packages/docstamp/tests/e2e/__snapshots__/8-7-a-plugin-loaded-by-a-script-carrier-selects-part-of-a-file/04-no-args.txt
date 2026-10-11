@@ -3,7 +3,7 @@ exit: 1
 --- stdout ---
 STALE    CLAUDE.md  (content-changed)
   fragment  "docs/guide.md#\"Install\""  (changed)  section "Install" (level 2) (lines 3-6)
-  review: git diff -M 2ede16cb7744546bccb27183f582346b78b9212d -- docs/guide.md
+  review: git diff -M d8054ebb3ab77dc8d97d173cab4a8e6997735868 -- docs/guide.md
 0 ok, 1 stale, 0 invalid
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
   run update only after the review, never --all just to pass; see docstamp help agents

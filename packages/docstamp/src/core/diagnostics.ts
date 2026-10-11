@@ -28,9 +28,12 @@ const FIX: Record<Code, string> = {
   E_UNREADABLE: 'Fix the permissions or remove the entry.',
   E_PLUGIN:
     'Register valid plugins in docstamp.config.ts or .js: { name, apiVersion: 1, files, extract }.',
-  E_SELECT: 'Register a plugin whose "files" select the path, or fix the plugin or the file.',
-  E_SELECT_NOT_FOUND: 'The plugin found nothing for the selector; correct "select" or the file.',
-  E_SELECT_AMBIGUOUS: 'The selector matched more than once; narrow "select".',
+  E_SELECT:
+    'Register a plugin whose "files" select the path, or fix the plugin, "select" or the file, ' +
+    'then run "docstamp check" again.',
+  E_SELECT_NOT_FOUND:
+    'The plugin found nothing for the selector; correct "select" or the file, then run ' +
+    '"docstamp check" again.',
   E_PATH_ENCODING: 'Rename the file to a valid UTF-8 name.',
   E_PATH_COLLISION: 'Rename one of the files; names differ only by case or normalization.',
   E_LOCK:
@@ -43,6 +46,9 @@ const FIX: Record<Code, string> = {
   E_HISTORY:
     'Run in a git work tree with its full history (not a shallow clone); ' +
     'for --from, name a commit.',
+  W_SELECT:
+    'Change "select" or the file as the plugin says, or ignore it: the part still stands and ' +
+    'nothing else changes.',
   W_ORPHAN: 'Run "docstamp update" on any file to remove the entry.',
   W_EMPTY_EXCLUSION:
     'The exclusion matches no file, so it excludes nothing; remove it, or keep it for later.',

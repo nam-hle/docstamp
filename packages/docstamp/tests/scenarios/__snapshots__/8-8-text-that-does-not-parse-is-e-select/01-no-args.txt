@@ -5,7 +5,8 @@ INVALID  CLAUDE.md
 0 ok, 0 stale, 1 invalid
 next: fix the configuration of each invalid file, then run: docstamp check CLAUDE.md
 --- stderr ---
-error: E_SELECT: CLAUDE.md: package.json: Plugin "docstamp-json" threw for "package.json".
+error: E_SELECT: CLAUDE.md: "package.json#\"scripts.build\"": The file is not one valid JSON document; fix the file.
+error: E_SELECT: CLAUDE.md: "package.json#\"scripts.test\"": The file is not one valid JSON document; fix the file.
 --- setup: package.json ---
 {"scripts": 
 (no final newline)

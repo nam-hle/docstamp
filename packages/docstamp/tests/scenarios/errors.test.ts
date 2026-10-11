@@ -5,14 +5,14 @@ import { config, scenario, type Repo, type RunResult } from './harness/index.ts'
 const seen = new Set<string>();
 const unreachable = new Set<string>();
 // these need a real machine or a script plugin: errors-real.test.ts reaches E_PATH_ENCODING and
-// E_HISTORY, plugins.test.ts E_PLUGIN, builtin-plugins.test.ts and the plugin packages' integration
-// tests the E_SELECT ones
+// E_HISTORY, plugins.test.ts E_PLUGIN, E_SELECT and W_SELECT, builtin-plugins.test.ts and the
+// plugin packages' integration tests the other E_SELECT ones
 for (const code of [
   'E_PATH_ENCODING',
   'E_PLUGIN',
   'E_SELECT',
   'E_SELECT_NOT_FOUND',
-  'E_SELECT_AMBIGUOUS',
+  'W_SELECT',
   'E_HISTORY',
 ]) {
   unreachable.add(code);

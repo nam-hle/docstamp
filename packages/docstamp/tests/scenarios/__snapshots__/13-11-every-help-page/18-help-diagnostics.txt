@@ -129,16 +129,18 @@ E_PLUGIN (error)
   fix      Register valid plugins: { name, apiVersion: 1, files, extract }, one per file.
 
 E_SELECT (error)
-  meaning  No plugin claims a file that has a selector, or the plugin failed on it.
-  fix      Register a plugin whose files select the path, or fix the plugin or the file.
+  meaning  No plugin claims a file that has a selector, the plugin failed on it, or the plugin
+           reported an error of its own (its message says what).
+  fix      Register a plugin whose files select the path, or fix the plugin, select or the file as
+           the message says, then run docstamp check again.
 
 E_SELECT_NOT_FOUND (error)
   meaning  The plugin found nothing for the selector.
-  fix      Correct select or the file.
+  fix      Correct select or the file, then run docstamp check again.
 
-E_SELECT_AMBIGUOUS (error)
-  meaning  The selector matched more than once.
-  fix      Narrow select.
+W_SELECT (warning)
+  meaning  The plugin reported a warning for a selector; the part still stands.
+  fix      Change select or the file as the message says, or ignore it. Nothing else changes.
 
 W_ORPHAN (warning)
   meaning  The lock has an entry for a file that is no longer declared.

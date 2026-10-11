@@ -1,16 +1,17 @@
 import { types } from 'node:util';
 
 import { Raised, diag } from '../core/diagnostics.ts';
+import type { Diagnostic } from '../core/types.ts';
 import { select as selectPaths } from '../pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../pattern/parse.ts';
 import { builtinPlugins } from './builtin.ts';
-import type { DocstampPlugin, ExtractInput, ExtractResult, LineRange } from './types.ts';
+import { canonicalJson } from './canonical.ts';
+import type { DocstampPlugin, ExtractInput, ExtractResult, LineRange, Part } from './types.ts';
 
-// SPEC §8.7: what a plugin returned, validated
+// SPEC §8.7: the Fragment of a selector and the warnings the plugin reported with it
 export interface Extracted {
-  readonly hashes: string[];
-  readonly focus?: readonly string[];
-  readonly lines?: readonly LineRange[];
+  readonly parts: readonly Part[];
+  readonly warnings: readonly Diagnostic[];
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -95,6 +96,16 @@ export function claim(plugins: readonly DocstampPlugin[], path: string): Docstam
   throw new Raised([diag('E_PLUGIN', { subject: path, message })]);
 }
 
+const MAX_DIAGNOSTICS = 100;
+const isControl = (character: string): boolean => {
+  const code = character.codePointAt(0)!;
+  return code < 0x20 || code === 0x7f;
+};
+
+// SPEC §8.7: a focus and a message are one non-empty line
+const isOneLine = (value: unknown): value is string =>
+  typeof value === 'string' && value !== '' && !Array.from(value).some(isControl);
+
 const isLineRange = (value: unknown): value is LineRange =>
   isObject(value) &&
   Number.isInteger(value['start']) &&
@@ -102,7 +113,28 @@ const isLineRange = (value: unknown): value is LineRange =>
   (value['start'] as number) >= 1 &&
   (value['end'] as number) >= (value['start'] as number);
 
-// SPEC §8.7: the host's error text never reaches a message (§5.5)
+// SPEC §8.7: what a plugin returned, read once so that a getter or a proxy is never called twice
+interface Raw {
+  readonly promised: boolean;
+  readonly parts: unknown;
+  readonly diagnostics: unknown;
+}
+
+function readRaw(result: unknown): Raw {
+  const member = (name: string): unknown => {
+    const value = isObject(result) ? result[name] : undefined;
+    if (!Array.isArray(value)) return value;
+    return Array.from(value as unknown[], (item) => (isObject(item) ? { ...item } : item));
+  };
+  return {
+    promised: isObject(result) && typeof result['then'] === 'function',
+    parts: member('parts'),
+    diagnostics: member('diagnostics'),
+  };
+}
+
+// SPEC §8.7: the Parts and the warnings of a selector, or a Raised; the host's error text never
+// reaches a message (§5.5)
 export function runExtract(plugin: DocstampPlugin, input: ExtractInput): Extracted {
   const fail = (why: string): never => {
     const message = `Plugin "${plugin.name}" ${why} for "${input.path}".`;
@@ -114,23 +146,13 @@ export function runExtract(plugin: DocstampPlugin, input: ExtractInput): Extract
   } catch {
     return fail('threw');
   }
-  let promised: boolean;
-  let hashes: unknown;
-  let focus: unknown;
-  let lines: unknown;
+  let raw: Raw;
   try {
-    promised = isObject(result) && typeof result['then'] === 'function';
-    const read = (name: string): unknown => {
-      const member = isObject(result) ? result[name] : undefined;
-      return Array.isArray(member) ? Array.from(member as unknown[]) : member;
-    };
-    hashes = read('hashes');
-    focus = read('focus');
-    lines = read('lines');
+    raw = readRaw(result);
   } catch {
     return fail('returned a value that could not be read');
   }
-  if (promised) {
+  if (raw.promised) {
     try {
       (result as PromiseLike<unknown>).then(undefined, () => {});
     } catch {
@@ -138,25 +160,51 @@ export function runExtract(plugin: DocstampPlugin, input: ExtractInput): Extract
     }
     return fail('returned a promise; extract must be synchronous');
   }
-  if (!Array.isArray(hashes)) return fail('did not return { hashes: string[] }');
-  if (!hashes.every((hash) => typeof hash === 'string' && hash !== '')) {
-    return fail('returned a hash that is not a non-empty string');
+  if (!isObject(result)) return fail('did not return { parts, diagnostics }');
+  const parts = raw.parts === undefined ? [] : raw.parts;
+  const reported = raw.diagnostics === undefined ? [] : raw.diagnostics;
+  if (!Array.isArray(parts)) return fail('returned parts that are not a list');
+  if (!Array.isArray(reported) || reported.length > MAX_DIAGNOSTICS) {
+    return fail(`returned diagnostics that are not a list of at most ${MAX_DIAGNOSTICS}`);
   }
-  const same = (list: unknown[]) => list.length === hashes.length;
-  if (
-    focus !== undefined &&
-    !(Array.isArray(focus) && same(focus) && focus.every((f) => typeof f === 'string' && f !== ''))
-  ) {
-    return fail('returned a focus that is not one non-empty string per hash');
+  const checked: Part[] = parts.map((part: unknown) => {
+    if (!isObject(part) || typeof part['content'] !== 'string' || !part['content'].isWellFormed()) {
+      return fail('returned a part whose content is not a well-formed string');
+    }
+    const { content, focus, lines } = part as {
+      content: string;
+      focus?: unknown;
+      lines?: unknown;
+    };
+    if (focus !== undefined && !isOneLine(focus)) {
+      return fail('returned a focus that is not one non-empty line');
+    }
+    if (lines !== undefined && !isLineRange(lines)) {
+      return fail('returned lines that are not { start, end } with 1 <= start <= end');
+    }
+    return {
+      content,
+      ...(focus === undefined ? {} : { focus }),
+      ...(lines === undefined ? {} : { lines: { start: lines.start, end: lines.end } }),
+    };
+  });
+  const subject = `${input.path}#${canonicalJson(input.select)}`;
+  const diagnostics = reported.map((item: unknown) => {
+    if (
+      !isObject(item) ||
+      (item['severity'] !== 'error' && item['severity'] !== 'warning') ||
+      !isOneLine(item['message'])
+    ) {
+      return fail('returned a diagnostic that is not { severity, message } of one line');
+    }
+    const code = item['severity'] === 'error' ? 'E_SELECT' : 'W_SELECT';
+    return diag(code, { subject, message: item['message'] });
+  });
+  const errors = diagnostics.filter((d) => d.severity === 'error');
+  const warnings = diagnostics.filter((d) => d.severity === 'warning');
+  if (errors.length > 0) throw new Raised([...errors, ...warnings]);
+  if (checked.length === 0) {
+    throw new Raised([diag('E_SELECT_NOT_FOUND', { subject }), ...warnings]);
   }
-  if (lines !== undefined && !(Array.isArray(lines) && same(lines) && lines.every(isLineRange))) {
-    return fail('returned lines that are not one { start, end } per hash');
-  }
-  return {
-    hashes: hashes as string[],
-    ...(focus === undefined ? {} : { focus: focus as string[] }),
-    ...(lines === undefined
-      ? {}
-      : { lines: (lines as LineRange[]).map(({ start, end }) => ({ start, end })) }),
-  };
+  return { parts: checked, warnings };
 }

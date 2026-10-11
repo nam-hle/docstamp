@@ -43,9 +43,10 @@ and `files` « `**/*.js`, `**/*.mjs`, `**/*.cjs`, `**/*.jsx`, `**/*.ts`, `**/*.m
 5. Raise unless *kind* is *none* or one of `function`, `class`, `interface`, `type`, `enum`,
    `variable`, `namespace`, and *part* is `shape` or `source`.
 
-NOTE: A selector that raises is reported by docstamp as `E_SELECT` (the plugin threw). A valid selector
-that matches nothing is `E_SELECT_NOT_FOUND`; one that matches more than one Group is
-`E_SELECT_AMBIGUOUS`.
+NOTE: A selector that raises, and a file that does not parse, are returned as `{ diagnostics: « d » }`,
+*d* an `error` whose message says what is wrong; docstamp reports it as `E_SELECT` (SPEC §8.7). A
+valid selector that matches nothing returns `{ }`, which docstamp reports as `E_SELECT_NOT_FOUND`;
+one that matches more than one Group is an `error` as well (§8).
 
 ## 5 Parsing
 
@@ -119,18 +120,21 @@ modifier, decorator or `export` is a change; a changed body is not.
 
 ## 8 Extract
 
-`Extract({ path, text, select })` returns { `hashes`, `focus`, `lines` }:
+`Extract({ path, text, select })` returns { `parts`, `diagnostics` }:
 
-1. Let *selector* be ? `ParseSelector(select)` and *statements* be ? `Parse(path, text)`.
+1. Let *selector* be ? `ParseSelector(select)` and *statements* be ? `Parse(path, text)`; where
+   either raises, return the `error` of §4 NOTE.
 2. Let *groups* be the Groups of `Declarations(statements)` (§6).
 3. Let *matches* be the Groups whose Declarations have `[[Name]]` equal to `selector.[[Name]]` and,
    unless `selector.[[Kind]]` is *none*, `[[Kind]]` equal to it.
-4. Return `hashes`, the List, in source order, of the lower-case hexadecimal SHA-256 of the UTF-8
-   encoding of `Source` (when `selector.[[Part]]` is `source`) or of `Shape` (when it is `shape`) of each
-   match; and, when there is a match, `focus`, the List of the Strings `<kind> <name> (<part>)` of the
-   matches (`function createUser (shape)`), and `lines`, the List of { `start`, `end` } of the matches:
-   the line where the first Statement of the Group starts and the line where its last Statement ends,
-   counted in *text* (CR LF read as LF).
+4. If *matches* is empty, return `{ }`. If it has more than one Group, return
+   `{ diagnostics: « d » }`, *d* an `error` whose message names the kind and the line of each Group
+   and says to add a `kind` or to rename one of them.
+5. Otherwise return `{ parts: « p » }`, *p* the Part { `content`: `Source` (when `selector.[[Part]]`
+   is `source`) or `Shape` (when it is `shape`) of the match, `focus`: `<kind> <name> (<part>)`
+   (`function createUser (shape)`), `lines`: { `start`, `end` } }, `start` the line where the
+   first Statement of the Group starts and `end` the line where its last Statement ends, counted in
+   *text* (CR LF read as LF).
 
 NOTE: `focus` and `lines` are advisory: docstamp prints them in its changed-file report and never
 hashes them, so they are not part of the compatibility of §9.

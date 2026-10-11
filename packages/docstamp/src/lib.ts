@@ -2,7 +2,14 @@ import type { Json } from './core/types.ts';
 import type { DocstampPlugin } from './plugin/types.ts';
 
 export type { Json } from './core/types.ts';
-export type { DocstampPlugin, ExtractInput, ExtractResult } from './plugin/types.ts';
+export type {
+  DocstampPlugin,
+  ExtractInput,
+  ExtractResult,
+  LineRange,
+  Part,
+  PluginDiagnostic,
+} from './plugin/types.ts';
 
 // SPEC §8.7
 export interface SelectedDependency {

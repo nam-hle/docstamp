@@ -6,6 +6,7 @@ import type { Diagnostic } from '../../src/core/types.ts';
 import { builtinPlugins } from '../../src/plugin/builtin.ts';
 import { canonicalJson } from '../../src/plugin/canonical.ts';
 import { claim, runExtract, validatePlugins } from '../../src/plugin/plugins.ts';
+import type { ExtractResult } from '../../src/plugin/types.ts';
 
 const raised = (run: () => unknown): Diagnostic[] => {
   try {
@@ -20,10 +21,18 @@ const raised = (run: () => unknown): Diagnostic[] => {
 const sha = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
 
 const [json, yaml] = builtinPlugins;
-const jsonHashes = (text: string, select: unknown, path = 'a.json') =>
-  json!.extract({ path, text, select: select as never }).hashes;
-const yamlHashes = (text: string, select: unknown, path = 'a.yaml') =>
-  yaml!.extract({ path, text, select: select as never }).hashes;
+const hashesOf = (result: ExtractResult): string[] =>
+  (result.parts ?? []).map((part) => sha(part.content));
+const jsonResult = (text: string, select: unknown, path = 'a.json') =>
+  json!.extract({ path, text, select: select as never });
+const yamlResult = (text: string, select: unknown, path = 'a.yaml') =>
+  yaml!.extract({ path, text, select: select as never });
+const jsonHashes = (text: string, select: unknown) => hashesOf(jsonResult(text, select));
+const yamlHashes = (text: string, select: unknown) => hashesOf(yamlResult(text, select));
+const errorOf = (result: ExtractResult): string | undefined => {
+  const [first] = result.diagnostics ?? [];
+  return first?.severity === 'error' ? first.message : undefined;
+};
 
 describe('§8.8 Builtin Plugins', () => {
   it('are docstamp-json and docstamp-yaml, apiVersion 1', () => {
@@ -55,7 +64,7 @@ describe('§8.7 claim falls back to the builtins', () => {
         name: 'pkg',
         apiVersion: 1,
         files: ['package.json'],
-        extract: () => ({ hashes: ['x'] }),
+        extract: () => ({ parts: [{ content: 'x' }] }),
       },
     ])[0]!;
     expect(claim([custom], 'package.json')).toBe(custom);
@@ -96,7 +105,7 @@ describe('§8.8 Extract: the Value Path', () => {
     expect(jsonHashes(text, 'scripts')).toEqual(hash({ build: 'tsc', test: 'vitest' }));
   });
 
-  it('returns no hash for a path that is not there', () => {
+  it('returns no part for a path that is not there', () => {
     for (const select of ['missing', 'scripts.lint', 'items.2', 'items.01', 'items.x', 'flag.x']) {
       expect(jsonHashes(text, select)).toEqual([]);
     }
@@ -107,7 +116,7 @@ describe('§8.8 Extract: the Value Path', () => {
     expect(jsonHashes(text, 'toString')).toEqual([]);
   });
 
-  it('throws for a select that is not a Value Path', () => {
+  it('reports an error for a select that is not a Value Path', () => {
     for (const select of [
       '',
       '.a',
@@ -122,7 +131,7 @@ describe('§8.8 Extract: the Value Path', () => {
       {},
       ['a'],
     ]) {
-      expect(() => jsonHashes(text, select), JSON.stringify(select)).toThrow();
+      expect(errorOf(jsonResult(text, select)), JSON.stringify(select)).toContain('Value Path');
     }
   });
 });
@@ -138,10 +147,10 @@ describe('§8.8 Extract: json', () => {
     expect(jsonHashes('{"a":1,"a":2}', 'a')).toEqual(jsonHashes('{"a":2}', 'a'));
   });
 
-  it('throws on text that is not JSON', () => {
-    expect(() => jsonHashes('{"a":', 'a')).toThrow();
-    expect(() => jsonHashes('{"a":1,}', 'a')).toThrow();
-    expect(() => jsonHashes('', 'a')).toThrow();
+  it('reports an error for text that is not JSON', () => {
+    for (const text of ['{"a":', '{"a":1,}', '']) {
+      expect(errorOf(jsonResult(text, 'a')), text).toContain('not one valid JSON');
+    }
   });
 });
 
@@ -182,17 +191,16 @@ describe('§8.8 Extract: yaml', () => {
     expect(yamlHashes('a: "1"\n', 'a')).not.toEqual(yamlHashes('a: 1\n', 'a'));
   });
 
-  it('throws on a YAML error or warning, and on more than one document', () => {
-    expect(() => yamlHashes('a: 1\na: 2\n', 'a')).toThrow();
-    expect(() => yamlHashes('a: *missing\n', 'a')).toThrow();
-    expect(() => yamlHashes('a: [1\n', 'a')).toThrow();
-    expect(() => yamlHashes('a: 1\n---\na: 2\n', 'a')).toThrow();
+  it('reports an error for a YAML error or warning, and for more than one document', () => {
+    for (const text of ['a: 1\na: 2\n', 'a: *missing\n', 'a: [1\n', 'a: 1\n---\na: 2\n']) {
+      expect(errorOf(yamlResult(text, 'a')), text).toContain('not one valid YAML');
+    }
   });
 
-  it('throws on a selected value that is not finite or not plain', () => {
-    expect(() => yamlHashes('a: .inf\n', 'a')).toThrow();
-    expect(() => yamlHashes('a: .nan\n', 'a')).toThrow();
-    expect(() => yamlHashes('a: !!binary aGk=\n', 'a')).toThrow();
+  it('reports an error for a selected value that is not finite or not plain', () => {
+    for (const text of ['a: .inf\n', 'a: .nan\n', 'a: !!binary aGk=\n']) {
+      expect(errorOf(yamlResult(text, 'a')), text).toContain('not plain data');
+    }
   });
 
   it('finds nothing in an empty document', () => {
@@ -201,35 +209,44 @@ describe('§8.8 Extract: yaml', () => {
 });
 
 describe('§8.7 runExtract with a builtin', () => {
-  it('turns a throw into E_SELECT', () => {
+  it('turns the error of a builtin into E_SELECT, worded by the plugin', () => {
     const [diagnostic] = raised(() =>
       runExtract(json!, { path: 'a.json', text: '{', select: 'a' }),
     );
     expect(diagnostic?.code).toBe('E_SELECT');
+    expect(diagnostic?.subject).toBe('a.json#"a"');
+    expect(diagnostic?.message).toContain('not one valid JSON');
+  });
+
+  it('turns no part into E_SELECT_NOT_FOUND', () => {
+    const [diagnostic] = raised(() =>
+      runExtract(json!, { path: 'a.json', text: '{}', select: 'a' }),
+    );
+    expect(diagnostic?.code).toBe('E_SELECT_NOT_FOUND');
   });
 });
 
 describe('§8.8 Extract: focus', () => {
   const focus = (text: string, select: string) =>
-    json!.extract({ path: 'a.json', text, select }).focus;
+    json!.extract({ path: 'a.json', text, select }).parts?.[0]?.focus;
 
   it('names the value path and the type of the value', () => {
     const text = '{"s":"x","n":1,"b":true,"z":null,"l":[1],"o":{"k":1}}';
-    expect(focus(text, 's')).toEqual(['s (string)']);
-    expect(focus(text, 'n')).toEqual(['n (number)']);
-    expect(focus(text, 'b')).toEqual(['b (boolean)']);
-    expect(focus(text, 'z')).toEqual(['z (null)']);
-    expect(focus(text, 'l')).toEqual(['l (list)']);
-    expect(focus(text, 'o')).toEqual(['o (object)']);
+    expect(focus(text, 's')).toBe('s (string)');
+    expect(focus(text, 'n')).toBe('n (number)');
+    expect(focus(text, 'b')).toBe('b (boolean)');
+    expect(focus(text, 'z')).toBe('z (null)');
+    expect(focus(text, 'l')).toBe('l (list)');
+    expect(focus(text, 'o')).toBe('o (object)');
   });
 
   it('is the same for yaml', () => {
-    expect(yaml!.extract({ path: 'a.yaml', text: 'a:\n  b: 1\n', select: 'a.b' }).focus).toEqual([
-      'a.b (number)',
-    ]);
+    expect(
+      yaml!.extract({ path: 'a.yaml', text: 'a:\n  b: 1\n', select: 'a.b' }).parts?.[0]?.focus,
+    ).toBe('a.b (number)');
   });
 
-  it('gives none for a path that is not there', () => {
-    expect(json!.extract({ path: 'a.json', text: '{}', select: 'x' })).toEqual({ hashes: [] });
+  it('gives no part for a path that is not there', () => {
+    expect(json!.extract({ path: 'a.json', text: '{}', select: 'x' })).toEqual({});
   });
 });
