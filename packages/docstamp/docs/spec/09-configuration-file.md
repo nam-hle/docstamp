@@ -171,7 +171,13 @@ raises `E_FILE_MISSING`.
 
 1. Evaluate the file at *path*, synchronously, as a module of the host runtime. If it cannot be
    loaded, if evaluation throws, or if evaluation is asynchronous (top-level `await`), raise
-   « `E_CONFIG` ».
+   « `E_CONFIG` » with `[[File]]` the file's name and the message `The script cannot be loaded: <cause>.` The
+   cause is stable text, never the runtime's: for a specifier the module imports and the runtime
+   cannot resolve (not an absolute path or a `file:` URL), `it imports "<specifier>", which cannot be
+   resolved`; for a package path it does not export, `it imports "<package>", which does not
+   export that path`; otherwise `evaluation
+   threw <name>`, *name* being the `name` of the thrown Error (`a value` for anything else). The
+   message holds no absolute path and no stack.
 2. Let *exports* be the module's exports. If *exports* is an ECMAScript module namespace whose
    `default` export is absent, `undefined` or Null, raise « `E_CONFIG` »; its message says to
    use `export default`, and that a CommonJS `module.exports` value is accepted. Otherwise let
