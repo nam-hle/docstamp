@@ -10,7 +10,16 @@ export interface Selector {
 }
 
 const KEYS = new Set(['name', 'kind', 'part']);
-const BLANKS = /^[ \t]+|[ \t]+$/gu;
+const isBlank = (character: string | undefined): boolean => character === ' ' || character === '\t';
+
+// SPEC §4: leading and trailing U+0020 and U+0009, in one linear pass
+function trimBlanks(text: string): string {
+  let start = 0;
+  let end = text.length;
+  while (start < end && isBlank(text[start])) start += 1;
+  while (end > start && isBlank(text[end - 1])) end -= 1;
+  return text.slice(start, end);
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -22,7 +31,7 @@ export function parseSelector(value: unknown): Selector {
     throw new Error('The selector is a name or { name, kind?, part? }.');
   }
   const { name, kind, part = 'shape' } = form;
-  if (typeof name !== 'string' || name.replaceAll(BLANKS, '') === '') {
+  if (typeof name !== 'string' || trimBlanks(name) === '') {
     throw new Error('The selector needs a non-empty name.');
   }
   if (kind !== undefined && !(KINDS as readonly unknown[]).includes(kind)) {
@@ -32,7 +41,7 @@ export function parseSelector(value: unknown): Selector {
     throw new Error('The part of a selector is shape or source.');
   }
   return {
-    name: name.replaceAll(BLANKS, ''),
+    name: trimBlanks(name),
     kind: kind as Kind | undefined,
     part,
   };

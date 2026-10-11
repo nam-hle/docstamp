@@ -499,3 +499,13 @@ describe('§8.1 ValidateSelect and codes', () => {
     expect(codeOf('function abc() {}\ninterface abc { x: 1 }\n', 'abc')).toBe('ambiguous-name');
   });
 });
+
+describe('§4 Selector: a long run of blanks', () => {
+  const tabs = '\t'.repeat(200_000);
+
+  it('is trimmed in linear time and rejected when it is all blanks', () => {
+    expect(plugin.validateSelect(tabs as never).diagnostics).toHaveLength(1);
+    expect(plugin.validateSelect(`${tabs}a${tabs}x${tabs}` as never)).toEqual({});
+    expect(plugin.validateSelect(`${tabs}!` as never)).toEqual({});
+  });
+});
