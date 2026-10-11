@@ -21,6 +21,8 @@ it is bound to that code in `docstamp.yaml`, so a change reviews only the parts 
 - Behavior changes start in the spec, then code and tests follow in the same change.
 - Code that implements an algorithm cites its clause (`// §8.4`). Tests are named by clause
   (`describe('§12.1 Evaluate', ...)`).
+- `tests/unit/spec-coverage.test.ts` fails when a clause has no cite in `src/` and no test named by
+  it; a prose-only clause goes in its short allow-list with a reason.
 - A behavior the spec does not define is a spec gap: fix the spec, do not invent behavior in code.
 - Design rationale lives in [docs/VISION.md](docs/VISION.md) and
   [docs/PRINCIPLES.md](docs/PRINCIPLES.md). Working plans and scratch design notes are not
