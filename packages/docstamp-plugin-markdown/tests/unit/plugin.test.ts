@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import plugin from '../../src/index.ts';
+import { parseSelect } from '../../src/parse-select.ts';
 
 const sha = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex');
 
@@ -286,5 +287,39 @@ describe('§4 Selector: a long run of blanks', () => {
     expect(plugin.extract({ path: 'a.md', text: '# a\n', select: ` \t a \t ` }).parts).toHaveLength(
       1,
     );
+  });
+});
+
+describe('§4.1 ParseSelect', () => {
+  it.each([
+    ['Install', 'Install'],
+    ['Q&A, part 2 = 3', 'Q&A, part 2 = 3'],
+    ['#tag', '#tag'],
+    ['#', '#'],
+    ['a # b', 'a # b'],
+    ['## Install', { heading: 'Install', level: 2 }],
+    ['#\tInstall', { heading: 'Install', level: 1 }],
+    ['###### Six', { heading: 'Six', level: 6 }],
+    ['##   Install  ', { heading: 'Install', level: 2 }],
+    ['## # x', { heading: '# x', level: 2 }],
+  ])('reads %j as %j', (raw, select) => {
+    expect(parseSelect(raw)).toEqual({ select });
+  });
+
+  it.each([['####### Seven'], ['## '], ['#\t \t']])('refuses %j with a code', (raw) => {
+    const [found, ...rest] = parseSelect(raw).diagnostics ?? [];
+    expect(rest).toEqual([]);
+    expect(found).toMatchObject({ severity: 'error', code: 'invalid-selector' });
+    expect(found!.message).not.toMatch(/\p{Cc}/u);
+  });
+
+  it('reads a long run of # and of blanks in linear time', () => {
+    expect(parseSelect('#'.repeat(200_000))).toEqual({ select: '#'.repeat(200_000) });
+    expect(parseSelect(`# ${' '.repeat(200_000)}a`)).toMatchObject({ select: { level: 1 } });
+  });
+
+  it('gives the plugin a schema for the String and the object forms', () => {
+    expect(plugin.meta.schema).toMatchObject({ type: ['string', 'object'] });
+    expect(plugin.parseSelect).toBe(parseSelect);
   });
 });
