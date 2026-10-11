@@ -2,6 +2,7 @@ import { comparePaths } from '../core/order.ts';
 import type { Change, FragmentChange, Result } from '../core/types.ts';
 import type { Git, RawChange } from '../host/git.ts';
 import { fragmentChanges, type FragmentProbe } from './fragments.ts';
+import { splitDependency } from '../pattern/split.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
 import { parseBlock } from '../inline/block.ts';
 import { recordedHash as inlineHash, scanFrontmatter } from '../inline/frontmatter.ts';
@@ -90,7 +91,8 @@ export function configuredOwnList(text: string, file: string): OwnList | null {
   const files = isYamlMap(top) ? top.entries.get('files')?.value : undefined;
   const entry = isYamlMap(files) ? files.entries.get(file)?.value : undefined;
   if (!isYamlMap(entry)) return null;
-  const dependencies = strings(entry.entries.get('dependencies')?.value);
+  const listed = strings(entry.entries.get('dependencies')?.value);
+  const dependencies = listed?.filter((item) => splitDependency(item) === null) ?? null;
   if (dependencies === null || dependencies.length === 0) return null;
   const use = entry.entries.get('use');
   return { dependencies, use: use === undefined ? undefined : (strings(use.value) ?? []) };

@@ -333,7 +333,7 @@ prefix, before a `/`, of some path of *U*.
    return it in NFC. The *candidates* are the `NormalizeWord` of every span word and of every bare
    word, and the `NormalizeLink` of every link target, that are not *none*, without duplicates.
 6. *Classification.* A candidate with none of `*`, `?`, `[`, `{` is *literal*; it is dropped unless
-   it is a valid Pattern without Negation that denotes itself (§8.5 NOTE). A literal candidate is a
+   it is a valid Pattern without Negation that denotes itself (§8.5 NOTE) and that `SplitDependency` (§8.7) does not split. A literal candidate is a
    *file* if it is in *U*, else a *directory* if it is one, else it is added to *ignored* if
    *isIgnored* holds for it and it is not *doc*, else dropped. Any other candidate is a *glob*: it
    is dropped unless it is a valid Pattern without Negation with a Literal in some segment (so `*` and
@@ -401,7 +401,8 @@ exclusion also trims the test files of the other inclusions; a test file the doc
 listed after it. The notion of a test file is the one of step 9: a name with `.test.` or `.spec.`,
 or a path through `__test__` or `__tests__`; a file under a `test` or `tests` directory with
 neither is not excluded. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern
-as written and is dropped.
+as written and is dropped, and so is one with a `:` (written `\:` it would be a Pattern, but a
+mention of it is not proposed).
 
 ### 12.7 Renamed Path
 

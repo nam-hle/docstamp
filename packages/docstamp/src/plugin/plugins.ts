@@ -11,8 +11,10 @@ import type {
   DocstampPlugin,
   ExtractInput,
   ExtractResult,
+  FieldType,
   LineRange,
   Part,
+  SelectorFields,
   ValidateSelectResult,
 } from './types.ts';
 
@@ -52,9 +54,37 @@ export function validatePlugins(raw: unknown): DocstampPlugin[] {
   });
 }
 
+const isFieldType = (type: unknown): type is FieldType =>
+  type === 'string' ||
+  type === 'integer' ||
+  (Array.isArray(type) &&
+    type.length > 0 &&
+    (type as unknown[]).every((item) => typeof item === 'string'));
+
+// SPEC §8.7: read once into plain data, so a getter or a proxy is never called again
+function readSelectorFields(raw: unknown, name: string): SelectorFields {
+  const message = `Plugin "${name}" has a "selectorFields" that is not { main, fields }: fields maps each name to "string", "integer" or a non-empty list of strings, and fields[main] is "string".`;
+  if (!isObject(raw) || typeof raw['main'] !== 'string' || !isObject(raw['fields'])) {
+    return bad(name, message);
+  }
+  const main = raw['main'];
+  const fields = Object.fromEntries(
+    Object.entries(raw['fields']).map(([field, type]) => [
+      field,
+      isFieldType(type)
+        ? Array.isArray(type)
+          ? [...(type as string[])]
+          : type
+        : bad(name, message),
+    ]),
+  );
+  if (fields[main] !== 'string') return bad(name, message);
+  return { main, fields };
+}
+
 function validateEntry(entry: unknown, label: string, names: Set<string>): DocstampPlugin {
   if (!isObject(entry)) return bad(label, 'A plugin must be an object.');
-  const { name, apiVersion, files, extract, validateSelect } = entry;
+  const { name, apiVersion, files, extract, validateSelect, selectorFields } = entry;
   if (typeof name !== 'string' || name === '') return bad(label, 'A plugin needs a "name".');
   if (apiVersion !== 1) {
     return bad(
@@ -76,6 +106,8 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
     return bad(name, `Plugin "${name}" has a "validateSelect" that is not a function.`);
   }
   if (names.has(name)) return bad(name, `Two plugins are named "${name}"; names must be unique.`);
+  const fields =
+    selectorFields === undefined ? undefined : readSelectorFields(selectorFields, name);
   names.add(name);
   // read once: later calls never touch a getter of the user object again
   const snapshot = [...(patterns as string[])];
@@ -83,6 +115,7 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
     name,
     apiVersion: 1,
     files: snapshot,
+    ...(fields === undefined ? {} : { selectorFields: fields }),
     extract: (input) => Reflect.apply(extract, entry, [input]) as ExtractResult,
     ...(validateSelect === undefined
       ? {}

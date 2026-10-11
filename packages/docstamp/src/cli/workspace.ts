@@ -1,4 +1,5 @@
 import { readConfig } from '../config/read-config.ts';
+import { resolveShorthands } from '../config/shorthand.ts';
 import { Raised, diag } from '../core/diagnostics.ts';
 import { comparePaths } from '../core/order.ts';
 import type { Declaration, Diagnostic } from '../core/types.ts';
@@ -43,15 +44,22 @@ export function loadWorkspace(host: Host, root: string): Workspace {
       return d;
     }
   });
+  const unresolved: Diagnostic[] = [];
+  const resolved = declarations.map((d) => {
+    const result = resolveShorthands(d, plugins);
+    unresolved.push(...result.problems);
+    return result.declaration;
+  });
   return {
     universe,
     presets: config.presets,
     defaultPresets: config.defaultPresets,
     plugins,
-    declarations,
+    declarations: resolved,
     attached: [
       ...attached,
       ...unknownPresets,
+      ...unresolved,
       ...inline.attached.filter((d) => !duplicates.has(d.file)),
       ...[...duplicates].map((file) => diag('E_DUPLICATE_DECLARATION', { file })),
     ],

@@ -37,10 +37,19 @@ export interface ValidateSelectResult {
   readonly diagnostics?: readonly PluginDiagnostic[];
 }
 
+// SPEC §8.7: `main` is the field a bare value stands for; it is a `string` field
+export type FieldType = 'string' | 'integer' | readonly string[];
+
+export interface SelectorFields {
+  readonly main: string;
+  readonly fields: Readonly<Record<string, FieldType>>;
+}
+
 export interface DocstampPlugin {
   readonly name: string;
   readonly apiVersion: 1;
   readonly files: readonly string[];
+  readonly selectorFields?: SelectorFields;
   extract(input: ExtractInput): ExtractResult;
   validateSelect?(select: Json): ValidateSelectResult;
 }

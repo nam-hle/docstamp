@@ -1,0 +1,5 @@
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_PLUGIN: headings: Plugin "headings" has a "selectorFields" that is not { main, fields }: fields maps each name to "string", "integer" or a non-empty list of strings, and fields[main] is "string".

@@ -202,6 +202,10 @@ describe('§12.6 Proposal', () => {
       const universe = tree('docs/only.md', 'src/a.ts');
       expect(patterns('`docs` `src`', { doc: 'docs/only.md', universe })).toEqual(['src']);
     });
+    it('a path with a ":" is dropped: written bare it would be a Shorthand (§8.7)', () => {
+      const universe = tree('src/a.ts', 'src/x:y.ts');
+      expect(patterns('`src/a.ts` `src/x:y.ts` `src/*:y.ts`', { universe })).toEqual(['src/a.ts']);
+    });
     it('the doc itself is never proposed', () => {
       expect(patterns('`README.md` and `./README.md`')).toEqual([]);
     });

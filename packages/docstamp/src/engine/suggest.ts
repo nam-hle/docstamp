@@ -1,3 +1,4 @@
+import { splitDependency } from '../pattern/split.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
 import { patternMatches, select } from '../pattern/match.ts';
 import { literalPath, parsePattern, type ParsedPattern } from '../pattern/parse.ts';
@@ -75,7 +76,7 @@ const SMALL_DIRECTORY = 5;
 const GLOB_CHARS = /[*?[{]/u;
 const parentOf = (path: string): string => path.slice(0, Math.max(0, path.lastIndexOf('/')));
 const parsed = (source: string): ParsedPattern | null => {
-  const pattern = parsePattern(source);
+  const pattern = splitDependency(source) === null ? parsePattern(source) : null;
   return pattern !== null && !pattern.negated ? pattern : null;
 };
 const isLiteral = (source: string): boolean => {

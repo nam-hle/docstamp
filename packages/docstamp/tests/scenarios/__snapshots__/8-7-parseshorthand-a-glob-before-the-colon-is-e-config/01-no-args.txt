@@ -1,0 +1,5 @@
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: CLAUDE.md: dependencies: A selected dependency written path:selector needs a literal file path before the first ":": escape a glob character of the name with "\" (as in "a\*b.md") and a ":" of the name as "\:".
