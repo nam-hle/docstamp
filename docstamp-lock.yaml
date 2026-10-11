@@ -1,6 +1,6 @@
 version: 3
 files:
-  "CLAUDE.md": 7383c74d710d93afe7fb2413d166fbc3bb0c8a98a16aada33e80feaa9556c987
+  "CLAUDE.md": 4065d88a4369384159a3e61c6fc1535c7569b3baba8c8115bb53dc5be37c5998
   "README.md": 5b9dc32c29cd41fe73c8ef4a71386baf0ce8dea7c1aa5c6d801959a0e5e041bb
   "packages/docstamp-plugin-js/README.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-js/SPEC.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
@@ -8,8 +8,8 @@ files:
   "packages/docstamp-plugin-markdown/SPEC.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
   "packages/docstamp/README.md": 02efeadd0f578bd5761f055f644796f1fbc4daeae0efe2f3021212a49b857da4
   "packages/docstamp/docs/spec/05-records.md": 33b70047eb390d77e967172d1039ae9b4993bddea1c4318e52b98584cad83628
-  "packages/docstamp/docs/spec/06-root.md": f9922b5c302f922ca2d4ea4453000d0c35df7e192c23b96bab047454a59cc096
-  "packages/docstamp/docs/spec/07-universe.md": f9922b5c302f922ca2d4ea4453000d0c35df7e192c23b96bab047454a59cc096
+  "packages/docstamp/docs/spec/06-root.md": dc6638d94fd9cd5d4bb557c57f8252d222d2ededa40e7bc483fcd1959dc1b7f9
+  "packages/docstamp/docs/spec/07-universe.md": dc6638d94fd9cd5d4bb557c57f8252d222d2ededa40e7bc483fcd1959dc1b7f9
   "packages/docstamp/docs/spec/08-patterns.md": 17d0bead596bd04dc2b32138759e63cdddc2aea6e7941a667e96cee439a7939d
   "packages/docstamp/docs/spec/09-configuration-file.md": f8b12a0218c17305acf00777f222099917cdf5c6f6f0b16d782e79d2c0615728
   "packages/docstamp/docs/spec/10-hashing.md": 55e5ec4ebbcffc5a75896cbf2dbb202623b55d2af8f29fcc5a980c67d2ad2314
