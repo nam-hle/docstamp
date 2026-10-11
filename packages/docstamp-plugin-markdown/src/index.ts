@@ -1,4 +1,11 @@
-import type { DocstampPlugin, ExtractInput, ExtractResult, Part } from 'docstamp';
+import type {
+  DocstampPlugin,
+  ExtractInput,
+  ExtractResult,
+  Json,
+  Part,
+  ValidateSelectResult,
+} from 'docstamp';
 
 import { parseSelector, type Selector } from './selector.ts';
 import { body, headings, sectionEnd } from './sections.ts';
@@ -8,8 +15,8 @@ const countLines = (text: string): number => text.split('\n').length - 1;
 // the 1-based line of the character at `offset` in `source`
 const lineAt = (source: string, offset: number): number => 1 + countLines(source.slice(0, offset));
 
-const problem = (message: string): ExtractResult => ({
-  diagnostics: [{ severity: 'error', message }],
+const problem = (code: string, message: string): ExtractResult => ({
+  diagnostics: [{ severity: 'error', code, message }],
 });
 
 // SPEC §8.7: a focus is one line
@@ -29,7 +36,7 @@ function extract({ text, select }: ExtractInput): ExtractResult {
   try {
     selector = parseSelector(select);
   } catch {
-    return problem(BAD_SELECTOR);
+    return problem('invalid-selector', BAD_SELECTOR);
   }
   const stripped = body(text);
   const source = stripped.replaceAll('\r\n', '\n');
@@ -53,11 +60,22 @@ function extract({ text, select }: ExtractInput): ExtractResult {
   if (found.length > 1) {
     const where = found.map((part) => part.lines!.start).join(', ');
     return problem(
+      'ambiguous-heading',
       `The heading "${oneLine(selector.heading)}" appears at lines ${where}; ` +
         'add a level to the selector, or rename one of them.',
     );
   }
   return { parts: found };
+}
+
+// SPEC §6.1
+function validateSelect(select: Json): ValidateSelectResult {
+  try {
+    parseSelector(select);
+    return {};
+  } catch {
+    return problem('invalid-selector', BAD_SELECTOR);
+  }
 }
 
 // SPEC §3
@@ -66,6 +84,7 @@ const plugin = {
   apiVersion: 1,
   files: ['**/*.md', '**/*.markdown'],
   extract,
+  validateSelect,
 } satisfies DocstampPlugin;
 
 export default plugin;

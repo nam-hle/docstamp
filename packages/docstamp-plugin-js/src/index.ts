@@ -1,4 +1,11 @@
-import type { DocstampPlugin, ExtractInput, ExtractResult, Part } from 'docstamp';
+import type {
+  DocstampPlugin,
+  ExtractInput,
+  ExtractResult,
+  Json,
+  Part,
+  ValidateSelectResult,
+} from 'docstamp';
 
 import { declarations, groups } from './declarations.ts';
 import { parseFile } from './parse.ts';
@@ -8,8 +15,8 @@ import { shapeOf, sourceOf } from './shape.ts';
 const lineAt = (source: string, offset: number): number =>
   source.slice(0, offset).split('\n').length;
 
-const problem = (message: string): ExtractResult => ({
-  diagnostics: [{ severity: 'error', message }],
+const problem = (code: string, message: string): ExtractResult => ({
+  diagnostics: [{ severity: 'error', code, message }],
 });
 
 const BAD_SELECTOR =
@@ -23,13 +30,14 @@ function extract({ path, text, select }: ExtractInput): ExtractResult {
   try {
     selector = parseSelector(select);
   } catch {
-    return problem(BAD_SELECTOR);
+    return problem('invalid-selector', BAD_SELECTOR);
   }
   let parsed: ReturnType<typeof parseFile>;
   try {
     parsed = parseFile(path, text);
   } catch {
     return problem(
+      'unparsable-file',
       `The file ${path} could not be parsed as JavaScript or TypeScript; fix its syntax.`,
     );
   }
@@ -51,11 +59,22 @@ function extract({ path, text, select }: ExtractInput): ExtractResult {
   if (found.length > 1) {
     const where = found.map(({ part, kind }) => `${kind} at line ${part.lines!.start}`).join(', ');
     return problem(
+      'ambiguous-name',
       `The name "${selector.name}" matches ${found.length} declarations (${where}); ` +
         'add a kind to the selector, or rename one of them.',
     );
   }
   return { parts: [found[0]!.part] };
+}
+
+// SPEC §8.1
+function validateSelect(select: Json): ValidateSelectResult {
+  try {
+    parseSelector(select);
+    return {};
+  } catch {
+    return problem('invalid-selector', BAD_SELECTOR);
+  }
 }
 
 // SPEC §3
@@ -73,6 +92,7 @@ const plugin = {
     '**/*.tsx',
   ],
   extract,
+  validateSelect,
 } satisfies DocstampPlugin;
 
 export default plugin;

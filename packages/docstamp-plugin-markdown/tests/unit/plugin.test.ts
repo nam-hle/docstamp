@@ -255,3 +255,24 @@ describe('§4 Selector: errors', () => {
     expect(result.diagnostics?.[0]?.message).toContain('{ heading: Install, level: 2 }');
   });
 });
+
+describe('§6.1 ValidateSelect and codes', () => {
+  it.each(['Install', { heading: 'Install', level: 2 }])('accepts %j', (select) => {
+    expect(plugin.validateSelect(select as never)).toEqual({});
+  });
+
+  it.each(['', 3, { heading: 'x', level: 7 }, { other: 1 }])('rejects %j', (select) => {
+    const result = plugin.validateSelect(select as never);
+    expect(result.diagnostics).toMatchObject([{ severity: 'error', code: 'invalid-selector' }]);
+  });
+
+  it('gives invalid-selector from Extract for the same selector', () => {
+    const result = plugin.extract({ path: 'a.md', text: DOC, select: '' });
+    expect(result.diagnostics?.[0]?.code).toBe('invalid-selector');
+  });
+
+  it('gives ambiguous-heading for two headings', () => {
+    const result = plugin.extract({ path: 'a.md', text: '# A\n\n# A\n', select: 'A' });
+    expect(result.diagnostics?.[0]?.code).toBe('ambiguous-heading');
+  });
+});
