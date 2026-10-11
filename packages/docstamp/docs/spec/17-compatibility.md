@@ -244,10 +244,11 @@ The following are not breaking:
   a Plugin diagnostic, with `[[PluginCode]]` of a Diagnostic (§5.5), its bracketed tail in §14.3 and
   its member `pluginCode` in §14.5: optional members of the Plugin API, which keeps `[[ApiVersion]]`
   1; a Plugin that gives neither behaves as before, and no code, state, Hash or exit code changes;
-- the optional `selectorFields` member of a Plugin (§8.7): an optional member of the Plugin API,
-  which keeps `[[ApiVersion]]` 1; a Plugin without it is addressed by the Shorthand with its `select`
-  as the String verbatim, and an old release ignores it (§8.7), so its own Shorthand is the breaking
-  part, not this member.
+- the optional `parseSelect` and `meta` members of a Plugin (§8.7): optional members of the Plugin
+  API, which keeps `[[ApiVersion]]` 1; a Plugin without `parseSelect` is addressed by the Shorthand
+  with its `select` as the String verbatim, and one without `meta.schema` has its `select` checked
+  by itself only. An old release ignores both (§8.7), so its own Shorthand is the breaking part, not
+  these members; none was released before the Shorthand.
 
 ### 17.4 The Hash Guarantee
 
@@ -323,7 +324,7 @@ which vectors may change until the release that first contains them):
   - no entries, one Fragment { path `docs/guide.md`, select Map `{ kind: function, name: abc }`,
     Parts with `[[Content]]` `« abc, def »` } gives
     `cf13425d12b91e9f192502bb184d8d8f30e0e6b3a8828a4f1ac2e5fcc4ee977c`;
-- the Shorthand (§8.7) with the same Hash as its written form: for a Plugin that declares `main` `name` and the fields `name` (`string`), `kind` (`function`, `class`) and `part` (`shape`, `source`), `docs/guide.md:kind=function,name=abc` resolves to the Select Map of the second vector above and gives the same Dependency Hash `cf13425d12b91e9f192502bb184d8d8f30e0e6b3a8828a4f1ac2e5fcc4ee977c`, and `docs/guide.md:Install` resolves to the String `Install` of the first one and gives `b97e1bef5907d4a4827ee34fcb74350137d74e7d8fd0c02db21bcd0b6a8e6ba5`, with the same entries and Parts as there.
+- the Shorthand (§8.7) with the same Hash as its written form: for a Plugin whose `parseSelect` returns the Map `{ kind: function, name: abc }` for `kind=function,name=abc`, `docs/guide.md:kind=function,name=abc` resolves to the Select Map of the second vector above and gives the same Dependency Hash `cf13425d12b91e9f192502bb184d8d8f30e0e6b3a8828a4f1ac2e5fcc4ee977c`, and `docs/guide.md:Install`, for a Plugin without `parseSelect`, resolves to the String `Install` of the first one and gives `b97e1bef5907d4a4827ee34fcb74350137d74e7d8fd0c02db21bcd0b6a8e6ba5`, with the same entries and Parts as there.
 
 A change that makes a vector fail is breaking (§17.2). The vector is updated only together with a
 new Lockfile `version` (§17.4) and its migration note (§17.6).

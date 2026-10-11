@@ -6,11 +6,12 @@ export type {
   DocstampPlugin,
   ExtractInput,
   ExtractResult,
-  FieldType,
   LineRange,
   Part,
   PluginDiagnostic,
-  SelectorFields,
+  JsonSchema,
+  ParseSelectResult,
+  PluginMeta,
   ValidateSelectResult,
 } from './plugin/types.ts';
 

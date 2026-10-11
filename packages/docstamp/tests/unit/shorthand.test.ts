@@ -26,25 +26,26 @@ const sections: DocstampPlugin = {
   apiVersion: 1,
   files: ['**/*.md'],
   extract,
-  selectorFields: { main: 'heading', fields: { heading: 'string', level: 'integer' } },
+  parseSelect: (raw) =>
+    raw.startsWith('## ')
+      ? { select: { heading: raw.slice(3), level: 2 } }
+      : raw === 'bad'
+        ? { diagnostics: [{ severity: 'error', message: 'Write a title.', code: 'bad-title' }] }
+        : { select: raw },
 };
 const declarations: DocstampPlugin = {
   name: 'declarations',
   apiVersion: 1,
   files: ['**/*.ts'],
   extract,
-  selectorFields: {
-    main: 'name',
-    fields: {
-      name: 'string',
-      kind: ['function', 'class', 'interface'],
-      part: ['shape', 'source'],
-    },
+  parseSelect: (raw) => {
+    const [name = '', kind = ''] = raw.split(',');
+    return kind === '' ? { select: name } : { select: { name, kind } };
   },
 };
 const plugins = [sections, declarations];
 
-const resolve = (path: string, raw: string) => resolveSelector(plugins, { path, raw });
+const resolve = (path: string, raw: string) => resolveSelector(plugins, 'CLAUDE.md', { path, raw });
 
 describe('§8.7 SplitDependency', () => {
   it.each([
@@ -96,84 +97,7 @@ describe('§8.7 ParseShorthand', () => {
 });
 
 describe('§8.7 ResolveSelector', () => {
-  it('keeps a bare value the String it always was', () => {
-    expect(resolve('docs/guide.md', 'Install')).toEqual({ select: 'Install' });
-    expect(resolve('src/api.ts', 'createUser')).toEqual({ select: 'createUser' });
-  });
-
-  it('reads key=value pairs as a Map, in any order, converting an integer', () => {
-    expect(resolve('docs/guide.md', 'heading=Install,level=2')).toEqual({
-      select: { heading: 'Install', level: 2 },
-    });
-    expect(resolve('docs/guide.md', 'level=-3,heading=A')).toEqual({
-      select: { heading: 'A', level: -3 },
-    });
-    expect(resolve('src/api.ts', 'kind=interface,name=User')).toEqual({
-      select: { kind: 'interface', name: 'User' },
-    });
-  });
-
-  it('gives one pair the Map, not the String', () => {
-    expect(resolve('docs/guide.md', 'heading=Install')).toEqual({
-      select: { heading: 'Install' },
-    });
-  });
-
-  it('resolves \\, \\= and \\\\ in a bare value and in a pair', () => {
-    expect(resolve('docs/guide.md', 'Q&A\\, part 2')).toEqual({ select: 'Q&A, part 2' });
-    expect(resolve('docs/guide.md', 'a\\=b')).toEqual({ select: 'a=b' });
-    expect(resolve('docs/guide.md', 'c\\\\d')).toEqual({ select: 'c\\d' });
-    expect(resolve('docs/guide.md', 'heading=a\\,b\\=c\\\\,level=1')).toEqual({
-      select: { heading: 'a,b=c\\', level: 1 },
-    });
-    expect(resolve('docs/guide.md', 'C\\D')).toEqual({ select: 'C\\D' });
-  });
-
-  it('refuses an unknown key, naming the fields and the escapes', () => {
-    const result = resolve('docs/guide.md', 'title=Install');
-    expect(result).toMatchObject({ message: expect.stringContaining('heading, level') });
-    expect(result).toMatchObject({ message: expect.stringContaining('\\=') });
-  });
-
-  it.each([['02'], ['1.0'], ['+1'], ['-0'], ['1e3'], ['1234567890123456'], ['']])(
-    'refuses level=%s as an integer, with the escape hint',
-    (value) => {
-      const result = resolve('docs/guide.md', `heading=A,level=${value}`);
-      expect(result).toMatchObject({ message: expect.stringContaining('integer') });
-      expect(result).toMatchObject({ message: expect.stringContaining('\\,') });
-    },
-  );
-
-  it.each([
-    ['-1', -1],
-    ['0', 0],
-    ['123456789012345', 123456789012345],
-  ])('reads level=%s as the integer %i', (value, level) => {
-    expect(resolve('docs/guide.md', `heading=A,level=${value}`)).toEqual({
-      select: { heading: 'A', level },
-    });
-  });
-
-  it('refuses a duplicate key, an empty item, a bare item among pairs and a bad value', () => {
-    const messages = [
-      resolve('docs/guide.md', 'heading=A,heading=B'),
-      resolve('docs/guide.md', 'a,,b'),
-      resolve('docs/guide.md', 'heading=A,B'),
-      resolve('docs/guide.md', 'A,B'),
-      resolve('docs/guide.md', '=A'),
-      resolve('docs/guide.md', 'heading=A,level=two'),
-      resolve('docs/guide.md', 'heading=A,level=02'),
-      resolve('docs/guide.md', 'heading=A,level=1.5'),
-      resolve('src/api.ts', 'name=A,kind=var'),
-    ];
-    for (const result of messages) expect(result).toHaveProperty('message');
-    expect(messages[0]).toMatchObject({ message: expect.stringContaining('twice') });
-    expect(messages[3]).toMatchObject({ message: expect.stringContaining('\\,') });
-    expect(messages[5]).toMatchObject({ message: expect.stringContaining('integer') });
-    expect(messages[8]).toMatchObject({ message: expect.stringContaining('function, class') });
-  });
-
-  it('takes the whole text verbatim for a plugin without selectorFields', () => {
+  it('takes the whole text verbatim for a plugin without parseSelect', () => {
     expect(resolve('package.json', 'scripts.build')).toEqual({ select: 'scripts.build' });
     expect(resolve('package.json', '["a,b=c"].d\\e')).toEqual({ select: '["a,b=c"].d\\e' });
     expect(resolve('ci.yml', 'jobs.test.steps.1.run')).toEqual({
@@ -183,6 +107,73 @@ describe('§8.7 ResolveSelector', () => {
 
   it('takes the text verbatim for a path no plugin claims', () => {
     expect(resolve('data.bin', 'a=b')).toEqual({ select: 'a=b' });
+  });
+
+  it('is what parseSelect returns, a String or a Map', () => {
+    expect(resolve('docs/guide.md', 'Install')).toEqual({ select: 'Install' });
+    expect(resolve('docs/guide.md', '## Install')).toEqual({
+      select: { heading: 'Install', level: 2 },
+    });
+    expect(resolve('src/api.ts', 'User,interface')).toEqual({
+      select: { name: 'User', kind: 'interface' },
+    });
+  });
+
+  it('is the errors parseSelect reports, with their code', () => {
+    expect(resolve('docs/guide.md', 'bad')).toEqual({
+      problems: [
+        expect.objectContaining({
+          code: 'E_SELECT',
+          file: 'CLAUDE.md',
+          subject: 'docs/guide.md:bad',
+          message: 'Write a title.',
+          pluginCode: 'bad-title',
+        }),
+      ],
+    });
+  });
+
+  const faulty = (parseSelect: unknown): DocstampPlugin =>
+    ({ name: 'f', apiVersion: 1, files: ['**/*.md'], extract, parseSelect }) as DocstampPlugin;
+  const problem = (parseSelect: unknown) => {
+    const result = resolveSelector([faulty(parseSelect)], 'CLAUDE.md', { path: 'a.md', raw: 'x' });
+    return 'problems' in result ? result.problems : [];
+  };
+
+  it.each([
+    [
+      'a throw',
+      () => {
+        throw new Error('secret');
+      },
+    ],
+    ['a promise', () => Promise.resolve({ select: 'x' })],
+    ['a non-Map', () => 'x'],
+    ['neither select nor error', () => ({})],
+    ['a warning', () => ({ select: 'x', diagnostics: [{ severity: 'warning', message: 'w' }] })],
+    ['a non-finite number', () => ({ select: { a: Number.NaN } })],
+    ['a function', () => ({ select: () => 1 })],
+    ['a bad diagnostic', () => ({ diagnostics: [{ severity: 'error' }] })],
+  ])('is one E_SELECT for %s, without the host text', (_name, parseSelect) => {
+    const [only, ...rest] = problem(parseSelect);
+    expect(rest).toEqual([]);
+    expect(only).toMatchObject({ code: 'E_SELECT', subject: 'a.md:x' });
+    expect(only!.message).not.toContain('secret');
+  });
+
+  it('prefers the errors over a select', () => {
+    const result = problem(() => ({
+      select: 'x',
+      diagnostics: [{ severity: 'error', message: 'No.' }],
+    }));
+    expect(result).toHaveLength(1);
+  });
+
+  it('may return null, a Number or a List as the select', () => {
+    for (const select of [null, 3, ['a']]) {
+      const result = resolveSelector([faulty(() => ({ select }))], 'f', { path: 'a.md', raw: 'x' });
+      expect(result).toEqual({ select });
+    }
   });
 });
 
@@ -199,7 +190,7 @@ describe('§8.7 shorthand and written form share one Dependency Hash', () => {
   });
 
   it('§17.7 pairs are the Map of the written form', () => {
-    const resolved = resolve('src/api.ts', 'name=abc,kind=function');
+    const resolved = resolve('src/api.ts', 'abc,function');
     const select = canonicalJson('select' in resolved ? resolved.select : null);
     const fragments = [
       { path: 'docs/guide.md', select, parts: [{ content: 'abc' }, { content: 'def' }] },
@@ -213,9 +204,9 @@ describe('§8.7 shorthand and written form share one Dependency Hash', () => {
 describe('§12.2 step 5 resolveShorthands', () => {
   const shorthands: Shorthand[] = [
     { path: 'docs/guide.md', raw: 'Install' },
-    { path: 'docs/guide.md', raw: 'heading=Install' },
+    { path: 'docs/guide.md', raw: '## Install' },
     { path: 'docs/guide.md', raw: 'Install' },
-    { path: 'docs/guide.md', raw: 'level=x' },
+    { path: 'docs/guide.md', raw: 'bad' },
   ];
 
   it('appends the values to Selected, drops identical ones and attaches the errors', () => {
@@ -232,8 +223,8 @@ describe('§12.2 step 5 resolveShorthands', () => {
       { path: 'docs/guide.md', select: 'Install' },
       {
         path: 'docs/guide.md',
-        select: { heading: 'Install' },
-        written: 'docs/guide.md:heading=Install',
+        select: { heading: 'Install', level: 2 },
+        written: 'docs/guide.md:## Install',
       },
     ]);
     expect(declaration.shorthands).toBeUndefined();
@@ -241,41 +232,49 @@ describe('§12.2 step 5 resolveShorthands', () => {
     expect(problems[0]).toMatchObject({
       code: 'E_SELECT',
       file: 'CLAUDE.md',
-      subject: 'docs/guide.md:level=x',
+      subject: 'docs/guide.md:bad',
     });
   });
 });
 
-describe('§8.7 selectorFields of a plugin', () => {
-  const plugin = (selectorFields: unknown) => () =>
-    validatePlugins([{ name: 'p', apiVersion: 1, files: ['**/*.md'], extract, selectorFields }]);
+describe('§8.7 parseSelect and meta of a plugin', () => {
+  const plugin = (members: Record<string, unknown>) => () =>
+    validatePlugins([{ name: 'p', apiVersion: 1, files: ['**/*.md'], extract, ...members }]);
+  const raised = (make: () => unknown) => {
+    try {
+      make();
+    } catch (error) {
+      expect(error).toBeInstanceOf(Raised);
+      return (error as Raised).diagnostics[0]!;
+    }
+    throw new Error('no Raised');
+  };
 
-  it('is kept when valid', () => {
-    const [valid] = plugin({ main: 'a', fields: { a: 'string', b: 'integer', c: ['x'] } })();
-    expect(valid!.selectorFields).toEqual({
-      main: 'a',
-      fields: { a: 'string', b: 'integer', c: ['x'] },
-    });
+  it('keeps a valid parseSelect and meta.schema', () => {
+    const [valid] = plugin({
+      parseSelect: (raw: string) => ({ select: raw }),
+      meta: { schema: { type: 'string', description: 'a title' } },
+    })();
+    expect(valid!.parseSelect!('a')).toEqual({ select: 'a' });
+    expect(valid!.meta).toEqual({ schema: { type: 'string', description: 'a title' } });
+  });
+
+  it('accepts a meta without a schema', () => {
+    expect(plugin({ meta: { other: 1 } })()[0]!.meta).toBeUndefined();
   });
 
   it.each([
-    [{ main: 'a', fields: { a: 'integer' } }],
-    [{ main: 'b', fields: { a: 'string' } }],
-    [{ main: 'a', fields: { a: 'string', b: 'float' } }],
-    [{ main: 'a', fields: { a: 'string', b: [] } }],
-    [{ main: 'a', fields: { a: 'string', b: [1] } }],
-    [{ main: 'a' }],
-    ['a'],
-    [null],
-  ])('is E_PLUGIN for %j', (selectorFields) => {
-    try {
-      plugin(selectorFields)();
-    } catch (error) {
-      expect(error).toBeInstanceOf(Raised);
-      expect((error as Raised).diagnostics[0]).toMatchObject({ code: 'E_PLUGIN' });
-      return;
-    }
-    throw new Error('no Raised');
+    [{ parseSelect: 'x' }, 'parseSelect'],
+    [{ meta: 'x' }, 'meta'],
+    [{ meta: { schema: { pattern: 'a' } } }, 'pattern'],
+    [{ meta: { schema: { type: 'float' } } }, 'type'],
+    [{ meta: { schema: { properties: { a: { minLength: -1 } } } } }, 'minLength'],
+    [{ meta: { schema: { additionalProperties: { type: 'string' } } } }, 'additionalProperties'],
+    [{ meta: { schema: { oneOf: [] } } }, 'oneOf'],
+  ])('is E_PLUGIN for %j, naming %s', (members, keyword) => {
+    const found = raised(plugin(members));
+    expect(found).toMatchObject({ code: 'E_PLUGIN', subject: 'p' });
+    expect(found.message).toContain(keyword);
   });
 });
 
@@ -317,10 +316,10 @@ describe('§9.3 step 8 and §9.6.2 step 6 shorthand in a Declaration', () => {
   };
 
   it('reads a shorthand of an inline block', () => {
-    const { declaration, problems } = block('    - src\n    - "docs/guide.md:level=2,heading=X"\n');
+    const { declaration, problems } = block('    - src\n    - "docs/guide.md:## X"\n');
     expect(problems).toEqual([]);
     expect(declaration.dependencies).toEqual(['src']);
-    expect(declaration.shorthands).toEqual([{ path: 'docs/guide.md', raw: 'level=2,heading=X' }]);
+    expect(declaration.shorthands).toEqual([{ path: 'docs/guide.md', raw: '## X' }]);
   });
 
   it('is E_BLOCK for a glob path in an inline block', () => {

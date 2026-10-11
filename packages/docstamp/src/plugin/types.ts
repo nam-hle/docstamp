@@ -37,19 +37,44 @@ export interface ValidateSelectResult {
   readonly diagnostics?: readonly PluginDiagnostic[];
 }
 
-// SPEC §8.7: `main` is the field a bare value stands for; it is a `string` field
-export type FieldType = 'string' | 'integer' | readonly string[];
+// SPEC §8.7 ParseSelect: a `select`, or the errors that say why the text is not one
+export interface ParseSelectResult {
+  readonly select?: Json;
+  readonly diagnostics?: readonly PluginDiagnostic[];
+}
 
-export interface SelectorFields {
-  readonly main: string;
-  readonly fields: Readonly<Record<string, FieldType>>;
+type SchemaType = 'string' | 'integer' | 'number' | 'boolean' | 'object' | 'array' | 'null';
+
+// SPEC §8.7 Select Schema: the subset of JSON Schema that docstamp checks a `select` against
+export interface JsonSchema {
+  readonly type?: SchemaType | readonly SchemaType[];
+  readonly enum?: readonly Json[];
+  readonly const?: Json;
+  readonly properties?: Readonly<Record<string, JsonSchema>>;
+  readonly required?: readonly string[];
+  readonly additionalProperties?: boolean;
+  readonly items?: JsonSchema;
+  readonly minItems?: number;
+  readonly maxItems?: number;
+  readonly minLength?: number;
+  readonly maxLength?: number;
+  readonly minimum?: number;
+  readonly maximum?: number;
+  readonly oneOf?: readonly JsonSchema[];
+  readonly anyOf?: readonly JsonSchema[];
+  readonly description?: string;
+}
+
+export interface PluginMeta {
+  readonly schema?: JsonSchema;
 }
 
 export interface DocstampPlugin {
   readonly name: string;
   readonly apiVersion: 1;
   readonly files: readonly string[];
-  readonly selectorFields?: SelectorFields;
+  readonly meta?: PluginMeta;
   extract(input: ExtractInput): ExtractResult;
   validateSelect?(select: Json): ValidateSelectResult;
+  parseSelect?(raw: string): ParseSelectResult;
 }
