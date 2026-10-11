@@ -2,10 +2,10 @@ version: 4
 files:
   "CLAUDE.md": 911b6b4f64b7640f91e91c58ecbec4d266a08c647b1292147f5b60b48817413f
   "README.md": 9b769d5d71b5b0fda6690507c3b7e2165b5818389a3a48e8b4ff8980ffda1f4a
-  "packages/docstamp-plugin-js/README.md": b322b5d3bcc6b995cad17abe7ef9b85296bc0469e15795c5e408eba9d41fd99f
-  "packages/docstamp-plugin-js/SPEC.md": b322b5d3bcc6b995cad17abe7ef9b85296bc0469e15795c5e408eba9d41fd99f
-  "packages/docstamp-plugin-markdown/README.md": 98d68fc5cd5a3b5d4dd8bdd009b6de2d4e113fc7f745ef792ce32a595c5de73f
-  "packages/docstamp-plugin-markdown/SPEC.md": 98d68fc5cd5a3b5d4dd8bdd009b6de2d4e113fc7f745ef792ce32a595c5de73f
+  "packages/docstamp-plugin-js/README.md": 61efc6f1dd9f28ab4278496ed4a7512060e6facdef10b78d8dab886343f5fe86
+  "packages/docstamp-plugin-js/SPEC.md": 61efc6f1dd9f28ab4278496ed4a7512060e6facdef10b78d8dab886343f5fe86
+  "packages/docstamp-plugin-markdown/README.md": 2c4f950fad8959cfcba319e5b10544b297fb7637e46ca57943d7aba501bff4d3
+  "packages/docstamp-plugin-markdown/SPEC.md": 2c4f950fad8959cfcba319e5b10544b297fb7637e46ca57943d7aba501bff4d3
   "packages/docstamp/README.md": cb914dfde7101bf5f5f57531f6e0dd9c63b4b5fd9bc85e158151633f1cfbde68
   "packages/docstamp/docs/spec/05-records.md": 59c32deb081b739c231c761f54cbecaad0ae82d86de56c27564beea29346fb1c
   "packages/docstamp/docs/spec/06-root.md": 062025720327214fde3ae16471fba616dc8eb3ccce3771126c27b5a2f35a5d28
@@ -23,7 +23,7 @@ files:
   "packages/site/content/get-started.md": 9b769d5d71b5b0fda6690507c3b7e2165b5818389a3a48e8b4ff8980ffda1f4a
   "packages/site/content/guide/ci.md": 9cfe6fe7414ce7f5037aa5ce29121e702866358e33ec2ba70e678622a4851450
   "packages/site/content/guide/declare.md": 376615dd29b9e14b6bd3427fc98a7a8c9186b0eb57ab3b919e0ddbadca2e8151
-  "packages/site/content/guide/plugins.md": 0a61877c6bba90043e09ce8a304ddbc00a0e21506ed33b2416feb129f8d79ae7
+  "packages/site/content/guide/plugins.md": 0c50d193919c280cee921a05d7fa0ecc4e76846a5ec8c303a2290a1df2130ef9
   "packages/site/content/guide/review.md": b52e745ffaf28be186641880c7e4a107100ae7b1f14943aa7d47caea05af633c
   "packages/site/content/guide/tune.md": ed6ee7c00cff000c01201c290323a31ca7763f58186af3ccb8b6c64be2cd2679
   "packages/site/content/index.md": 955cd9ba1754269d3613bed0d5e1655eab72da8c9eea968d89a14cff65d334ca

@@ -276,3 +276,15 @@ describe('§6.1 ValidateSelect and codes', () => {
     expect(result.diagnostics?.[0]?.code).toBe('ambiguous-heading');
   });
 });
+
+describe('§4 Selector: a long run of blanks', () => {
+  const tabs = '\t'.repeat(200_000);
+
+  it('is trimmed in linear time and rejected when it is all blanks', () => {
+    expect(plugin.validateSelect(tabs as never).diagnostics).toHaveLength(1);
+    expect(plugin.validateSelect(`${tabs}a${tabs}x${tabs}` as never)).toEqual({});
+    expect(plugin.extract({ path: 'a.md', text: '# a\n', select: ` \t a \t ` }).parts).toHaveLength(
+      1,
+    );
+  });
+});

@@ -4,7 +4,16 @@ export interface Selector {
 }
 
 const KEYS = new Set(['heading', 'level']);
-const BLANKS = /^[ \t]+|[ \t]+$/gu;
+const isBlank = (character: string | undefined): boolean => character === ' ' || character === '\t';
+
+// SPEC §4: leading and trailing U+0020 and U+0009, in one linear pass
+function trimBlanks(text: string): string {
+  let start = 0;
+  let end = text.length;
+  while (start < end && isBlank(text[start])) start += 1;
+  while (end > start && isBlank(text[end - 1])) end -= 1;
+  return text.slice(start, end);
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -16,7 +25,7 @@ export function parseSelector(value: unknown): Selector {
     throw new Error('The selector is a heading text or { heading, level? }.');
   }
   const { heading, level } = form;
-  if (typeof heading !== 'string' || heading.replaceAll(BLANKS, '') === '') {
+  if (typeof heading !== 'string' || trimBlanks(heading) === '') {
     throw new Error('The selector needs a non-empty heading text.');
   }
   if (
@@ -26,7 +35,7 @@ export function parseSelector(value: unknown): Selector {
     throw new Error('The level of a selector is an integer from 1 to 6.');
   }
   return {
-    heading: heading.replaceAll(BLANKS, ''),
+    heading: trimBlanks(heading),
     level: level as number | undefined,
   };
 }
