@@ -50,6 +50,8 @@ legend: patterns declared, files they select, commits and distinct days that wou
 `stale` is commits divided by the commits of the window. A selected dependency (`path:selector`)
 counts as a pattern, and a commit touches it only when the selected part changed, so narrowing to a
 selector shows up as a lower `stale`. A `sweep` near 1 means the noise is a few
-repository-wide commits, not the list. The window is `--since <n>d` (default `30d`) or
+repository-wide commits, not the list. To see which dependency drives a doc's commits, name the doc
+(`docstamp stats docs/guide.md`): under the table, each of its dependencies is listed with the
+commits that touch it and `only`, the commits no other dependency of the doc touches. The window is `--since <n>d` (default `30d`) or
 `--from <rev>`. It needs full history: a shallow clone is `E_HISTORY`
 ([stats](/reference/commands/stats), [SPEC §13.9](/spec/command-line#139-stats)).

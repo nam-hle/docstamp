@@ -1,5 +1,7 @@
 import { comparePaths } from '../core/order.ts';
 import type { Diagnostic, SelectedEntry } from '../core/types.ts';
+import { patternMatches } from '../pattern/match.ts';
+import type { ParsedPattern } from '../pattern/parse.ts';
 
 // SPEC §12.4
 export interface CommitRecord {
@@ -7,6 +9,11 @@ export interface CommitRecord {
   readonly day: string;
   readonly paths: readonly string[];
 }
+
+// SPEC §12.5: a dependency of a file, as the breakdown counts it
+export type StatsDependency =
+  | { readonly label: string; readonly preset: string | null; readonly pattern: ParsedPattern }
+  | { readonly label: string; readonly preset: null; readonly entry: SelectedEntry };
 
 export interface StatsInput {
   readonly file: string;
@@ -16,10 +23,20 @@ export interface StatsInput {
   readonly whole: readonly string[];
   readonly selected: readonly SelectedEntry[];
   readonly diagnostics: readonly Diagnostic[];
+  // given only when the files are named (§13.9)
+  readonly breakdown?: readonly StatsDependency[];
 }
 
 // SPEC §12.5: the sweep size
 const SWEEP_SIZE = 200;
+
+// SPEC §12.5
+interface DependencyStats {
+  readonly dependency: string;
+  readonly preset: string | null;
+  readonly commits: number;
+  readonly only: number;
+}
 
 // SPEC §12.5; the ratios are integers of ten-thousandths
 export interface FileStats {
@@ -32,6 +49,7 @@ export interface FileStats {
   readonly staleRate: number;
   readonly sweepShare: number;
   readonly diagnostics: readonly Diagnostic[];
+  readonly dependencies?: readonly DependencyStats[];
 }
 
 export interface Statistics {
@@ -72,6 +90,9 @@ export function statistics(
   const days = inputs.map(() => new Set<string>());
   const commits = inputs.map(() => 0);
   const sweeps = inputs.map(() => 0);
+  const counts = inputs.map((input) =>
+    (input.breakdown ?? []).map(() => ({ commits: 0, only: 0 })),
+  );
   let untouched = 0;
   for (const commit of window) {
     const distinct = new Set(commit.paths);
@@ -86,6 +107,21 @@ export function statistics(
       commits[index]! += 1;
       days[index]!.add(commit.day);
       if (distinct.size > SWEEP_SIZE) sweeps[index]! += 1;
+      const input = inputs[index]!;
+      const whole = new Set(input.whole);
+      const hit = (input.breakdown ?? []).flatMap((dependency, position) =>
+        'pattern' in dependency
+          ? [...distinct].some(
+              (path) => whole.has(path) && patternMatches(dependency.pattern, path),
+            )
+            ? [position]
+            : []
+          : distinct.has(dependency.entry.path) && fragmentChanged(dependency.entry, commit)
+            ? [position]
+            : [],
+      );
+      for (const position of hit) counts[index]![position]!.commits += 1;
+      if (hit.length === 1) counts[index]![hit[0]!]!.only += 1;
     }
   }
   const files = inputs
@@ -99,7 +135,26 @@ export function statistics(
       staleRate: ratio(commits[index]!, window.length),
       sweepShare: ratio(sweeps[index]!, commits[index]!),
       diagnostics: input.diagnostics,
+      ...(input.breakdown === undefined
+        ? {}
+        : { dependencies: breakdownOf(input.breakdown, counts[index]!) }),
     }))
     .sort((a, b) => b.staleRate - a.staleRate || comparePaths(a.file, b.file));
   return { files, untouched };
+}
+
+// SPEC §12.5: by Commits descending, then in the order the dependencies are declared
+function breakdownOf(
+  dependencies: readonly StatsDependency[],
+  counts: ReadonlyArray<{ commits: number; only: number }>,
+): DependencyStats[] {
+  return dependencies
+    .map((dependency, position) => ({
+      dependency: dependency.label,
+      preset: dependency.preset,
+      ...counts[position]!,
+      position,
+    }))
+    .sort((a, b) => b.commits - a.commits || a.position - b.position)
+    .map(({ dependency, preset, commits, only }) => ({ dependency, preset, commits, only }));
 }

@@ -1,0 +1,46 @@
+$ docstamp stats --json --from 9f9b75022ce2ae127e7f08dd82ad2d7cf4f0133a MIX.md
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 0,
+  "window": {
+    "kind": "revision",
+    "value": "9f9b75022ce2ae127e7f08dd82ad2d7cf4f0133a",
+    "commits": 4,
+    "untouched": 1
+  },
+  "files": [
+    {
+      "file": "MIX.md",
+      "patterns": 4,
+      "resolvedCount": 4,
+      "staleCommits": 3,
+      "days": 3,
+      "staleRate": 0.75,
+      "sweepCommits": 0,
+      "sweepShare": 0,
+      "dependencies": [
+        {
+          "dependency": "src",
+          "commits": 3,
+          "only": 1
+        },
+        {
+          "dependency": "src/a.ts",
+          "commits": 2,
+          "only": 0
+        },
+        {
+          "dependency": "src/zz",
+          "commits": 0,
+          "only": 0
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

@@ -1,0 +1,13 @@
+$ docstamp stats --from 0128f552141fb2bab6f65dbe882826d45b867b42 CLAUDE.md
+exit: 0
+--- stdout ---
+file       patterns  files  commits  days   stale   sweep
+CLAUDE.md         4      4        1     1  1.0000  0.0000
+window: 1 commits in 0128f552141fb2bab6f65dbe882826d45b867b42..HEAD, 0 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
+
+CLAUDE.md
+dependency                  commits  only
+docs/SPEC.md (preset spec)        1     1
+src                               0     0
+--- stderr ---
