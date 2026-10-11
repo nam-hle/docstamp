@@ -294,8 +294,8 @@ the work tree, the commits that changed nothing under Root are in the Window and
 
 ### 12.5 Statistics
 
-`Statistics(results, window)` returns, for the Results (none `invalid`), a List of FileStats and the
-Number *untouched*. The *sweep size* is the constant 200.
+`Statistics(results, window, breakdown)` returns, for the Results (none `invalid`), a List of
+FileStats and the Number *untouched*. *breakdown* is a Boolean. The *sweep size* is the constant 200.
 
 A Commit *touches* a Result when a path of its `[[Paths]]` is selected by the patterns of the
 Result's `[[Dependencies]]`, or when it changes the Fragment of one of the Result's Selected
@@ -324,6 +324,18 @@ floating point. It is reported as the Number of that many ten-thousandths divide
 
 The FileStats are in descending order of `[[StaleRate]]` as reported, then ascending path order of
 the file.
+
+When *breakdown* is true, each FileStats also has `[[Dependencies]]`, a List of DependencyStats
+{ `[[Dependency]]`: a String, `[[Preset]]`: a Preset name or none, `[[Commits]]`: a Number, `[[Only]]`: a Number }, one for each
+non-negated pattern of `r.[[Dependencies]]`, in declaration order, then one for each Selected
+Dependency of `r`, in order of appearance (the order of §14.3): `[[Dependency]]` is the pattern, or
+the path, `#` and `CanonicalJson(select)`; `[[Preset]]` is the Preset a pattern comes from (§8.6), else none. A Commit *of the dependency* is a Commit of *touching*
+that selects a path of `[[Paths]]` that is in the selection of the patterns of `r`
+(§8.4) and that the pattern matches (§8.3), or, for a Selected Dependency *e*, that changes the
+Fragment of *e* as above. `[[Commits]]` is the number of Commits of the dependency, and `[[Only]]`
+the number of those that are of no other dependency of `r`. A Commit of several dependencies counts
+for each of them, so the `[[Commits]]` may add up to more than `[[StaleCommits]]`. The
+DependencyStats are in descending order of `[[Commits]]`, then in the order above.
 
 NOTE: Dependencies are the ones resolved now, at `HEAD` (§12.1), not the ones of each commit: a
 file deleted or renamed inside the Window is not a dependency any more and is not seen. A Window

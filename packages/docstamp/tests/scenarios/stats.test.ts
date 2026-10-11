@@ -226,7 +226,14 @@ scenario(
         'MID.md            2      2        3     2  0.5000  0.0000\n' +
         'NARROW.md         1      1        2     2  0.3333  0.0000\n' +
         `window: 6 commits in ${base}..HEAD, 3 make no file stale\n` +
-        LEGEND,
+        LEGEND +
+        '\nMID.md\n' +
+        'dependency  commits  only\n' +
+        'src/a.ts          2     2\n' +
+        'src/b.ts          1     1\n' +
+        '\nNARROW.md\n' +
+        'dependency  commits  only\n' +
+        'src/a.ts          2     2\n',
     );
     const unknown = await repo.run(['stats', '--from', base, 'nope.md', 'NARROW.md']);
     expect(unknown.exit).toBe(2);
@@ -392,5 +399,70 @@ scenario(
       days: 1,
       staleRate: 0.5,
     });
+  },
+);
+
+scenario(
+  '§12.5 a named file is broken down by dependency: commits, and commits only it explains',
+  async (repo) => {
+    repo.write('docstamp.yaml', config({ 'MIX.md': ['src/a.ts', 'src', '!src/c.ts', 'src/zz'] }));
+    repo.write('MIX.md', 'doc\n');
+    for (const name of ['a', 'b', 'c']) repo.write(`src/${name}.ts`, `${name}\n`);
+    repo.write('src/zz/z.ts', 'z\n');
+    const base = repo.commit('base', '2026-01-01T09:00:00Z');
+    repo.append('src/a.ts', 'one\n');
+    repo.commit('edit a', '2026-01-02T09:00:00Z');
+    repo.append('src/b.ts', 'one\n');
+    repo.commit('edit b', '2026-01-03T09:00:00Z');
+    repo.append('src/c.ts', 'one\n');
+    repo.commit('edit c, excluded', '2026-01-04T09:00:00Z');
+    repo.append('src/a.ts', 'two\n');
+    repo.write('src/gen.ts', 'g\n');
+    repo.commit('edit a and add gen', '2026-01-05T09:00:00Z');
+
+    const text = await repo.run(['stats', '--from', base, 'MIX.md']);
+    expect(text.exit).toBe(0);
+    expect(text.stdout).toBe(
+      'file    patterns  files  commits  days   stale   sweep\n' +
+        'MIX.md         4      4        3     3  0.7500  0.0000\n' +
+        `window: 4 commits in ${base}..HEAD, 1 make no file stale\n` +
+        LEGEND +
+        '\nMIX.md\n' +
+        'dependency  commits  only\n' +
+        'src               3     1\n' +
+        'src/a.ts          2     0\n' +
+        'src/zz            0     0\n',
+    );
+    const json = await repo.run(['stats', '--json', '--from', base, 'MIX.md']);
+    expect(doc(json).files[0].dependencies).toEqual([
+      { dependency: 'src', commits: 3, only: 1 },
+      { dependency: 'src/a.ts', commits: 2, only: 0 },
+      { dependency: 'src/zz', commits: 0, only: 0 },
+    ]);
+    const all = await repo.run(['stats', '--json', '--from', base], { snapshot: false });
+    expect(doc(all).files[0]).not.toHaveProperty('dependencies');
+  },
+);
+
+scenario(
+  '§12.5 a Selected Dependency is in the breakdown, touched when its Fragment changes',
+  { fixture: 'structured' },
+  async (repo) => {
+    repo.write(
+      'docstamp.yaml',
+      'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - package.json:scripts.build\n      - package.json:scripts.test\n',
+    );
+    repo.write('CLAUDE.md', 'doc\n');
+    const base = repo.commit('base', '2026-01-01T09:00:00Z');
+    repo.write('package.json', repo.read('package.json').replace('"vitest"', '"vitest run"'));
+    repo.commit('edit test script', '2026-01-02T09:00:00Z');
+    repo.write('package.json', repo.read('package.json').replace('"tsc"', '"tsc -b"'));
+    repo.commit('edit build script', '2026-01-03T09:00:00Z');
+    const json = await repo.run(['stats', '--json', '--from', base, 'CLAUDE.md']);
+    expect(json.exit).toBe(0);
+    expect(doc(json).files[0].dependencies).toEqual([
+      { dependency: 'package.json#"scripts.build"', commits: 1, only: 1 },
+      { dependency: 'package.json#"scripts.test"', commits: 1, only: 1 },
+    ]);
   },
 );

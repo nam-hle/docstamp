@@ -1,0 +1,14 @@
+$ docstamp stats --from 9f9b75022ce2ae127e7f08dd82ad2d7cf4f0133a MIX.md
+exit: 0
+--- stdout ---
+file    patterns  files  commits  days   stale   sweep
+MIX.md         4      4        3     3  0.7500  0.0000
+window: 4 commits in 9f9b75022ce2ae127e7f08dd82ad2d7cf4f0133a..HEAD, 1 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
+
+MIX.md
+dependency  commits  only
+src               3     1
+src/a.ts          2     0
+src/zz            0     0
+--- stderr ---

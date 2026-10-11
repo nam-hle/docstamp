@@ -446,3 +446,27 @@ scenario(
     expect(json.diagnostics[0]).toMatchObject({ code: 'E_UNKNOWN_KEY', file: null });
   },
 );
+
+scenario(
+  '§12.5 §14.8 stats breakdown marks the dependencies that come from a preset',
+  { fixture },
+  async (repo) => {
+    repo.write(
+      'docstamp.yaml',
+      repo.read('docstamp.yaml').replace('      - tests', '      - tests\n      - spec'),
+    );
+    const base = repo.commit('initial');
+    repo.write('docs/SPEC.md', 'changed\n');
+    repo.commit('edit spec');
+    const text = await repo.run(['stats', '--from', base, 'CLAUDE.md']);
+    expect(text.exit).toBe(0);
+    expect(text.stdout).toContain('docs/SPEC.md (preset spec)        1     1\n');
+    const json = await repo.run(['stats', '--json', '--from', base, 'CLAUDE.md']);
+    const file = json.json().files[0];
+    expect(file.dependencies.map((d: { dependency: string }) => d.dependency)).toEqual([
+      'docs/SPEC.md',
+      'src',
+    ]);
+    expect(file.origins).toEqual(['spec', null]);
+  },
+);

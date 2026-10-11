@@ -409,6 +409,11 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   }
   ```
 
+  When files are named (§13.9) each element of `files` also has `dependencies`, before `diagnostics`:
+  the DependencyStats of §12.5 in their order, each { `dependency`, `commits`, `only` }, and, when a dependency comes from a Preset, `origins`
+  after it: the `[[Preset]]` of each, in the same order, `null` for none (as §14.5 `origins`); without a
+  file argument the member is absent.
+
   It has no `summary`, `state`, `reasons` or `changes`. `window` is { `kind`: the Window's `[[Kind]]`;
   `value`: the value of `--since` (`30d` by default) or of `--from`, as given; `commits`: the number
   of its Commits; `untouched` } of §12.5, and `null` when a step raised. `files` is the FileStats of
@@ -532,6 +537,18 @@ when there is at least one row, the *legend line*, the fixed text shown above, w
 columns; the sweep size it names is the one of §12.5. The legend is text only: `--json` has no
 member for it (§14.5). When the command raised or a file was `invalid`, nothing is output on
 standard output. Diagnostics as in §14.3.
+
+When files are named (§13.9), then, for each row in its order, an empty line, the file as in §14.2
+and a table of its DependencyStats in their order (§12.5):
+
+```
+NARROW.md
+dependency  commits  only
+src/a.ts          2     2
+```
+
+A dependency from a Preset is followed by `(preset <name>)`, as in §14.3. The header row has the columns `dependency` (`[[Dependency]]` as in §14.2), `commits` and `only`,
+separated by two spaces, padded as the table above; a row has no trailing space.
 
 ### 14.9 Suggest, Text Mode
 
