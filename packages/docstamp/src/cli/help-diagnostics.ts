@@ -12,7 +12,7 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
     fix:
       'Correct the command line as docstamp help <command> shows it. A removed option names ' +
       'its replacement; a mistyped command names the command, and -- before it makes it a ' +
-      'file. A file argument is resolved against the current directory, not --root.',
+      'file. A file argument is resolved against the working directory: the current one, or --cwd.',
   },
   E_CWD: {
     meaning: 'The directory given to --cwd does not exist.',
@@ -130,7 +130,7 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'resolves outside the root is E_USAGE.',
     fix:
       'Name a file listed under files or one with a docstamp block, resolved against the ' +
-      'current directory; docstamp list-dependencies lists them all.',
+      'working directory (the current one, or --cwd); docstamp list-dependencies lists them all.',
   },
   E_HISTORY: {
     meaning:
@@ -182,6 +182,6 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
     meaning:
       'A list-dependents argument is not in the universe and not on disk, so nothing ' +
       'depends on it.',
-    fix: 'Check the spelling; arguments are resolved against the current directory.',
+    fix: 'Check the spelling; arguments are resolved against the working directory.',
   },
 };

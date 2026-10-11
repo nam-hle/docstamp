@@ -7,4 +7,4 @@ src/util.ts
 src/utl.ts
   (no dependents)
 --- stderr ---
-warning: W_UNKNOWN_PATH: src/utl.ts: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the current directory).
+warning: W_UNKNOWN_PATH: src/utl.ts: The path is neither tracked nor on disk, so nothing depends on it; check the spelling (arguments are resolved against the working directory).
