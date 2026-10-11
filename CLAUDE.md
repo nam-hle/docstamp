@@ -281,15 +281,11 @@ adds or extends), `src/cli/workspace.ts` (merge with `files`, duplicate check) a
 
 ## Selected shorthand
 
-A `dependencies` String `path:selector` (SPEC §8.7) is a Shorthand. `splitDependency`
-(`src/pattern/split.ts`, a leaf the engine may import) finds the first unescaped `:`;
-`parseShorthand` (`src/config/shorthand.ts`) validates the literal path, and `readConfig` and
-`parseBlock` keep the results in `Declaration.shorthands`, off `dependencies`. `loadWorkspace` calls
-`resolveShorthands` (§12.2 step 5), which reads the plugin's `selectorFields` as data and never runs
-`extract`, so the invariant on plugins above holds. A new plugin's grammar is its `selectorFields`;
-core owns the `key=value` syntax. `suggest` never proposes a path with a `:`. Tests:
-`tests/unit/shorthand.test.ts` (with the §17.7 vectors), `tests/scenarios/shorthand.test.ts` and the
-`plugins` e2e scenarios.
+A `dependencies` String `path:selector` is a Shorthand; the rules are
+[SPEC §8.7](packages/docstamp/docs/spec/08-patterns.md#87-selected-dependencies). Code:
+`src/pattern/split.ts` (a leaf the engine may import), `src/config/shorthand.ts`; `loadWorkspace`
+resolves them and reads a plugin's `selectorFields` as data, never running `extract`. Tests:
+`tests/unit/shorthand.test.ts`, `tests/scenarios/shorthand.test.ts`.
 
 ## Suggest
 
