@@ -6,6 +6,7 @@ import type { Git, LogEntry, LogWindow } from '../../src/host/git.ts';
 import { parseLog } from '../../src/host/git-output.ts';
 import { fragmentChangedAt, type FragmentCache } from '../../src/history/fragments.ts';
 import { replay } from '../../src/history/replay.ts';
+import { parsePattern } from '../../src/pattern/parse.ts';
 import { statsJsonText } from '../../src/report/json.ts';
 import { statsText } from '../../src/report/text.ts';
 
@@ -433,5 +434,38 @@ describe('§12.5 Fragments are extracted once per distinct blob', () => {
     expect(fragmentChangedAt(git2, 'c2', entry, earlier as never, cache)).toBe(true);
     expect(fragmentChangedAt(git2, 'c3', entry, earlier as never, cache)).toBe(false);
     expect(runs).toBe(2);
+  });
+});
+
+describe('§12.5 Statistics: breakdown', () => {
+  const pattern = (label: string) => ({ label, pattern: parsePattern(label)! });
+  const window = [
+    commit('2026-01-03', 'src/a.ts'),
+    commit('2026-01-02', 'src/a.ts', 'src/b.ts'),
+    commit('2026-01-01', 'src/b.ts'),
+  ];
+  const withBreakdown = (...labels: string[]) => ({
+    ...input('A.md', 'src/a.ts', 'src/b.ts'),
+    breakdown: labels.map(pattern),
+  });
+
+  it('orders by commits descending, then by declaration order', () => {
+    const { files } = statistics([withBreakdown('src/b.ts', 'src/a.ts', 'nope')], window);
+    expect(files[0]?.dependencies).toEqual([
+      { dependency: 'src/b.ts', commits: 2, only: 1 },
+      { dependency: 'src/a.ts', commits: 2, only: 1 },
+      { dependency: 'nope', commits: 0, only: 0 },
+    ]);
+  });
+  it('a commit of several dependencies counts for each and is only for none', () => {
+    const { files } = statistics([withBreakdown('src', 'src/a.ts')], window);
+    expect(files[0]?.dependencies).toEqual([
+      { dependency: 'src', commits: 3, only: 1 },
+      { dependency: 'src/a.ts', commits: 2, only: 0 },
+    ]);
+  });
+  it('has no dependencies unless asked', () => {
+    const { files } = statistics([input('A.md', 'src/a.ts')], window);
+    expect(files[0]).not.toHaveProperty('dependencies');
   });
 });

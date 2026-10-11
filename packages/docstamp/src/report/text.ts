@@ -403,5 +403,23 @@ export function statsText(files: readonly FileStats[], window: StatsWindow): str
       : `in ${shown(`${window.value}..HEAD`)}`;
   out += `window: ${window.commits} commits ${where}, ${window.untouched} make no file stale\n`;
   if (files.length > 0) out += `${STATS_LEGEND}\n`;
+  for (const f of files) out += breakdownText(f);
   return out;
+}
+
+// SPEC §14.8: the breakdown of a file whose dependencies were asked for
+function breakdownText(f: FileStats): string {
+  if (f.dependencies === undefined) return '';
+  const table = [
+    ['dependency', 'commits', 'only'],
+    ...f.dependencies.map((d) => [shown(d.dependency), String(d.commits), String(d.only)]),
+  ];
+  const widths = [0, 1, 2].map((c) => Math.max(...table.map((row) => row[c]!.length)));
+  const lines = table.map((row) =>
+    row
+      .map((cell, c) => (c === 0 ? cell.padEnd(widths[c]!) : cell.padStart(widths[c]!)))
+      .join('  ')
+      .trimEnd(),
+  );
+  return `\n${shown(f.file)}\n${lines.map((line) => `${line}\n`).join('')}`;
 }

@@ -295,6 +295,20 @@ export function statsJsonText(doc: StatsJsonDoc): string {
       ['staleRate', f.staleRate / 10000],
       ['sweepCommits', f.sweepCommits],
       ['sweepShare', f.sweepShare / 10000],
+      ...(f.dependencies === undefined
+        ? []
+        : [
+            [
+              'dependencies',
+              f.dependencies.map((d) =>
+                obj([
+                  ['dependency', d.dependency],
+                  ['commits', d.commits],
+                  ['only', d.only],
+                ]),
+              ),
+            ] as [string, Json],
+          ]),
       ['diagnostics', sortDiagnostics(f.diagnostics).map(diagJson)],
     ]),
   );

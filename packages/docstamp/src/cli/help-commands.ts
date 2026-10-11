@@ -169,14 +169,16 @@ reads no lock, never changes the verdict of check, and exits 0 whatever the numb
 Columns: patterns, files they select, commits and distinct days that would make the file stale,
 stale (those commits over all commits of the window) and sweep (the share of those commits that
 touch over 200 paths). A selected dependency (path:selector) counts as a pattern, and a commit
-touches it only when the selected part changed. It needs the full git history (fetch-depth: 0 in
-CI), else E_HISTORY.`,
+touches it only when the selected part changed. Name files to also list, under each, its dependencies
+with the commits that touch each (commits) and those that touch no other dependency of the file
+(only): the dependency with the most only commits is the one to narrow. It needs the full git
+history (fetch-depth: 0 in CI), else E_HISTORY.`,
     options: [
       JSON_OPTION,
       ROOT_OPTION,
       ['--since <n>d', 'The last <n> days, written like 30d (1d to 3650d). The default: 30d.'],
       ['--from <rev>', 'The commits of <rev>..HEAD, which does not move from day to day.'],
-      ['<file>...', 'Measure only these stamped files.'],
+      ['<file>...', 'Measure only these stamped files, and break each down by dependency.'],
     ],
     reads: 'the configuration file, the docstamp blocks, the file tree and git history.',
     writes: 'nothing.',

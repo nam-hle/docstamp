@@ -306,13 +306,18 @@ read.
    Otherwise the warnings of *selected* (§8.5) are kept with their file.
 4. Let *window* be `? Replay(root, w, now)` (§12.4), where *w* is `from R` for `--from R`, else
    `days N` for `--since Nd` or for the default 30, and *now* is the wall-clock time.
-5. Let *stats* be `Statistics(selected, window)` (§12.5).
+5. Let *stats* be `Statistics(selected, window, breakdown)` (§12.5), where *breakdown* is true when
+   there is at least one file argument.
 6. Output *stats*, the Window's size, its *kind* and *untouched* (§14), and exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
 
 NOTE: `[[Patterns]]` (§12.5) counts the effective patterns of the file (§8.6) and its Selected
 Dependencies: the Presets it uses are counted pattern by pattern.
+
+NOTE: Naming files is how a list is narrowed: the breakdown shows, for each dependency of those files,
+which one explains the commits (`only`), where the totals of every file cannot. There is no option
+for it, and without a file argument the output is as it was.
 
 NOTE: `stats` resolves dependencies as §13.7 does, so it reports the same warnings, such as
 `W_EMPTY_EXCLUSION`, on the same files: in text mode on standard error as §14.3 does, in `--json` as

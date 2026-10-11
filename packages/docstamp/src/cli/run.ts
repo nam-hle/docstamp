@@ -4,8 +4,10 @@ import { sortPaths } from '../core/order.ts';
 import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
 import { resolveDependencies } from '../engine/evaluate.ts';
 import { dependentTree, dependentsOf } from '../engine/reverse.ts';
-import { statistics, type FileStats } from '../engine/stats.ts';
+import { statistics, type FileStats, type StatsDependency } from '../engine/stats.ts';
 import type { Host } from '../host/host.ts';
+import { parsePattern } from '../pattern/parse.ts';
+import { canonicalJson } from '../core/canonical.ts';
 import { fragmentChangedAt, type FragmentCache } from '../history/fragments.ts';
 import { replay } from '../history/replay.ts';
 import { listJsonText, reverseJsonText, statsJsonText, type StatsWindow } from '../report/json.ts';
@@ -125,6 +127,19 @@ function runReverse(
   return exitCode;
 }
 
+// SPEC §12.5: the patterns that select, then the Selected Dependencies, as listed in §14.3
+function breakdownOf(r: Result): StatsDependency[] {
+  const patterns = r.dependencies.flatMap((label): StatsDependency[] => {
+    const pattern = parsePattern(label)!;
+    return pattern.negated ? [] : [{ label, pattern }];
+  });
+  const selected = (r.selected ?? []).map((entry) => ({
+    label: `${entry.path}#${canonicalJson(entry.select)}`,
+    entry,
+  }));
+  return [...patterns, ...selected];
+}
+
 // SPEC §13.9; the only read of the clock (§2)
 function runStats(
   host: Host,
@@ -163,6 +178,7 @@ function runStats(
           whole: resolveDependencies(declaration, workspace.universe.paths),
           selected: r.selected ?? [],
           diagnostics: r.diagnostics,
+          ...(args.paths.length === 0 ? {} : { breakdown: breakdownOf(r) }),
         };
       }),
       replayed.commits,
