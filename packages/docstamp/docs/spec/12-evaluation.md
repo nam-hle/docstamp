@@ -99,7 +99,15 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
       parent's does not. If there is none, return *unknown*.
    4. Let *edited* be true iff the Declaration's *own list* as of *C* is known and differs from its
       own list now. The own list is the pair (the patterns of `result.[[Dependencies]]` whose
-      `[[Origins]]` element is none, in order; `result.[[Use]]`, where none differs from « »).
+      `[[Origins]]` element is none, in order; `result.[[Use]]`, where none differs from « »; and
+      the Selected Dependencies of `result.[[Selected]]` that came from a Shorthand, as the Strings
+      `[[Path]]`, `#` and `CanonicalJson([[Select]])`, sorted). As of *C* the Shorthands of the same
+      list are read with `ParseShorthand` (§8.7), those it raises for being left out, and resolved
+      with `ResolveSelector` and the Plugins of now, as the Presets are expanded with those of now
+      (step 10), into the same Strings; one that resolves to an `E_SELECT` is the String of its
+      `[[Raw]]`. The lists differ if these Strings do, so a Shorthand added, removed or rewritten
+      to select something else since *C* is an edit, and one rewritten to the same selection is not.
+      The Selected Dependencies written as Maps are not part of the own list.
       As of *C* it is read from `docstamp.yaml` there for a configured file (the `dependencies`
       and `use` of the key `result.[[File]]` under `files`, parsed by §9.2), and from the inline
       block of the file there for an inline file (§9.6.2 with *defaults* true, its `dependencies`
@@ -182,7 +190,7 @@ SelectionChange.
 NOTE: Step 11 runs a Plugin (user code, §8.7 NOTE) on the old text, in the host, as the verdict
 does on the new. It lists what a reviewer must look at, and never changes a state or a Hash. Its
 limits: the old text is the stored one, so the `hash:` line of an inline file (§10.2 step 4) is not
-removed from it; and step 1.4 reads String patterns only (a Shorthand is none: it is left out of both lists), so a Selected Dependency added to the own
+removed from it; and step 1.4 reads String patterns and Shorthands only, so a Map Selected Dependency added to the own
 list since *C* is `new` only when its file or its part did not exist at *C*, and is otherwise
 absent from `[[Fragments]]`.
 

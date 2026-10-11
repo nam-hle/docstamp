@@ -151,3 +151,18 @@ scenario('§12.3 step 1.4 a shorthand is not a pattern of the own list', options
   expect(stale.exit).toBe(1);
   expect(stale.stdout).not.toContain('edited');
 });
+
+scenario('§12.3 step 1.4 a shorthand edited after the review is an edit', options, async (repo) => {
+  const config = (selector: string) =>
+    `version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - src/**\n      - package.json:${selector}\n`;
+  repo.write('src/a.ts', 'a\n');
+  repo.write('docstamp.yaml', config('scripts.build'));
+  repo.commit('initial');
+  await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+  repo.commit('review');
+  repo.write('docstamp.yaml', config('scripts.test'));
+  const stale = await repo.run([]);
+  expect(stale.exit).toBe(1);
+  expect(stale.stdout).toContain('edited');
+  expect(stale.stdout).toContain('docstamp.yaml');
+});
