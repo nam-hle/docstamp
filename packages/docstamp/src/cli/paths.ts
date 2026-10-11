@@ -7,22 +7,14 @@ const toPosix = (value: string): string => value.replaceAll('\\', '/');
 const isDriveAbsolute = (value: string): boolean => /^[A-Za-z]:\//u.test(value);
 
 // SPEC §13.4 steps 1 and 2
-export function resolveArgument(
-  arg: string,
-  cwd: string,
-  windows: boolean = process.platform === 'win32',
-): string {
+export function resolveArgument(arg: string, cwd: string, windows: boolean): string {
   const [argument, base] = windows ? [arg, cwd].map(toPosix) : [arg, cwd];
   const absolute = posix.isAbsolute(argument!) || (windows && isDriveAbsolute(argument!));
   return posix.normalize(absolute ? argument! : `${base}/${argument}`);
 }
 
 // SPEC §13.8 step 3: the resolved argument is the root itself or below it
-export function isAtOrUnderRoot(
-  resolved: string,
-  root: string,
-  windows: boolean = process.platform === 'win32',
-): boolean {
+export function isAtOrUnderRoot(resolved: string, root: string, windows: boolean): boolean {
   const rootDir = windows ? toPosix(root) : root;
   return (
     resolved === rootDir || resolved.startsWith(rootDir.endsWith('/') ? rootDir : `${rootDir}/`)
@@ -34,7 +26,7 @@ export function toRepoPath(
   arg: string,
   cwd: string,
   root: string,
-  windows: boolean = process.platform === 'win32',
+  windows: boolean,
 ): string | null {
   const joined = resolveArgument(arg, cwd, windows);
   const rootDir = windows ? toPosix(root) : root;
@@ -45,9 +37,14 @@ export function toRepoPath(
 }
 
 // SPEC §5.5, §13.3, §13.8 step 3: how an argument that names no path inside the root was resolved
-export function resolutionMessage(arg: string, cwd: string, root: string): string {
-  const resolved = resolveArgument(arg, cwd);
-  const problem = isAtOrUnderRoot(resolved, root)
+export function resolutionMessage(
+  arg: string,
+  cwd: string,
+  root: string,
+  windows: boolean,
+): string {
+  const resolved = resolveArgument(arg, cwd, windows);
+  const problem = isAtOrUnderRoot(resolved, root, windows)
     ? `which does not name a file inside the root ${root}`
     : `which is outside the root ${root}`;
   return (
@@ -57,11 +54,7 @@ export function resolutionMessage(arg: string, cwd: string, root: string): strin
 }
 
 // SPEC §14.3.3: the path from cwd to the root, "" when they are the same directory
-export function rootFromCwd(
-  cwd: string,
-  root: string,
-  windows: boolean = process.platform === 'win32',
-): string {
+export function rootFromCwd(cwd: string, root: string, windows: boolean): string {
   const [from, to] = windows ? [cwd, root].map(toPosix) : [cwd, root];
   const drive = (value: string) => (isDriveAbsolute(value) ? value[0]!.toUpperCase() : '');
   if (drive(from!) !== drive(to!)) return '';
@@ -74,15 +67,16 @@ export function selectResults(
   cwd: string,
   root: string,
   results: readonly Result[],
+  windows: boolean,
 ): Result[] {
   if (args.length === 0) return [...results];
   const named = new Set<string>();
   const errors: Diagnostic[] = [];
   const known = new Set(results.map((result) => result.file));
   for (const arg of args) {
-    const path = toRepoPath(arg, cwd, root);
+    const path = toRepoPath(arg, cwd, root, windows);
     if (path === null) {
-      const message = resolutionMessage(arg, cwd, root);
+      const message = resolutionMessage(arg, cwd, root, windows);
       errors.push(diag('E_USAGE', { subject: arg, message }));
     } else if (!known.has(path)) {
       errors.push(diag('E_UNKNOWN_FILE', { subject: arg }));

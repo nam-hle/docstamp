@@ -1,13 +1,5 @@
-import { isMap, type Value } from '../config/value.ts';
-import { comparePaths } from '../core/order.ts';
-import type { Json } from '../core/types.ts';
-
-// SPEC §3.5: a configuration value as a plain value, a Map becoming an object
-export function fromValue(value: Value): Json {
-  if (Array.isArray(value)) return value.map(fromValue);
-  if (!isMap(value)) return value;
-  return Object.fromEntries([...value].map(([key, member]) => [key, fromValue(member)]));
-}
+import type { Json } from './types.ts';
+import { comparePaths } from './order.ts';
 
 // SPEC §3.5
 export function canonicalJson(value: Json): string {

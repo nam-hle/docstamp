@@ -2,7 +2,7 @@ import { basename, dirname, join } from 'node:path';
 import { Raised } from '../core/diagnostics.ts';
 import type { Json, SelectedEntry } from '../core/types.ts';
 import type { Host } from '../host/host.ts';
-import { canonicalJson } from '../plugin/canonical.ts';
+import { canonicalJson } from '../core/canonical.ts';
 import { claim, runExtract, type Extracted } from '../plugin/plugins.ts';
 import { comparePaths } from '../core/order.ts';
 import type { Declaration, Diagnostic, Lock, Result } from '../core/types.ts';

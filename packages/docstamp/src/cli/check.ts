@@ -80,7 +80,7 @@ export function runCheck(
     const cwd = resolveCwd(host, processCwd, args.cwd);
     const root = determineRoot(host, cwd);
     const evaluated = evaluateAll(host, root, 'strict');
-    const selected = selectResults(args.paths, cwd, root, evaluated.results);
+    const selected = selectResults(args.paths, cwd, root, evaluated.results, host.windows);
     const global = evaluated.global;
     const refused = hasError(global) || selected.some((r) => r.state === 'invalid');
     const stale = selected.some((r) => r.state === 'stale');
@@ -90,7 +90,7 @@ export function runCheck(
     const chunks = checkChunks(reported, global, {
       cwd: args.cwd,
       quiet: args.quiet,
-      rootFromCwd: rootFromCwd(cwd, root),
+      rootFromCwd: rootFromCwd(cwd, root, host.windows),
       inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
     });
     return emit(io, {

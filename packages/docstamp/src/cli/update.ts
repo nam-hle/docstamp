@@ -36,7 +36,7 @@ export function runUpdate(
     const evaluated = evaluateAll(host, root, args.all ? 'discard-invalid' : 'strict');
     const selected = args.all
       ? evaluated.results
-      : selectResults(args.paths, cwd, root, evaluated.results);
+      : selectResults(args.paths, cwd, root, evaluated.results, host.windows);
     const global = evaluated.global;
     const refused = hasError(global) || selected.some((r) => r.state === 'invalid');
     if (refused) {

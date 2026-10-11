@@ -1,7 +1,7 @@
 import { Raised, diag } from '../core/diagnostics.ts';
 import { quote } from '../core/quote.ts';
 import type { SelectedEntry } from '../core/types.ts';
-import { canonicalJson } from '../plugin/canonical.ts';
+import { canonicalJson } from '../core/canonical.ts';
 import { MARKER_REST, parseBlock } from './block.ts';
 import { scanFrontmatter, splitFrontmatter } from './frontmatter.ts';
 

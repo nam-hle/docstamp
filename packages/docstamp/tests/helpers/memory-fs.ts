@@ -240,7 +240,7 @@ export function memoryHost(
 ): MemoryHost {
   const fs = new MemoryFs(root, tree, options);
   const repo = new MemoryGit(fs);
-  return { fs, root, repo, git: () => repo, clock };
+  return { fs, root, repo, git: () => repo, clock, windows: process.platform === 'win32' };
 }
 
 // `fn(...inMemory(tree))` calls a function that takes (host, root) on a tree that lives in memory

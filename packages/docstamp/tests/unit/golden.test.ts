@@ -5,7 +5,7 @@ import { loadWorkspace } from '../../src/cli/workspace.ts';
 import { evaluate, resolveDependencies } from '../../src/engine/evaluate.ts';
 import { expandPresets } from '../../src/engine/presets.ts';
 import { dependencyHashFrom, fileHash } from '../../src/hash/hash.ts';
-import { canonicalJson } from '../../src/plugin/canonical.ts';
+import { canonicalJson } from '../../src/core/canonical.ts';
 import { select } from '../../src/pattern/match.ts';
 import { parsePattern, type ParsedPattern } from '../../src/pattern/parse.ts';
 import { computeUniverse, type Universe } from '../../src/universe/walk.ts';

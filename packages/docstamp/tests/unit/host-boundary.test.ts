@@ -26,4 +26,7 @@ describe('the host boundary', () => {
   it('only src/host/node-git.ts reads the clock', () => {
     expect(importing(/Date\.now\(|new Date\(\)/u)).toEqual(['host/node-git.ts']);
   });
+  it('only src/host/node-fs.ts reads the platform', () => {
+    expect(importing(/process\.platform/u)).toEqual(['host/node-fs.ts']);
+  });
 });

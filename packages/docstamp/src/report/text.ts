@@ -1,7 +1,7 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
 import { needsQuoting, quote, shellQuote } from '../core/quote.ts';
-import { canonicalJson } from '../plugin/canonical.ts';
+import { canonicalJson } from '../core/canonical.ts';
 import type {
   Change,
   Diagnostic,

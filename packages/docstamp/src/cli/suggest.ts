@@ -71,9 +71,9 @@ function suggestAll(
   const texts = new Map<string, string>();
   const absolute = (path: string) => join(root, universe.onDisk.get(path) ?? path);
   for (const arg of args.paths) {
-    const path = toRepoPath(arg, cwd, root);
+    const path = toRepoPath(arg, cwd, root, host.windows);
     if (path === null) {
-      problems.push(usage(arg, resolutionMessage(arg, cwd, root)));
+      problems.push(usage(arg, resolutionMessage(arg, cwd, root, host.windows)));
       continue;
     }
     let text: string | null = null;
