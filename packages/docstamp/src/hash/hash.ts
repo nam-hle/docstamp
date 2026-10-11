@@ -32,30 +32,43 @@ function crlfToLf(bytes: Buffer): Buffer {
   return out.subarray(0, length);
 }
 
-// SPEC §10.2, §9.6.3
-export function normalizedContent(host: Host, root: string, u: Universe, path: string): Buffer {
+interface Normalized {
+  readonly content: Buffer;
+  readonly binary: boolean;
+}
+
+// SPEC §10.1: the binary decision is made once, on the file's own bytes
+function normalize(host: Host, root: string, u: Universe, path: string): Normalized {
   const abs = join(root, u.onDisk.get(path) ?? path);
   try {
     if (u.kinds.get(path) === 'link') {
       const target = host.fs.readLink(abs).replaceAll('\\', '/');
-      return Buffer.concat([Buffer.from('link\u0000'), Buffer.from(target, 'utf8')]);
+      const content = Buffer.concat([Buffer.from('link\u0000'), Buffer.from(target, 'utf8')]);
+      return { content, binary: false };
     }
     const bytes = host.fs.readFile(abs);
-    if (isBinary(bytes)) return Buffer.concat([Buffer.from('file\u0000'), bytes]);
+    if (isBinary(bytes)) {
+      return { content: Buffer.concat([Buffer.from('file\u0000'), bytes]), binary: true };
+    }
     const body = crlfToLf(bytes);
     const hashLines = u.marked?.get(path);
     const kept = hashLines === undefined ? body : withoutLines(body, hashLines);
-    return Buffer.concat([Buffer.from('file\u0000'), kept]);
+    return { content: Buffer.concat([Buffer.from('file\u0000'), kept]), binary: false };
   } catch {
     throw new Raised([diag('E_UNREADABLE', { subject: path })]);
   }
+}
+
+// SPEC §10.2, §9.6.3
+export function normalizedContent(host: Host, root: string, u: Universe, path: string): Buffer {
+  return normalize(host, root, u, path).content;
 }
 
 const FILE_TAG = Buffer.from('file\u0000');
 
 // SPEC §8.7: the text a Plugin sees is the normalized content of §10.2 as UTF-8
 export function selectableText(host: Host, root: string, u: Universe, path: string): string {
-  const content = normalizedContent(host, root, u, path);
+  const { content, binary } = normalize(host, root, u, path);
   const fail = (why: string) =>
     new Raised([
       diag('E_SELECT', {
@@ -65,7 +78,7 @@ export function selectableText(host: Host, root: string, u: Universe, path: stri
     ]);
   if (!content.subarray(0, FILE_TAG.length).equals(FILE_TAG)) throw fail('a link');
   const body = content.subarray(FILE_TAG.length);
-  if (isBinary(body)) throw fail('binary');
+  if (binary) throw fail('binary');
   try {
     return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(body);
   } catch {

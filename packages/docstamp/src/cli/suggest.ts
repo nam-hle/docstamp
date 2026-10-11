@@ -18,7 +18,7 @@ import { computeUniverse, determineRoot, isIgnoredPath, resolveCwd } from '../un
 import type { Args } from './args.ts';
 import type { Host } from '../host/host.ts';
 import { resolutionMessage, toRepoPath } from './paths.ts';
-import type { Io } from './run.ts';
+import type { Io } from './io.ts';
 
 const WINDOW_DAYS = 30;
 const usage = (subject: string, message: string) => diag('E_USAGE', { subject, message });

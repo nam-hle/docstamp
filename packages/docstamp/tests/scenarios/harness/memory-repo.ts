@@ -1,6 +1,7 @@
 import { lstatSync, readdirSync, readFileSync, readlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { run, type Io } from '../../../src/cli/run.ts';
+import type { Io } from '../../../src/cli/io.ts';
+import { run } from '../../../src/cli/run.ts';
 import { memoryHost, type Entry, type MemoryHost } from '../../helpers/memory-fs.ts';
 import {
   FIRST_COMMIT_TIME,

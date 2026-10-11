@@ -100,7 +100,7 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
   },
   E_UNREADABLE: {
     meaning: 'A file or directory cannot be read, or the root or a file cannot be written.',
-    fix: 'Fix the permissions, or make the root writable.',
+    fix: 'Fix the permissions; for a write, also make the root writable.',
   },
   E_PATH_ENCODING: {
     meaning: 'A file name under the root is not valid UTF-8.',

@@ -161,6 +161,16 @@ describe('§8.7 runExtract', () => {
     expect(result.parts[0]?.content).toBe('{"path":"a.md","text":"x","select":"Install"}');
   });
 
+  it('gives the plugin a copy of select, so a mutation leaves the declared one intact', () => {
+    const select = { keys: ['a'] };
+    const mutating = (i: { select: { keys: string[] } }) => {
+      i.select.keys.push('b');
+      return part('x');
+    };
+    runExtract(validatePlugins([plugin({ extract: mutating })])[0]!, { ...input, select });
+    expect(canonicalJson(select)).toBe(canonicalJson({ keys: ['a'] }));
+  });
+
   it('returns the focus and the lines of each part when the plugin gives them', () => {
     const parts = [
       { content: 'a', focus: 'section "A"', lines: { start: 1, end: 3 } },
