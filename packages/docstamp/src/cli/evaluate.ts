@@ -30,6 +30,7 @@ function isStampedFile(host: Host, root: string, path: string): boolean {
 
 export interface Evaluated {
   results: Result[];
+  plugins: readonly DocstampPlugin[];
   fragmentProbe: (entries: readonly SelectedEntry[]) => FragmentProbe;
   declarations: Declaration[];
   universe: Universe;
@@ -144,7 +145,7 @@ function evaluateDeclarations(
       fs,
     ),
   );
-  return { declarations, universe, presets, defaultPresets, results, lock, fragmentProbe };
+  return { declarations, universe, presets, defaultPresets, results, lock, fragmentProbe, plugins };
 }
 
 // SPEC §12.2

@@ -25,7 +25,8 @@ resolve the conflict by taking either side, then run `docstamp`.
 NOTE: The version 4 Lockfile has the form of version 3 and the same Hash algorithm (§10.4). It
 differs in the selection: an ignore rule is matched against the NFC form of an entry name, and a
 space after an escaped backslash is trimmed (§7.2 step 3.4, §7.3 step 2), so the Universe, and
-with it a selected file list, may differ from version 3. A version 2 Lockfile differs from version 3
+with it a selected file list, may differ from version 3, and a String of `dependencies` with an
+unescaped `:` is a Shorthand (§8.7), no longer a Pattern, so its selection differs too. A version 2 Lockfile differs from version 3
 only in the name of its top-level key, `dependents` instead of `files`. An inline `hash:` line is
 not refused: a doc whose selection changed reports stale; review it and run `docstamp update <file>`.
 

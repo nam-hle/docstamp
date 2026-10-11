@@ -1,7 +1,10 @@
+import { canonicalJson } from '../core/canonical.ts';
 import { comparePaths } from '../core/order.ts';
-import type { Change, FragmentChange, Result } from '../core/types.ts';
+import type { Change, FragmentChange, Json, Result, Shorthand } from '../core/types.ts';
 import type { Git, RawChange } from '../host/git.ts';
 import { fragmentChanges, type FragmentProbe } from './fragments.ts';
+import { parseShorthand } from '../config/shorthand.ts';
+import { splitDependency } from '../pattern/split.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
 import { parseBlock } from '../inline/block.ts';
 import { recordedHash as inlineHash, scanFrontmatter } from '../inline/frontmatter.ts';
@@ -76,7 +79,29 @@ function reviewCommit(git: Git, file: string, hash: string, inline: boolean): st
 export interface OwnList {
   readonly dependencies: readonly string[];
   readonly use: readonly string[] | undefined;
+  readonly selected?: readonly string[];
 }
+
+// SPEC §12.3 step 1.4: what a Shorthand of the old list selects, with the Plugins of now
+export type ShorthandResolver = (shorthand: Shorthand) => Json | null;
+
+const selectedKey = (path: string, select: Json): string => `${path}#${canonicalJson(select)}`;
+
+const shorthandKeys = (
+  texts: readonly string[],
+  resolve: ShorthandResolver | undefined,
+): string[] =>
+  texts
+    .flatMap((text) => {
+      const parsed = parseShorthand(text);
+      if (typeof parsed === 'string') return [];
+      const select = resolve?.(parsed) ?? parsed.raw;
+      return [selectedKey(parsed.path, select)];
+    })
+    .sort();
+
+const withSelected = (own: OwnList, selected: readonly string[]): OwnList =>
+  selected.length === 0 ? own : { ...own, selected };
 
 const isYamlMap = (v: YamlValue | undefined): v is YamlMap =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -85,32 +110,49 @@ const strings = (v: YamlValue | undefined): string[] | null =>
   Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : null;
 
 // SPEC §12.3 step 1.4: the own list of `file` in a docstamp.yaml text, null when unknown
-export function configuredOwnList(text: string, file: string): OwnList | null {
+export function configuredOwnList(
+  text: string,
+  file: string,
+  resolve?: ShorthandResolver,
+): OwnList | null {
   const top = parseStrictYaml(text)?.value;
   const files = isYamlMap(top) ? top.entries.get('files')?.value : undefined;
   const entry = isYamlMap(files) ? files.entries.get(file)?.value : undefined;
   if (!isYamlMap(entry)) return null;
-  const dependencies = strings(entry.entries.get('dependencies')?.value);
-  if (dependencies === null || dependencies.length === 0) return null;
+  const listed = strings(entry.entries.get('dependencies')?.value);
+  const dependencies = listed?.filter((item) => splitDependency(item) === null) ?? null;
+  const shorthands = listed?.filter((item) => splitDependency(item) !== null) ?? [];
+  if (dependencies === null || listed?.length === 0) return null;
   const use = entry.entries.get('use');
-  return { dependencies, use: use === undefined ? undefined : (strings(use.value) ?? []) };
+  return withSelected(
+    { dependencies, use: use === undefined ? undefined : (strings(use.value) ?? []) },
+    shorthandKeys(shorthands, resolve),
+  );
 }
 
 // SPEC §12.3 step 1.4: the own list of an inline file's text, null when unknown
-export function inlineOwnList(text: string, file: string): OwnList | null {
+export function inlineOwnList(
+  text: string,
+  file: string,
+  resolve?: ShorthandResolver,
+): OwnList | null {
   const scan = scanFrontmatter(text);
   if (scan === null) return null;
   const { declaration } = parseBlock(file, scan, true);
-  if (declaration.dependencies.length === 0) return null;
-  return { dependencies: declaration.dependencies, use: declaration.use };
+  const shorthands = declaration.shorthands ?? [];
+  if (declaration.dependencies.length === 0 && shorthands.length === 0) return null;
+  const keys = shorthands.map((s) => selectedKey(s.path, resolve?.(s) ?? s.raw)).sort();
+  return withSelected({ dependencies: declaration.dependencies, use: declaration.use }, keys);
 }
 
 // SPEC §12.3 step 1.4: the own list now, without the patterns a Preset brought
 export function ownListOf(result: Result): OwnList {
-  return {
+  const own = {
     dependencies: result.dependencies.filter((_, i) => (result.origins?.[i] ?? null) === null),
     use: result.use,
   };
+  const written = (result.selected ?? []).filter((e) => e.written !== undefined);
+  return withSelected(own, written.map((e) => selectedKey(e.path, e.select)).sort());
 }
 
 const sameList = (a: readonly string[] | undefined, b: readonly string[] | undefined): boolean =>
@@ -124,18 +166,24 @@ function editedCarrier(
   rev: string,
   result: Result,
   inline: boolean,
+  resolve?: ShorthandResolver,
 ): { carrier: string; ownThen: OwnList } | null {
   const carrier = inline ? result.file : 'docstamp.yaml';
   let then: OwnList | null;
   try {
     const text = git.fileAt(rev, carrier);
-    then = inline ? inlineOwnList(text, result.file) : configuredOwnList(text, result.file);
+    then = inline
+      ? inlineOwnList(text, result.file, resolve)
+      : configuredOwnList(text, result.file, resolve);
   } catch {
     return null;
   }
   if (then === null) return null;
   const now = ownListOf(result);
-  const same = sameList(then.dependencies, now.dependencies) && sameList(then.use, now.use);
+  const same =
+    sameList(then.dependencies, now.dependencies) &&
+    sameList(then.use, now.use) &&
+    sameList(then.selected ?? [], now.selected ?? []);
   return same ? null : { carrier, ownThen: then };
 }
 
@@ -190,6 +238,7 @@ export function changedSince(
   inline = false,
   whitespace: Map<string, boolean> = new Map(),
   probe?: FragmentProbe,
+  resolve?: ShorthandResolver,
 ): ChangedReport | null {
   try {
     if (git.isShallow()) return null;
@@ -207,7 +256,7 @@ export function changedSince(
       viaOf: (path) => viaOf(result.dependencies, parsed, path),
     });
     if (changes === null) return null;
-    const edited = editedCarrier(git, id, result, inline);
+    const edited = editedCarrier(git, id, result, inline, resolve);
     const fragments = probe === undefined ? undefined : fragmentChanges(git, id, probe);
     if (changes.length === 0 && edited === null && !fragments?.length) return null;
     const whitespaceOnly = (path: string): boolean => {

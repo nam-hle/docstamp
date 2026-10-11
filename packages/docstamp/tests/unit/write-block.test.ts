@@ -253,7 +253,7 @@ describe('§9.6.5 Writing a Block', () => {
       '.inf',
       '.5/x',
       'a b/c',
-      'a:b/c',
+      'a\\:b/c',
       'a #b/c',
       'src/cli (old)',
       'é/ü',

@@ -11,6 +11,8 @@ import type { DocstampPlugin } from '../plugin/types.ts';
 import { fromYaml, isYamlMap } from './from-yaml.ts';
 import { loadScript } from './script.ts';
 import { SELECTED_MESSAGE, dedupeSelected, parseSelected } from './selected.ts';
+import { parseShorthand } from './shorthand.ts';
+import { splitDependency } from '../pattern/split.ts';
 import { CONFIG_NAMES, PRESET_NAME, isMap, isStrings, type Value } from './value.ts';
 import { parseStrictYaml } from './yaml-profile.ts';
 
@@ -96,7 +98,13 @@ function collectDeclaration(
     fatal.push(diag('E_CONFIG', { file: key, ...optional(missingMessage(value, items)) }));
     return;
   }
-  const dependencies = items.filter((item) => typeof item === 'string');
+  const strings = items.filter((item) => typeof item === 'string');
+  const dependencies = strings.filter((item) => splitDependency(item) === null);
+  const shorthands = strings.filter((item) => splitDependency(item) !== null).map(parseShorthand);
+  for (const shorthand of shorthands) {
+    if (typeof shorthand !== 'string') continue;
+    fatal.push(diag('E_CONFIG', { file: key, subject: 'dependencies', message: shorthand }));
+  }
   const selected = entries.map(parseSelected);
   if (!selected.every((entry) => entry !== null)) {
     const message = SELECTED_MESSAGE;
@@ -126,6 +134,9 @@ function collectDeclaration(
     file: key,
     dependencies,
     ...(selected.length > 0 ? { selected: dedupeSelected(selected) } : {}),
+    ...(shorthands.length > 0
+      ? { shorthands: shorthands.filter((s) => typeof s !== 'string') }
+      : {}),
     ...(isStrings(use) ? { use } : {}),
   });
 }

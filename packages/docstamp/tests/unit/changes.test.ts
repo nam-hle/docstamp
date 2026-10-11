@@ -48,6 +48,42 @@ describe('§12.3 step 1.4: own list', () => {
     expect(inlineOwnList(text, 'a.md')).toEqual({ dependencies: ['src'], use: undefined });
     expect(inlineOwnList('# A\n', 'a.md')).toBeNull();
   });
+  it('§12.3 step 1.4 resolves the Shorthands of the old list with the Plugins of now', () => {
+    const resolve = (s: { path: string; raw: string }) =>
+      s.raw.startsWith('heading=') ? { heading: s.raw.slice(8) } : s.raw;
+    const old = yaml('  a.md:\n    dependencies: [src, "g.md:heading=Install", "g.md:Usage"]\n');
+    expect(configuredOwnList(old, 'a.md', resolve)).toEqual({
+      dependencies: ['src'],
+      use: undefined,
+      selected: ['g.md#"Usage"', 'g.md#{"heading":"Install"}'],
+    });
+    const block = '---\ndocstamp:\n  dependencies:\n    - "g.md:Install"\n---\n# A\n';
+    expect(inlineOwnList(block, 'a.md', resolve)).toEqual({
+      dependencies: [],
+      use: undefined,
+      selected: ['g.md#"Install"'],
+    });
+  });
+  it('§12.3 step 1.4 the own list now holds the selections of its Shorthands only', () => {
+    const result = {
+      file: 'a.md',
+      dependencies: ['src'],
+      selected: [
+        { path: 'g.md', select: 'Install', written: 'g.md:Install' },
+        { path: 'g.md', select: 'Usage' },
+      ],
+      state: 'stale' as const,
+      reasons: [],
+      resolved: [],
+      current: '',
+      diagnostics: [],
+    };
+    expect(ownListOf(result)).toEqual({
+      dependencies: ['src'],
+      use: undefined,
+      selected: ['g.md#"Install"'],
+    });
+  });
   it('the own list now leaves out the patterns of a Preset', () => {
     const result = {
       file: 'a.md',

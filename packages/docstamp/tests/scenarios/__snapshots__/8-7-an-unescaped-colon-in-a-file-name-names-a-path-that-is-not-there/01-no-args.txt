@@ -1,0 +1,8 @@
+$ docstamp
+exit: 2
+--- stdout ---
+INVALID  CLAUDE.md
+0 ok, 0 stale, 1 invalid
+next: fix the configuration of each invalid file, then run: docstamp check CLAUDE.md
+--- stderr ---
+error: E_EMPTY_PATTERN: CLAUDE.md: notes: Correct or remove the path; it matches no file. If "notes:2024.md" is a file name, write "\:" for each ":" of it.

@@ -27,7 +27,7 @@ part of the shape of the declaration that holds them (§7.2) but cannot be selec
 
 The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugin-js`, `apiVersion` 1
 and `files` « `**/*.js`, `**/*.mjs`, `**/*.cjs`, `**/*.jsx`, `**/*.ts`, `**/*.mts`, `**/*.cts`,
-`**/*.tsx` ». Its `extract` is `Extract` (§8) and its `validateSelect` is `ValidateSelect` (§8.1).
+`**/*.tsx` ». Its `extract` is `Extract` (§8), its `validateSelect` is `ValidateSelect` (§8.1) and its `selectorFields` (SPEC §8.7) is { `main`: `name`, `fields`: { `name`: `string`, `kind`: « `function`, `class`, `interface`, `type`, `enum`, `variable`, `namespace` », `part`: « `shape`, `source` » } }.
 
 ## 4 Selector
 
@@ -42,6 +42,14 @@ and `files` « `**/*.js`, `**/*.mjs`, `**/*.cjs`, `**/*.jsx`, `**/*.ts`, `**/*.m
    is empty.
 5. Raise unless *kind* is *none* or one of `function`, `class`, `interface`, `type`, `enum`,
    `variable`, `namespace`, and *part* is `shape` or `source`.
+
+NOTE: A dependency may also be written as one String, `Path ":" Selector` (SPEC §8.7), which docstamp
+turns into the `select` before this plugin sees it: `src/api.ts:createUser` is the String
+`createUser`, `src/api.ts:kind=interface,name=User` is the Map `{ kind: interface, name: User }` and
+`src/api.ts:name=createUser,part=source` is `{ name: createUser, part: source }`. The keys are the
+fields of §4, in any order. The String and a one-pair Map are different `select` values, as
+`createUser` and `{ name: createUser }` are, so their hashes differ; a hash is never changed by how
+a dependency is written.
 
 NOTE: A selector that raises, and a file that does not parse, are returned as `{ diagnostics: « d » }`,
 *d* an `error` whose message says what is wrong; docstamp reports it as `E_SELECT` (SPEC §8.7). A
@@ -160,6 +168,6 @@ Every Diagnostic of this Plugin has a code (SPEC §8.7 step 3), stable across ve
 
 The hash of a declaration is part of the Dependency Hash of every file that depends on it, so a change
 to what `Shape` or `Source` contain, to which Declarations exist or are grouped, to the selector forms of
-§4 or to `files` in §3 is breaking. So is a parser upgrade that changes where a Statement or a body
+§4 or to `files` or `selectorFields` in §3 is breaking. So is a parser upgrade that changes where a Statement or a body
 starts or ends. Removing or renaming a code of §8.1 is breaking for those who act on it; adding one
 is not.

@@ -1,0 +1,5 @@
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_CONFIG: CLAUDE.md: dependencies: The selector after the first ":" of "package.json:" is empty.

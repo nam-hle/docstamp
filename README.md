@@ -116,7 +116,7 @@ Every command except `help` and `version` takes `--json` and `--cwd <dir>` (act 
 | Key | |
 | --- | --- |
 | `version` | Required, exactly `2`. |
-| `files` | Required, even when empty (`files: {}`). Maps each file, by its path from the root, to its `dependencies` (a non-empty list of patterns) and optionally `use` (preset names). |
+| `files` | Required, even when empty (`files: {}`). Maps each file, by its path from the root, to its `dependencies` (a non-empty list of patterns, or `path:selector`, e.g. `package.json:scripts.build`, [SPEC §8.7](packages/docstamp/docs/spec/08-patterns.md#87-selected-dependencies)) and optionally `use` (preset names). |
 | `presets`, `default-presets` | Named pattern lists, and the ones every file without its own `use` gets. |
 | `include` | The files searched for inline `docstamp` blocks (default `**/*.md`). |
 | `gitignore`, `ignore` | Read the `.gitignore` files (default `true`), and more ignore rules. Ignored files cannot be dependencies. |

@@ -107,15 +107,16 @@ raises:
    1. If *key* is not a RepoPath, collect `E_CONFIG` into *fatal*, `[[Subject]]` *key*, and
       continue.
    2. If *value* is not a Map, or has no key `dependencies`, or `dependencies` is not a non-empty
-      List whose elements are Strings or Selected Dependencies (§8.7), collect `E_CONFIG` into
+      List whose elements are Strings or Selected Dependencies (§8.7), or a String that `ParseShorthand` (§8.7) raises for, collect `E_CONFIG` into
       *fatal*, `[[File]]` *key*, and continue.
    3. For each key of *value* other than `dependencies` and `use`, collect `E_UNKNOWN_KEY` into
       *fatal*, `[[File]]` *key*, `[[Subject]]` that key. If `use` is present and is not a List of
       Strings without a repeated element, or is empty while `default-presets` is absent, collect
       `E_CONFIG` into *fatal*, `[[File]]` *key*, `[[Subject]]` `use`.
-   4. For each string *s* of `dependencies` that is not a valid Pattern (§8.1), collect
+   4. For each string *s* of `dependencies` that `SplitDependency` does not split and that is not a
+      valid Pattern (§8.1), collect
       `E_PATTERN` into *attached*, `[[File]]` *key*, `[[Subject]]` *s*.
-   5. Produce the Declaration { `[[File]]`: *key*, `[[Dependencies]]`: the strings of
+   5. Produce the Declaration { `[[File]]`: *key*, `[[Shorthands]]`: the Shorthands of the strings of `dependencies` that `SplitDependency` splits, `[[Dependencies]]`: the other strings of
       `dependencies`, `[[Selected]]`: its Maps as Selected Dependencies (§8.7), each in order of
       appearance, `[[Use]]`: the strings of `use`, or none if it is absent, `[[Origin]]`:
       `config`, `[[Recorded]]`: none }.
@@ -259,8 +260,9 @@ raises a List of Diagnostics attached to *file*:
 5. For each key of the block other than `dependencies`, `use` and `hash`, collect `E_UNKNOWN_KEY`,
    `[[Subject]]` the key.
 6. If `dependencies` is present but not a non-empty List whose elements are Strings or Selected
-   Dependencies (§8.7), or is absent and step 5 collected no `E_UNKNOWN_KEY`, collect `E_BLOCK`,
-   `[[Subject]]` `dependencies`. Otherwise, for each string *s* of it that is not a valid Pattern
+   Dependencies (§8.7), or is absent and step 5 collected no `E_UNKNOWN_KEY`, or holds a String that
+   `ParseShorthand` (§8.7) raises for, collect `E_BLOCK`, `[[Subject]]` `dependencies`. Otherwise,
+   for each string *s* of it that `SplitDependency` does not split and that is not a valid Pattern
    (§8.1), collect `E_PATTERN`, `[[Subject]]` *s*. If `use` is present and is not a List of Strings without a repeated element, or is empty
    while *defaults* is false, collect `E_BLOCK`, `[[Subject]]` `use`.
 7. If `hash` is present, let *recorded* be it. Collect `E_BLOCK`, `[[Subject]]` `hash`, unless
@@ -268,8 +270,9 @@ raises a List of Diagnostics attached to *file*:
    line of *hashLines*, and that line, after `hash:`, is one or more blanks, *recorded* itself,
    then either optional blanks, or one or more blanks and a `#` comment (a `#` with no blank
    before it is part of the scalar, as in YAML), and its terminator.
-8. If *problems* is empty, return the Declaration { `[[File]]` *file*, `[[Dependencies]]` the
-   strings of `dependencies`, `[[Selected]]` its Maps as Selected Dependencies (§8.7), each in order
+8. If *problems* is empty, return the Declaration { `[[File]]` *file*, `[[Shorthands]]` the
+   Shorthands of the strings of `dependencies` that `SplitDependency` splits, `[[Dependencies]]` the
+   other strings of `dependencies`, `[[Selected]]` its Maps as Selected Dependencies (§8.7), each in order
    of appearance, `[[Use]]` the strings of `use`, or none if it is absent, `[[Origin]]`
    `inline`, `[[Recorded]]` *recorded*, or none }. Otherwise raise *problems*, and the Declaration of the Result
    (§12.1) is { *file*, the strings of `dependencies` if it is a List of Strings and Selected Dependencies else « » }.

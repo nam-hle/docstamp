@@ -1,9 +1,11 @@
 import { fromYaml } from '../config/from-yaml.ts';
 import { SELECTED_MESSAGE, dedupeSelected, parseSelected } from '../config/selected.ts';
+import { parseShorthand } from '../config/shorthand.ts';
+import { splitDependency } from '../pattern/split.ts';
 import { parseStrictYaml, type YamlMap, type YamlValue } from '../config/yaml-profile.ts';
 import { diag } from '../core/diagnostics.ts';
 import { unknownKeyMessage } from '../core/did-you-mean.ts';
-import type { Declaration, Diagnostic, SelectedEntry } from '../core/types.ts';
+import type { Declaration, Diagnostic, SelectedEntry, Shorthand } from '../core/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { hashOnLine, type Scan } from './frontmatter.ts';
 import { BLOCK_KEYS, HASH } from './keys.ts';
@@ -29,11 +31,13 @@ export function parseBlock(file: string, scan: Scan, defaults = false): ParsedBl
     recorded: string | null,
     use: readonly string[] | null = null,
     selected: readonly SelectedEntry[] = [],
+    shorthands: readonly Shorthand[] = [],
   ): ParsedBlock => ({
     declaration: {
       file,
       dependencies,
       ...(selected.length > 0 ? { selected } : {}),
+      ...(shorthands.length > 0 ? { shorthands } : {}),
       ...(use === null ? {} : { use }),
       inline: { recorded },
     },
@@ -77,10 +81,15 @@ export function parseBlock(file: string, scan: Scan, defaults = false): ParsedBl
   const parsedEntries = shapeOk ? mapItems.map((item) => parseSelected(fromYaml(item))) : [];
   const parsedSelected = parsedEntries.filter((entry) => entry !== null);
   const selected = dedupeSelected(parsedSelected);
-  const dependencies =
+  const strings =
     shapeOk && parsedSelected.length === parsedEntries.length
       ? items.filter((item) => typeof item === 'string')
       : null;
+  const dependencies = strings?.filter((item) => splitDependency(item) === null) ?? null;
+  const parsedShorthands = (strings ?? [])
+    .filter((item) => splitDependency(item) !== null)
+    .map(parseShorthand);
+  const shorthands = parsedShorthands.filter((item) => typeof item !== 'string');
   if (dependencies === null) {
     if (listed !== undefined || unknown.length === 0) {
       block(
@@ -91,6 +100,9 @@ export function parseBlock(file: string, scan: Scan, defaults = false): ParsedBl
   } else {
     for (const pattern of dependencies) {
       if (!parsePattern(pattern)) problems.push(diag('E_PATTERN', { file, subject: pattern }));
+    }
+    for (const parsed of parsedShorthands) {
+      if (typeof parsed === 'string') block('dependencies', parsed);
     }
   }
 
@@ -124,5 +136,5 @@ export function parseBlock(file: string, scan: Scan, defaults = false): ParsedBl
   if (value !== undefined && !wellFormed) {
     block('hash', 'Write the hash as "hash:" and 64 lowercase hex digits on one line.');
   }
-  return done(dependencies ?? [], wellFormed ? (value as string) : null, use, selected);
+  return done(dependencies ?? [], wellFormed ? (value as string) : null, use, selected, shorthands);
 }

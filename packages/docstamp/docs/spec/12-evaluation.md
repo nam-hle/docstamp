@@ -54,8 +54,11 @@ raises:
    Declaration *d* that uses a Preset, call
    `ExpandPresets(d, config.[[Presets]], config.[[DefaultPresets]], present)` (§8.6): when it returns, the effective patterns and their origins are those of *d* from here on;
    when it raises, collect its Diagnostics into *attached*, `[[File]]` the file of *d*. Then, for
-   each Selected Dependency of each remaining Declaration, collect `ValidateSelect` (§8.7) into
-   *attached*.
+   each Shorthand of each remaining Declaration, call `ResolveSelector(plugins, shorthand)` (§8.7):
+   a value becomes a Selected Dependency { the Shorthand's `[[Path]]`, that value } appended to
+   `[[Selected]]`, and the identical ones are dropped as §8.7 says; an `E_SELECT` is collected into
+   *attached*. Then, for each Selected Dependency of each remaining Declaration, collect
+   `ValidateSelect` (§8.7) into *attached*.
 6. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
    entries. Otherwise let *lock* be `? ReadLock(root)`.
 7. Let *results* be `Evaluate(b, universe, lock, attached of b, plugins)` for each *b* of *declarations*,
@@ -96,7 +99,15 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
       parent's does not. If there is none, return *unknown*.
    4. Let *edited* be true iff the Declaration's *own list* as of *C* is known and differs from its
       own list now. The own list is the pair (the patterns of `result.[[Dependencies]]` whose
-      `[[Origins]]` element is none, in order; `result.[[Use]]`, where none differs from « »).
+      `[[Origins]]` element is none, in order; `result.[[Use]]`, where none differs from « »; and
+      the Selected Dependencies of `result.[[Selected]]` that came from a Shorthand, as the Strings
+      `[[Path]]`, `#` and `CanonicalJson([[Select]])`, sorted). As of *C* the Shorthands of the same
+      list are read with `ParseShorthand` (§8.7), those it raises for being left out, and resolved
+      with `ResolveSelector` and the Plugins of now, as the Presets are expanded with those of now
+      (step 10), into the same Strings; one that resolves to an `E_SELECT` is the String of its
+      `[[Raw]]`. The lists differ if these Strings do, so a Shorthand added, removed or rewritten
+      to select something else since *C* is an edit, and one rewritten to the same selection is not.
+      The Selected Dependencies written as Maps are not part of the own list.
       As of *C* it is read from `docstamp.yaml` there for a configured file (the `dependencies`
       and `use` of the key `result.[[File]]` under `files`, parsed by §9.2), and from the inline
       block of the file there for an inline file (§9.6.2 with *defaults* true, its `dependencies`
@@ -179,7 +190,7 @@ SelectionChange.
 NOTE: Step 11 runs a Plugin (user code, §8.7 NOTE) on the old text, in the host, as the verdict
 does on the new. It lists what a reviewer must look at, and never changes a state or a Hash. Its
 limits: the old text is the stored one, so the `hash:` line of an inline file (§10.2 step 4) is not
-removed from it; and step 1.4 reads String patterns only, so a Selected Dependency added to the own
+removed from it; and step 1.4 reads String patterns and Shorthands only, so a Map Selected Dependency added to the own
 list since *C* is `new` only when its file or its part did not exist at *C*, and is otherwise
 absent from `[[Fragments]]`.
 
@@ -330,7 +341,7 @@ prefix, before a `/`, of some path of *U*.
    return it in NFC. The *candidates* are the `NormalizeWord` of every span word and of every bare
    word, and the `NormalizeLink` of every link target, that are not *none*, without duplicates.
 6. *Classification.* A candidate with none of `*`, `?`, `[`, `{` is *literal*; it is dropped unless
-   it is a valid Pattern without Negation that denotes itself (§8.5 NOTE). A literal candidate is a
+   it is a valid Pattern without Negation that denotes itself (§8.5 NOTE) and that `SplitDependency` (§8.7) does not split. A literal candidate is a
    *file* if it is in *U*, else a *directory* if it is one, else it is added to *ignored* if
    *isIgnored* holds for it and it is not *doc*, else dropped. Any other candidate is a *glob*: it
    is dropped unless it is a valid Pattern without Negation with a Literal in some segment (so `*` and
@@ -398,7 +409,8 @@ exclusion also trims the test files of the other inclusions; a test file the doc
 listed after it. The notion of a test file is the one of step 9: a name with `.test.` or `.spec.`,
 or a path through `__test__` or `__tests__`; a file under a `test` or `tests` directory with
 neither is not excluded. A literal path whose name has a `,`, `]` or `}` is not a valid Pattern
-as written and is dropped.
+as written and is dropped, and so is one with a `:` (written `\:` it would be a Pattern, but a
+mention of it is not proposed).
 
 ### 12.7 Renamed Path
 

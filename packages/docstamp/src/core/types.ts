@@ -42,6 +42,13 @@ export type Json =
 export interface SelectedEntry {
   readonly path: string;
   readonly select: Json;
+  readonly written?: string;
+}
+
+// SPEC §8.7: `path:selector` as written, before a Plugin's selector grammar reads `raw`
+export interface Shorthand {
+  readonly path: string;
+  readonly raw: string;
 }
 
 export interface Diagnostic {
@@ -62,6 +69,7 @@ export interface Declaration {
   readonly origins?: readonly (string | null)[];
   readonly inline?: { readonly recorded: string | null };
   readonly selected?: readonly SelectedEntry[];
+  readonly shorthands?: readonly Shorthand[];
 }
 
 // SPEC §5.2

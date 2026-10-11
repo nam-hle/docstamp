@@ -30,6 +30,10 @@ export default defineConfig({
 });
 ```
 
+The same entry fits in one string: `'docs/guide.md:Install'`. A plugin that declares its fields
+(below) also reads `key=value` pairs, as in `'docs/guide.md:heading=Install,level=2'`; a bare value
+is the plugin's main field. In a value, `\,`, `\=` and `\\` mean `,`, `=` and a backslash.
+
 Editing another section of `docs/guide.md` leaves `CLAUDE.md` `ok`; editing `Install` makes it stale,
 and the report names the part that changed:
 
@@ -68,6 +72,12 @@ A plugin may also have a synchronous `validateSelect(select)` that returns `{ di
 errors only. docstamp calls it when the configuration loads, so a malformed selector is reported as
 `E_SELECT` for the file and pattern before any file is read. It must not read the file; a plugin
 without it behaves as before.
+
+A plugin may declare `selectorFields: { main, fields }`: the field a bare value stands for, and the
+type of each field (`'string'`, `'integer'` or a list of allowed strings). docstamp then reads
+`path:selector` for it and turns the string into the same `select` the written form has, before any
+hash, so both forms record one Dependency Hash. A plugin without it gets the text after the colon
+as a String.
 
 A plugin runs in your process, so determinism is its author's duty: keep it independent of the
 clock, the network and the environment. The contract, with every error case, is

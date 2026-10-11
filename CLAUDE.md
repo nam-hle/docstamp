@@ -279,6 +279,14 @@ adds or extends), `src/cli/workspace.ts` (merge with `files`, duplicate check) a
 `src/hash/hash.ts`. Tests: `tests/unit/inline.test.ts`, `tests/e2e/scenarios/inline.test.ts` on the
 `inline-docs` fixture.
 
+## Selected shorthand
+
+A `dependencies` String `path:selector` is a Shorthand; the rules are
+[SPEC §8.7](packages/docstamp/docs/spec/08-patterns.md#87-selected-dependencies). Code:
+`src/pattern/split.ts` (a leaf the engine may import), `src/config/shorthand.ts`; `loadWorkspace`
+resolves them and reads a plugin's `selectorFields` as data, never running `extract`. Tests:
+`tests/unit/shorthand.test.ts`, `tests/scenarios/shorthand.test.ts`.
+
 ## Suggest
 
 `docstamp suggest` (SPEC §12.6, §13.10) proposes a doc's `dependencies` from the paths it mentions.

@@ -2,6 +2,7 @@ import { Raised } from '../core/diagnostics.ts';
 import type { Result } from '../core/types.ts';
 import { selectionChanges } from '../engine/selection.ts';
 import type { Host } from '../host/host.ts';
+import { resolveSelector } from '../config/shorthand.ts';
 import { changedSince } from '../history/changes.ts';
 import { checkChunks } from '../report/text.ts';
 import { determineRoot, resolveCwd } from '../universe/walk.ts';
@@ -35,6 +36,10 @@ function withChanges(
     inline !== undefined,
     whitespace,
     probe,
+    (shorthand) => {
+      const resolved = resolveSelector(evaluated.plugins, shorthand);
+      return 'select' in resolved ? resolved.select : null;
+    },
   );
   if (report === null) return { ...result, changes: null };
   const { universe, presets, defaultPresets } = evaluated;
