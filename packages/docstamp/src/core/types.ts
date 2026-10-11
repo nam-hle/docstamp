@@ -1,6 +1,6 @@
 export type Code =
   | 'E_USAGE'
-  | 'E_ROOT'
+  | 'E_CWD'
   | 'E_CONFIG_MISSING'
   | 'E_CONFIG_AMBIGUOUS'
   | 'E_CONFIG'

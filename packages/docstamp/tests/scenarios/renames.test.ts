@@ -99,7 +99,7 @@ scenario(
   async (repo) => {
     repo.write('docstamp.yaml', config({ 'docs/api.md': ['src/lib/old-name.ts'] }));
     repo.rename('src/lib/old-name.ts', 'src/lib/new-name.ts');
-    const result = await repo.run(['--root', '.']);
+    const result = await repo.run(['--cwd', '.']);
     expect(result.exit).toBe(2);
     expect(result.stderr).toContain(
       'error: E_EMPTY_PATTERN: docs/api.md: src/lib/old-name.ts: ' +

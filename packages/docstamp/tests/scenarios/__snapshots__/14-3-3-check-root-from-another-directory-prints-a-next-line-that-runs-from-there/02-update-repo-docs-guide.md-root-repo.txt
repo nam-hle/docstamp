@@ -1,6 +1,0 @@
-$ docstamp update repo/docs/guide.md --root repo
-cwd: ..
-exit: 0
---- stdout ---
-written  docs/guide.md
---- stderr ---

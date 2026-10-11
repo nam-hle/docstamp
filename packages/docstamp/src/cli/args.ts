@@ -11,13 +11,13 @@ export type Args =
   | {
       mode: 'list-dependencies';
       json: boolean;
-      root?: string;
+      cwd?: string;
       paths: string[];
     }
   | {
       mode: 'list-dependents';
       json: boolean;
-      root?: string;
+      cwd?: string;
       paths: string[];
       transitive: boolean;
     }
@@ -26,18 +26,18 @@ export type Args =
       json: boolean;
       onlyStale: boolean;
       quiet: boolean;
-      root?: string;
+      cwd?: string;
       paths: string[];
     }
   | {
       mode: 'stats';
       json: boolean;
-      root?: string;
+      cwd?: string;
       paths: string[];
       window: StatsWindowArg;
     }
-  | { mode: 'suggest'; json: boolean; root?: string; paths: string[]; write: boolean }
-  | { mode: 'update'; all: boolean; json: boolean; root?: string; paths: string[] };
+  | { mode: 'suggest'; json: boolean; cwd?: string; paths: string[]; write: boolean }
+  | { mode: 'update'; all: boolean; json: boolean; cwd?: string; paths: string[] };
 
 // SPEC §13.1: the command table, in the order help lists it
 export const COMMANDS = [
@@ -64,17 +64,20 @@ const FLAGS = new Set([
 ]);
 const REMOVED: Record<string, string> = {
   '--files': 'docstamp list-dependencies',
+  '--root': '--cwd',
 };
 const VALUED: Record<string, string> = {
-  '--root': 'a directory',
+  '--cwd': 'a directory',
   '--since': 'a number of days such as 30d',
   '--from': 'a revision',
 };
 const valuedName = (arg: string): string | undefined =>
   Object.keys(VALUED).find((name) => arg === name || arg.startsWith(`${name}=`));
+const removedName = (arg: string): string | undefined =>
+  Object.keys(REMOVED).find((name) => arg === name || arg.startsWith(`${name}=`));
 export const OPTIONS: readonly string[] = [...FLAGS, ...Object.keys(VALUED)];
 const isOption = (arg: string) =>
-  arg === '--' || valuedName(arg) !== undefined || FLAGS.has(arg) || arg in REMOVED;
+  arg === '--' || valuedName(arg) !== undefined || FLAGS.has(arg) || removedName(arg) !== undefined;
 const DEFAULT_SINCE = '30d';
 const STATS_ONLY = ['--since', '--from'];
 const CHECK_ONLY = ['--only-stale', '--quiet'];
@@ -134,8 +137,10 @@ export function parseArgs(
       if (value === undefined || value === '') fail(name, `${name} needs ${VALUED[name]}.`);
       else values.set(name, value);
     } else if (FLAGS.has(arg)) mark(arg);
-    else if (REMOVED[arg] !== undefined) fail(arg, `${arg} was removed; use "${REMOVED[arg]}".`);
-    else if (arg.startsWith('-') && arg !== '-') {
+    else if (removedName(arg) !== undefined) {
+      const name = removedName(arg)!;
+      fail(arg, `${name} was removed; use "${REMOVED[name]}".`);
+    } else if (arg.startsWith('-') && arg !== '-') {
       fail(arg, `Unknown option ${arg}.`);
     } else if (command === undefined) {
       if (isCommand(arg)) command = explicit = arg;
@@ -202,8 +207,8 @@ export function parseArgs(
     throw usage(failure.subject, failure.message.replace(/\.$/u, `; see ${page}.`));
   }
   const json = seen.has('--json');
-  const root = values.get('--root');
-  const rootOpt = root === undefined ? {} : { root };
+  const cwd = values.get('--cwd');
+  const cwdOpt = cwd === undefined ? {} : { cwd };
   if (mode === 'stats') {
     const window: StatsWindowArg =
       from === undefined
@@ -213,17 +218,17 @@ export function parseArgs(
             value: since ?? DEFAULT_SINCE,
           }
         : { kind: 'from', value: from };
-    return { mode, json, ...rootOpt, paths, window };
+    return { mode, json, ...cwdOpt, paths, window };
   }
   if (mode === 'list-dependents') {
-    return { mode, json, ...rootOpt, paths, transitive: seen.has('--transitive') };
+    return { mode, json, ...cwdOpt, paths, transitive: seen.has('--transitive') };
   }
   if (mode === 'check') {
     const onlyStale = seen.has('--only-stale');
-    return { mode, json, onlyStale, quiet: seen.has('--quiet'), ...rootOpt, paths };
+    return { mode, json, onlyStale, quiet: seen.has('--quiet'), ...cwdOpt, paths };
   }
-  if (mode === 'suggest') return { mode, json, ...rootOpt, paths, write: seen.has('--write') };
+  if (mode === 'suggest') return { mode, json, ...cwdOpt, paths, write: seen.has('--write') };
   return mode === 'update'
-    ? { mode, all, json, ...rootOpt, paths }
-    : { mode, json, ...rootOpt, paths };
+    ? { mode, all, json, ...cwdOpt, paths }
+    : { mode, json, ...cwdOpt, paths };
 }

@@ -21,13 +21,16 @@ export interface Universe {
 const hasEntry = (host: Host, dir: string, name: string): boolean =>
   host.fs.kind(join(dir, name)) !== null;
 
+// SPEC §13.4: the directory a command acts as if it ran in
+export function resolveCwd(host: Host, processCwd: string, cwdOption: string | undefined): string {
+  if (cwdOption === undefined) return processCwd;
+  const dir = resolve(processCwd, cwdOption);
+  if (!host.fs.isDirectory(dir)) throw new Raised([diag('E_CWD')]);
+  return dir;
+}
+
 // SPEC §6: the nearest configuration file, else the nearest .git
-export function determineRoot(host: Host, cwd: string, rootOption: string | undefined): string {
-  if (rootOption !== undefined) {
-    const dir = resolve(cwd, rootOption);
-    if (!host.fs.isDirectory(dir)) throw new Raised([diag('E_ROOT')]);
-    return dir;
-  }
+export function determineRoot(host: Host, cwd: string): string {
   const nearest = (found: (dir: string) => boolean): string | null => {
     for (let dir = cwd; ; dir = dirname(dir)) {
       if (found(dir)) return dir;

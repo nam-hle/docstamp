@@ -51,7 +51,7 @@ export function resolutionMessage(arg: string, cwd: string, root: string): strin
     ? `which does not name a file inside the root ${root}`
     : `which is outside the root ${root}`;
   return (
-    `The argument is resolved against the current directory (${cwd}) to ${resolved}, ` +
+    `The argument is resolved against the working directory (${cwd}) to ${resolved}, ` +
     `${problem}; name a file inside the root.`
   );
 }

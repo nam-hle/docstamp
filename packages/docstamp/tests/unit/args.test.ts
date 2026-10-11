@@ -31,12 +31,12 @@ describe('§13.2 parseArgs', () => {
     });
   });
   it('an explicit check is the same as a bare one', () => {
-    expect(parseArgs(['check', 'a.md', '--root', 'x'])).toEqual({
+    expect(parseArgs(['check', 'a.md', '--cwd', 'x'])).toEqual({
       mode: 'check',
       json: false,
       onlyStale: false,
       quiet: false,
-      root: 'x',
+      cwd: 'x',
       paths: ['a.md'],
     });
   });
@@ -55,12 +55,12 @@ describe('§13.2 parseArgs', () => {
       json: true,
       paths: ['D.md'],
     });
-    expect(parseArgs(['--root', 'd', 'update', '--all'])).toMatchObject({
+    expect(parseArgs(['--cwd', 'd', 'update', '--all'])).toMatchObject({
       mode: 'update',
       all: true,
-      root: 'd',
+      cwd: 'd',
     });
-    expect(parseArgs(['--root=d', 'list-dependencies'])).toMatchObject({
+    expect(parseArgs(['--cwd=d', 'list-dependencies'])).toMatchObject({
       mode: 'list-dependencies',
     });
   });
@@ -171,10 +171,10 @@ describe('§13.2 parseArgs', () => {
     }
     expect(parseArgs(['--help', '--quiet'])).toEqual({ mode: 'help', names: [] });
   });
-  it('--root forms and --', () => {
-    expect(parseArgs(['--root=x', '--', '--json'])).toMatchObject({ root: 'x', paths: ['--json'] });
-    expect(parseArgs(['--root', 'x'])).toMatchObject({ root: 'x' });
-    expect(parseArgs(['list-dependencies', '--root=x'])).toMatchObject({ root: 'x' });
+  it('--cwd forms and --', () => {
+    expect(parseArgs(['--cwd=x', '--', '--json'])).toMatchObject({ cwd: 'x', paths: ['--json'] });
+    expect(parseArgs(['--cwd', 'x'])).toMatchObject({ cwd: 'x' });
+    expect(parseArgs(['list-dependencies', '--cwd=x'])).toMatchObject({ cwd: 'x' });
   });
   it('update needs exactly one of --all or files', () => {
     expect(parseArgs(['update', 'a'])).toEqual({
@@ -191,16 +191,16 @@ describe('§13.2 parseArgs', () => {
     [['--bogus'], '--bogus'],
     [['--json', '--json'], '--json'],
     [['update', '--all', '--all'], '--all'],
-    [['--root'], '--root'],
-    [['--root='], '--root'],
-    [['--root', '--json'], '--root'],
-    [['--root', '--root=x'], '--root'],
-    [['--root', '--'], '--root'],
-    [['--root', '--write'], '--root'],
-    [['--root', 'a', '--root=b'], '--root'],
+    [['--cwd'], '--cwd'],
+    [['--cwd='], '--cwd'],
+    [['--cwd', '--json'], '--cwd'],
+    [['--cwd', '--cwd=x'], '--cwd'],
+    [['--cwd', '--'], '--cwd'],
+    [['--cwd', '--write'], '--cwd'],
+    [['--cwd', 'a', '--cwd=b'], '--cwd'],
     [['list-dependencies', '--json', '--json'], '--json'],
     [['--all'], '--all'],
-    [['--root', 'd', 'update'], 'update'],
+    [['--cwd', 'd', 'update'], 'update'],
     [['check', '--all'], '--all'],
     [['list-dependencies', '--all'], '--all'],
     [['list-dependents'], 'list-dependents'],
@@ -280,10 +280,10 @@ describe('§13.2 suggest', () => {
       paths: ['a.md'],
       write: false,
     });
-    expect(parseArgs(['--write', 'suggest', '--json', '--root', 'r', 'a.md', 'b.md'])).toEqual({
+    expect(parseArgs(['--write', 'suggest', '--json', '--cwd', 'r', 'a.md', 'b.md'])).toEqual({
       mode: 'suggest',
       json: true,
-      root: 'r',
+      cwd: 'r',
       paths: ['a.md', 'b.md'],
       write: true,
     });

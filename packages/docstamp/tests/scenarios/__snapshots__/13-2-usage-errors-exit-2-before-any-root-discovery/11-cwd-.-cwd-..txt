@@ -1,0 +1,5 @@
+$ docstamp --cwd . --cwd .
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --cwd: --cwd given twice; see docstamp help.

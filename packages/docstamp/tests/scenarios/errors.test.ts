@@ -378,25 +378,18 @@ scenario(
 );
 
 scenario(
-  '§6 E_ROOT for --root that is not an existing directory',
+  '§13.4 E_CWD for --cwd that is not an existing directory',
   { fixture: 'docs-site' },
   async (repo) => {
-    await run(repo, 'missing directory', ['--root', 'nope'], 2, ['E_ROOT'], []);
-    await run(repo, 'a file, not a directory', ['--root', 'CLAUDE.md'], 2, ['E_ROOT'], []);
-    await run(repo, 'update', ['update', '--all', '--root=nope'], 2, ['E_ROOT'], []);
-    await run(
-      repo,
-      'list-dependencies',
-      ['list-dependencies', '--root', 'nope'],
-      2,
-      ['E_ROOT'],
-      [],
-    );
-    const json = await repo.run(['list-dependents', '--json', '--root', 'nope', 'x']);
+    await run(repo, 'missing directory', ['--cwd', 'nope'], 2, ['E_CWD'], []);
+    await run(repo, 'a file, not a directory', ['--cwd', 'CLAUDE.md'], 2, ['E_CWD'], []);
+    await run(repo, 'update', ['update', '--all', '--cwd=nope'], 2, ['E_CWD'], []);
+    await run(repo, 'list-dependencies', ['list-dependencies', '--cwd', 'nope'], 2, ['E_CWD'], []);
+    const json = await repo.run(['list-dependents', '--json', '--cwd', 'nope', 'x']);
     expect(json.exit).toBe(2);
-    expect(json.json().diagnostics[0].code).toBe('E_ROOT');
+    expect(json.json().diagnostics[0].code).toBe('E_CWD');
     expect(json.json().files).toEqual([]);
-    const absolute = await repo.run([`--root=${repo.root}`, '--json']);
+    const absolute = await repo.run([`--cwd=${repo.root}`, '--json']);
     expect(absolute.json().summary.stale).toBe(3);
   },
 );

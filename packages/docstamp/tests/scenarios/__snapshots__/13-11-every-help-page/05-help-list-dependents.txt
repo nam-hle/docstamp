@@ -5,7 +5,7 @@ docstamp list-dependents: List the files that depend on each named file, and the
 select it.
 
 Usage:
-  docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
+  docstamp list-dependents [--json] [--transitive] [--cwd <dir>] <file>...
 
 The reverse query: any file of the repository may be named. Run it before changing code to see which
 docs the change affects. A path that is neither in the universe nor on disk prints (no dependents)
@@ -16,9 +16,8 @@ Options:
   --transitive  Also list the dependents of each dependent, depth first; every direct dependent is
                 shown in full at the first level, a file reached again is marked (listed above) or
                 (listed below), a cycle (cycle).
-  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
-                file, else with .git. File arguments are still resolved against the current
-                directory.
+  --cwd <dir>   Act as if run from <dir>: the root is searched upward from it, and file arguments
+                are resolved against it.
   <file>...     Any files, resolved against the current directory. At least one.
   -h, --help    Print this page.
 

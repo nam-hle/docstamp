@@ -4,7 +4,7 @@ exit: 0
 docstamp suggest: Propose dependencies from the paths each file mentions.
 
 Usage:
-  docstamp suggest [--json] [--root <dir>] [--write] <file>...
+  docstamp suggest [--json] [--cwd <dir>] [--write] <file>...
 
 Reads each named file and proposes its dependencies from the repository paths it mentions (code
 spans, links, paths in the prose), with the number of files each pattern selects and its stale rate
@@ -18,17 +18,16 @@ Read the proposal before keeping it: a mention can be an illustration, and a dir
 many files. It is the quick way to enroll an existing doc: suggest --write, review, then update.
 
 Options:
-  --json        Print one JSON document instead of text (docstamp help json).
-  --root <dir>  Use <dir> as the root, instead of the nearest directory upward with a configuration
-                file, else with .git. File arguments are still resolved against the current
-                directory.
-  --write       Write the proposal into the file as a docstamp block without hash, so the file stays
-                unrecorded until reviewed. A block that already declares patterns keeps them, in
-                order, and gains only new ones; an addition that would change what they select is
-                left out. Refuses (E_USAGE) a block that has a hash, a file declared in the
-                configuration file, and a block with use that cannot be extended line by line.
-  <file>...     The files to read. At least one.
-  -h, --help    Print this page.
+  --json       Print one JSON document instead of text (docstamp help json).
+  --cwd <dir>  Act as if run from <dir>: the root is searched upward from it, and file arguments are
+               resolved against it.
+  --write      Write the proposal into the file as a docstamp block without hash, so the file stays
+               unrecorded until reviewed. A block that already declares patterns keeps them, in
+               order, and gains only new ones; an addition that would change what they select is
+               left out. Refuses (E_USAGE) a block that has a hash, a file declared in the
+               configuration file, and a block with use that cannot be extended line by line.
+  <file>...    The files to read. At least one.
+  -h, --help   Print this page.
 
 Reads:
   the configuration file, the named files, the file tree and git history (stale rate).

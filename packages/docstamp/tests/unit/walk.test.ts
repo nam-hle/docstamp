@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { memoryHost, type Entry, type MemoryOptions } from '../helpers/memory-fs.ts';
-import { computeUniverse, determineRoot, isIgnoredPath } from '../../src/universe/walk.ts';
+import {
+  computeUniverse,
+  determineRoot,
+  isIgnoredPath,
+  resolveCwd,
+} from '../../src/universe/walk.ts';
 import { CONFIG_NAMES } from '../../src/config/value.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 import type { Config } from '../../src/core/types.ts';
@@ -33,40 +38,56 @@ const codes = (fn: () => unknown) => {
 describe('§6 determineRoot', () => {
   it('finds nearest docstamp.yaml upward', () => {
     const { host, root } = tree({ 'docstamp.yaml': '', 'a/b/x': '' });
-    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(root);
-  });
-  it('--root must exist', () => {
-    expect(codes(() => determineRoot(memoryHost(), '/', '/nope/nope'))).toEqual(['E_ROOT']);
+    expect(determineRoot(host, join(root, 'a/b'))).toBe(root);
   });
   it('no docstamp.yaml raises E_CONFIG_MISSING', () => {
     const { host, root } = tree({ 'a/x': '' });
-    expect(codes(() => determineRoot(host, join(root, 'a'), undefined))).toEqual([
-      'E_CONFIG_MISSING',
-    ]);
+    expect(codes(() => determineRoot(host, join(root, 'a')))).toEqual(['E_CONFIG_MISSING']);
   });
   it.each(CONFIG_NAMES)('finds %s upward', (name) => {
     const { host, root } = tree({ [name]: '', 'a/b/x': '' });
-    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(root);
+    expect(determineRoot(host, join(root, 'a/b'))).toBe(root);
   });
   it('a directory named docstamp.yaml still counts as an entry', () => {
     const { host, root } = tree({ 'docstamp.yaml/x': '' });
-    expect(determineRoot(host, root, undefined)).toBe(root);
+    expect(determineRoot(host, root)).toBe(root);
   });
   it('without a configuration file the nearest .git directory is the root', () => {
     const { host, root } = tree({ '.git/HEAD': '', 'a/b/x': '', 'a/.git/HEAD': '' });
-    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(join(root, 'a'));
+    expect(determineRoot(host, join(root, 'a/b'))).toBe(join(root, 'a'));
   });
   it('a .git file, as in a linked work tree, counts', () => {
     const { host, root } = tree({ '.git': 'gitdir: elsewhere\n', 'a/b/x': '' });
-    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(root);
+    expect(determineRoot(host, join(root, 'a/b'))).toBe(root);
   });
   it('a configuration file further up wins over a nearer .git', () => {
     const { host, root } = tree({ 'docstamp.yaml': '', 'a/.git/HEAD': '', 'a/b/x': '' });
-    expect(determineRoot(host, join(root, 'a/b'), undefined)).toBe(root);
+    expect(determineRoot(host, join(root, 'a/b'))).toBe(root);
   });
-  it('--root wins over both', () => {
-    const { host, root } = tree({ 'docstamp.yaml': '', 'a/.git/HEAD': '' });
-    expect(determineRoot(host, join(root, 'a'), '..')).toBe(root);
+});
+
+describe('§13.4 resolveCwd', () => {
+  it('is the directory of the process without --cwd', () => {
+    const { host, root } = tree({ 'a/x': '' });
+    expect(resolveCwd(host, join(root, 'a'), undefined)).toBe(join(root, 'a'));
+  });
+  it('resolves a relative value against the directory of the process', () => {
+    const { host, root } = tree({ 'a/b/x': '' });
+    expect(resolveCwd(host, join(root, 'a'), 'b')).toBe(join(root, 'a/b'));
+    expect(resolveCwd(host, join(root, 'a'), '..')).toBe(root);
+  });
+  it('takes an absolute value as it is', () => {
+    const { host, root } = tree({ 'a/x': '' });
+    expect(resolveCwd(host, '/', join(root, 'a'))).toBe(join(root, 'a'));
+  });
+  it('raises E_CWD for a directory that does not exist, or for a file', () => {
+    const { host, root } = tree({ 'a/x': '' });
+    expect(codes(() => resolveCwd(host, root, 'nope'))).toEqual(['E_CWD']);
+    expect(codes(() => resolveCwd(host, root, 'a/x'))).toEqual(['E_CWD']);
+  });
+  it('does not search: the Root of --cwd is still found by §6', () => {
+    const { host, root } = tree({ 'docstamp.yaml': '', 'a/b/x': '' });
+    expect(determineRoot(host, resolveCwd(host, root, 'a/b'))).toBe(root);
   });
 });
 

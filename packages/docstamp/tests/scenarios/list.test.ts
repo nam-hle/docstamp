@@ -169,7 +169,7 @@ scenario(
     expect(result.exit).toBe(2);
     expect(result.stdout).toBe('');
     expect(slashes(result.stderr)).toBe(
-      'error: E_USAGE: ../outside.txt: The argument is resolved against the current directory ' +
+      'error: E_USAGE: ../outside.txt: The argument is resolved against the working directory ' +
         slashes(
           `(${repo.root}) to ${dirname(repo.root)}/outside.txt, which is outside the root ` +
             `${repo.root}; name a file inside the root.\n`,
@@ -247,7 +247,7 @@ scenario(
 );
 
 scenario(
-  '§13.8 W_UNKNOWN_PATH names the path relative to the root, from a subdirectory and with --root',
+  '§13.8 W_UNKNOWN_PATH names the path relative to the root, from a subdirectory and with --cwd',
   { fixture: 'docs-site' },
   async (repo) => {
     const fromDocs = await repo.run(['list-dependents', '../src/utl.ts', '../src/util.ts'], {
@@ -257,17 +257,17 @@ scenario(
     expect(fromDocs.stderr).toMatch(/^warning: W_UNKNOWN_PATH: src\/utl\.ts: /u);
     expect(fromDocs.stdout).toContain('src/utl.ts\n  (no dependents)\n');
 
-    const rooted = await repo.run(['list-dependents', '--root', '..', 'ghost.md'], {
+    const above = await repo.run(['list-dependents', '--cwd', '..', 'ghost.md'], {
       cwd: 'docs',
     });
-    expect(rooted.exit).toBe(0);
-    expect(rooted.stderr).toMatch(/^warning: W_UNKNOWN_PATH: docs\/ghost\.md: /u);
+    expect(above.exit).toBe(0);
+    expect(above.stderr).toMatch(/^warning: W_UNKNOWN_PATH: ghost\.md: /u);
 
-    const named = await repo.run(['list-dependents', '--root', '..', '../ghost.md'], {
+    const here = await repo.run(['list-dependents', '--cwd', '.', 'ghost.md'], {
       cwd: 'docs',
     });
-    expect(named.exit).toBe(0);
-    expect(named.stderr).toMatch(/^warning: W_UNKNOWN_PATH: ghost\.md: /u);
+    expect(here.exit).toBe(0);
+    expect(here.stderr).toMatch(/^warning: W_UNKNOWN_PATH: docs\/ghost\.md: /u);
   },
 );
 
@@ -279,7 +279,7 @@ scenario(
     expect(outside.exit).toBe(2);
     expect(outside.stdout).toBe('');
     expect(slashes(outside.stderr)).toBe(
-      'error: E_USAGE: ../../outside.txt: The argument is resolved against the current ' +
+      'error: E_USAGE: ../../outside.txt: The argument is resolved against the working ' +
         slashes(
           `directory (${repo.root}/docs) to ${dirname(repo.root)}/outside.txt, which is outside ` +
             `the root ${repo.root}; name a file inside the root.\n`,

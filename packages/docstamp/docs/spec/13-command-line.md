@@ -3,12 +3,12 @@
 ### 13.1 Synopsis
 
 ```
-docstamp [check] [--json] [--only-stale] [--quiet] [--root <dir>] [<file>...]
-docstamp update [--json] [--root <dir>] (--all | <file>...)
-docstamp list-dependencies [--json] [--root <dir>] [<file>...]
-docstamp list-dependents [--json] [--transitive] [--root <dir>] <file>...
-docstamp stats [--json] [--root <dir>] [--since <n>d | --from <rev>] [<file>...]
-docstamp suggest [--json] [--root <dir>] [--write] <file>...
+docstamp [check] [--json] [--only-stale] [--quiet] [--cwd <dir>] [<file>...]
+docstamp update [--json] [--cwd <dir>] (--all | <file>...)
+docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]
+docstamp list-dependents [--json] [--transitive] [--cwd <dir>] <file>...
+docstamp stats [--json] [--cwd <dir>] [--since <n>d | --from <rev>] [<file>...]
+docstamp suggest [--json] [--cwd <dir>] [--write] <file>...
 docstamp help [<command> | <topic> | diagnostics <code>]
 docstamp <command> --help
 docstamp version
@@ -26,13 +26,13 @@ option as `--help`, wherever `--help` is written.
 The command line is parsed before anything else.
 
 1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--write`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
-   written `--name <value>` or `--name=<value>`: `--root`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
+   written `--name <value>` or `--name=<value>`: `--cwd`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
    `list-dependencies`, `list-dependents`, `stats`, `suggest`, `help` or `version`; it is then not a file argument. Otherwise, if it
    is not an existing entry (any kind, not followed) at the path it resolves to against the
-   current directory (§13.4 step 2), and a command name is at edit distance 1 or 2 from it (the
+   current directory of the process (parsing comes before `--cwd` applies), and a command name is at edit distance 1 or 2 from it (the
    distance of the §9.3 NOTE), it is a *mistyped command*: raise « `E_USAGE` », `[[Subject]]` that
    argument, whose message names the first such command name at the smallest distance, in the
    order above, and says that a file of that name is reached after `--` (`Unknown command "updte";
@@ -51,9 +51,11 @@ Otherwise the following raise « `E_USAGE` » with `[[Subject]]` the offending a
 Each message states the problem:
 
 - an unknown option, a missing value for an option with a value (none, empty, `--`, or a
-  recognised option, so `--root --json` is an error), or an option given twice;
-- `--write` with any command but `suggest`, and `--files`, which were removed: the message names
-  the replacement, `docstamp update` for `--write` and `docstamp list-dependencies` for `--files`;
+  recognised option, so `--cwd --json` is an error), or an option given twice;
+- `--write` with any command but `suggest`, `--files` and `--root` (also written `--root=<value>`),
+  which were removed: the message
+  names the replacement, `docstamp update` for `--write`, `docstamp list-dependencies` for
+  `--files` and `--cwd` for `--root`, which also resolves file arguments (§13.4);
 - `--all` with any command but `update`;
 - `--transitive` with any command but `list-dependents`;
 - `--only-stale` or `--quiet` with any command but `check` (`[[Subject]]` the option);
@@ -96,6 +98,17 @@ arguments. A command line that cannot be answered in full is answered with its D
 
 ### 13.4 Path Resolution
 
+The *working directory* of a command is `ResolveCwd(processCwd, --cwd)`, the directory the command
+acts as if it ran in. In §13.3 and §13.5 to §13.10, *cwd* is that directory, computed before
+anything else of the command, so its `E_CWD` comes first; §6 searches from it and file arguments
+resolve against it.
+
+1. If `--cwd` is absent, return *processCwd*.
+2. Let *dir* be the value joined to *processCwd* unless it is absolute, with `.` segments removed
+   and `..` segments resolved textually, as in `ToRepoPath` step 2.
+3. If *dir* is not an existing directory, raise `E_CWD`.
+4. Return *dir*.
+
 `ToRepoPath(arg, cwd, root)` is lexical: no symbolic link is resolved and no file system access
 happens.
 
@@ -108,14 +121,14 @@ happens.
 No case folding is applied: the argument must equal the key under `files`, or the RepoPath of an
 inline file.
 
-When `ToRepoPath` fails, the argument is wrong for this current directory and Root, whatever
+When `ToRepoPath` fails, the argument is wrong for this working directory and Root, whatever
 file it names: every command raises `E_USAGE` for it (§13.3 step 2, §13.8 step 3, §13.10 step 2).
 `E_UNKNOWN_FILE` is only for an argument that resolves inside Root to a file that is neither
 declared nor carries an inline block.
 
 ### 13.5 Check
 
-1. Let *root* be `? DetermineRoot(cwd, --root)`.
+1. Let *root* be `? DetermineRoot(cwd)`.
 2. Let (*results*, *lock*, *global*) be `? EvaluateAll(root, strict)`.
 3. Let *selected* be `? SelectResults(args, cwd, root, results)`.
 4. Output *selected* and *global* (§14).
@@ -142,7 +155,7 @@ reviewer compares them with the state at the last Write using its own tools.
 
 ### 13.6 Update
 
-1. Let *root* be `? DetermineRoot(cwd, --root)`.
+1. Let *root* be `? DetermineRoot(cwd)`.
 2. Let *policy* be `discard-invalid` if `--all` is given, else `strict`.
 3. Let (*results*, *lock*, *global*) be `? EvaluateAll(root, policy)`.
 4. If `--all` is given, let *targets* be *results*. Otherwise let *targets* be
@@ -180,7 +193,7 @@ unreadable Lockfile), so no file is marked reviewed by accident.
 
 ### 13.7 ListDependencies
 
-1. Let *root* be `? DetermineRoot(cwd, --root)`.
+1. Let *root* be `? DetermineRoot(cwd)`.
 2. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`, *universe* be
    `? ComputeUniverse(root, config)`, and (*declarations*, *attached*, *marked*) be the Declarations
    and attached Diagnostics of steps 3 to 5 of §12.2.
@@ -202,13 +215,13 @@ the first `update` and while a legacy `docsync.lock` is still present.
 The reverse query of §13.7: the arguments are any files, not only stamped files, and the answer is the
 dependents of each: the stamped files that depend on it. At least one file argument is required (§13.2).
 
-1. Let *root* be `? DetermineRoot(cwd, --root)`.
+1. Let *root* be `? DetermineRoot(cwd)`.
 2. Let (*config*, *attached*, *present*) be `? ReadConfig(root)`, *universe* be
    `? ComputeUniverse(root, config)`, and (*declarations*, *attached*, *marked*) be the Declarations
    and attached Diagnostics of steps 3 to 5 of §12.2.
 3. If `ToRepoPath(arg, cwd, root)` fails for any file argument *arg*, raise « `E_USAGE` with
    `[[Subject]]` *arg* » for each such *arg*; no entry is output. Its `[[Message]]` says how *arg*
-   was resolved: against the current directory *cwd*, to which absolute path (step 2 of §13.4),
+   was resolved: against the working directory *cwd*, to which absolute path (step 2 of §13.4),
    and that this is outside *root*. A *path* need not exist.
 4. Let *entries* be an empty List. For each distinct *arg* of the file arguments, in path order of
    its *path*:
@@ -261,8 +274,7 @@ that comes from a Preset. A file that is not in the Universe
 
 NOTE: `W_UNKNOWN_PATH` makes a typo visible without breaking a script: the entry is still output
 with no dependents and the exit code stays 0 (§16). A path that exists but is ignored, a directory,
-or the Lockfile is not unknown: it has no dependents and no warning. The arguments are still
-resolved against the current directory (§13.4), not against `--root`.
+or the Lockfile is not unknown: it has no dependents and no warning.
 
 NOTE: `--transitive` only reports the chains: it changes no verdict, Hash or exit code, and a
 change in a file still makes only its direct dependents `stale` (§12.2 NOTE); the chains show which
@@ -287,7 +299,7 @@ days, or `--from <rev>`, the commits of `<rev>..HEAD`; without either it is `--s
 command only reports: it exits 0 whatever the numbers are. Nothing is written and no Lockfile is
 read.
 
-1. Let *root* be `? DetermineRoot(cwd, --root)`.
+1. Let *root* be `? DetermineRoot(cwd)`.
 2. Let *results* be the Results of steps 2 and 3 of §13.7, and *selected* be
    `? SelectResults(args, cwd, root, results)`.
 3. If any of *selected* is `invalid`, raise their Diagnostics, so that the history is not read.
@@ -319,7 +331,7 @@ each pattern selects and how often it would have made the file stale over the la
 `unrecorded` until a person reviews it and runs `update` (§13.6). The command never stamps, never
 reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 whatever it finds.
 
-1. Let *root* be `? DetermineRoot(cwd, --root)`, *config* be the Config of `? ReadConfig(root)`
+1. Let *root* be `? DetermineRoot(cwd)`, *config* be the Config of `? ReadConfig(root)`
    (§9.3; a Root with no Configuration file and no inline block is not an error here) and *universe*
    be `? ComputeUniverse(root, config)`.
 2. For each distinct file argument *arg*, in path order of its *path*: if `ToRepoPath(arg, cwd, root)`

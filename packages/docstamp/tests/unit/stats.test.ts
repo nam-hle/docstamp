@@ -377,7 +377,7 @@ describe('§13.2 stats options', () => {
       ['stats', '--since', '--json'],
       ['stats', '--since='],
       ['stats', '--from'],
-      ['stats', '--from', '--root'],
+      ['stats', '--from', '--cwd'],
       ['stats', '--from='],
       ['stats', '--from=-x'],
     ]) {

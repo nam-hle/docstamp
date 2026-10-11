@@ -151,13 +151,13 @@ scenario(
   '§13.10 stale rate is n/a without git and without commits in the window',
   { fixture: 'suggest', git: false },
   async (repo) => {
-    const result = await repo.run(['suggest', 'docs/nothing.md', 'README.md', '--root', repo.root]);
+    const result = await repo.run(['suggest', 'docs/nothing.md', 'README.md', '--cwd', repo.root]);
     expect(result.exit).toBe(0);
     expect(result.stdout).toBe(
       'suggest README.md\n  pattern     files  stale\n  docs/guide      1    n/a\n' +
         'suggest docs/nothing.md\n  no paths found\n',
     );
-    const json = await repo.run(['suggest', '--json', 'README.md', '--root', repo.root]);
+    const json = await repo.run(['suggest', '--json', 'README.md', '--cwd', repo.root]);
     expect(json.json().files[0].suggestions[0].staleRate).toBeNull();
   },
 );
@@ -411,7 +411,7 @@ scenario(
     expect(outside.stdout).toBe('');
     expect(outside.stderr.replaceAll('\\', '/')).toBe(
       (
-        'error: E_USAGE: ../outside.md: The argument is resolved against the current directory ' +
+        'error: E_USAGE: ../outside.md: The argument is resolved against the working directory ' +
         `(${repo.root}) to ${dirname(repo.root)}/outside.md, which is outside the root ` +
         `${repo.root}; name a file inside the root.\n`
       ).replaceAll('\\', '/'),

@@ -1,0 +1,6 @@
+$ docstamp update src/x.ts --cwd repo
+cwd: ..
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNKNOWN_FILE: src/x.ts: Name a file listed under "files" in the configuration file, or one with a docstamp block.

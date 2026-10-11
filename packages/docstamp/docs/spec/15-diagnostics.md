@@ -2,8 +2,8 @@
 
 | Code | Severity | Raised by | Fix named by the message |
 |---|---|---|---|
-| `E_USAGE` | error | §13.2, §13.3, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a mistyped command, the command name it suggests, or `--` before a file of that name; for a file argument outside Root, name a path that resolves, against the current directory, inside Root; for an unknown help name, one of those the message lists |
-| `E_ROOT` | error | §6 | pass an existing directory |
+| `E_USAGE` | error | §13.2, §13.3, §13.8, §13.10, §13.11, §9.6.5 | correct the command line, as `docstamp help <command>` shows it; for a removed option, use the command it names; for a mistyped command, the command name it suggests, or `--` before a file of that name; for a file argument outside Root, name a path that resolves, against the working directory, inside Root; for an unknown help name, one of those the message lists |
+| `E_CWD` | error | §13.4 | pass an existing directory to `--cwd` |
 | `E_CONFIG_MISSING` | error | §6, §9.3, §12.2 | create a Configuration file (§9.1), or add a `docstamp` block to the frontmatter of a Markdown file (§5.6); `docstamp help start` shows both |
 | `E_CONFIG_AMBIGUOUS` | error | §9.3 | keep one configuration file |
 | `E_CONFIG` | error | §8.7, §9.2, §9.3, §9.5 | fix the named key (`presets.<name>` for a Preset, `use` for a file, `default-presets` for the default Presets; an empty `use` needs `default-presets`); for a missing `files`, write `files: {}` for none (a key one or two edits from `files` is `E_UNKNOWN_KEY` alone, §9.3 step 7); for a module without a default export, `export default` the value |

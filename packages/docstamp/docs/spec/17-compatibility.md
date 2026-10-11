@@ -83,6 +83,16 @@ becomes a pass, so *Platform* (what a script Carrier may export) and *Verdicts*:
 migration is none for existing files. No Hash input, selection or Lockfile `version` changes for a
 file without Selected Dependencies.
 
+NOTE: The option `--root <dir>` is removed (§13.2) and `--cwd <dir>` takes its place (§13.4). It is
+breaking under *Contract*: an option name, the meaning of an argument, and the Diagnostic code
+`E_ROOT`, which is now `E_CWD`. `--root D` made *D* the Root without a search and left file
+arguments to resolve against the current directory of the process; `--cwd D` runs as if from *D*:
+the Root is found by §6 from *D*, and file arguments resolve against *D*. The migration is to write
+`--cwd D` for `--root D`, and, where the old command passed file arguments relative to the process
+directory, to write them relative to *D*. A *D* with no Configuration file and no `.git` at or above
+it, which `--root` accepted, is now `E_CONFIG_MISSING`: add a Configuration file to it. The `next:` and `review:` lines (§14.3.3, §14.3.4) print `--cwd`. No Hash
+input, selection or Lockfile `version` changes.
+
 ### 17.3 Non-breaking changes
 
 The following are not breaking:

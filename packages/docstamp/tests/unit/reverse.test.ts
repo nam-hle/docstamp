@@ -104,9 +104,9 @@ describe('§13.8 list-dependents', () => {
     expect(exec(root, cmd, 'src/x.ts').out).toBe('src/x.ts\n  b.md   via src/**\n');
   });
 
-  it('resolves arguments against cwd, dedupes and sorts', () => {
+  it('resolves arguments against --cwd, dedupes and sorts', () => {
     const root = tree({ 'a.md': ['src/**'] });
-    const r = exec(join(root, 'src'), cmd, 'x.ts', '../src/x.ts', 'gen/y.ts', '--root', root);
+    const r = exec(root, cmd, 'x.ts', '../src/x.ts', 'gen/y.ts', '--cwd', join(root, 'src'));
     expect(r.out).toBe('src/gen/y.ts\n  a.md   via src/**\nsrc/x.ts\n  a.md   via src/**\n');
   });
 
@@ -115,7 +115,7 @@ describe('§13.8 list-dependents', () => {
     const r = exec(root, cmd, '../outside.ts');
     expect(r.code).toBe(2);
     expect(r.err).toContain('error: E_USAGE: ../outside.ts: ');
-    expect(r.err).toContain(`resolved against the current directory (${root}) to `);
+    expect(r.err).toContain(`resolved against the working directory (${root}) to `);
     expect(r.err).toContain(`which is outside the root ${root};`);
   });
 
@@ -158,7 +158,7 @@ describe('§13.8 list-dependents', () => {
   });
 
   it('--json on a raised error has empty files', () => {
-    const doc = JSON.parse(exec(makeTree({}), cmd, '--json', '--root', '.', 'a').out);
+    const doc = JSON.parse(exec(makeTree({}), cmd, '--json', '--cwd', '.', 'a').out);
     expect(doc.files).toEqual([]);
     expect(doc.diagnostics[0].code).toBe('E_CONFIG_MISSING');
   });

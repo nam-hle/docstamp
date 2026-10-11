@@ -214,6 +214,6 @@ describe('action runner', () => {
   it('puts the working directory in the commands of the comment', async () => {
     const { calls } = await execute({ report: staleReport, env: { DOCSTAMP_ROOT: 'docs' } });
     const writes = calls.filter((call) => call.method !== 'GET');
-    expect(writes[0]?.body).toContain('docstamp update docs/CLAUDE.md --root docs');
+    expect(writes[0]?.body).toContain('docstamp update CLAUDE.md --cwd docs');
   });
 });

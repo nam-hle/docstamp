@@ -48,11 +48,11 @@ const SAFE = /^[A-Za-z0-9_./:@%+=,-]+$/u;
 const quoted = (text: string): string =>
   SAFE.test(text) ? text : `'${text.replaceAll("'", `'\\''`)}'`;
 
-// the command that names a file the way the report does: from the repository top
-const command = (verb: string, file: string, root: string): string => {
-  const dir = root.replace(/^(\.\/)+/u, '').replace(/\/+$/u, '');
+// the command that names a file the way the report does: from the working directory
+const command = (verb: string, file: string, workingDirectory: string): string => {
+  const dir = workingDirectory.replace(/^(\.\/)+/u, '').replace(/\/+$/u, '');
   if (dir === '' || dir === '.') return `docstamp ${verb} ${quoted(file)}`;
-  return `docstamp ${verb} ${quoted(`${dir}/${file}`)} --root ${quoted(dir)}`;
+  return `docstamp ${verb} ${quoted(file)} --cwd ${quoted(dir)}`;
 };
 
 const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? '' : 's'}`;

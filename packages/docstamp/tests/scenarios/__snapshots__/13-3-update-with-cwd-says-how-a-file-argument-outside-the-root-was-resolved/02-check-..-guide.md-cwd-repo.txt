@@ -1,0 +1,6 @@
+$ docstamp check ../guide.md --cwd repo
+cwd: ..
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: ../guide.md: The argument is resolved against the working directory (<root>) to <tmp>/guide.md, which is outside the root <root>; name a file inside the root.
