@@ -1,7 +1,8 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { memoizeHash, run, type Io } from '../../src/cli/run.ts';
+import type { Io } from '../../src/cli/io.ts';
+import { memoizeHash, run } from '../../src/cli/run.ts';
 import { Raised, diag } from '../../src/core/diagnostics.ts';
 import { cleanupTrees, makeTree } from '../helpers/fixture.ts';
 import { nodeHost } from '../../src/host/node-fs.ts';

@@ -42,16 +42,10 @@ import {
 } from '../universe/walk.ts';
 import { parseArgs, type Args } from './args.ts';
 import { helpText } from './help.ts';
+import type { Io } from './io.ts';
 import { resolutionMessage, rootFromCwd, selectResults, toRepoPath } from './paths.ts';
 import { runSuggest } from './suggest.ts';
 import { loadWorkspace } from './workspace.ts';
-
-export interface Io {
-  stdout(s: string): void;
-  stderr(s: string): void;
-  isTty: boolean;
-  env: NodeJS.ProcessEnv;
-}
 
 declare const VERSION: string | undefined;
 

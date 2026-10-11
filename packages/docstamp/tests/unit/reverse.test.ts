@@ -1,7 +1,8 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { run, type Io } from '../../src/cli/run.ts';
+import type { Io } from '../../src/cli/io.ts';
+import { run } from '../../src/cli/run.ts';
 import { nodeHost } from '../../src/host/node-fs.ts';
 import { cleanupTrees, makeTree, type TreeSpec } from '../helpers/fixture.ts';
 
