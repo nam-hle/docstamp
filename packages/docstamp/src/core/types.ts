@@ -42,7 +42,6 @@ export type Json =
 export interface SelectedEntry {
   readonly path: string;
   readonly select: Json;
-  readonly match: 'one' | 'all';
 }
 
 export interface Diagnostic {

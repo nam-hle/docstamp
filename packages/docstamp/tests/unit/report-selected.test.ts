@@ -7,7 +7,7 @@ import { checkText, listText } from '../../src/report/text.ts';
 const withSelected: Result = {
   file: 'CLAUDE.md',
   dependencies: ['src/**'],
-  selected: [{ path: 'docs/guide.md', select: { name: 'abc', kind: 'function' }, match: 'all' }],
+  selected: [{ path: 'docs/guide.md', select: { name: 'abc', kind: 'function' } }],
   state: 'stale',
   reasons: ['content-changed'],
   resolved: ['src/a.ts'],
@@ -46,8 +46,7 @@ describe('§14.3, §14.5, §14.6 selected dependencies in the output', () => {
         '          "select": {',
         '            "kind": "function",',
         '            "name": "abc"',
-        '          },',
-        '          "match": "all"',
+        '          }',
         '        }',
         '      ],',
         '      "changes"',

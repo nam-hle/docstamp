@@ -121,11 +121,10 @@ function evaluateDeclarations(
       }),
   );
   // SPEC §12.3 step 11: the Fragments rule of §8.7, with null where it would raise
-  const fragmentOf = (found: () => Extracted, entry: SelectedEntry): Extracted | null => {
+  const fragmentOf = (found: () => Extracted): Extracted | null => {
     try {
       const extracted = found();
-      const { length } = extracted.hashes;
-      return length === 1 || (length > 1 && entry.match === 'all') ? extracted : null;
+      return extracted.hashes.length === 1 ? extracted : null;
     } catch (e) {
       if (e instanceof Raised) return null;
       throw e;
@@ -137,12 +136,10 @@ function evaluateDeclarations(
         comparePaths(a.path, b.path) ||
         comparePaths(canonicalJson(a.select), canonicalJson(b.select)),
     ),
-    now: (entry) => fragmentOf(() => extract([entry.path, entry.select]), entry),
+    now: (entry) => fragmentOf(() => extract([entry.path, entry.select])),
     earlier: (entry, text) =>
-      fragmentOf(
-        () =>
-          runExtract(claim(plugins, entry.path), { path: entry.path, select: entry.select, text }),
-        entry,
+      fragmentOf(() =>
+        runExtract(claim(plugins, entry.path), { path: entry.path, select: entry.select, text }),
       ),
   });
   const lock = readLockFor();

@@ -153,8 +153,8 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
     fix: 'Correct select or the file.',
   },
   E_SELECT_AMBIGUOUS: {
-    meaning: 'The selector matched more than once and match is one.',
-    fix: 'Narrow select, or write match: all to depend on all.',
+    meaning: 'The selector matched more than once.',
+    fix: 'Narrow select.',
   },
   W_ORPHAN: {
     meaning: 'The lock has an entry for a file that is no longer declared.',

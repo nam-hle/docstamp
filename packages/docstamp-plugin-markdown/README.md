@@ -60,7 +60,7 @@ The report names the section and its lines because this plugin returns them with
   `## *Fast* path` is selected by `'*Fast* path'`. Nothing is decoded or stripped, so a formatting
   edit to the heading makes the selector match nothing (`E_SELECT_NOT_FOUND`) instead of silently
   tracking a different heading.
-- A heading that appears twice is `E_SELECT_AMBIGUOUS`; write `match: 'all'` to depend on every one.
+- A heading that appears twice is `E_SELECT_AMBIGUOUS`; rename one of them.
 
 ## What is hashed
 

@@ -23,18 +23,15 @@ exit: 1
       "selected": [
         {
           "path": "package.json",
-          "select": "scripts.build",
-          "match": "one"
+          "select": "scripts.build"
         },
         {
           "path": "package.json",
-          "select": "scripts.test",
-          "match": "one"
+          "select": "scripts.test"
         },
         {
           "path": "ci.yml",
-          "select": "jobs.test.steps.1.run",
-          "match": "one"
+          "select": "jobs.test.steps.1.run"
         }
       ],
       "changes": [

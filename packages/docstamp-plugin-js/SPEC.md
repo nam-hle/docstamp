@@ -45,7 +45,7 @@ and `files` « `**/*.js`, `**/*.mjs`, `**/*.cjs`, `**/*.jsx`, `**/*.ts`, `**/*.m
 
 NOTE: A selector that raises is reported by docstamp as `E_SELECT` (the plugin threw). A valid selector
 that matches nothing is `E_SELECT_NOT_FOUND`; one that matches more than one Group is
-`E_SELECT_AMBIGUOUS` unless the dependency says `match: all`.
+`E_SELECT_AMBIGUOUS`.
 
 ## 5 Parsing
 

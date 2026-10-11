@@ -678,18 +678,17 @@ patterns. The Lockfile and its `version` are unchanged. It is not an edit of the
 
 ### 8.7 Selected Dependencies
 
-A *Selected Dependency* is { `[[Path]]`: a RepoPath, `[[Select]]`: a plain value (§3.5), `[[Match]]`:
-`one` or `all` }. In a `dependencies` List a Selected Dependency is written as
-a Map with the keys `path`, `select` and, optionally, `match` (`one` when absent); a String is a
-Pattern (§8.1) as before. The written `path` is a literal path (§8.5 NOTE) and `[[Path]]` is the
-String it denotes, so a file named `a[1].json` is written `a\[1\].json`. A Map with another key, a
-missing `path` or `select`, a `path` that is not a valid Pattern without Negation or not a literal
-path, a `select` holding a Number that is not finite at any depth, or a `match` other than `one` or
-`all` is `E_CONFIG` (`E_BLOCK` in an inline block).
+A *Selected Dependency* is { `[[Path]]`: a RepoPath, `[[Select]]`: a plain value (§3.5) }. In a
+`dependencies` List a Selected Dependency is written as a Map with the keys `path` and `select`; a
+String is a Pattern (§8.1) as before. The written `path` is a literal path (§8.5 NOTE) and
+`[[Path]]` is the String it denotes, so a file named `a[1].json` is written `a\[1\].json`. A Map
+with another key, a missing `path` or `select`, a `path` that is not a valid Pattern without
+Negation or not a literal path, or a `select` holding a Number that is not finite at any depth is
+`E_CONFIG` (`E_BLOCK` in an inline block).
 
 Selected Dependencies with the same `[[Path]]` and the same `CanonicalJson([[Select]])` are one
-dependency: the Declaration's `[[Selected]]` holds the first of them in order of appearance, with
-its `[[Match]]`, and drops the others without a diagnostic.
+dependency: the Declaration's `[[Selected]]` holds the first of them in order of appearance and
+drops the others without a diagnostic.
 
 A *Plugin* is { `[[Name]]`: a non-empty String, `[[ApiVersion]]`: 1, `[[Files]]`: a non-empty List
 of Patterns, `[[Extract]]`: a function }, other members being ignored. Plugin names are unique.
@@ -708,9 +707,8 @@ and { `lines` }, a List of { `start`, `end` } integers with 1 <= `start` <= `end
 throws, returns a Promise, does not return such a List, or if the file is a link, binary (§10.1) or
 not valid UTF-8, or if `focus` or `lines` is present and not such a List. *text* is the content of §10.2
 steps 1 to 4 after the `file` tag. Then, with *n*
-the length of `hashes`: `E_SELECT_NOT_FOUND` if *n* is 0; `E_SELECT_AMBIGUOUS` if *n* > 1 and
-`[[Match]]` is `one`; else the Fragment is `hashes`, with its *Focus* (`focus`) and *Lines* (`lines`) when
-given. For both errors, `[[Subject]]` is the path, `#` and `CanonicalJson(select)`.
+the length of `hashes`: `E_SELECT_NOT_FOUND` if *n* is 0; `E_SELECT_AMBIGUOUS` if *n* > 1; else
+the Fragment is `hashes`, with its *Focus* (`focus`) and *Lines* (`lines`) when given. For both errors, `[[Subject]]` is the path, `#` and `CanonicalJson(select)`.
 
 NOTE: *Focus* says in words what a hash is of, as a reader of the report needs it (`section "Install"
 (level 2)`, `function createUser`), and *Lines* where it is in *text*, which has the line count of the
@@ -764,7 +762,7 @@ Paths.
    (`scripts.build (string)`). They give no `lines`.
 
 So a key reordered, a comment, the quoting style and the indentation never change a Fragment, and a
-changed value does. `null` at the path is a value like any other. `match` has no effect: the
+changed value does. `null` at the path is a value like any other. The
 Fragment never holds more than one hash.
 
 NOTE: Several Selected Dependencies of one file are independent (§8.7): each has its own `select`,
@@ -2457,7 +2455,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   between `dependencies` and `changes`, as `list-dependencies` has them (below).
 - A member `"selected"` follows `dependencies` (after `use` and `origins` when present) in an
   element of `files` of `check`, `update` and `list-dependencies` when the Declaration has Selected
-  Dependencies (§8.7), and is absent otherwise: a List of `{ "path", "select", "match" }` in order of
+  Dependencies (§8.7), and is absent otherwise: a List of `{ "path", "select" }` in order of
   appearance, `select` as the plain value with its Map keys in path order.
 - With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (true only when it was written, §13.6 step 10; false when it was unchanged or when
@@ -2743,7 +2741,7 @@ command raised.
 | `E_PLUGIN` | error | §8.7, §9.5 | fix the Plugin in the `plugins` of the script Carrier: a non-empty `name`, `apiVersion: 1`, a non-empty `files` List of Patterns and an `extract` function, unique names, and no two Plugins claiming one path; the subject names the Plugin or `plugins[i]`, or the path claimed twice |
 | `E_SELECT` | error | §8.7 | register a Plugin whose `files` claim the path, or fix the Plugin: `extract` must return `{ hashes }` synchronously and the file must be a UTF-8 text file; subject the path |
 | `E_SELECT_NOT_FOUND` | error | §8.7 | correct `select`, or the file, so the Plugin returns at least one Fragment; subject the path, `#` and the selector |
-| `E_SELECT_AMBIGUOUS` | error | §8.7 | narrow `select` to one Fragment, or write `match: all`; subject the path, `#` and the selector |
+| `E_SELECT_AMBIGUOUS` | error | §8.7 | narrow `select` to one Fragment; subject the path, `#` and the selector |
 | `W_ORPHAN` | warning | §12.2 | run `docstamp update` on any file to remove it |
 | `W_EMPTY_EXCLUSION` | warning | §8.5 | correct or remove the exclusion, or keep it: it matches no file of the Universe and changes nothing; attached to the file, subject the pattern |
 | `W_SHADOWED_EXCLUSION` | warning | §8.5 | move the exclusion after the named later pattern (for a Preset, list it last in `use`), or narrow that pattern, unless re-selecting those files is intended; attached to the file, subject the exclusion |

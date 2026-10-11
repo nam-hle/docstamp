@@ -19,7 +19,6 @@ const fsWith = (
 const entry = (over: Partial<SelectedEntry> = {}): SelectedEntry => ({
   path: 'docs/guide.md',
   select: 'Install',
-  match: 'one',
   ...over,
 });
 const decl = (selected: SelectedEntry[], dependencies: string[] = []): Declaration => ({
@@ -93,12 +92,11 @@ describe('§8.7 / §12.1 selected dependencies', () => {
     expect(result.diagnostics[0]!.subject).toBe('docs/guide.md#"Install"');
   });
 
-  it('reports E_SELECT_AMBIGUOUS for match one, accepts match all', () => {
+  it('reports E_SELECT_AMBIGUOUS when the plugin returns several hashes', () => {
     const ambiguous = run(decl([entry()]), () => ['a', 'b']);
+    expect(ambiguous.state).toBe('invalid');
     expect(ambiguous.diagnostics.map((d) => d.code)).toEqual(['E_SELECT_AMBIGUOUS']);
-    const all = run(decl([entry({ match: 'all' })]), () => ['a', 'b']);
-    expect(all.state).not.toBe('invalid');
-    expect(all.current).not.toBe(run(decl([entry()]), () => ['a']).current);
+    expect(ambiguous.diagnostics[0]!.message).toContain('narrow "select"');
   });
 
   it('does not depend on the select key order', () => {

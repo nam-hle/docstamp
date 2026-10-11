@@ -146,10 +146,8 @@ function fragmentsOf(b: Declaration, fs: EngineFs, problems: Diagnostic[]): Frag
       const hashes = fs.extractHashes!(entry.path, entry.select);
       const subject = `${entry.path}#${select}`;
       if (hashes.length === 0) problems.push(diag('E_SELECT_NOT_FOUND', { subject }));
-      else if (hashes.length > 1 && entry.match === 'one') {
-        const message =
-          `The selector matched ${hashes.length} times; narrow "select", ` +
-          'or write "match: all" to depend on all.';
+      else if (hashes.length > 1) {
+        const message = `The selector matched ${hashes.length} times; narrow "select".`;
         problems.push(diag('E_SELECT_AMBIGUOUS', { subject, message }));
       } else fragments.push({ path: entry.path, select, hashes });
     } catch (e) {

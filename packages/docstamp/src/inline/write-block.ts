@@ -20,7 +20,7 @@ const body = (dependencies: readonly string[], indent: string, eol: string): str
 
 // §9.6.2, §8.7: the rewrite must keep every Selected Dependency, in order
 const canonicalSelected = (entries: readonly SelectedEntry[]): string =>
-  canonicalJson(entries.map(({ path, select, match }) => ({ path, select, match })));
+  canonicalJson(entries.map(({ path, select }) => ({ path, select })));
 
 const INDENTED = /^( +)[^ \t\r\n]/u;
 
