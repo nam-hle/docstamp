@@ -78,6 +78,7 @@ describe('§9.5 the packed tarball works from node_modules', () => {
       'schema.json',
       'schema-frontmatter.json',
       'docs/SPEC.md',
+      'docs/spec/13-command-line.md',
       'package.json',
     ]) {
       expect(existsSync(join(packaged(), file)), file).toBe(true);
@@ -86,13 +87,13 @@ describe('§9.5 the packed tarball works from node_modules', () => {
     for (const leaked of ['src', 'tests', 'scripts', 'node_modules']) {
       expect(top).not.toContain(leaked);
     }
-    expect(readdirSync(join(packaged(), 'docs'))).toEqual(['SPEC.md']);
+    expect(readdirSync(join(packaged(), 'docs')).sort()).toEqual(['SPEC.md', 'spec']);
   });
 
   it('help names the files the package ships, offline', () => {
     const spec = docstamp('help', 'spec');
     expect(spec).toMatchObject({ status: 0, stderr: '' });
-    expect(spec.stdout).toContain('node_modules/docstamp/docs/SPEC.md');
+    expect(spec.stdout).toContain('node_modules/docstamp/docs/');
     const schema = docstamp('help', 'schema');
     expect(schema.stdout).toContain('node_modules/docstamp/schema.json');
     expect(existsSync(join(project, '..', 'node_modules', 'docstamp', 'docs', 'SPEC.md'))).toBe(

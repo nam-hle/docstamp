@@ -8,4 +8,4 @@ Workspace packages published from this repository, one folder per package, each 
   its heading.
 - [`docstamp-plugin-js`](docstamp-plugin-js): select a top-level declaration of a JavaScript or
   TypeScript file by its name. Each plugin has a `SPEC.md` for its selectors and what it hashes; the plugin
-  interface itself is [SPEC §8.7](docstamp/docs/SPEC.md#87-selected-dependencies).
+  interface itself is [SPEC §8.7](docstamp/docs/spec/08-patterns.md#87-selected-dependencies).

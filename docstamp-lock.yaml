@@ -1,10 +1,22 @@
 version: 3
 files:
-  "CLAUDE.md": 34304a359dfb8e3833962496c4cfeefe422eb0f2046d227557f85c42f37cbe03
-  "README.md": 440ee122099eae4c90d0fb1c240797226e705b0fa98ce98f59558289499e2ad8
+  "CLAUDE.md": 36d94271e42f5db38aedccfb68e4bf99d5d02c581a04936dafbe98786e72cc93
+  "README.md": 59d5690e56914489e0d95cfa93a75a4e3f4765c5d40f772a5152d04239aa9b03
   "packages/docstamp-plugin-js/README.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-js/SPEC.md": 49f3c8a376990b0e35fca23902281c6de9b65d1da977210a25506fb9a502def0
   "packages/docstamp-plugin-markdown/README.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
   "packages/docstamp-plugin-markdown/SPEC.md": 4200047d9602746c0d6bf68be00c2eb00e193af093408b477e418f7597cb06d7
-  "packages/docstamp/README.md": 62ca530002e70ee829a54a15a347e014acb1e29d0d07f21748e7fd9351ea709e
-  "packages/docstamp/docs/SPEC.md": 3cb29c0033715a84c249f916a949c493cdf5eb284b7aac89397be0c35b3b7f1c
+  "packages/docstamp/README.md": b87f4b95f415ef566444c788b41ca53db8fc8e47b0ae9f838c46cdcf66c72bba
+  "packages/docstamp/docs/spec/05-records.md": bcab05c75ab7946844b0cfced763ffcc415048ddc90b40b36f733a011c25743e
+  "packages/docstamp/docs/spec/06-root.md": 908eabd654cccc4df102abebf05797e2732f904480005a18eb645f157ae72d0b
+  "packages/docstamp/docs/spec/07-universe.md": 908eabd654cccc4df102abebf05797e2732f904480005a18eb645f157ae72d0b
+  "packages/docstamp/docs/spec/08-patterns.md": 98e79f0acf61b57008e4aef81d8399ccd49455ad2a0e1e24d850aac02e7a2a4c
+  "packages/docstamp/docs/spec/09-configuration-file.md": 751e91a6a0389e671bd508c78f3b536e930f592d1e68e85621972caa5321f461
+  "packages/docstamp/docs/spec/10-hashing.md": 300085d78d2dd367969fc9c3b51fc36f5b6542dad1370f5e44dbe56901cd1f3d
+  "packages/docstamp/docs/spec/11-lockfile.md": 58e714956ae41cecca1cb21b60b46dce8f733306ca610278a501f7735ed4728e
+  "packages/docstamp/docs/spec/12-evaluation.md": 4fcd08243281a7a58fd4f94d7efb29778f09c65cad7c2bd45f8d09aea0faa84f
+  "packages/docstamp/docs/spec/13-command-line.md": b87f4b95f415ef566444c788b41ca53db8fc8e47b0ae9f838c46cdcf66c72bba
+  "packages/docstamp/docs/spec/14-output.md": 9f414ef7d308e95f1bc5b7e609b87726dbdc08d663a540c1d506a67c5d02f304
+  "packages/docstamp/docs/spec/15-diagnostics.md": d7fe726477b18282a0be85b5c6a03e9591ee0b3d77401ef3cb58fdb18ad5c4ed
+  "packages/docstamp/docs/spec/16-exit-codes.md": b87f4b95f415ef566444c788b41ca53db8fc8e47b0ae9f838c46cdcf66c72bba
+  "packages/docstamp/docs/spec/17-compatibility.md": cf89ec84fa2c77a6cbd076f4a5f2d1a565838c88a1fa841d032099fc1841a6b7

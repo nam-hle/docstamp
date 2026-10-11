@@ -489,8 +489,7 @@ scenario('§9.3 steps 4 and 7 a first configuration file is told what to add', a
 });
 
 it('every diagnostic code of SPEC §15 is exercised through the CLI', () => {
-  const spec = readFileSync(new URL('../../docs/SPEC.md', import.meta.url), 'utf8');
-  const table = spec.slice(spec.indexOf('## 15 Diagnostics'), spec.indexOf('## 16 Exit Codes'));
+  const table = readFileSync(new URL('../../docs/spec/15-diagnostics.md', import.meta.url), 'utf8');
   const codes = [...table.matchAll(/^\| `([EW]_[A-Z_]+)`/gmu)].map((m) => m[1]!);
   expect(codes.length).toBeGreaterThanOrEqual(18);
   const missing = codes.filter((code) => !seen.has(code) && !unreachable.has(code));

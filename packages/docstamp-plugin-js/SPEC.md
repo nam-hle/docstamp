@@ -3,7 +3,7 @@
 The contract of the plugin: which top-level declaration of a JavaScript or TypeScript file a
 selector names, and what is hashed. How docstamp calls a plugin, counts matches and reports errors is
 the contract of docstamp
-([SPEC §8.7](../docstamp/docs/SPEC.md#87-selected-dependencies)); this document does not repeat it.
+([SPEC §8.7](../docstamp/docs/spec/08-patterns.md#87-selected-dependencies)); this document does not repeat it.
 
 ## 1 Scope
 

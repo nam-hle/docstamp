@@ -5,9 +5,10 @@ docstamp help spec: Where the specification is, and its sections.
 
 The specification defines all observable behavior: formats, algorithms, output, diagnostics, exit
 codes and compatibility. The help pages summarize it; it decides. It ships with the package, for the
-installed version, as docs/SPEC.md (in a project, node_modules/docstamp/docs/SPEC.md), and is online
-at https://github.com/nam-hle/docstamp/blob/main/docs/SPEC.md. Clauses are numbered, such as 8.4 for
-selection; search the file for the heading. Its sections:
+installed version, as docs/SPEC.md, an index, and one file per section in docs/spec/ (in a project,
+node_modules/docstamp/docs/). It is online at
+https://github.com/nam-hle/docstamp/blob/main/packages/docstamp/docs/SPEC.md. Clauses are numbered,
+such as 8.4 for selection; open the file of its section. Its sections:
 
     1 Scope
     2 Conformance

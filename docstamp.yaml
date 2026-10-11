@@ -23,15 +23,58 @@ files:
   README.md:
     dependencies:
       - packages/docstamp/src/cli
-      - packages/docstamp/docs/SPEC.md
+      - packages/docstamp/docs/spec
       - action
       - action.yml
   packages/docstamp/README.md:
     dependencies:
       - packages/docstamp/src/cli
-  packages/docstamp/docs/SPEC.md:
+  packages/docstamp/docs/spec/05-records.md:
     dependencies:
-      - packages/docstamp/src
+      - packages/docstamp/src/core
+      - packages/docstamp/src/inline
+  packages/docstamp/docs/spec/06-root.md:
+    dependencies:
+      - packages/docstamp/src/universe
+  packages/docstamp/docs/spec/07-universe.md:
+    dependencies:
+      - packages/docstamp/src/universe
+  packages/docstamp/docs/spec/08-patterns.md:
+    dependencies:
+      - packages/docstamp/src/pattern
+      - packages/docstamp/src/plugin
+  packages/docstamp/docs/spec/09-configuration-file.md:
+    dependencies:
+      - packages/docstamp/src/config
+      - packages/docstamp/src/inline
+  packages/docstamp/docs/spec/10-hashing.md:
+    dependencies:
+      - packages/docstamp/src/hash
+  packages/docstamp/docs/spec/11-lockfile.md:
+    dependencies:
+      - packages/docstamp/src/lock
+  packages/docstamp/docs/spec/12-evaluation.md:
+    dependencies:
+      - packages/docstamp/src/engine
+      - packages/docstamp/src/history
+  packages/docstamp/docs/spec/13-command-line.md:
+    dependencies:
+      - packages/docstamp/src/cli
+  packages/docstamp/docs/spec/14-output.md:
+    dependencies:
+      - packages/docstamp/src/report
+  packages/docstamp/docs/spec/15-diagnostics.md:
+    dependencies:
+      - packages/docstamp/src/core
+      - packages/docstamp/src/report
+  packages/docstamp/docs/spec/16-exit-codes.md:
+    dependencies:
+      - packages/docstamp/src/cli
+  packages/docstamp/docs/spec/17-compatibility.md:
+    dependencies:
+      - packages/docstamp/src/hash
+      - packages/docstamp/src/lock
+      - packages/docstamp/tests/helpers/golden-tree.ts
   packages/docstamp-plugin-markdown/README.md:
     dependencies:
       - packages/docstamp-plugin-markdown/src

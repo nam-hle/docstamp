@@ -47,6 +47,7 @@
   "files": [
     "dist",
     "docs/SPEC.md",
+    "docs/spec",
     "schema.json",
     "schema-frontmatter.json"
   ],
