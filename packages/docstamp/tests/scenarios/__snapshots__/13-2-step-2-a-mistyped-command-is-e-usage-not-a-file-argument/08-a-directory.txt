@@ -22,6 +22,7 @@ Commands:
   docstamp help [<command> | <topic>]
   docstamp help diagnostics <code>
   docstamp <command> --help
+  docstamp --help
       Print the index, a command page or a topic page.
   docstamp version
   docstamp --version

@@ -242,6 +242,7 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
       'docstamp help [<command> | <topic>]',
       'docstamp help diagnostics <code>',
       'docstamp <command> --help',
+      'docstamp --help',
     ],
     summary: 'Print the index, a command page or a topic page.',
     description: `
