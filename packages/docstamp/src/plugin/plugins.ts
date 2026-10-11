@@ -11,12 +11,13 @@ import type {
   DocstampPlugin,
   ExtractInput,
   ExtractResult,
-  FieldType,
+  JsonSchema,
   LineRange,
+  ParseSelectResult,
   Part,
-  SelectorFields,
   ValidateSelectResult,
 } from './types.ts';
+import { checkSelect, readSchema, toPlainJson } from './schema.ts';
 
 // SPEC §8.7: the Fragment of a selector and the warnings the plugin reported with it
 export interface Extracted {
@@ -54,37 +55,20 @@ export function validatePlugins(raw: unknown): DocstampPlugin[] {
   });
 }
 
-const isFieldType = (type: unknown): type is FieldType =>
-  type === 'string' ||
-  type === 'integer' ||
-  (Array.isArray(type) &&
-    type.length > 0 &&
-    (type as unknown[]).every((item) => typeof item === 'string'));
-
 // SPEC §8.7: read once into plain data, so a getter or a proxy is never called again
-function readSelectorFields(raw: unknown, name: string): SelectorFields {
-  const message = `Plugin "${name}" has a "selectorFields" that is not { main, fields }: fields maps each name to "string", "integer" or a non-empty list of strings, and fields[main] is "string".`;
-  if (!isObject(raw) || typeof raw['main'] !== 'string' || !isObject(raw['fields'])) {
-    return bad(name, message);
-  }
-  const main = raw['main'];
-  const fields = Object.fromEntries(
-    Object.entries(raw['fields']).map(([field, type]) => [
-      field,
-      isFieldType(type)
-        ? Array.isArray(type)
-          ? [...(type as string[])]
-          : type
-        : bad(name, message),
-    ]),
-  );
-  if (fields[main] !== 'string') return bad(name, message);
-  return { main, fields };
+function readMeta(raw: unknown, name: string): JsonSchema | undefined {
+  if (raw === undefined) return undefined;
+  if (!isObject(raw)) return bad(name, `Plugin "${name}" has a "meta" that is not a Map.`);
+  const schema = raw['schema'];
+  if (schema === undefined) return undefined;
+  const read = readSchema(schema, 'meta.schema');
+  if ('problem' in read) return bad(name, `Plugin "${name}": ${read.problem}`);
+  return read.schema;
 }
 
 function validateEntry(entry: unknown, label: string, names: Set<string>): DocstampPlugin {
   if (!isObject(entry)) return bad(label, 'A plugin must be an object.');
-  const { name, apiVersion, files, extract, validateSelect, selectorFields } = entry;
+  const { name, apiVersion, files, extract, validateSelect, parseSelect, meta } = entry;
   if (typeof name !== 'string' || name === '') return bad(label, 'A plugin needs a "name".');
   if (apiVersion !== 1) {
     return bad(
@@ -105,9 +89,11 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
   if (validateSelect !== undefined && typeof validateSelect !== 'function') {
     return bad(name, `Plugin "${name}" has a "validateSelect" that is not a function.`);
   }
+  if (parseSelect !== undefined && typeof parseSelect !== 'function') {
+    return bad(name, `Plugin "${name}" has a "parseSelect" that is not a function.`);
+  }
   if (names.has(name)) return bad(name, `Two plugins are named "${name}"; names must be unique.`);
-  const fields =
-    selectorFields === undefined ? undefined : readSelectorFields(selectorFields, name);
+  const schema = readMeta(meta, name);
   names.add(name);
   // read once: later calls never touch a getter of the user object again
   const snapshot = [...(patterns as string[])];
@@ -115,8 +101,14 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
     name,
     apiVersion: 1,
     files: snapshot,
-    ...(fields === undefined ? {} : { selectorFields: fields }),
+    ...(schema === undefined ? {} : { meta: { schema } }),
     extract: (input) => Reflect.apply(extract, entry, [input]) as ExtractResult,
+    ...(parseSelect === undefined
+      ? {}
+      : {
+          parseSelect: (raw: string) =>
+            Reflect.apply(parseSelect, entry, [raw]) as ParseSelectResult,
+        }),
     ...(validateSelect === undefined
       ? {}
       : {
@@ -168,6 +160,7 @@ interface Raw {
   readonly promised: boolean;
   readonly parts: unknown;
   readonly diagnostics: unknown;
+  readonly select: unknown;
 }
 
 function readRaw(result: unknown): Raw {
@@ -180,6 +173,7 @@ function readRaw(result: unknown): Raw {
     promised: isObject(result) && typeof result['then'] === 'function',
     parts: member('parts'),
     diagnostics: member('diagnostics'),
+    select: isObject(result) ? result['select'] : undefined,
   };
 }
 
@@ -290,8 +284,15 @@ export function runValidateSelect(
   file: string,
   entry: { readonly path: string; readonly select: Json },
 ): Diagnostic[] {
-  if (plugin.validateSelect === undefined) return [];
   const subject = `${entry.path}#${canonicalJson(entry.select)}`;
+  const schema = plugin.meta?.schema;
+  const failure = schema === undefined ? null : checkSelect(schema, entry.select);
+  if (failure !== null) {
+    const where = failure.pointer === '' ? 'the selector' : failure.pointer;
+    const message = `Plugin "${plugin.name}" expects ${where} of "${entry.path}" to be ${failure.expected}.`;
+    return [diag('E_SELECT', { file, subject, message })];
+  }
+  if (plugin.validateSelect === undefined) return [];
   const failed = (why: string): Diagnostic[] => [
     diag('E_SELECT', {
       file,
@@ -336,4 +337,63 @@ export function runValidateSelect(
     if (error instanceof Raised) return [...error.diagnostics];
     throw error;
   }
+}
+
+// SPEC §8.7 ResolveSelector steps 2 to 4: the select a Plugin's parseSelect reads from a Raw
+export function runParseSelect(
+  plugin: DocstampPlugin,
+  file: string,
+  shorthand: { readonly path: string; readonly raw: string },
+): { readonly select: Json } | { readonly problems: Diagnostic[] } {
+  const subject = `${shorthand.path}:${shorthand.raw}`;
+  const failed = (why: string) => ({
+    problems: [
+      diag('E_SELECT', {
+        file,
+        subject,
+        message: `Plugin "${plugin.name}" ${why} for "${shorthand.path}".`,
+      }),
+    ],
+  });
+  if (plugin.parseSelect === undefined) return { select: shorthand.raw };
+  let result: unknown;
+  try {
+    result = plugin.parseSelect(shorthand.raw);
+  } catch {
+    return failed('threw in parseSelect');
+  }
+  let raw: Raw;
+  try {
+    raw = readRaw(result);
+  } catch {
+    return failed('returned a value from parseSelect that could not be read');
+  }
+  if (raw.promised) {
+    try {
+      (result as PromiseLike<unknown>).then(undefined, () => {});
+    } catch {
+      // the failure is reported below; nothing else to contain
+    }
+    return failed('returned a promise; parseSelect must be synchronous');
+  }
+  if (!isObject(result)) return failed('did not return { select, diagnostics } from parseSelect');
+  const reported = raw.diagnostics === undefined ? [] : raw.diagnostics;
+  if (!Array.isArray(reported) || reported.length > MAX_DIAGNOSTICS) {
+    return failed(`returned diagnostics that are not a list of at most ${MAX_DIAGNOSTICS}`);
+  }
+  try {
+    const read = readDiagnostics(reported, subject, file, (why) => {
+      throw new Raised(failed(why).problems);
+    });
+    if (read.some((d) => d.severity === 'warning')) {
+      return failed('returned a warning from parseSelect, which reports errors only');
+    }
+    if (read.length > 0) return { problems: read };
+  } catch (error) {
+    if (error instanceof Raised) return { problems: [...error.diagnostics] };
+    throw error;
+  }
+  if (raw.select === undefined) return failed('returned neither a select nor an error');
+  const select = toPlainJson(raw.select);
+  return select === undefined ? failed('returned a select that is not a plain value') : { select };
 }

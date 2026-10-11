@@ -28,7 +28,8 @@ to the root and use / as the separator on every platform.
 - A file is never its own dependency. An ignored file cannot be a dependency: depend on its source.
 - In YAML, quote a pattern that starts with ! or *.
 - path:selector depends on one part of a file (package.json:scripts.build, docs/guide.md:Install). A
-  : in a file name is written \:. SPEC section 8.7 has the rules; docstamp help spec.
+  : in a file name is written \:. A plugin defines the text after the first : (its parseSelect).
+  SPEC section 8.7 has the rules; docstamp help spec.
 
 docstamp list-dependencies <file> shows what a list selects.
 --- stderr ---

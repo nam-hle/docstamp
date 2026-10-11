@@ -22,7 +22,7 @@ sections begin and end; it hashes the source text of the section, never a render
 ## 3 The Plugin
 
 The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugin-markdown`,
-`apiVersion` 1 and `files` « `**/*.md`, `**/*.markdown` ». Its `extract` is `Extract` (§6), its `validateSelect` is `ValidateSelect` (§6.1) and its `selectorFields` (SPEC §8.7) is { `main`: `heading`, `fields`: { `heading`: `string`, `level`: `integer` } }.
+`apiVersion` 1 and `files` « `**/*.md`, `**/*.markdown` ». Its `extract` is `Extract` (§6), its `validateSelect` is `ValidateSelect` (§6.1), its `parseSelect` is `ParseSelect` (§4.1) and its `meta.schema` (SPEC §8.7 Select Schema) is { `type`: « `string`, `object` », `minLength`: 1, `required`: « `heading` », `properties`: { `heading`: { `type`: `string`, `minLength`: 1 }, `level`: { `type`: `integer`, `minimum`: 1, `maximum`: 6 } }, `additionalProperties`: `false` }: it names the shape of §4 step 2 and the range of step 5, so docstamp refuses a Map with another key or a level outside 1 to 6 before `ValidateSelect` runs.
 
 ## 4 Selector
 
@@ -36,12 +36,24 @@ The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugi
    String or is empty.
 5. Raise unless *level* is *none* or an integer from 1 to 6.
 
-NOTE: A dependency may also be written as one String, `Path ":" Selector` (SPEC §8.7), which docstamp
-turns into the `select` before this plugin sees it: `docs/guide.md:Install` is the String
-`Install`, `docs/guide.md:heading=Install,level=2` is the Map `{ heading: Install, level: 2 }` (`level`
-is read as an integer), and a heading that holds `,` or `=` is written with `\,` and `\=`. The two
-are different `select` values, as `Install` and `{ heading: Install }` are, so their hashes differ;
-the plugin accepts them all and a hash is never changed by how a dependency is written.
+### 4.1 ParseSelect
+
+A dependency may be written as one String, `Path ":" Raw` (SPEC §8.7), whose *Raw* docstamp gives to
+`ParseSelect(raw)`; what it returns is the `select`, so it is the only value hashed. It reads *raw*
+in one linear pass:
+
+1. Let *n* be the number of `#` at the start of *raw*. If *n* is 0, or the code point after them is
+   not U+0020 or U+0009, return `{ select: raw }`: *raw* itself, a String, verbatim.
+2. Otherwise *raw* is a level marker and a heading. If *n* is greater than 6, or *raw* after the
+   blanks that follow the marker, with its trailing U+0020 and U+0009 removed, is empty, return
+   `{ diagnostics: « d » }`, *d* an `error` with the code `invalid-selector`.
+3. Otherwise return `{ select: { heading, level: n } }`, *heading* being that text.
+
+`docs/guide.md:Install` is the String `Install`, and `docs/guide.md:## Install` is the Map
+`{ heading: Install, level: 2 }`, with the hash of the same Map written out. `,` and `=` mean
+nothing in *raw*, so a heading that holds them is written as it is. A heading that starts with `#`
+and a blank is written as the Map, `{ heading: '# x' }`, or after a marker (`## # x`). The two forms
+are different `select` values, as `Install` and `{ heading: Install }` are, so their hashes differ.
 
 NOTE: A selector that raises is returned as `{ diagnostics: « d » }`, *d* an `error` whose message
 says what is wrong and the two forms that are accepted (`Install` and `{ heading: Install, level: 2 }`);
@@ -117,13 +129,13 @@ Every Diagnostic of this Plugin has a code (SPEC §8.7 step 3), stable across ve
 
 | Code | Severity | Where |
 |---|---|---|
-| `invalid-selector` | `error` | §4 NOTE, in `Extract` step 1 and in `ValidateSelect` |
+| `invalid-selector` | `error` | §4 NOTE, in `Extract` step 1 and in `ValidateSelect`; §4.1 step 2, in `ParseSelect` |
 | `ambiguous-heading` | `error` | `Extract` step 4, more than one Heading selected |
 
 ## 7 Compatibility
 
 The hash of a Section is part of the Dependency Hash of every file that depends on it, so a change to
 `Body`, `Headings` or `SectionEnd` that changes the hash of an existing Section is breaking, as is a
-change to the selector forms accepted in §4 or to `files` in §3. Removing or renaming a code of §6.1
+change to the selector forms accepted in §4, to `files` or `meta.schema` in §3, or to what §4.1 returns for a *raw*. Removing or renaming a code of §6.1
 is breaking for those who act on it; adding one is not. A parser upgrade that changes where a
 Heading starts or ends is such a change.

@@ -131,7 +131,7 @@ describe('§6 the plugin through the docstamp CLI', () => {
     expect(result.stderr).toContain('E_SELECT');
   });
 
-  it('§4 NOTE reads the one-string shorthand with the hash of the written form', () => {
+  it('§4.1 reads the one-string shorthand with the hash of the written form', () => {
     const written = repository(INSTALL);
     written.run('update', 'CLAUDE.md');
     const bare = repository("'guide.md:Install'");
@@ -141,31 +141,41 @@ describe('§6 the plugin through the docstamp CLI', () => {
     expect(bare.run().exit).toBe(0);
   });
 
-  it('§4 NOTE reads heading and level pairs, converting the level to an integer', () => {
+  it('§4.1 reads a level marker as the object form, with its hash', () => {
     const text = '# Install\none\n\n## Install\ntwo\n';
-    const pairs = repository("'guide.md:level=2,heading=Install'", text);
-    pairs.run('update', 'CLAUDE.md');
+    const marked = repository("'guide.md:## Install'", text);
+    marked.run('update', 'CLAUDE.md');
     const written = repository(
       "{ path: 'guide.md', select: { heading: 'Install', level: 2 } }",
       text,
     );
     written.run('update', 'CLAUDE.md');
-    expect(pairs.lock()).toBe(written.lock());
-    pairs.write('guide.md', text.replace('one', 'uno'));
-    expect(pairs.run().exit).toBe(0);
-    pairs.write('guide.md', text.replace('two', 'dos'));
-    expect(pairs.run().exit).toBe(1);
+    expect(marked.lock()).toBe(written.lock());
+    marked.write('guide.md', text.replace('one', 'uno'));
+    expect(marked.run().exit).toBe(0);
+    marked.write('guide.md', text.replace('two', 'dos'));
+    expect(marked.run().exit).toBe(1);
   });
 
-  it('§4 NOTE writes a comma of a heading as \\,', () => {
-    const { run } = repository("'guide.md:Q&A\\\\, part 2'", '# Q&A, part 2\ntext\n');
+  it('§4.1 takes a comma and an equals sign of a heading as they are', () => {
+    const { run } = repository("'guide.md:Q&A, part 2 = 3'", '# Q&A, part 2 = 3\ntext\n');
     expect(run().exit).toBe(1);
     expect(run('update', 'CLAUDE.md').exit).toBe(0);
   });
 
-  it('§4 NOTE reports an unknown key as E_SELECT', () => {
-    const result = repository("'guide.md:title=Install'").run();
+  it('§4.1 reports a marker without a heading as E_SELECT', () => {
+    const result = repository("'guide.md:## '").run();
     expect(result.exit).toBe(2);
     expect(result.stderr).toContain('E_SELECT');
+    expect(result.stderr).toContain('invalid-selector');
+  });
+
+  it('§3 meta.schema reports an unknown key as E_SELECT', () => {
+    const result = repository(
+      "{ path: 'guide.md', select: { heading: 'Install', title: 'x' } }",
+    ).run();
+    expect(result.exit).toBe(2);
+    expect(result.stderr).toContain('E_SELECT');
+    expect(result.stderr).toContain('/title');
   });
 });

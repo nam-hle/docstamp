@@ -1,0 +1,5 @@
+$ docstamp
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_PLUGIN: headings: Plugin "headings": The keyword "pattern" at meta.schema must be one of the supported keywords.

@@ -30,9 +30,9 @@ export default defineConfig({
 });
 ```
 
-The same entry fits in one string: `'docs/guide.md:Install'`. A plugin that declares its fields
-(below) also reads `key=value` pairs, as in `'docs/guide.md:heading=Install,level=2'`; a bare value
-is the plugin's main field. In a value, `\,`, `\=` and `\\` mean `,`, `=` and a backslash.
+The same entry fits in one string: `'docs/guide.md:Install'`. What follows the first `:` is the
+plugin's own text: with a `parseSelect` (below) the plugin turns it into the `select`, as the
+Markdown plugin does for `'docs/guide.md:## Install'`; without one it is the `select` as a String.
 
 Editing another section of `docs/guide.md` leaves `CLAUDE.md` `ok`; editing `Install` makes it stale,
 and the report names the part that changed:
@@ -73,11 +73,41 @@ errors only. docstamp calls it when the configuration loads, so a malformed sele
 `E_SELECT` for the file and pattern before any file is read. It must not read the file; a plugin
 without it behaves as before.
 
-A plugin may declare `selectorFields: { main, fields }`: the field a bare value stands for, and the
-type of each field (`'string'`, `'integer'` or a list of allowed strings). docstamp then reads
-`path:selector` for it and turns the string into the same `select` the written form has, before any
-hash, so both forms record one Dependency Hash. A plugin without it gets the text after the colon
-as a String.
+A plugin defines its own `select` format, as an ESLint rule defines its options; docstamp checks
+only the shape. Two optional members say so:
+
+```ts
+const plugin = {
+  name: 'headings',
+  apiVersion: 1,
+  files: ['**/*.md'],
+  meta: {
+    schema: {
+      type: ['string', 'object'],
+      required: ['heading'],
+      properties: { heading: { type: 'string' }, level: { type: 'integer', minimum: 1, maximum: 6 } },
+      additionalProperties: false,
+    },
+  },
+  parseSelect: (raw) => {
+    const marker = /^(#{1,6}) (.+)$/u.exec(raw);
+    return marker ? { select: { heading: marker[2], level: marker[1].length } } : { select: raw };
+  },
+  extract,
+};
+```
+
+- `meta.schema` is a small subset of JSON Schema. docstamp checks every `select` against it before
+  `validateSelect` and `extract`, and a failure is an `E_SELECT` naming the JSON Pointer of the first
+  problem. A schema that uses anything outside the subset makes the plugin invalid (`E_PLUGIN`).
+- `parseSelect(raw)` is synchronous, pure and deterministic. docstamp calls it only for the
+  `path:selector` string, with the text after the first `:`, and takes `{ select }` or
+  `{ diagnostics }` back (errors may carry a `code`). The parsed value is what is hashed, so the
+  shorthand and the written form of the same `select` share one Dependency Hash. A plugin without
+  it gets the text as a String.
+
+Both are optional and additive, so `apiVersion` stays 1. The exact subset and the order in which
+failures are reported are [SPEC §8.7](/spec/patterns#87-selected-dependencies).
 
 A plugin runs in your process, so determinism is its author's duty: keep it independent of the
 clock, the network and the environment. The contract, with every error case, is

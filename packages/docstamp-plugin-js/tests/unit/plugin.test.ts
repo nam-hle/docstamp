@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
+import { parseSelect } from '../../src/parse-select.ts';
 import plugin from '../../src/index.ts';
 
 const sha = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex');
@@ -507,5 +508,58 @@ describe('§4 Selector: a long run of blanks', () => {
     expect(plugin.validateSelect(tabs as never).diagnostics).toHaveLength(1);
     expect(plugin.validateSelect(`${tabs}a${tabs}x${tabs}` as never)).toEqual({});
     expect(plugin.validateSelect(`${tabs}!` as never)).toEqual({});
+  });
+});
+
+describe('§4.1 ParseSelect', () => {
+  it.each([
+    ['createUser', 'createUser'],
+    ['a\\,b', 'a,b'],
+    ['a\\=b', 'a=b'],
+    ['a\\\\b', 'a\\b'],
+    ['a\\b', 'a\\b'],
+    ['name=createUser', { name: 'createUser' }],
+    ['kind=interface,name=User', { kind: 'interface', name: 'User' }],
+    [
+      'name=createUser,part=source,kind=function',
+      {
+        name: 'createUser',
+        part: 'source',
+        kind: 'function',
+      },
+    ],
+    ['name=a\\,b\\=c\\\\', { name: 'a,b=c\\' }],
+    ['name=a=b', { name: 'a=b' }],
+    ['kind=nonsense,name=x', { kind: 'nonsense', name: 'x' }],
+  ])('reads %j as %j', (raw, select) => {
+    expect(parseSelect(raw)).toEqual({ select });
+  });
+
+  it.each([
+    [''],
+    ['a,b'],
+    ['name=a,b'],
+    ['name=a,,kind=class'],
+    ['title=a'],
+    ['name=a,name=b'],
+    ['=a'],
+  ])('refuses %j with the code invalid-selector', (raw) => {
+    const [found, ...rest] = parseSelect(raw).diagnostics ?? [];
+    expect(rest).toEqual([]);
+    expect(found).toMatchObject({ severity: 'error', code: 'invalid-selector' });
+    expect(found!.message).not.toMatch(/\p{Cc}/u);
+  });
+
+  it('reads a long selector in linear time', () => {
+    const raw = `name=${'a\\,'.repeat(100_000)}`;
+    expect(parseSelect(raw)).toEqual({
+      select: { name: 'a,'.repeat(100_000) },
+    });
+  });
+
+  it('gives the plugin a schema that holds the kinds and parts', () => {
+    expect(plugin.meta.schema.properties!.kind!.enum).toContain('interface');
+    expect(plugin.meta.schema.properties!.part!.enum).toEqual(['shape', 'source']);
+    expect(plugin.parseSelect).toBe(parseSelect);
   });
 });

@@ -58,10 +58,12 @@ The report names the section and its lines because this plugin returns them with
 
 - `select: 'Install'` names the heading `Install`, at any level.
 - `select: { heading: 'Install', level: 2 }` names only a level 2 heading.
-- Both fit in one string next to the path: `'guide.md:Install'` and
-  `'guide.md:heading=Install,level=2'` (`level` is read as a number). Write `\,` and `\=` for a
-  comma or an equals sign in a heading. `'guide.md:heading=Install'` is the object form, a different
-  selector from the bare `'guide.md:Install'`, as `{ heading: 'Install' }` is from `'Install'`.
+- Both fit in one string next to the path: `'guide.md:Install'` and `'guide.md:## Install'`, where
+  the `#`s are the level. A comma or an equals sign needs no escape. `'guide.md:## Install'` is the
+  object form, a different selector from the bare `'guide.md:Install'`
+  ([SPEC §4.1](SPEC.md#41-parseselect)).
+- A selector that is not one of these shapes, such as `level: 9` or an unknown key, is refused
+  before any file is read, with the place and what was expected.
 - The text is matched **as written in the file**, without the `#`s and the closing sequence:
   `## *Fast* path` is selected by `'*Fast* path'`. Nothing is decoded or stripped, so a formatting
   edit to the heading makes the selector match nothing (`E_SELECT_NOT_FOUND`) instead of silently

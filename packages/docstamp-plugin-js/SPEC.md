@@ -27,7 +27,7 @@ part of the shape of the declaration that holds them (§7.2) but cannot be selec
 
 The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugin-js`, `apiVersion` 1
 and `files` « `**/*.js`, `**/*.mjs`, `**/*.cjs`, `**/*.jsx`, `**/*.ts`, `**/*.mts`, `**/*.cts`,
-`**/*.tsx` ». Its `extract` is `Extract` (§8), its `validateSelect` is `ValidateSelect` (§8.1) and its `selectorFields` (SPEC §8.7) is { `main`: `name`, `fields`: { `name`: `string`, `kind`: « `function`, `class`, `interface`, `type`, `enum`, `variable`, `namespace` », `part`: « `shape`, `source` » } }.
+`**/*.tsx` ». Its `extract` is `Extract` (§8), its `validateSelect` is `ValidateSelect` (§8.1), its `parseSelect` is `ParseSelect` (§4.1) and its `meta.schema` (SPEC §8.7 Select Schema) is { `type`: « `string`, `object` », `minLength`: 1, `required`: « `name` », `properties`: { `name`: { `type`: `string`, `minLength`: 1 }, `kind`: { `enum`: « `function`, `class`, `interface`, `type`, `enum`, `variable`, `namespace` » }, `part`: { `enum`: « `shape`, `source` » } }, `additionalProperties`: `false` }: it names the shape of §4 step 2 and the values of step 5, so docstamp refuses another key, a kind or a part that is not listed before `ValidateSelect` runs.
 
 ## 4 Selector
 
@@ -43,13 +43,27 @@ and `files` « `**/*.js`, `**/*.mjs`, `**/*.cjs`, `**/*.jsx`, `**/*.ts`, `**/*.m
 5. Raise unless *kind* is *none* or one of `function`, `class`, `interface`, `type`, `enum`,
    `variable`, `namespace`, and *part* is `shape` or `source`.
 
-NOTE: A dependency may also be written as one String, `Path ":" Selector` (SPEC §8.7), which docstamp
-turns into the `select` before this plugin sees it: `src/api.ts:createUser` is the String
-`createUser`, `src/api.ts:kind=interface,name=User` is the Map `{ kind: interface, name: User }` and
-`src/api.ts:name=createUser,part=source` is `{ name: createUser, part: source }`. The keys are the
-fields of §4, in any order. The String and a one-pair Map are different `select` values, as
-`createUser` and `{ name: createUser }` are, so their hashes differ; a hash is never changed by how
-a dependency is written.
+### 4.1 ParseSelect
+
+A dependency may be written as one String, `Path ":" Raw` (SPEC §8.7), whose *Raw* docstamp gives to
+`ParseSelect(raw)`; what it returns is the `select`, so it is the only value hashed. It reads *raw*
+in one linear pass:
+
+1. Split *raw* into *items* at each `,` that is not escaped, and each item into a key and a value at
+   its first `=` that is not escaped, if it has one. An escape is a `\` before `,`, `=` or `\`, and
+   stands for that character; any other `\` is literal.
+2. If there is one item and it has no `=`, return `{ select: text }`, *text* being the item with its
+   escapes resolved, a String, unless it is empty.
+3. Otherwise return `{ select: m }`, *m* the Map of the pairs, each value a String, or
+   `{ diagnostics: « d » }`, *d* an `error` with the code `invalid-selector`, for an empty *raw*, an
+   item without `=` among several, a key that is not `name`, `kind` or `part`, or a key written twice.
+
+`src/api.ts:createUser` is the String `createUser`, `src/api.ts:kind=interface,name=User` is the Map
+`{ kind: interface, name: User }` and `src/api.ts:name=createUser,part=source` is
+`{ name: createUser, part: source }`; the keys are the fields of §4, in any order. A value that is not
+valid for its key (`kind=method`) is not judged here: `meta.schema` refuses it (§3). The String and a
+one-pair Map are different `select` values, as `createUser` and `{ name: createUser }` are, so their
+hashes differ.
 
 NOTE: A selector that raises, and a file that does not parse, are returned as `{ diagnostics: « d » }`,
 *d* an `error` whose message says what is wrong; docstamp reports it as `E_SELECT` (SPEC §8.7). A
@@ -160,7 +174,7 @@ Every Diagnostic of this Plugin has a code (SPEC §8.7 step 3), stable across ve
 
 | Code | Severity | Where |
 |---|---|---|
-| `invalid-selector` | `error` | §4 NOTE, in `Extract` step 1 and in `ValidateSelect` |
+| `invalid-selector` | `error` | §4 NOTE, in `Extract` step 1 and in `ValidateSelect`; §4.1 step 3, in `ParseSelect` |
 | `unparsable-file` | `error` | §4 NOTE, in `Extract` step 1 when `Parse` raises |
 | `ambiguous-name` | `error` | `Extract` step 4, more than one Group selected |
 
@@ -168,6 +182,6 @@ Every Diagnostic of this Plugin has a code (SPEC §8.7 step 3), stable across ve
 
 The hash of a declaration is part of the Dependency Hash of every file that depends on it, so a change
 to what `Shape` or `Source` contain, to which Declarations exist or are grouped, to the selector forms of
-§4 or to `files` or `selectorFields` in §3 is breaking. So is a parser upgrade that changes where a Statement or a body
+§4, to `files` or `meta.schema` in §3, or to what §4.1 returns for a *raw* is breaking. So is a parser upgrade that changes where a Statement or a body
 starts or ends. Removing or renaming a code of §8.1 is breaking for those who act on it; adding one
 is not.

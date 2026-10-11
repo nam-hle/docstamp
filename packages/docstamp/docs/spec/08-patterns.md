@@ -253,37 +253,73 @@ NOTE: A String that has no unescaped `:` is a Pattern, and `\:` is already an Es
 literal `:`. A Pattern is split only where it is an element of `dependencies`; a Preset (§8.6), `include`
 and `ignore` hold Patterns only.
 
-A *Selector Grammar* is the same for every Plugin that declares `[[SelectorFields]]` (below).
-`ResolveSelector(plugins, shorthand)` returns a plain value (§3.5) or an `E_SELECT` Diagnostic:
+`ResolveSelector(plugins, shorthand)` returns a plain value (§3.5) or a List of `E_SELECT`
+Diagnostics. The format of a *Raw* is the Plugin's, as the format of a `select` is: docstamp has no
+grammar for it.
 
 1. Let *plugin* be `Claim(plugins, shorthand.[[Path]])`. If that raises, or *plugin* has no
-   `[[SelectorFields]]`, return `shorthand.[[Raw]]`, a String, verbatim: no `,`, `=` or `\` of it has a
-   meaning, which is how a Value Path (§8.8) holding them is written.
-2. Split *raw* into *items* at each `,` that is not escaped, an escape being a `\` before `,`, `=` or
-   `\`. Any other `\` is literal.
-3. If *items* has one item and it holds no `=` that is not escaped, return the item with its escapes
-   resolved, a String, which must not be empty. This is the main field, and the String is the
-   `select` that a bare String has always been, so no hash changes (§17.4).
-4. Otherwise each item is *key* `=` *value*, split at its first `=` that is not escaped, with the
-   escapes of both resolved; an item without such `=`, with an empty *key* or a *key* repeated is an
-   `E_SELECT`. Let *type* be `fields[key]`; if there is none, it is an `E_SELECT` whose message names the
-   fields. If *type* is `integer`, *value* must match `0` or `-`? then a digit 1 to 9 and up to 14 more
-   digits, exactly, so `02`, `1.0`, `+1`, `-0` and `1e3` are refused, and it becomes that Number; if *type* is a List, *value* must be
-   one of its Strings; otherwise it is an `E_SELECT`. Return the Map of the pairs.
+   `[[ParseSelect]]`, return `shorthand.[[Raw]]`, a String, verbatim, as a bare String `select` has
+   always been, so no hash changes (§17.4); it is how a Value Path (§8.8) is written.
+2. Call `plugin.[[ParseSelect]]` synchronously with `shorthand.[[Raw]]`. If it throws, returns a
+   Promise or does not return a Map, return « `E_SELECT` ».
+3. Read from the result { `select` }, a plain value that is not an absent member, and { `diagnostics` },
+   « » when absent, as `Fragments` step 3 reads it, other members being ignored. If *diagnostics* holds
+   an `error`, return an `E_SELECT` for each `error` in the order given, with `[[Message]]` and
+   `[[PluginCode]]` as for `ValidateSelect` step 3; a `warning`, a `diagnostics` of another shape, a
+   result with neither a `select` nor an `error`, or a `select` that is not a plain value (a Number
+   that is not finite at any depth, a function) is the `E_SELECT` of step 2.
+4. Otherwise return `select`, a copy of it, which is the Selected Dependency's `[[Select]]`.
 
-The `E_SELECT` has `[[File]]` the file declaring it and `[[Subject]]` `[[Path]]`, `:` and `[[Raw]]`;
-its message names the item and what to write; that of an unknown key or a wrong value also says that
-a literal `=` or `,` in a bare value is written `\=` or `\,`. Even a single pair (`heading=Install`) is the Map, not
-the String.
+The `E_SELECT` has `[[File]]` the file declaring it and `[[Subject]]` `[[Path]]`, `:` and `[[Raw]]`. The
+message of one docstamp raises names the Plugin and the path. `ResolveSelector` is called from the
+CLI layer only, at load (§12.2 step 5) and at §12.3 step 1.4, never from the engine (§12.2).
 
 A *Plugin* is { `[[Name]]`: a non-empty String, `[[ApiVersion]]`: 1, `[[Files]]`: a non-empty List
 of Patterns, `[[Extract]]`: a function, `[[ValidateSelect]]`: a function, when present,
-`[[SelectorFields]]`: { `main`: a String, `fields`: a Map from a field name to `string`, `integer`
-or a non-empty List of Strings, the member `fields[main]` being `string` }, when present }, other
-members being ignored. Plugin names are unique. A `validateSelect` that is present and not a function,
-or a `selectorFields` that is present and not of this shape, is an invalid Plugin (`E_PLUGIN`, §9.5).
-The names of `fields` are the keys of the Map form the Plugin accepts, and `main` is the one that the
-bare String stands for.
+`[[ParseSelect]]`: a function, when present, `[[Meta]]`: { `schema`: a *Select Schema* (below),
+when present }, when present }, other members being ignored. Plugin names are unique. A
+`validateSelect` or a `parseSelect` that is present and not a function, a `meta` that is present and
+not a Map, or a `meta.schema` that is not a Select Schema is an invalid Plugin (`E_PLUGIN`, §9.5);
+the message of a schema names the keyword.
+
+A *Select Schema* is a Map that uses only the keywords below, as the JSON Schema of the same name
+means them; a Plugin author writes their `select` format freely, and docstamp checks no more than
+this. Every value a Selected Dependency holds for the Plugin is checked against it, before
+`ValidateSelect`: a written Map or String `select`, and what `ParseSelect` returned.
+
+| Keyword | Value | A value *v* passes when |
+|---|---|---|
+| `type` | a name, or a non-empty List of distinct names, of `string`, `integer`, `number`, `boolean`, `object`, `array`, `null` | *v* is of one of them; `integer` is a Number with no fraction, `number` any Number, `object` a Map, `array` a List |
+| `enum` | a non-empty List of plain values | `CanonicalJson(v)` is that of an element |
+| `const` | a plain value | `CanonicalJson(v)` is that of the value |
+| `properties` | a Map from a String to a Select Schema | for each of its keys that *v*, a Map, has, the member passes that Schema |
+| `required` | a List of distinct Strings | *v*, a Map, has each as a key |
+| `additionalProperties` | a Boolean | if `false`, *v*, a Map, has no key that `properties` lacks |
+| `items` | a Select Schema | each element of *v*, a List, passes it |
+| `minItems`, `maxItems` | a non-negative integer | the length of *v*, a List, is at least, at most it |
+| `minLength`, `maxLength` | a non-negative integer | the number of code points of *v*, a String, is at least, at most it |
+| `minimum`, `maximum` | a finite Number | *v*, a Number, is at least, at most it |
+| `oneOf` | a non-empty List of Select Schemas | *v* passes exactly one |
+| `anyOf` | a non-empty List of Select Schemas | *v* passes at least one |
+| `description` | a String | always; it is ignored |
+
+A keyword that does not apply to the kind of *v* (`minLength` of a Number) is satisfied. A schema
+that is not a Map, a keyword not in the table, or a value of a keyword other than as the table says
+is not a Select Schema; the invalid Plugin's message names the keyword and where it is.
+
+`CheckSelect(schema, value)` returns none, or the first failure as a JSON Pointer (RFC 6901) to the
+member of *value* and what was expected. It tests the keywords of a Schema in this order: `type`,
+`enum`, `const`; then for a Map `required` (in the order given), `properties` (the members in path
+order of their keys, each by recursion, the pointer extended with the key), `additionalProperties` (the
+keys of *v* in path order); for a List `minItems`, `maxItems`, `items` (in order of the elements,
+the pointer extended with the index); for a String `minLength`, `maxLength`; for a Number `minimum`,
+`maximum`; then `anyOf` and `oneOf`, which fail at the pointer of *v* and do not look inside the
+alternatives. The same value therefore gives the same first failure on every machine.
+
+A failure is an `E_SELECT` with `[[File]]` the file declaring it and `[[Subject]]` `[[Path]]`, `#` and
+`CanonicalJson([[Select]])`, whose message names the Plugin, the path, the pointer (`/level`, empty
+for the whole value, written as "the selector") and what was expected (`one of "shape", "source"`,
+`an integer`, `at most 6`).
 
 The *Plugin API* is the shape of this Map, of the Map `[[Extract]]` receives (§8.7 `Fragments` step 2)
 and of the Map it returns (step 3), and `[[ApiVersion]]` names it; version 1 is the shape defined
@@ -327,9 +363,11 @@ Plugin.
 
 `ValidateSelect(entry, plugin)`, with *entry* a Selected Dependency of the Declaration *file*, returns
 a List of Diagnostics. It is called at load (§12.2 step 5), once for each Selected Dependency of each
-Declaration, never at evaluation, and only when `Claim(plugins, entry.[[Path]])` returns a Plugin
-that has `[[ValidateSelect]]`; a Plugin without it adds nothing, and a path no Plugin claims is left
-to `Fragments` step 0. It reads no file:
+Declaration, never at evaluation, and only when `Claim(plugins, entry.[[Path]])` returns a Plugin;
+a path no Plugin claims is left to `Fragments` step 0. It reads no file. If the Plugin has a
+`schema` in `[[Meta]]`, it first checks `CheckSelect(schema, entry.[[Select]])`; a failure is the only
+Diagnostic of the entry. Otherwise, a Plugin without `[[ValidateSelect]]` adds nothing, and for one
+that has it:
 
 1. Call `plugin.[[ValidateSelect]]` synchronously with a copy of `entry.[[Select]]` (as `Fragments`
    step 2). If it throws or returns a Promise or not a Map, return « `E_SELECT` » with `[[File]]`
@@ -348,12 +386,15 @@ validates is therefore reported with the file and the path it is written in, bef
 same fact `Fragments` step 4 reports, and a Declaration stays an ordinary Declaration. No new code.
 
 NOTE: A Shorthand is resolved at load (§12.2 step 5), before any hash, so it is the Selected
-Dependency the written Map would be: `docs/guide.md:Install` is `{ path: docs/guide.md, select:
-Install }`, and `docs/guide.md:heading=Install,level=2` is `{ path: docs/guide.md, select: { heading:
-Install, level: 2 } }`, with the same Dependency Hash (§10.4, §17.7). The bare form and the one-pair form
-are different values, as `Install` and `{ heading: Install }` always were; `CanonicalJson` of a Map
-orders its keys (§3.5), so the order of the pairs never matters. Reports print the resolved
-`CanonicalJson` (§14.3).
+Dependency its value makes: with no `[[ParseSelect]]`, `docs/guide.md:Install` is `{ path:
+docs/guide.md, select: Install }`; with one, the Selected Dependency holds what it returned, so a
+Plugin that reads `## Install` as `{ heading: Install, level: 2 }` has the Dependency Hash (§10.4,
+§17.7) of that Map written out. The hashed value is the parsed one, never the Raw. Reports print the
+resolved `CanonicalJson` (§14.3).
+
+NOTE: `ParseSelect` and `[[Meta]]` follow the model of a lint rule's `meta.schema`: the Plugin
+defines its format, docstamp checks the shape. `ParseSelect` MUST be pure and deterministic, and is
+called for a Shorthand only; a `select` written as a Map or String is never parsed.
 
 NOTE: `ValidateSelect` is an early check, not a second extraction: a Plugin MUST NOT depend on the
 file's content in it, and a selector it accepts may still be `E_SELECT` or `E_SELECT_NOT_FOUND` at
@@ -410,7 +451,7 @@ names are not checked against it.
 | `docstamp-json` | `**/*.json` | one JSON value (RFC 8259); of a repeated key in an object the last wins |
 | `docstamp-yaml` | `**/*.yaml`, `**/*.yml` | one YAML 1.2 document, core schema, no merge keys |
 
-Their `[[ApiVersion]]` is 1, they declare no `[[SelectorFields]]`, so a Shorthand for them is the
+Their `[[ApiVersion]]` is 1, they declare no `[[ParseSelect]]`, so a Shorthand for them is the
 Value Path verbatim (`package.json:scripts.build`, `config.yaml:items.0.name`, `a.json:["x,y"].z`), and
 their `select` is a *Value Path*: a String of one or more steps.
 The first step is a name or a bracket; each later step is `.` and a name, or a bracket. A *name* is

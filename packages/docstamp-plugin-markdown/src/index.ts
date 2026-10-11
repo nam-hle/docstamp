@@ -3,10 +3,12 @@ import type {
   ExtractInput,
   ExtractResult,
   Json,
+  JsonSchema,
   Part,
   ValidateSelectResult,
 } from 'docstamp';
 
+import { parseSelect } from './parse-select.ts';
 import { parseSelector, type Selector } from './selector.ts';
 import { body, headings, sectionEnd } from './sections.ts';
 
@@ -78,6 +80,18 @@ function validateSelect(select: Json): ValidateSelectResult {
   }
 }
 
+// SPEC §3: the shape of a select, checked by docstamp before ValidateSelect
+const schema: JsonSchema = {
+  type: ['string', 'object'],
+  minLength: 1,
+  required: ['heading'],
+  properties: {
+    heading: { type: 'string', minLength: 1 },
+    level: { type: 'integer', minimum: 1, maximum: 6 },
+  },
+  additionalProperties: false,
+};
+
 // SPEC §3
 const plugin = {
   name: 'docstamp-plugin-markdown',
@@ -85,7 +99,8 @@ const plugin = {
   files: ['**/*.md', '**/*.markdown'],
   extract,
   validateSelect,
-  selectorFields: { main: 'heading', fields: { heading: 'string', level: 'integer' } },
+  parseSelect,
+  meta: { schema },
 } satisfies DocstampPlugin;
 
 export default plugin;

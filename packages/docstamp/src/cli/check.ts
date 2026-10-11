@@ -37,7 +37,7 @@ function withChanges(
     whitespace,
     probe,
     (shorthand) => {
-      const resolved = resolveSelector(evaluated.plugins, shorthand);
+      const resolved = resolveSelector(evaluated.plugins, result.file, shorthand);
       return 'select' in resolved ? resolved.select : null;
     },
   );

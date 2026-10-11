@@ -130,15 +130,20 @@ scenario(
   },
 );
 
-const shorthandConfig = (dependency: string) =>
+const parsing =
+  'parseSelect: (raw: string) => raw.startsWith("## ")\n' +
+  '  ? { select: raw.slice(3) }\n' +
+  '  : { diagnostics: [{ severity: "error", message: "Write the title as ## Title.", code: "no-marker" }] }';
+
+const shorthandConfig = (dependency: string, extra = '') =>
   "import { defineConfig } from 'docstamp';\n" +
   "import headings from './tools/headings.ts';\n\n" +
-  'const declared = { ...headings, selectorFields: { main: "title", fields: { title: "string" } } };\n' +
+  `const declared = { ...headings, ${parsing}${extra} };\n` +
   'export default defineConfig({ version: 2, plugins: [declared], files: {\n' +
   `  'CLAUDE.md': { dependencies: [${dependency}] } } });\n`;
 
 scenario(
-  '§8.7 a shorthand of a plugin that declares selectorFields has the hash of the written form',
+  '§8.7 a shorthand parsed by the plugin has the hash of the written form',
   options,
   async (repo) => {
     repo.write(
@@ -147,34 +152,37 @@ scenario(
     );
     await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
     const written = repo.read('docstamp-lock.yaml');
-    repo.write('docstamp.config.ts', shorthandConfig("'docs/guide.md:Install'"));
+    repo.write('docstamp.config.ts', shorthandConfig("'docs/guide.md:## Install'"));
     expect(await repo.run([], { show: ['docstamp.config.ts'] })).toMatchObject({ exit: 0 });
+    expect(repo.read('docstamp-lock.yaml')).toBe(written);
     repo.write(
       'docs/guide.md',
       '# Guide\n\n## Install\n\nRun it twice.\n\n## Usage\n\nRun the tool.\n',
     );
     expect((await repo.run([])).exit).toBe(1);
-    expect(written).toContain('CLAUDE.md');
   },
 );
 
-scenario(
-  '§8.7 key=value pairs of a shorthand are the Map the plugin judges',
-  options,
-  async (repo) => {
-    repo.write('docstamp.config.ts', shorthandConfig("'docs/guide.md:title=Install'"));
-    const result = await repo.run([], { expectExit: 2 });
-    expect(result.stderr).toContain('E_SELECT_NOT_FOUND');
-    expect(result.stderr).toContain('{\\"title\\":\\"Install\\"}');
-  },
-);
+scenario('§8.7 ResolveSelector reports what parseSelect refuses', options, async (repo) => {
+  repo.write('docstamp.config.ts', shorthandConfig("'docs/guide.md:Install'"));
+  const result = await repo.run([], { expectExit: 2 });
+  expect(result.stderr).toContain('E_SELECT');
+  expect(result.stderr).toContain('Write the title as ## Title.');
+  expect(result.stderr).toContain('no-marker');
+});
 
-scenario('§9.5 a selectorFields that is not valid is E_PLUGIN', options, async (repo) => {
-  repo.write(
-    'docstamp.config.ts',
-    shorthandConfig("'docs/guide.md:Install'").replace('main: "title"', 'main: "nope"'),
-  );
+scenario('§8.7 meta.schema refuses a select before extract', options, async (repo) => {
+  const schema = ", meta: { schema: { type: 'string', maxLength: 3 } }";
+  repo.write('docstamp.config.ts', shorthandConfig("'docs/guide.md:## Install'", schema));
+  const result = await repo.run([], { expectExit: 2 });
+  expect(result.stderr).toContain('E_SELECT');
+  expect(result.stderr).toContain('expects the selector of "docs/guide.md" to be at most 3');
+});
+
+scenario('§9.5 a meta.schema that is not valid is E_PLUGIN', options, async (repo) => {
+  const schema = ", meta: { schema: { pattern: 'a' } }";
+  repo.write('docstamp.config.ts', shorthandConfig("'docs/guide.md:## Install'", schema));
   const result = await repo.run([], { expectExit: 2 });
   expect(result.stderr).toContain('E_PLUGIN');
-  expect(result.stderr).toContain('selectorFields');
+  expect(result.stderr).toContain('"pattern"');
 });

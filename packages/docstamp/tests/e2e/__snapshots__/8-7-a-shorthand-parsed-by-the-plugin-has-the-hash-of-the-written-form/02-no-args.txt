@@ -1,0 +1,14 @@
+$ docstamp
+exit: 0
+--- stdout ---
+1 ok, 0 stale, 0 invalid
+--- stderr ---
+--- setup: docstamp.config.ts ---
+import { defineConfig } from 'docstamp';
+import headings from './tools/headings.ts';
+
+const declared = { ...headings, parseSelect: (raw: string) => raw.startsWith("## ")
+  ? { select: raw.slice(3) }
+  : { diagnostics: [{ severity: "error", message: "Write the title as ## Title.", code: "no-marker" }] } };
+export default defineConfig({ version: 2, plugins: [declared], files: {
+  'CLAUDE.md': { dependencies: ['docs/guide.md:## Install'] } } });

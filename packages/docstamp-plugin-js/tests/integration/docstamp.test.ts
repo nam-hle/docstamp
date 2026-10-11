@@ -157,7 +157,7 @@ describe('§8 the plugin through the docstamp CLI', () => {
     expect(broken.stderr).toContain('E_SELECT');
   });
 
-  it('§4 NOTE reads the one-string shorthand with the hash of the written form', () => {
+  it('§4.1 reads the one-string shorthand with the hash of the written form', () => {
     const written = repository(CREATE);
     written.run('update', 'CLAUDE.md');
     const bare = repository("'api.ts:createUser'");
@@ -167,7 +167,7 @@ describe('§8 the plugin through the docstamp CLI', () => {
     expect(bare.run().exit).toBe(0);
   });
 
-  it('§4 NOTE reads name, kind and part pairs as the written Map', () => {
+  it('§4.1 reads name, kind and part pairs as the written Map', () => {
     const written = repository(
       "{ path: 'api.ts', select: { name: 'createUser', part: 'source', kind: 'function' } }",
     );
@@ -179,9 +179,16 @@ describe('§8 the plugin through the docstamp CLI', () => {
     expect(pairs.run().exit).toBe(1);
   });
 
-  it('§4 NOTE refuses a kind that is not one of the plugin kinds', () => {
+  it('§3 meta.schema refuses a kind that is not one of the plugin kinds', () => {
     const result = repository("'api.ts:name=createUser,kind=method'").run();
     expect(result.exit).toBe(2);
     expect(result.stderr).toContain('E_SELECT');
+    expect(result.stderr).toContain('/kind');
+  });
+
+  it('§4.1 refuses an unknown key with a code', () => {
+    const result = repository("'api.ts:title=createUser'").run();
+    expect(result.exit).toBe(2);
+    expect(result.stderr).toContain('invalid-selector');
   });
 });

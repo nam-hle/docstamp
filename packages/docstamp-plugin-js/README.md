@@ -64,7 +64,8 @@ The report names the declaration, its part and its lines because this plugin ret
 - `select: { name: 'createUser', part: 'source' }` hashes the whole source instead of the shape.
 - Each fits in one string next to the path: `'api.ts:createUser'`, `'api.ts:name=User,kind=interface'`
   and `'api.ts:name=createUser,part=source'`. The keys are the fields above, in any order, and a
-  pair list is the object form, not the bare name.
+  pair list is the object form, not the bare name. Write `\,`, `\=` and `\\` for a comma, an
+  equals sign and a backslash in a value ([SPEC §4.1](SPEC.md#41-parseselect)).
 - A name shared by two declarations (a function and an interface of the same name) is
   an `E_SELECT` whose message names both kinds and lines: add `kind`. A name that is not declared is `E_SELECT_NOT_FOUND`.
 - Overload signatures and their implementation are one declaration.
