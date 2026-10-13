@@ -11,7 +11,10 @@ then records the review.
 
 1. Read the changed files the report lists (the `review:` line is a read-only `git diff` for them).
 2. Fix every claim in the doc that is no longer true.
-3. Run `docstamp update <doc>`, and commit the lock (or the doc, for an inline declaration).
+3. Run `docstamp update <doc>`, and commit the lock (or the doc, for an inline declaration). It
+   first prints `changed since last review:` and the changed files, so the review input is on
+   screen when the review is recorded, or a note when no dependency differs
+   ([SPEC §13.6](/spec/command-line#136-update)).
 
 ::: warning Never skip the re-check
 `docstamp update` writes the lock: it records that a review happened, and nothing can verify that.

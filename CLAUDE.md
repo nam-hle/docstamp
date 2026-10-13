@@ -373,7 +373,9 @@ raised `E_EMPTY_PATTERN`, and it changes nothing but that message.
 
 `checkChunks` in `src/report/text.ts` returns the check report as a List of stdout and stderr writes
 in the order of SPEC §14.3.2 (an `INVALID` line, then its Diagnostics). `emit` in `src/cli/emit.ts`
-writes them one by one, in that order: never all of stdout first. Each stream alone must stay what
+writes them one by one, in that order: never all of stdout first. `update` prints its review input
+(§13.6, `reviewInputText`, reusing `withChanges` of `cli/check.ts`) before the written lines; it is advisory.
+Each stream alone must stay what
 §14.1 says; `tests/unit/run.test.ts` pins the interleaving. `reviewLine` (§14.3.4) only builds the
 text of a git command for the reader; `git` still runs in `src/host/node-git.ts` alone, read-only: `history/` asks the `Git` port
 (`isWhitespaceOnly` for §12.3 step 7, `objectsAt` and `hashWorkFiles` for step 8, `fileAt` for step
