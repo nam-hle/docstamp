@@ -93,7 +93,7 @@ without changing any verdict.
 
 `ChangedSince(root, result, entry)` returns a List of Change, the commit *C* below, and the
 `[[Edited]]`, `[[Selection]]` and `[[Fragments]]` of step 9, or *unknown*. It is
-run, in a check (§13.5), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
+run, in a check (§13.5) and in an update (§13.6), only for a Result whose `[[State]]` is `stale`, whose `[[Reasons]]`
 contain `content-changed`, and whose file has a LockEntry *entry*, or an inline `[[Recorded]]`
 Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
 
