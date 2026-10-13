@@ -142,6 +142,10 @@ The following are not breaking:
   command, and a file literally named `suggest` is reached with `--` (§13.2), as for every other
   command word. `--write` without `suggest` is still refused (§13.2);
 - a new member of the JSON output (§14.5: consumers ignore unknown members);
+- `check --undeclared` (§13.5) and `suggest --all` (§13.10): new options that no existing command
+  line uses (`--all` was `E_USAGE` with `suggest`, `--undeclared` unknown), the undeclared lines of
+  §14.3 and the members `undeclared` and `all` of §14.5. Without them every output, verdict and
+  exit code is as it was;
 - *declared* of `suggest` (§13.10 step 4): the `status` column and the `only declared` lines of
   §14.9 for a file that already has a declaration, and the member `declared` of §14.5. A file
   without one prints exactly what it printed; the proposal, `--write` and the exit code are
