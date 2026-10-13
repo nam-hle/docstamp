@@ -2,5 +2,7 @@
 $ docstamp update CLAUDE.md
 exit: 0
 --- stdout ---
+changed since last review: CLAUDE.md
+  modified  src/core/hash.ts
 written  CLAUDE.md
 --- stderr ---

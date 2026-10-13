@@ -1,6 +1,8 @@
 $ docstamp update README.md
 exit: 0
 --- stdout ---
+changed since last review: README.md
+  modified  src/cli/run.ts
 written  README.md
 --- stderr ---
 --- setup: README.md ---

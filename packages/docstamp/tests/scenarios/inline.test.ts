@@ -170,7 +170,11 @@ scenario(
 
     const stamped = repo.read('README.md');
     const again = await repo.run(['update', 'README.md', 'docs/GUIDE.md'], { expectExit: 0 });
-    expect(again.stdout).toBe('unchanged  README.md\nunchanged  docs/GUIDE.md\n');
+    expect(again.stdout).toBe(
+      'note: no dependency of README.md differs from its last reviewed state\n' +
+        'note: no dependency of docs/GUIDE.md differs from its last reviewed state\n' +
+        'unchanged  README.md\nunchanged  docs/GUIDE.md\n',
+    );
     expect(repo.read('README.md')).toBe(stamped);
 
     repo.append('src/cli/run.ts', 'export const more = 1;\n');

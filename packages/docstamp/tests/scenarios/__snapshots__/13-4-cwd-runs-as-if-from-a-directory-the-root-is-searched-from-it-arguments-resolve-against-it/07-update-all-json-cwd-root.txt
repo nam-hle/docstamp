@@ -19,7 +19,7 @@ exit: 0
       "dependencies": [
         "packages/*/package.json"
       ],
-      "changes": null,
+      "changes": [],
       "diagnostics": [],
       "written": false
     },

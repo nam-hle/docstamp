@@ -19,7 +19,7 @@ exit: 0
         "src/index.ts",
         "docs/guide.md"
       ],
-      "changes": null,
+      "changes": [],
       "diagnostics": [],
       "written": false
     }

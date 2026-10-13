@@ -1,0 +1,8 @@
+$ docstamp update CLAUDE.md
+exit: 0
+--- stdout ---
+changed since last review: CLAUDE.md
+  added     src/new.ts
+  modified  src/util.ts
+written  CLAUDE.md
+--- stderr ---
