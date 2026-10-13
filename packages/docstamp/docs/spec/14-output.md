@@ -312,7 +312,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 }
 ```
 
-- `mode` is `check`, `update`, `list-dependencies`, `list-dependents`, `stats` or `suggest`.
+- `mode` is `check`, `update`, `list-dependencies`, `list-dependents`, `stats`, `suggest` or `help`.
 - `files` holds every selected Result (check) or every target (update), in path order,
   including `ok` ones. With `check --only-stale` the `ok` ones are omitted, and `summary`
   still counts every selected Result (§13.5).
@@ -489,6 +489,25 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   Diagnostics, in which case `files` is empty. With `--all` (§13.10) the document has a last
   top-level member `"all": true`, after `diagnostics`, `files` holds only the files that have a
   Suggestion left by step 8, and `suggestions` only the `new` ones; the other members are as above.
+- With `help` and no help name (§13.11 step 5) the document is instead:
+
+  ```json
+  {
+    "version": 2,
+    "mode": "help",
+    "exitCode": 0,
+    "commands": [
+      { "name": "check", "synopsis": ["docstamp [check] [options] [<file>...]"], "summary": "..." }
+    ],
+    "topics": [{ "name": "start", "summary": "..." }],
+    "diagnostics": []
+  }
+  ```
+
+  `commands` holds each command of §13.1 in its order, with `synopsis` the synopsis lines and
+  `summary` the one line of the index, and `topics` each topic of §13.11 step 3 in the order of the
+  index, with its one line. The strings are those of the text index, so they are informative (§2).
+  It has no `summary`, `files`, `state`, `reasons` or `changes`.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
   empty `[[File]]` or `[[Subject]]`, and a last member `"pluginCode"` that is present only when the
   Diagnostic has a `[[PluginCode]]`. Diagnostic Lists are in Diagnostic order.
