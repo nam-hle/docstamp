@@ -52,6 +52,9 @@ STALE    CLAUDE.md  (content-changed)
 next: review each stale file against its dependencies, then run: docstamp update CLAUDE.md
 ```
 
+Written as the string `'guide.md:## Install'`, the dependency is printed as written (`depends   "guide.md:## Install"`)
+instead of in the form above, which is the one of a `{ path, select }` entry.
+
 The report names the section and its lines because this plugin returns them with the part (`focus` and `lines`, [SPEC §6](SPEC.md#6-extract)).
 
 ## The selector

@@ -291,6 +291,11 @@ resolves them through the plugin's `parseSelect`, never running `extract`. The p
 (`src/plugin/plugins.ts`) before `validateSelect`. Tests: `tests/unit/shorthand.test.ts`,
 `tests/unit/select-schema.test.ts`, `tests/scenarios/shorthand.test.ts`.
 
+A Shorthand keeps its text as `SelectedEntry.written` (`path:raw`), which text reports print in place
+of the canonical `path#select` (SPEC §8.7, §14.2): `depends`, `fragment` and `via` lines, the `stats`
+rows, and a Diagnostic subject through `Diagnostic.written` (`withWritten` in `core/diagnostics.ts`).
+It is never hashed or compared, and `--json` keeps the canonical members and adds `written`.
+
 ## Suggest
 
 `docstamp suggest` (SPEC §12.6, §13.10) proposes a doc's `dependencies` from the paths it mentions;

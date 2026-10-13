@@ -35,3 +35,8 @@ default message of a code (one with no detail of its own) may name only its firs
 | `W_SHADOWED_EXCLUSION` | warning | §8.5 | move the exclusion after the named later pattern (for a Preset, list it last in `use`), or narrow that pattern, unless re-selecting those files is intended; attached to the file, subject the exclusion |
 | `W_DUPLICATE_PATTERN` | warning | §8.5 | keep one copy of the repeated pattern, unless the order of the patterns needs both (§8.4); attached to the file, subject the pattern, once per distinct repeated pattern |
 | `W_UNKNOWN_PATH` | warning | §13.8 | check the spelling: the path is not in the Universe and not on disk, so nothing depends on it; subject the path as a RepoPath, carried by the entry of that path |
+
+A subject made of the path, `#` and the selector is the canonical form of a Selected Dependency
+(§8.7). When that dependency was written as a Shorthand, the Diagnostic also has `[[Written]]` (§5.5)
+and text mode (§14.3) shows `path:selector` as written in its place; the subject, the code and
+the fix are those above.

@@ -33,6 +33,8 @@ export default defineConfig({
 The same entry fits in one string: `'docs/guide.md:Install'`. What follows the first `:` is the
 plugin's own text: with a `parseSelect` (below) the plugin turns it into the `select`, as the
 Markdown plugin does for `'docs/guide.md:## Install'`; without one it is the `select` as a String.
+Reports print the string as written (`docs/guide.md:Install`), where a map entry is printed in the
+canonical form of the output below ([SPEC §14.2](/spec/output#142-paths-and-patterns-in-text)).
 
 Editing another section of `docs/guide.md` leaves `CLAUDE.md` `ok`; editing `Install` makes it stale,
 and the report names the part that changed:
