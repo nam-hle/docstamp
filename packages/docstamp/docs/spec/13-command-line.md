@@ -275,7 +275,10 @@ dependents of each: the stamped files that depend on it. At least one file argum
       whose file has no Diagnostic in *attached*: if *path* is in *universe*, *path* is not
       `b.[[File]]` and `Select(b.[[Dependencies]], « path »)` selects it, append { `[[File]]`:
       `b.[[File]]`, `[[Via]]`: the patterns of `b.[[Dependencies]]` that have no Negation and
-      satisfy `PatternMatches(pattern, path)`, in declaration order } to *found*.
+      satisfy `PatternMatches(pattern, path)`, in declaration order, then the canonical form (§8.7)
+      of each Selected Dependency of `b.[[Selected]]` whose `[[Path]]` is *path*, in order } to
+      *found*; a Declaration whose only link to *path* is a Selected Dependency is found too.
+      Text mode (§14.7) prints the display form (§8.7) of each, JSON the canonical form.
    3. If `--transitive` is given, let *found* be `DependentTree(path)` (below).
    4. Let *diagnostics* be « `W_UNKNOWN_PATH` », `[[Subject]]` *path*, with no `[[File]]`, if
       *path* is not in *universe* and is not an *existing entry*; else « ». An *existing entry* is

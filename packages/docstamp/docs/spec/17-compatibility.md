@@ -224,6 +224,12 @@ The following are not breaking:
   frontmatter, which no earlier release gave a meaning; it can opt out with `include`. This is
   also why §10.2 step 4 does not change a Hash for a file with no inline block, and for one with an
   inline block that has no `hash` line.
+- `[[Written]]` (§8.7): a Selected Dependency that came from a Shorthand is shown as written in text
+  mode (§14.2: the `depends`, `fragment` and `via` entries, the `stats` rows and a Diagnostic
+  subject), where the canonical form was, which is text layout of §14.3; the member `written` of
+  §14.5 is new. Every existing JSON member, the Dependency Hash, the Lockfile, the codes and the
+  exit codes are unchanged. `list-dependents` also finds a Declaration through the path of a Selected
+  Dependency (§13.8 step 4.2), which it already did, and its `via` names it;
 - `[[Selection]]` (§5.4, §12.3 step 10): the selection lines of §14.3 and the member `selection` of
   §14.5, part of the changed-file report; no `changes`, verdict or exit code changes;
 - `[[Fragments]]` (§5.4, §12.3 step 11): the fragment lines of §14.3 and the member `fragments` of

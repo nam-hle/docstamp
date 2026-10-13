@@ -225,7 +225,8 @@ patterns. The Lockfile and its `version` are unchanged. It is not an edit of the
 
 ### 8.7 Selected Dependencies
 
-A *Selected Dependency* is { `[[Path]]`: a RepoPath, `[[Select]]`: a plain value (§3.5) }. In a
+A *Selected Dependency* is { `[[Path]]`: a RepoPath, `[[Select]]`: a plain value (§3.5),
+`[[Written]]`: a String, when present }. In a
 `dependencies` List a Selected Dependency is written as a Map with the keys `path` and `select`, or
 as a String in the *shorthand* `Path ":" Selector` (below); any other String is a Pattern (§8.1)
 as before. The written `path` is a literal path (§8.5 NOTE) and
@@ -237,6 +238,18 @@ Negation or not a literal path, or a `select` holding a Number that is not finit
 Selected Dependencies with the same `[[Path]]` and the same `CanonicalJson([[Select]])` are one
 dependency: the Declaration's `[[Selected]]` holds the first of them in order of appearance and
 drops the others without a diagnostic.
+
+`[[Written]]` is the *written form* of a Selected Dependency: the one that `ResolveSelector` makes
+from a Shorthand has `[[Written]]` `[[Path]]`, `:` and `[[Raw]]` (§12.2 step 5), and one written as a
+Map has none. It is for reports only. It is no part of the identity above, so it enters no Hash, no
+Lockfile and no comparison of two Selected Dependencies; the one that stays when identical ones are
+dropped keeps its own `[[Written]]` or lack of it, so the first in `[[Selected]]` decides, and that
+order is the Maps in order of appearance, then the Shorthands in order of appearance (§12.2 step
+5): the same selection written as two Shorthands is shown as the first, and one written as a Map
+and as a Shorthand is shown by its canonical form. The *display form* of a Selected Dependency is its
+`[[Written]]` when present, else its `[[Path]]`, `#` and `CanonicalJson([[Select]])`, the *canonical
+form*. A text report (§14.2) prints the display form and a JSON report (§14.5) the canonical form,
+with the written form as the additive member `written`.
 
 A *Shorthand* is { `[[Path]]`: a RepoPath, `[[Raw]]`: a String }. `SplitDependency(s)` reads the code
 points of the String *s* in order, a `\` and the code point after it counting as one escaped unit,
@@ -389,8 +402,14 @@ NOTE: A Shorthand is resolved at load (§12.2 step 5), before any hash, so it is
 Dependency its value makes: with no `[[ParseSelect]]`, `docs/guide.md:Install` is `{ path:
 docs/guide.md, select: Install }`; with one, the Selected Dependency holds what it returned, so a
 Plugin that reads `## Install` as `{ heading: Install, level: 2 }` has the Dependency Hash (§10.4,
-§17.7) of that Map written out. The hashed value is the parsed one, never the Raw. Reports print the
-resolved `CanonicalJson` (§14.3).
+§17.7) of that Map written out. The hashed value is the parsed one, never the Raw. A text report
+prints the Shorthand as written, a JSON report the resolved `CanonicalJson` (§14.3, §14.5).
+
+NOTE: A Diagnostic that `Fragments`, `ValidateSelect` or `CheckSelect` raises for a Selected
+Dependency *e* of a Declaration has the canonical form of *e* as `[[Subject]]`. When `e.[[Written]]`
+is present, the Diagnostic also has it as `[[Written]]` (§5.5), whoever raised it, and text mode shows it
+in place of the `[[Subject]]` (§14.3), so a Shorthand's error names the Shorthand and not its
+parsed value. The code, the `[[Subject]]` and the message are unchanged, and the Plugin sees none of it.
 
 NOTE: `ParseSelect` and `[[Meta]]` follow the model of a lint rule's `meta.schema`: the Plugin
 defines its format, docstamp checks the shape. `ParseSelect` MUST be pure and deterministic, and is
