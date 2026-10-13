@@ -9,6 +9,7 @@ docstamp needs Node.js 24 or newer.
 ```sh
 pnpm add -D docstamp      # or run it with npx docstamp
 npx docstamp help start   # the same walk-through, offline
+npx docstamp help concepts   # the idea behind it: drift, stale, check, review, update
 ```
 
 ## 1. Declare what each doc depends on
