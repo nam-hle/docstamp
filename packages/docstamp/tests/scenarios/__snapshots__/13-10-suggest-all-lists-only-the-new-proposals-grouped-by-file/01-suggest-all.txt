@@ -1,0 +1,11 @@
+$ docstamp suggest --all
+exit: 0
+--- stdout ---
+suggest docs/a.md
+  pattern     files  stale  status
+  src/new.ts      1    n/a  new
+suggest docs/b.md
+  pattern        files  stale  status
+  scripts/*.mjs      1    n/a  new
+  src/new.ts         1    n/a  new
+--- stderr ---

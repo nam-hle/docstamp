@@ -1,0 +1,10 @@
+$ docstamp check --undeclared
+exit: 2
+--- stdout ---
+INVALID  docs/a.md
+1 ok, 0 stale, 1 invalid
+next: fix the configuration of each invalid file, then run: docstamp check docs/a.md
+UNDECLARED docs/b.md  mentions src/new.ts
+next: declare each mentioned path in its file, or stop mentioning it; see docstamp help suggest
+--- stderr ---
+error: E_PATTERN: docs/a.md: [: Correct the pattern; "/" separates its segments and "\" escapes the next character.

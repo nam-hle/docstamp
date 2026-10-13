@@ -19,6 +19,7 @@ export interface JsonDoc {
   diagnostics: readonly Diagnostic[];
   written?: ReadonlySet<string>;
   removed?: readonly string[];
+  undeclared?: readonly { readonly file: string; readonly path: string }[];
 }
 
 export type Json = null | boolean | number | string | readonly Json[] | JsonObject;
@@ -199,6 +200,17 @@ export function jsonText(doc: JsonDoc): string {
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
   ];
   if (doc.mode === 'update') top.push(['removed', [...(doc.removed ?? [])]]);
+  if (doc.undeclared !== undefined) {
+    top.push([
+      'undeclared',
+      doc.undeclared.map(({ file, path }) =>
+        obj([
+          ['file', file],
+          ['path', path],
+        ]),
+      ),
+    ]);
+  }
   return `${render(obj(top), '')}\n`;
 }
 

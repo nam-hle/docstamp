@@ -49,7 +49,7 @@ function onlyDeclared(entry: SuggestEntry): string[] {
   return [...new Set(entry.declared ?? [])].filter((pattern) => !proposed.has(pattern));
 }
 
-export function suggestText(entries: readonly SuggestEntry[], write: boolean): string {
+export function suggestText(entries: readonly SuggestEntry[], write: boolean, all = false): string {
   let out = '';
   for (const entry of entries) {
     out += `suggest ${shown(entry.file)}\n`;
@@ -58,6 +58,7 @@ export function suggestText(entries: readonly SuggestEntry[], write: boolean): s
       out += table(entry.suggestions, entry.declared)
         .map((line) => `${line}\n`)
         .join('');
+    if (all) continue;
     for (const path of entry.ignored) out += `  ignored  ${shown(path)}\n`;
     for (const pattern of onlyDeclared(entry)) out += `  only declared  ${shown(pattern)}\n`;
   }
@@ -72,6 +73,7 @@ export function suggestText(entries: readonly SuggestEntry[], write: boolean): s
 export interface SuggestJsonDoc {
   exitCode: number;
   write: boolean;
+  all?: boolean;
   files: readonly SuggestEntry[];
   diagnostics: readonly Diagnostic[];
 }
@@ -104,6 +106,7 @@ export function suggestJsonText(doc: SuggestJsonDoc): string {
     ['exitCode', doc.exitCode],
     ['files', files],
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
+    ...(doc.all === true ? [['all', true] as [string, Json]] : []),
   ];
   return `${render(obj(top), '')}\n`;
 }

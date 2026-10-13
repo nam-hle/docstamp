@@ -20,6 +20,7 @@ describe('§13.2 parseArgs', () => {
       json: false,
       onlyStale: false,
       quiet: false,
+      undeclared: false,
       paths: [],
     });
     expect(parseArgs(['a.md', '--json'])).toEqual({
@@ -27,6 +28,7 @@ describe('§13.2 parseArgs', () => {
       json: true,
       onlyStale: false,
       quiet: false,
+      undeclared: false,
       paths: ['a.md'],
     });
   });
@@ -36,6 +38,7 @@ describe('§13.2 parseArgs', () => {
       json: false,
       onlyStale: false,
       quiet: false,
+      undeclared: false,
       cwd: 'x',
       paths: ['a.md'],
     });
@@ -162,7 +165,7 @@ describe('§13.2 parseArgs', () => {
       quiet: true,
     });
     expect(parseArgs(['check', '--quiet'])).toMatchObject({ onlyStale: false, quiet: true });
-    for (const option of ['--only-stale', '--quiet']) {
+    for (const option of ['--only-stale', '--quiet', '--undeclared']) {
       for (const command of ['update', 'list-dependencies', 'list-dependents', 'stats']) {
         const argv = [command, option, command === 'update' ? '--all' : 'a.md'];
         expect(usage(argv), argv.join(' ')).toBe(option);
@@ -170,6 +173,14 @@ describe('§13.2 parseArgs', () => {
       expect(usage([option, option])).toBe(option);
     }
     expect(parseArgs(['--help', '--quiet'])).toEqual({ mode: 'help', names: [] });
+  });
+  it('--undeclared is an option of check', () => {
+    expect(parseArgs(['--undeclared'])).toMatchObject({ mode: 'check', undeclared: true });
+    expect(parseArgs(['check', 'a.md', '--undeclared'])).toMatchObject({
+      undeclared: true,
+      paths: ['a.md'],
+    });
+    expect(usage(['check', '--undeclared', '--undeclared'])).toBe('--undeclared');
   });
   it('--cwd forms and --', () => {
     expect(parseArgs(['--cwd=x', '--', '--json'])).toMatchObject({ cwd: 'x', paths: ['--json'] });
@@ -279,6 +290,7 @@ describe('§13.2 suggest', () => {
       json: false,
       paths: ['a.md'],
       write: false,
+      all: false,
     });
     expect(parseArgs(['--write', 'suggest', '--json', '--cwd', 'r', 'a.md', 'b.md'])).toEqual({
       mode: 'suggest',
@@ -286,6 +298,7 @@ describe('§13.2 suggest', () => {
       cwd: 'r',
       paths: ['a.md', 'b.md'],
       write: true,
+      all: false,
     });
   });
   it('needs a file argument', () => {
@@ -304,8 +317,22 @@ describe('§13.2 suggest', () => {
     }
     expect(usage(['suggest', '--write', '--write', 'a'])).toBe('--write');
   });
-  it('--all, --since and --from are refused', () => {
+  it('--all stands for every declared file, alone', () => {
+    expect(parseArgs(['suggest', '--all', '--json'])).toEqual({
+      mode: 'suggest',
+      json: true,
+      paths: [],
+      write: false,
+      all: true,
+    });
     expect(usage(['suggest', '--all', 'a'])).toBe('--all');
+    expect(usage(['suggest', '--all', '--write'])).toBe('--all');
+    expect(usage(['suggest', '--all', '--all'])).toBe('--all');
+    for (const command of ['check', 'list-dependencies', 'list-dependents', 'stats']) {
+      expect(usage([command, '--all', 'a'])).toBe('--all');
+    }
+  });
+  it('--since and --from are refused', () => {
     expect(usage(['suggest', '--since', '30d', 'a'])).toBe('--since');
     expect(usage(['suggest', '--from', 'main', 'a'])).toBe('--from');
   });

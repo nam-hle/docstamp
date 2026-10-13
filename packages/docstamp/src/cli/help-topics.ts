@@ -242,9 +242,11 @@ its declaration fixed, then docstamp check <file>.
   'exit-codes': {
     summary: 'What each exit code means.',
     body: `
-    0    check: every selected file is ok. update: written or already current. list-dependencies,
-         list-dependents, stats, suggest: listed. help, version.
-    1    check only: a selected file is stale, none is invalid, no global error.
+    0    check: every selected file is ok (and, with --undeclared, no path is undeclared).
+         update: written or already current. list-dependencies, list-dependents, stats,
+         suggest: listed. help, version.
+    1    check only: a selected file is stale, or with --undeclared mentions an undeclared path;
+         none is invalid, no global error.
     2    an error diagnostic, an invalid file, or a usage error.
     70   an internal fault, reported on standard error as "internal error:" and a stack.
 
@@ -259,11 +261,12 @@ global ones, each { code, severity, file, subject, message }, file and subject n
 Consumers must ignore members they do not know: later releases only add members.
 
 - check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited (configurationEdited when a script configuration changed instead); fragments (a list of { path, select, status }, with focus and lines when the plugin gives them) appears when it has selected dependencies; use and origins when it uses presets (use is [] when they are only default-presets).
+- check --undeclared: a last top-level undeclared, a list of { file, path }.
 - update: as check, with written true or false on each file and a top-level removed list. A written file reports state ok.
 - list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and origins with presets, default-presets included.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive each dependent also has dependents, cycle and repeated.
 - stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount, staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }.
-- suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate, status }], ignored, declared, diagnostics }, plus written with --write.
+- suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate, status }], ignored, declared, diagnostics }, plus written with --write; with --all the top level also has all (true) and only the new proposals.
 
 A command that fails before it evaluates anything has an empty files list and no summary. Read the
 verdict from exitCode and state, and the next step from the text mode's next: lines, which have no

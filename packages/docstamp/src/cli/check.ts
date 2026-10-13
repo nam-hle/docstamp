@@ -11,6 +11,7 @@ import { emit, hasError, type Output } from './emit.ts';
 import { evaluateAll, type Evaluated } from './evaluate.ts';
 import type { Io } from './io.ts';
 import { rootFromCwd, selectResults } from './paths.ts';
+import { undeclaredPaths } from './undeclared.ts';
 
 // SPEC §12.3
 function withChanges(
@@ -82,6 +83,7 @@ export function runCheck(
     selected: [],
     global: [],
     text: '',
+    ...(args.undeclared ? { undeclared: [] } : {}),
   };
   try {
     const cwd = resolveCwd(host, processCwd, args.cwd);
@@ -90,7 +92,10 @@ export function runCheck(
     const selected = selectResults(args.paths, cwd, root, evaluated.results, host.windows);
     const global = evaluated.global;
     const refused = hasError(global) || selected.some((r) => r.state === 'invalid');
-    const stale = selected.some((r) => r.state === 'stale');
+    const undeclared = args.undeclared
+      ? undeclaredPaths(host, root, evaluated.universe, selected)
+      : undefined;
+    const stale = selected.some((r) => r.state === 'stale') || (undeclared?.length ?? 0) > 0;
     const exitCode = refused ? 2 : stale ? 1 : 0;
     const whitespace = new Map<string, boolean>();
     const reported = selected.map((r) => withChanges(host, root, r, evaluated, whitespace));
@@ -99,6 +104,7 @@ export function runCheck(
       quiet: args.quiet,
       rootFromCwd: rootFromCwd(cwd, root, host.windows),
       inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
+      undeclared,
     });
     return emit(io, {
       ...empty,
@@ -108,6 +114,7 @@ export function runCheck(
       selected: reported,
       global,
       chunks,
+      ...(undeclared === undefined ? {} : { undeclared }),
     });
   } catch (e) {
     if (!(e instanceof Raised)) throw e;

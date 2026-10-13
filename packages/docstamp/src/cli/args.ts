@@ -26,6 +26,7 @@ export type Args =
       json: boolean;
       onlyStale: boolean;
       quiet: boolean;
+      undeclared: boolean;
       cwd?: string;
       paths: string[];
     }
@@ -36,7 +37,14 @@ export type Args =
       paths: string[];
       window: StatsWindowArg;
     }
-  | { mode: 'suggest'; json: boolean; cwd?: string; paths: string[]; write: boolean }
+  | {
+      mode: 'suggest';
+      json: boolean;
+      cwd?: string;
+      paths: string[];
+      write: boolean;
+      all: boolean;
+    }
   | { mode: 'update'; all: boolean; json: boolean; cwd?: string; paths: string[] };
 
 // SPEC §13.1: the command table, in the order help lists it
@@ -61,6 +69,7 @@ const FLAGS = new Set([
   '--version',
   '--help',
   '--write',
+  '--undeclared',
 ]);
 const REMOVED: Record<string, string> = {
   '--files': 'docstamp list-dependencies',
@@ -80,7 +89,7 @@ const isOption = (arg: string) =>
   arg === '--' || valuedName(arg) !== undefined || FLAGS.has(arg) || removedName(arg) !== undefined;
 const DEFAULT_SINCE = '30d';
 const STATS_ONLY = ['--since', '--from'];
-const CHECK_ONLY = ['--only-stale', '--quiet'];
+const CHECK_ONLY = ['--only-stale', '--quiet', '--undeclared'];
 const MAX_DAYS = 3650;
 const DAYS = /^([1-9][0-9]{0,3})d$/u;
 const usage = (subject: string, message?: string) =>
@@ -172,7 +181,9 @@ export function parseArgs(
       fail('update', 'Name the files you reviewed, or pass --all.');
     }
     if (all && paths.length > 0) fail('--all', 'Pass either files or --all, not both.');
-  } else if (all) fail('--all', '--all is only valid with "docstamp update".');
+  } else if (all && mode !== 'suggest') {
+    fail('--all', '--all is only valid with "docstamp update" and "docstamp suggest".');
+  }
   if (seen.has('--transitive') && mode !== 'list-dependents') {
     fail('--transitive', '--transitive is only valid with "docstamp list-dependents".');
   }
@@ -184,8 +195,10 @@ export function parseArgs(
   if (mode === 'list-dependents' && paths.length === 0) {
     fail('list-dependents', 'Name the files whose dependents you want to list.');
   }
-  if (mode === 'suggest' && paths.length === 0) {
-    fail('suggest', 'Name the files whose dependencies you want proposed.');
+  if (mode === 'suggest' && all && (paths.length > 0 || seen.has('--write'))) {
+    fail('--all', 'Pass either files or --all, not both, and --all never writes.');
+  } else if (mode === 'suggest' && !all && paths.length === 0) {
+    fail('suggest', 'Name the files whose dependencies you want proposed, or pass --all.');
   }
   const since = values.get('--since');
   const from = values.get('--from');
@@ -225,9 +238,12 @@ export function parseArgs(
   }
   if (mode === 'check') {
     const onlyStale = seen.has('--only-stale');
-    return { mode, json, onlyStale, quiet: seen.has('--quiet'), ...cwdOpt, paths };
+    const [quiet, undeclared] = [seen.has('--quiet'), seen.has('--undeclared')];
+    return { mode, json, onlyStale, quiet, undeclared, ...cwdOpt, paths };
   }
-  if (mode === 'suggest') return { mode, json, ...cwdOpt, paths, write: seen.has('--write') };
+  if (mode === 'suggest') {
+    return { mode, json, ...cwdOpt, paths, write: seen.has('--write'), all };
+  }
   return mode === 'update'
     ? { mode, all, json, ...cwdOpt, paths }
     : { mode, json, ...cwdOpt, paths };
