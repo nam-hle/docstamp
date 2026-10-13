@@ -44,6 +44,10 @@ export function render(value: Json, indent: string): string {
   return `[\n${items.map((x) => `${inner}${render(x, inner)}`).join(',\n')}\n${indent}]`;
 }
 
+// SPEC §14.5: `written`, only for a Selected Dependency that has a written form
+const writtenMember = (written: string | undefined): Array<[string, Json]> =>
+  written === undefined ? [] : [['written', written]];
+
 export const diagJson = (d: Diagnostic): JsonObject =>
   obj([
     ['code', d.code],
@@ -54,6 +58,7 @@ export const diagJson = (d: Diagnostic): JsonObject =>
     ...(d.pluginCode === undefined
       ? []
       : ([['pluginCode', d.pluginCode]] as Array<[string, Json]>)),
+    ...writtenMember(d.written),
   ]);
 
 // SPEC §14.5: `use` and `origins`, only for a file that uses a Preset, a default one included
@@ -88,6 +93,7 @@ function selectedMembers(r: Result): Array<[string, Json]> {
         obj([
           ['path', entry.path],
           ['select', selectJson(entry.select)],
+          ...writtenMember(entry.written),
         ]),
       ),
     ],
@@ -145,6 +151,7 @@ export function jsonText(doc: JsonDoc): string {
                 obj([
                   ['path', f.path],
                   ['select', selectJson(f.select)],
+                  ...writtenMember(f.written),
                   ['status', f.status],
                   ...(f.parts === undefined
                     ? []
@@ -316,6 +323,7 @@ export function statsJsonText(doc: StatsJsonDoc): string {
               f.dependencies.map((d) =>
                 obj([
                   ['dependency', d.dependency],
+                  ...writtenMember(d.written),
                   ['commits', d.commits],
                   ['only', d.only],
                 ]),

@@ -1,0 +1,52 @@
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 0,
+    "stale": 1,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [],
+      "selected": [
+        {
+          "path": "package.json",
+          "select": "scripts.build",
+          "written": "package.json:scripts.build"
+        },
+        {
+          "path": "ci.yml",
+          "select": "jobs.test.steps.1.run",
+          "written": "ci.yml:jobs.test.steps.1.run"
+        }
+      ],
+      "changes": [],
+      "fragments": [
+        {
+          "path": "package.json",
+          "select": "scripts.build",
+          "written": "package.json:scripts.build",
+          "status": "changed",
+          "parts": [
+            {
+              "focus": "scripts.build (string)"
+            }
+          ]
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

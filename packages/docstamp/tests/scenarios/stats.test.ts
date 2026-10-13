@@ -461,8 +461,21 @@ scenario(
     const json = await repo.run(['stats', '--json', '--from', base, 'CLAUDE.md']);
     expect(json.exit).toBe(0);
     expect(doc(json).files[0].dependencies).toEqual([
-      { dependency: 'package.json#"scripts.build"', commits: 1, only: 1 },
-      { dependency: 'package.json#"scripts.test"', commits: 1, only: 1 },
+      {
+        dependency: 'package.json#"scripts.build"',
+        written: 'package.json:scripts.build',
+        commits: 1,
+        only: 1,
+      },
+      {
+        dependency: 'package.json#"scripts.test"',
+        written: 'package.json:scripts.test',
+        commits: 1,
+        only: 1,
+      },
     ]);
+    const text = await repo.run(['stats', '--from', base, 'CLAUDE.md']);
+    expect(text.stdout).toContain('package.json:scripts.build  ');
+    expect(text.stdout).not.toContain('#');
   },
 );

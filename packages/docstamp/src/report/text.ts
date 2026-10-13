@@ -1,7 +1,6 @@
-import { sortDiagnostics } from '../core/diagnostics.ts';
+import { canonicalForm, sortDiagnostics } from '../core/diagnostics.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
 import { needsQuoting, quote, shellQuote } from '../core/quote.ts';
-import { canonicalJson } from '../core/canonical.ts';
 import type {
   Change,
   Diagnostic,
@@ -138,7 +137,7 @@ function partsOf(f: FragmentChange): string {
 function fragmentLines(r: Result): string {
   return (r.fragments ?? [])
     .map((f) => {
-      const subject = shown(`${f.path}#${canonicalJson(f.select)}`);
+      const subject = shown(f.written ?? canonicalForm(f));
       return `  fragment  ${subject}  (${f.status})${partsOf(f)}\n`;
     })
     .join('');
@@ -310,7 +309,7 @@ function dependsLines(r: Result): string {
     return `  depends   ${shown(c)}${preset === null ? '' : ` (preset ${shown(preset)})`}\n`;
   });
   const selected = (r.selected ?? []).map(
-    (entry) => `  depends   ${shown(`${entry.path}#${canonicalJson(entry.select)}`)}\n`,
+    (entry) => `  depends   ${shown(entry.written ?? canonicalForm(entry))}\n`,
   );
   return [...patterns, ...selected].join('');
 }
@@ -380,7 +379,7 @@ export function diagnosticsText(ds: readonly Diagnostic[]): string {
     .map((d) => {
       const parts: string[] = [d.severity, d.code];
       if (d.file !== '') parts.push(shown(d.file));
-      if (d.subject !== '') parts.push(shownSubject(d.subject));
+      if (d.subject !== '') parts.push(shownSubject(d.written ?? d.subject));
       const tag = d.pluginCode === undefined ? '' : ` [${d.pluginCode}]`;
       return `${parts.join(': ')}: ${d.message}${tag}\n`;
     })
@@ -395,7 +394,7 @@ function reverseRows(dependents: readonly ReverseDependent[], depth: number): st
   dependents.forEach((d, i) => {
     const where = d.below === true ? ' (listed below)' : ' (listed above)';
     const mark = d.cycle === true ? ' (cycle)' : d.repeated === true ? where : '';
-    const via = d.via.map(shown).join(', ');
+    const via = d.via.map((entry) => shown(d.written?.get(entry) ?? entry)).join(', ');
     out += `${'  '.repeat(depth + 1)}${names[i]!.padEnd(width)}   via ${via}${mark}\n`;
     out += reverseRows(d.dependents ?? [], depth + 1);
   });
@@ -465,7 +464,7 @@ function breakdownText(f: FileStats): string {
   const table = [
     ['dependency', 'commits', 'only'],
     ...f.dependencies.map((d) => [
-      `${shown(d.dependency)}${d.preset === null ? '' : ` (preset ${shown(d.preset)})`}`,
+      `${shown(d.written ?? d.dependency)}${d.preset === null ? '' : ` (preset ${shown(d.preset)})`}`,
       String(d.commits),
       String(d.only),
     ]),

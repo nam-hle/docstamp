@@ -24,11 +24,13 @@ exit: 0
       "dependencies": [
         {
           "dependency": "package.json#\"scripts.build\"",
+          "written": "package.json:scripts.build",
           "commits": 1,
           "only": 1
         },
         {
           "dependency": "package.json#\"scripts.test\"",
+          "written": "package.json:scripts.test",
           "commits": 1,
           "only": 1
         }

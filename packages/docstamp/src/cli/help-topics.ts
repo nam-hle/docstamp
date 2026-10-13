@@ -213,7 +213,7 @@ to the root and use / as the separator on every platform.
 - Matching is case-sensitive, and a leading . is not special. No leading or trailing /, no . or .. segment.
 - A file is never its own dependency. An ignored file cannot be a dependency: depend on its source.
 - In YAML, quote a pattern that starts with ! or *.
-- path:selector depends on one part of a file (package.json:scripts.build, docs/guide.md:Install). A : in a file name is written \\:. A plugin defines the text after the first : (its parseSelect). SPEC section 8.7 has the rules; docstamp help spec.
+- path:selector depends on one part of a file (package.json:scripts.build, docs/guide.md:Install). A : in a file name is written \\:. A plugin defines the text after the first : (its parseSelect). Reports print it as written; --json adds a written member. SPEC section 8.7 has the rules; docstamp help spec.
 
 docstamp list-dependencies <file> shows what a list selects.`,
   },
@@ -293,15 +293,16 @@ Warnings never affect the exit code.`,
     body: `
 With --json, one JSON document goes to standard output and nothing to standard error. Every
 document starts with version (2), mode (the command) and exitCode, and ends with diagnostics: the
-global ones, each { code, severity, file, subject, message }, file and subject null when empty.
+global ones, each { code, severity, file, subject, message }, file and subject null when empty, and
+pluginCode and written when they apply (written: a selected dependency as it was written).
 Consumers must ignore members they do not know: later releases only add members.
 
-- check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited (configurationEdited when a script configuration changed instead); fragments (a list of { path, select, status }, with focus and lines when the plugin gives them) appears when it has selected dependencies; use and origins when it uses presets (use is [] when they are only default-presets).
+- check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited (configurationEdited when a script configuration changed instead); fragments (a list of { path, select, status }, with written, focus and lines when they apply) appears when it has selected dependencies; selected lists { path, select } and written for a shorthand; use and origins when it uses presets (use is [] when they are only default-presets).
 - check --undeclared: a last top-level undeclared, a list of { file, path }.
 - update: as check, with written true or false on each file and a top-level removed list. A written file reports state ok. changes is what changed before the write, [] when nothing did, null when unrecorded or unknown.
 - list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and origins with presets, default-presets included.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive each dependent also has dependents, cycle and repeated.
-- stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount, staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }.
+- stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount, staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }; named files add dependencies of { dependency, commits, only }, with written for a shorthand.
 - suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate, status }], ignored, declared, diagnostics }, plus written with --write; with --all the top level also has all (true) and only the new proposals.
 - help (no name): commands of { name, synopsis, summary } and topics of { name, summary }, as the text index lists them. mode is help.
 

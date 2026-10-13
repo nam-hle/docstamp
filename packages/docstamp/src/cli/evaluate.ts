@@ -1,5 +1,5 @@
 import { basename, dirname, join } from 'node:path';
-import { Raised } from '../core/diagnostics.ts';
+import { Raised, withWritten } from '../core/diagnostics.ts';
 import type { Json, SelectedEntry } from '../core/types.ts';
 import type { Host } from '../host/host.ts';
 import { canonicalJson } from '../core/canonical.ts';
@@ -72,7 +72,8 @@ function validatedSelects(
   return declarations.flatMap((declaration) =>
     (declaration.selected ?? []).flatMap((entry) => {
       try {
-        return runValidateSelect(claim(plugins, entry.path), declaration.file, entry);
+        const found = runValidateSelect(claim(plugins, entry.path), declaration.file, entry);
+        return withWritten(found, entry);
       } catch (e) {
         if (e instanceof Raised) return []; // an unclaimed path is Fragments step 0's to report
         throw e;

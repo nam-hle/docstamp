@@ -7,6 +7,7 @@ interface Diagnostic {
   subject: string | null;
   message: string;
   pluginCode?: string;
+  written?: string;
 }
 
 interface Change {
@@ -28,6 +29,7 @@ interface FileReport {
   fragments?: {
     path: string;
     select: unknown;
+    written?: string;
     status: string;
     parts?: { focus?: string; lines?: { start: number; end: number } }[];
   }[];
@@ -59,7 +61,8 @@ const command = (verb: string, file: string, workingDirectory: string): string =
 const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
 const renderDiagnostic = (diagnostic: Diagnostic): string => {
-  const subject = diagnostic.subject === null ? '' : ` ${code(diagnostic.subject)}`;
+  const named = diagnostic.written ?? diagnostic.subject;
+  const subject = named === null ? '' : ` ${code(named)}`;
   const tag = diagnostic.pluginCode === undefined ? '' : ` [${diagnostic.pluginCode}]`;
   return `- ${code(diagnostic.code)}${subject}: ${diagnostic.message}${tag}`;
 };
@@ -94,7 +97,7 @@ const renderStale = (file: FileReport, root: string): string[] => {
     (entry) => `- ${entry.status} ${code(entry.path)} (selection)`,
   );
   const fragments = (file.fragments ?? []).map((entry) => {
-    const subject = code(`${entry.path}#${JSON.stringify(entry.select)}`);
+    const subject = code(entry.written ?? `${entry.path}#${JSON.stringify(entry.select)}`);
     const parts = (entry.parts ?? []).flatMap(({ focus, lines }) => {
       const range = lines === undefined ? '' : `lines ${lines.start}-${lines.end}`;
       if (focus === undefined) return range === '' ? [] : [range];

@@ -1,0 +1,41 @@
+$ docstamp --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "summary": {
+    "ok": 0,
+    "stale": 0,
+    "invalid": 1
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "invalid",
+      "reasons": [],
+      "dependencies": [],
+      "selected": [
+        {
+          "path": "package.json",
+          "select": "scripts.nope",
+          "written": "package.json:scripts.nope"
+        }
+      ],
+      "changes": null,
+      "diagnostics": [
+        {
+          "code": "E_SELECT_NOT_FOUND",
+          "severity": "error",
+          "file": "CLAUDE.md",
+          "subject": "package.json#\"scripts.nope\"",
+          "message": "The plugin found nothing for the selector; correct \"select\" or the file, then run \"docstamp check\" again.",
+          "written": "package.json:scripts.nope"
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---
