@@ -10,10 +10,14 @@ Usage:
   docstamp --help
 
 Without a name: the index of commands and topics. With a command or topic: its page. With
-diagnostics and a code: that code alone. It reads no file. --help anywhere before -- prints the page
+diagnostics and a code: that code alone. With --json and no name, the index as JSON: the commands
+and the topics, each with its summary. It reads no file. --help anywhere before -- prints the page
 of the command word given, or the index when there is none. A mistyped command (a first word one or
 two edits from a command name that names no file, such as updte) is E_USAGE with exit 2, with or
 without --help.
+
+Options:
+  --json  With no name: print the index as one JSON document (docstamp help json).
 
 Reads:
   nothing.
@@ -30,5 +34,5 @@ Exit codes:
   0  the page was printed.
   2  an unknown name (E_USAGE lists the names).
 
-Related: docstamp help start, docstamp help agents
+Related: docstamp help start, docstamp help concepts, docstamp help agents
 --- stderr ---

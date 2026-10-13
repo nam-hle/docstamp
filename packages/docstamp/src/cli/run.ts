@@ -17,7 +17,7 @@ import { parseArgs, type Args } from './args.ts';
 import { runCheck } from './check.ts';
 import { hasError } from './emit.ts';
 import { listAll, listWorkspace } from './evaluate.ts';
-import { helpText } from './help.ts';
+import { helpText, indexJson } from './help.ts';
 import type { Io } from './io.ts';
 import { resolutionMessage, selectResults, toRepoPath } from './paths.ts';
 import { runSuggest } from './suggest.ts';
@@ -218,7 +218,8 @@ export function run(host: Host, argv: readonly string[], processCwd: string, io:
   }
   if (args.mode === 'help') {
     try {
-      io.stdout(helpText(args.names));
+      const asJson = args.json === true && args.names.length === 0;
+      io.stdout(asJson ? indexJson() : helpText(args.names));
       return 0;
     } catch (e) {
       if (!(e instanceof Raised)) throw e;

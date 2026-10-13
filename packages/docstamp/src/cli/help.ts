@@ -5,6 +5,7 @@ import { COMMAND_PAGES } from './help-commands.ts';
 import { DIAGNOSTIC_HELP } from './help-diagnostics.ts';
 import { examples, prose, table } from './help-format.ts';
 import { TOPICS, type Topic, type TopicPage } from './help-topics.ts';
+import { type Json, obj, render } from '../report/json.ts';
 
 const isCommand = (name: string): name is Command => Object.hasOwn(COMMAND_PAGES, name);
 const isTopic = (name: string): name is Topic => Object.hasOwn(TOPICS, name);
@@ -25,12 +26,38 @@ function indexText(): string {
     prose(`
 docstamp is a deterministic gate for hidden links between files. Each file (usually a doc)
 declares the files it depends on; docstamp fails when they changed since the file was last
-reviewed, and docstamp update <file> records the review. New here: docstamp help start.`) +
+reviewed, and docstamp update <file> records the review. New here: docstamp help start, or docstamp help concepts for the idea behind it.`) +
     `\n\nCommands:\n${commands.join('\n')}\n\nTopics:\n${topics}\n\n` +
     'Exit codes: 0 ok, 1 stale (check only), 2 error or invalid (docstamp help exit-codes).\n' +
     'Run docstamp help <command> or docstamp help <topic> for a page, and\n' +
     'docstamp help diagnostics <code> for one diagnostic code.\n'
   );
+}
+
+// SPEC §13.11 step 5, §14.5
+export function indexJson(): string {
+  const commands = COMMANDS.map((name) =>
+    obj([
+      ['name', name],
+      ['synopsis', [...COMMAND_PAGES[name].synopsis]],
+      ['summary', COMMAND_PAGES[name].summary],
+    ]),
+  );
+  const topics = Object.entries(TOPICS).map(([name, topic]) =>
+    obj([
+      ['name', name],
+      ['summary', topic.summary],
+    ]),
+  );
+  const top: Json = obj([
+    ['version', 2],
+    ['mode', 'help'],
+    ['exitCode', 0],
+    ['commands', commands],
+    ['topics', topics],
+    ['diagnostics', []],
+  ]);
+  return `${render(top, '')}\n`;
 }
 
 function commandText(name: Command): string {

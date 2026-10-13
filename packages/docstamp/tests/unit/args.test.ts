@@ -92,7 +92,8 @@ describe('§13.2 parseArgs', () => {
       [['version', '--help'], ['version']],
       [['help', '--help', 'stats'], ['stats']],
     ] as const) {
-      expect(parseArgs([...argv]), argv.join(' ')).toEqual({ mode: 'help', names });
+      const json = (argv as readonly string[]).includes('--json') ? { json: true } : {};
+      expect(parseArgs([...argv]), argv.join(' ')).toEqual({ mode: 'help', names, ...json });
     }
     for (const argv of [
       ['--version', 'a'],

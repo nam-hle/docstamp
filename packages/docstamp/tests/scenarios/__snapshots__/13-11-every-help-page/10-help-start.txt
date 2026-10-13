@@ -40,7 +40,8 @@ docstamp-lock.yaml (created only for files declared in the configuration file).
 5. Run docstamp in CI. It exits 1 when a file is stale and 2 on an error. Fetch the full history
 (fetch-depth: 0) so that a stale report can name the changed files.
 
-When it fails later, follow docstamp help agents.
+When it fails later, follow docstamp help agents. For the idea behind it, read docstamp help
+concepts.
 
 Example:
   $ docstamp suggest --write docs/notes.md

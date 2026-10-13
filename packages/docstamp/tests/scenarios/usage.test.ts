@@ -8,7 +8,7 @@ scenario('§13.1 help: every spelling of the index exits 0', { git: false }, asy
   expect(help.stdout).toContain('docstamp');
   expect(help.stdout).toContain('list-dependents');
 
-  for (const args of [['--help'], ['help', '--bogus'], ['--json', 'help'], ['x.md', '--help']]) {
+  for (const args of [['--help'], ['help', '--bogus'], ['x.md', '--help']]) {
     const same = await repo.run(args, { snapshot: false });
     expect(same, args.join(' ')).toMatchObject({ exit: 0, stdout: help.stdout, stderr: '' });
   }

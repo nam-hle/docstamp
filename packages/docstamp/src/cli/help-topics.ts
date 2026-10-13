@@ -48,7 +48,8 @@ and docstamp-lock.yaml (created only for files declared in the configuration fil
 5. Run docstamp in CI. It exits 1 when a file is stale and 2 on an error. Fetch the full history
 (fetch-depth: 0) so that a stale report can name the changed files.
 
-When it fails later, follow docstamp help agents.`,
+When it fails later, follow docstamp help agents. For the idea behind it, read docstamp help
+concepts.`,
     examples: [
       {
         args: ['suggest', '--write', 'docs/notes.md'],
@@ -70,6 +71,41 @@ next: review each stale file against its dependencies, then run: docstamp update
       },
       { args: ['update', 'docs/notes.md'], out: 'written  docs/notes.md\n' },
     ],
+  },
+  concepts: {
+    summary: 'The mental model: drift, what stale means, and the check, review, update loop.',
+    body: `
+A doc says things about other files: a guide describes the CLI, a README quotes a script. When
+that code changes, the doc can become wrong and nothing tells anyone, because no link joins the
+two. That hidden link is a dependency, and the doc falling out of step with it is dependency drift.
+docstamp makes the link explicit and turns the drift into a failing check.
+
+The loop has three steps:
+
+    check    docstamp compares what each file depends on with what it was at the file's last review
+    review   a person or an agent reads the changes and fixes what the file no longer gets right
+    update   docstamp update <file> records the dependencies as they are now, as reviewed
+
+A file is stale when its dependencies are not what they were when update last ran for it, or when
+update never ran for it (unrecorded). Stale does not mean wrong: it means a review is due.
+
+An example. docs/guide.md depends on src and says "Run docstamp build to compile".
+
+    1. A commit renames the build command to compile.
+    2. docstamp fails: docs/guide.md is stale, and its block lists src/cli.ts as modified.
+    3. You read the change, see that the guide is now wrong, and fix the sentence.
+    4. docstamp update docs/guide.md records the reviewed state. The check passes.
+
+Running update at step 2, without step 3, also makes the check pass, but the guide still says
+build. update is the statement that a review happened, so a blind update records a review that
+never took place and hides the drift the gate exists to catch. Using update --all just to pass is
+the same lie told for every file.
+
+- The verdict is content only. It compares hashes of the bytes of the dependencies, so it gives the same answer on any machine, in a shallow clone, after a rebase or a squash, and with no git history at all. Git only helps to name the changed files in the report; that report is advice and never decides. Putting a change back makes the file ok again, since the content is what counts.
+- The lock is never written automatically. check never writes. docstamp-lock.yaml (or the hash: line of an inline doc) changes only when update names the file, because a tool that refreshed it by itself would erase the drift instead of showing it. Commit the lock, so the review is part of the change.
+
+Next: docstamp help start to set it up, docstamp help agents for the review workflow,
+docstamp help patterns to declare dependencies, docstamp help states for ok, stale and invalid.`,
   },
   config: {
     summary: 'The configuration file: docstamp.yaml or docstamp.config.ts, and every key.',
@@ -267,6 +303,7 @@ Consumers must ignore members they do not know: later releases only add members.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive each dependent also has dependents, cycle and repeated.
 - stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount, staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }.
 - suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate, status }], ignored, declared, diagnostics }, plus written with --write; with --all the top level also has all (true) and only the new proposals.
+- help (no name): commands of { name, synopsis, summary } and topics of { name, summary }, as the text index lists them. mode is help.
 
 A command that fails before it evaluates anything has an empty files list and no summary. Read the
 verdict from exitCode and state, and the next step from the text mode's next: lines, which have no

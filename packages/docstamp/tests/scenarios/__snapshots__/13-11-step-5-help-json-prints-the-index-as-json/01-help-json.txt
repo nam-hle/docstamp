@@ -1,0 +1,126 @@
+$ docstamp help --json
+exit: 0
+--- stdout ---
+{
+  "version": 2,
+  "mode": "help",
+  "exitCode": 0,
+  "commands": [
+    {
+      "name": "check",
+      "synopsis": [
+        "docstamp [check] [--json] [--only-stale] [--quiet] [--undeclared] [--cwd <dir>] [<file>...]"
+      ],
+      "summary": "Check that each file's dependencies are unchanged since its last review."
+    },
+    {
+      "name": "update",
+      "synopsis": [
+        "docstamp update [--json] [--cwd <dir>] (--all | <file>...)"
+      ],
+      "summary": "Record that you reviewed the named files against their dependencies."
+    },
+    {
+      "name": "list-dependencies",
+      "synopsis": [
+        "docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]"
+      ],
+      "summary": "List each file with its dependency patterns and the files they select."
+    },
+    {
+      "name": "list-dependents",
+      "synopsis": [
+        "docstamp list-dependents [--json] [--transitive] [--cwd <dir>] <file>..."
+      ],
+      "summary": "List the files that depend on each named file, and the patterns that select it."
+    },
+    {
+      "name": "stats",
+      "synopsis": [
+        "docstamp stats [--json] [--cwd <dir>] [--since <n>d | --from <rev>] [<file>...]"
+      ],
+      "summary": "Report how often each file's dependencies would have made it stale."
+    },
+    {
+      "name": "suggest",
+      "synopsis": [
+        "docstamp suggest [--json] [--cwd <dir>] (--all | [--write] <file>...)"
+      ],
+      "summary": "Propose dependencies from the paths each file mentions."
+    },
+    {
+      "name": "help",
+      "synopsis": [
+        "docstamp help [<command> | <topic>]",
+        "docstamp help diagnostics <code>",
+        "docstamp <command> --help",
+        "docstamp --help"
+      ],
+      "summary": "Print the index, a command page or a topic page."
+    },
+    {
+      "name": "version",
+      "synopsis": [
+        "docstamp version",
+        "docstamp --version"
+      ],
+      "summary": "Print the installed version."
+    }
+  ],
+  "topics": [
+    {
+      "name": "start",
+      "summary": "From nothing to a first passing check, with a configuration file or inline."
+    },
+    {
+      "name": "concepts",
+      "summary": "The mental model: drift, what stale means, and the check, review, update loop."
+    },
+    {
+      "name": "config",
+      "summary": "The configuration file: docstamp.yaml or docstamp.config.ts, and every key."
+    },
+    {
+      "name": "inline",
+      "summary": "Declaring dependencies in the frontmatter of a Markdown file."
+    },
+    {
+      "name": "patterns",
+      "summary": "The pattern language: paths, globs, ! exclusions, last match wins, escapes."
+    },
+    {
+      "name": "presets",
+      "summary": "Named pattern lists shared by many files (presets and use)."
+    },
+    {
+      "name": "states",
+      "summary": "The states ok, stale and invalid, and the reasons unrecorded and content-changed."
+    },
+    {
+      "name": "exit-codes",
+      "summary": "What each exit code means."
+    },
+    {
+      "name": "json",
+      "summary": "The shape of the --json output of every command."
+    },
+    {
+      "name": "diagnostics",
+      "summary": "Every diagnostic code, what it means and how to fix it."
+    },
+    {
+      "name": "agents",
+      "summary": "The review workflow for AI agents, ready to paste into CLAUDE.md or AGENTS.md."
+    },
+    {
+      "name": "schema",
+      "summary": "The JSON Schemas the package ships, and how to point an editor at them."
+    },
+    {
+      "name": "spec",
+      "summary": "Where the specification is, and its sections."
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---
