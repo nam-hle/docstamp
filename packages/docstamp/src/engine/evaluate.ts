@@ -1,4 +1,4 @@
-import { Raised, diag, sortDiagnostics } from '../core/diagnostics.ts';
+import { Raised, diag, sortDiagnostics, withWritten } from '../core/diagnostics.ts';
 import { comparePaths, sortPaths } from '../core/order.ts';
 import type {
   Declaration,
@@ -168,10 +168,10 @@ function fragmentsOf(
         select: canonicalJson(entry.select),
         parts: extracted.parts,
       });
-      warnings.push(...extracted.warnings);
+      warnings.push(...withWritten(extracted.warnings, entry));
     } catch (e) {
       if (!(e instanceof Raised)) throw e;
-      problems.push(...e.diagnostics);
+      problems.push(...withWritten(e.diagnostics, entry));
     }
   }
   return { fragments, warnings };

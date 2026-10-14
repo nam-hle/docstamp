@@ -15,6 +15,12 @@ export type StatsDependency =
   | { readonly label: string; readonly preset: string | null; readonly pattern: ParsedPattern }
   | { readonly label: string; readonly preset: null; readonly entry: SelectedEntry };
 
+// SPEC §12.5: the written form of a Selected Dependency, when it has one
+const writtenOf = (dependency: StatsDependency): { written?: string } =>
+  'entry' in dependency && dependency.entry.written !== undefined
+    ? { written: dependency.entry.written }
+    : {};
+
 export interface StatsInput {
   readonly file: string;
   readonly patterns: number;
@@ -33,6 +39,7 @@ const SWEEP_SIZE = 200;
 // SPEC §12.5
 interface DependencyStats {
   readonly dependency: string;
+  readonly written?: string;
   readonly preset: string | null;
   readonly commits: number;
   readonly only: number;
@@ -151,10 +158,17 @@ function breakdownOf(
   return dependencies
     .map((dependency, position) => ({
       dependency: dependency.label,
+      ...writtenOf(dependency),
       preset: dependency.preset,
       ...counts[position]!,
       position,
     }))
     .sort((a, b) => b.commits - a.commits || a.position - b.position)
-    .map(({ dependency, preset, commits, only }) => ({ dependency, preset, commits, only }));
+    .map(({ dependency, written, preset, commits, only }) => ({
+      dependency,
+      ...(written === undefined ? {} : { written }),
+      preset,
+      commits,
+      only,
+    }));
 }

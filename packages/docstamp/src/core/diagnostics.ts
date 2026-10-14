@@ -1,5 +1,6 @@
+import { canonicalJson } from './canonical.ts';
 import { comparePaths } from './order.ts';
-import type { Code, Diagnostic } from './types.ts';
+import type { Code, Diagnostic, SelectedEntry } from './types.ts';
 
 const FIX: Record<Code, string> = {
   E_USAGE: 'Correct the command line; see docstamp help.',
@@ -95,6 +96,21 @@ export function diag(
     message: fields.message ?? defaultMessage(code, subject),
     ...(fields.pluginCode === undefined ? {} : { pluginCode: fields.pluginCode }),
   };
+}
+
+// SPEC §5.5: the canonical form of a Selected Dependency, the subject of its Diagnostics
+export const canonicalForm = (entry: SelectedEntry): string =>
+  `${entry.path}#${canonicalJson(entry.select)}`;
+
+// SPEC §8.7 NOTE: a Diagnostic of a Selected Dependency written as a Shorthand carries its form
+export function withWritten(
+  diagnostics: readonly Diagnostic[],
+  entry: SelectedEntry,
+): Diagnostic[] {
+  const { written } = entry;
+  if (written === undefined) return [...diagnostics];
+  const subject = canonicalForm(entry);
+  return diagnostics.map((d) => (d.subject === subject ? { ...d, written } : d));
 }
 
 // SPEC §5.5

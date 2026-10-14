@@ -121,7 +121,7 @@ scenario('§9.6.2 step 6 an inline block holds a shorthand', options, async (rep
   repo.commit('initial');
   const check = await repo.run(['GUIDE.md'], { show: ['GUIDE.md'] });
   expect(check.exit).toBe(1);
-  expect(check.stdout).toContain('depends   "package.json#\\"scripts.build\\""');
+  expect(check.stdout).toContain('  depends   package.json:scripts.build\n');
   await repo.run(['update', 'GUIDE.md'], { expectExit: 0 });
   repo.commit('review');
   expect((await repo.run(['GUIDE.md'])).exit).toBe(0);
@@ -166,3 +166,53 @@ scenario('§12.3 step 1.4 a shorthand edited after the review is an edit', optio
   expect(stale.stdout).toContain('edited');
   expect(stale.stdout).toContain('docstamp.yaml');
 });
+
+scenario(
+  '§14.2 a shorthand is printed as written, and --json adds written',
+  options,
+  async (repo) => {
+    repo.write('docstamp.yaml', SHORTHAND);
+    repo.commit('initial');
+    await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+    repo.commit('review');
+    repo.write('package.json', repo.read('package.json').replace('"tsc"', '"tsc -b"'));
+    const text = await repo.run([], { expectExit: 1 });
+    expect(text.stdout).toContain('  fragment  package.json:scripts.build  (changed)  ');
+    expect(text.stdout).not.toContain('#');
+    const json = (await repo.run(['--json'], { expectExit: 1 })).json() as {
+      files: { selected: unknown[]; fragments: unknown[] }[];
+    };
+    expect(json.files[0]!.selected[0]).toEqual({
+      path: 'package.json',
+      select: 'scripts.build',
+      written: 'package.json:scripts.build',
+    });
+    expect(json.files[0]!.fragments[0]).toMatchObject({
+      select: 'scripts.build',
+      written: 'package.json:scripts.build',
+      status: 'changed',
+    });
+    const dependents = await repo.run(['list-dependents', 'package.json']);
+    expect(dependents.stdout).toContain('CLAUDE.md   via package.json:scripts.build\n');
+    const listed = (await repo.run(['list-dependents', 'package.json', '--json'])).json();
+    expect(JSON.stringify(listed)).toContain('package.json#\\"scripts.build\\"');
+  },
+);
+
+scenario(
+  '§8.7 a shorthand error names the shorthand, --json keeps the subject',
+  options,
+  async (repo) => {
+    repo.write(
+      'docstamp.yaml',
+      'version: 2\nfiles:\n  CLAUDE.md:\n    dependencies:\n      - package.json:scripts.nope\n',
+    );
+    const json = (await repo.run(['--json'], { expectExit: 2 })).json() as {
+      files: { diagnostics: { subject: string; written?: string }[] }[];
+    };
+    expect(json.files[0]!.diagnostics[0]).toMatchObject({
+      subject: 'package.json#"scripts.nope"',
+      written: 'package.json:scripts.nope',
+    });
+  },
+);

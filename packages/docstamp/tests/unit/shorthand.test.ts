@@ -235,6 +235,43 @@ describe('§12.2 step 5 resolveShorthands', () => {
       subject: 'docs/guide.md:bad',
     });
   });
+
+  it('§8.7 shows the first Shorthand when two are written for one selection', () => {
+    const { declaration } = resolveShorthands(
+      {
+        file: 'CLAUDE.md',
+        dependencies: [],
+        shorthands: [
+          { path: 'docs/guide.md', raw: '## Install' },
+          { path: 'docs/guide.md', raw: '## Install' },
+          { path: 'docs/guide.md', raw: 'Install' },
+        ],
+      },
+      [{ ...sections, parseSelect: () => ({ select: { heading: 'Install' } }) }],
+    );
+    expect(declaration.selected).toEqual([
+      {
+        path: 'docs/guide.md',
+        select: { heading: 'Install' },
+        written: 'docs/guide.md:## Install',
+      },
+    ]);
+  });
+
+  it('§8.7 keeps the Map, with no written form, over a Shorthand of the same selection', () => {
+    const { declaration } = resolveShorthands(
+      {
+        file: 'CLAUDE.md',
+        dependencies: [],
+        selected: [{ path: 'docs/guide.md', select: { heading: 'Install', level: 2 } }],
+        shorthands: [{ path: 'docs/guide.md', raw: '## Install' }],
+      },
+      plugins,
+    );
+    expect(declaration.selected).toEqual([
+      { path: 'docs/guide.md', select: { heading: 'Install', level: 2 } },
+    ]);
+  });
 });
 
 describe('§8.7 parseSelect and meta of a plugin', () => {

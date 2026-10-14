@@ -58,6 +58,8 @@ export interface Diagnostic {
   readonly subject: string;
   readonly message: string;
   readonly pluginCode?: string;
+  // SPEC §5.5: the written form of the Selected Dependency that `subject` names canonically
+  readonly written?: string;
 }
 
 // SPEC §5.1: `inline` is set for an inline Declaration, with its recorded Hash or null.
@@ -115,6 +117,7 @@ interface PartInfo {
 export interface FragmentChange {
   readonly path: string;
   readonly select: Json;
+  readonly written?: string;
   readonly status: 'changed' | 'new';
   // one PartInfo for each part now; absent when no part has a focus or lines
   readonly parts?: readonly PartInfo[];
@@ -143,6 +146,8 @@ export interface Result {
 export interface ReverseDependent {
   readonly file: string;
   readonly via: readonly string[];
+  // SPEC §13.8 step 4.2: the written form of each canonical `via` String that has one
+  readonly written?: ReadonlyMap<string, string>;
   readonly dependents?: readonly ReverseDependent[];
   readonly cycle?: boolean;
   readonly repeated?: boolean;

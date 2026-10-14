@@ -1,0 +1,13 @@
+$ docstamp stats --from 8b4b5b046b0b598358bf645974f1493abf79519b CLAUDE.md
+exit: 0
+--- stdout ---
+file       patterns  files  commits  days   stale   sweep
+CLAUDE.md         2      1        2     2  1.0000  0.0000
+window: 2 commits in 8b4b5b046b0b598358bf645974f1493abf79519b..HEAD, 0 make no file stale
+legend: patterns declared, files they select, commits and distinct days that would make the file stale; stale = commits / window commits; sweep = share of those commits that touch over 200 paths
+
+CLAUDE.md
+dependency                  commits  only
+package.json:scripts.build        1     1
+package.json:scripts.test         1     1
+--- stderr ---

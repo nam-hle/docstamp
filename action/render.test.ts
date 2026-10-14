@@ -203,6 +203,57 @@ describe('action comment renderer', () => {
     expect(body).not.toContain('Git history is not available');
   });
 
+  it('names a fragment as written when it has a written form', () => {
+    const body = renderComment({
+      ...base,
+      exitCode: 1,
+      summary: { ok: 0, stale: 1, invalid: 0 },
+      files: [
+        stale({
+          changes: [],
+          fragments: [
+            {
+              path: 'package.json',
+              select: 'scripts.build',
+              written: 'package.json:scripts.build',
+              status: 'changed',
+            },
+          ],
+        }),
+      ],
+    });
+    expect(body).toContain('- fragment `package.json:scripts.build` (changed)');
+    expect(body).not.toContain('#"');
+  });
+
+  it('names a diagnostic subject as written when it has a written form', () => {
+    const body = renderComment({
+      ...base,
+      exitCode: 2,
+      summary: { ok: 0, stale: 0, invalid: 1 },
+      files: [
+        {
+          file: 'README.md',
+          state: 'invalid',
+          reasons: [],
+          dependencies: [],
+          changes: null,
+          diagnostics: [
+            {
+              code: 'E_SELECT',
+              severity: 'error',
+              file: 'README.md',
+              subject: 'a.md#"x"',
+              written: 'a.md:x',
+              message: 'Rename one.',
+            },
+          ],
+        },
+      ],
+    });
+    expect(body).toContain('`E_SELECT` `a.md:x`: Rename one.');
+  });
+
   it('keeps the update command and the footer when the changes are capped', () => {
     const changes = Array.from({ length: 5000 }, (_, index) => ({
       status: 'modified',

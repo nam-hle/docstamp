@@ -66,8 +66,8 @@ raises:
    `ExpandPresets(d, config.[[Presets]], config.[[DefaultPresets]], present)` (§8.6): when it returns, the effective patterns and their origins are those of *d* from here on;
    when it raises, collect its Diagnostics into *attached*, `[[File]]` the file of *d*. Then, for
    each Shorthand of each remaining Declaration, call `ResolveSelector(plugins, shorthand)` (§8.7):
-   a value becomes a Selected Dependency { the Shorthand's `[[Path]]`, that value } appended to
-   `[[Selected]]`, and the identical ones are dropped as §8.7 says; an `E_SELECT` is collected into
+   a value becomes a Selected Dependency { the Shorthand's `[[Path]]`, that value, `[[Written]]` the
+   Shorthand's `[[Path]]`, `:` and `[[Raw]]` } appended to `[[Selected]]`, and the identical ones are dropped as §8.7 says; an `E_SELECT` is collected into
    *attached*. Then, for each Selected Dependency of each remaining Declaration, collect
    `ValidateSelect` (§8.7) into *attached*.
 6. If *lockPolicy* is `discard-invalid` and `ReadLock(root)` raises, let *lock* be a Lock with no
@@ -189,7 +189,7 @@ Hash *entry*; for every other Result `[[Changes]]` is *unknown*.
     *before*, and `removed` for each path of *before* that is not in *after*.
 11. Let *fragments* be empty, and, for each Selected Dependency *e* of `result.[[Selected]]` in the
     order of §10.4 step 3, add a FragmentChange { `e.[[Path]]`, `e.[[Select]]`, *status*,
-    `[[Parts]]` as §5.4 defines it from the Parts of *now* } as follows. Let *now* be the Fragment
+    `[[Parts]]` as §5.4 defines it from the Parts of *now*, `[[Written]]` the `e.[[Written]]` } as follows. Let *now* be the Fragment
     of `Fragments(e, text)` (§8.7) on the file in the work tree, read as §10.4 step 3 reads it. Let
     *old* be the output of `git show <C>:./<path>` run in Root as step 1 does, with CR LF read as
     LF. Let *then* be the Fragment of `Fragments(e, old)` (§8.7) with the Plugins of now, its warnings
@@ -326,10 +326,11 @@ The FileStats are in descending order of `[[StaleRate]]` as reported, then ascen
 the file.
 
 When *breakdown* is true, each FileStats also has `[[Dependencies]]`, a List of DependencyStats
-{ `[[Dependency]]`: a String, `[[Preset]]`: a Preset name or none, `[[Commits]]`: a Number, `[[Only]]`: a Number }, one for each
+{ `[[Dependency]]`: a String, `[[Written]]`: a String, when present, `[[Preset]]`: a Preset name or none, `[[Commits]]`: a Number, `[[Only]]`: a Number }, one for each
 non-negated pattern of `r.[[Dependencies]]`, in declaration order, then one for each Selected
 Dependency of `r`, in order of appearance (the order of §14.3): `[[Dependency]]` is the pattern, or
-the path, `#` and `CanonicalJson(select)`; `[[Preset]]` is the Preset a pattern comes from (§8.6), else none. A Commit *of the dependency* is a Commit of *touching*
+the path, `#` and `CanonicalJson(select)`, and `[[Written]]`, a String, when present, is the
+`[[Written]]` of the Selected Dependency (§8.7); `[[Preset]]` is the Preset a pattern comes from (§8.6), else none. A Commit *of the dependency* is a Commit of *touching*
 that selects a path of `[[Paths]]` that is in the selection of the patterns of `r`
 (§8.4) and that the pattern matches (§8.3), or, for a Selected Dependency *e*, that changes the
 Fragment of *e* as above. `[[Commits]]` is the number of Commits of the dependency, and `[[Only]]`

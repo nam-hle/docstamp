@@ -16,6 +16,12 @@ environment variable `NO_COLOR` is unset or empty. Removing them MUST yield the 
 In text mode, a RepoPath or pattern *s* is written as *s* if it contains no code point that
 `Quote` (§3.4) would replace and no U+0020, `(` or `)`; otherwise as `Quote(s)`.
 
+A Selected Dependency (§8.7) is written in text mode as its *display form*, the String *s* of this
+section: the `[[Written]]` it has from a Shorthand (`docs/guide.md:Install`), else its canonical form
+(`docs/guide.md#{"heading":"Install"}`). Wherever text mode names a Selected Dependency (a `depends`,
+`fragment` or `via` entry, a row of `stats`, a Diagnostic subject), it is the display form; the
+canonical form is the identity and stays that of every Hash, the Lockfile and `--json` (§14.5).
+
 ### 14.3 Check, Text Mode
 
 One block per selected Result that is not `ok`, in path order.
@@ -36,7 +42,7 @@ STALE    <file>  (<reason>, <reason>)
   modified  <path>
   added     <path>
   deleted   <dir>  (5 files)
-  fragment  <path>#<select>  (changed)
+  fragment  <selected>  (changed)
 ```
 
 - The first line is `STALE` or `INVALID`, padded with spaces to 9 characters, then the
@@ -58,7 +64,7 @@ STALE    <file>  (<reason>, <reason>)
     characters, two spaces, and the path as in §14.2 (`  modified  <path>`, `  added     <path>`,
     `  deleted   <path>`, `  renamed   <from> -> <to>`), or a group line;
   - if `[[Fragments]]` is not none, one *fragment line* per FragmentChange in order, after the change
-    lines: `  fragment  `, the path, `#` and `CanonicalJson(select)` as one String of §14.2, and
+    lines: `  fragment  `, the display form of the Selected Dependency as one String of §14.2, and
     `  (changed)` or `  (new)`, then, if `[[Parts]]` is not none, two spaces and a description of
     each Part that has a Focus or Lines (so a Part with neither is not described here, while the
     `"parts"` of §14.5 holds one element for each Part), joined by `; `: its Focus String, followed by
@@ -66,8 +72,7 @@ STALE    <file>  (<reason>, <reason>)
     there is no Focus). They are not counted by the summary line.
 - For any other `stale`: one `depends` line per pattern, in declaration order, with the
   `(preset <name>)` marker of §14.6 for a pattern that comes from a Preset, then one `depends` line
-  per Selected Dependency (§8.7), in order of appearance: the path, `#` and `CanonicalJson(select)`,
-  as one String of §14.2.
+  per Selected Dependency (§8.7), in order of appearance: its display form, as one String of §14.2.
 
 Then one summary line:
 
@@ -92,7 +97,8 @@ Each Diagnostic, global and attached, in Diagnostic order, is written to standar
 ```
 
 omitting the bracketed parts when empty. A Diagnostic with a `[[PluginCode]]` ends its line with
-a space and the code in square brackets (`... : <message> [heading-not-found]`). `<file>` is written as in §14.2, and so is `<subject>`,
+a space and the code in square brackets (`... : <message> [heading-not-found]`). `<file>` is written as in §14.2, and so is `<subject>`, or the `[[Written]]` of the Diagnostic (§5.5)
+when it has one, in its place,
 except that a `\` alone does not make it quoted: a pattern or argument is shown as the user wrote
 it (`src\core`, not `"src\\core"`). A Diagnostic line is read, never pasted as a command, so this
 loses nothing. §14.3.2 says when each is written.
@@ -337,7 +343,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   order (§12.3 step 10).
 - `"fragments"` follows `selection` (or `dependenciesEdited`, or `changes`, as far as they are
   present) when the Result's `[[Fragments]]` is not none, and is absent otherwise: a List of
-  `{ "path", "select", "status" }` in order, `select` written as in `selected` below and `status`
+  `{ "path", "select", "written", "status" }` in order, `select` written as in `selected` below,
+  `written` as there when the Selected Dependency has one, and `status`
   being `changed` or `new` (§12.3 step 11), then `"parts"` when `[[Parts]]` is not none: a List with
   one `{ }` for each Part, holding `"focus"` (a String) and `"lines"` (`{ "start", "end" }`) when
   the Part has them; without `"parts"` otherwise.
@@ -346,7 +353,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - A member `"selected"` follows `dependencies` (after `use` and `origins` when present) in an
   element of `files` of `check`, `update` and `list-dependencies` when the Declaration has Selected
   Dependencies (§8.7), and is absent otherwise: a List of `{ "path", "select" }` in order of
-  appearance, `select` as the plain value with its Map keys in path order.
+  appearance, `select` as the plain value with its Map keys in path order, and `written` after it
+  when the Selected Dependency has one (below).
 - With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (true only when it was written, §13.6 step 10; false when it was unchanged or when
   step 5 of §13.6 refused), and the top level adds `"removed"`, a
@@ -438,7 +446,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   ```
 
   When files are named (§13.9) each element of `files` also has `dependencies`, before `diagnostics`:
-  the DependencyStats of §12.5 in their order, each { `dependency`, `commits`, `only` }, and, when a dependency comes from a Preset, `origins`
+  the DependencyStats of §12.5 in their order, each { `dependency`, `written` when present (below), `commits`, `only` }, and, when a dependency comes from a Preset, `origins`
   after it: the `[[Preset]]` of each, in the same order, `null` for none (as §14.5 `origins`); without a
   file argument the member is absent.
 
@@ -509,8 +517,17 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   index, with its one line. The strings are those of the text index, so they are informative (§2).
   It has no `summary`, `files`, `state`, `reasons` or `changes`.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
-  empty `[[File]]` or `[[Subject]]`, and a last member `"pluginCode"` that is present only when the
-  Diagnostic has a `[[PluginCode]]`. Diagnostic Lists are in Diagnostic order.
+  empty `[[File]]` or `[[Subject]]`, a member `"pluginCode"` that is present only when the
+  Diagnostic has a `[[PluginCode]]`, and, after it, a last member `"written"` that is present only
+  when the Diagnostic has a `[[Written]]` (§5.5); `"subject"` stays the canonical form.
+  Diagnostic Lists are in Diagnostic order.
+- `written` is the one member that carries the written form (§8.7) of a Selected Dependency: the
+  String `[[Written]]`, present in the element of `selected` and of `fragments`, in the
+  element of `dependencies` of `stats` and in a Diagnostic, only when the Selected Dependency has
+  one, and absent otherwise. It follows the members the element had before (after `select` in
+  `selected` and in `fragments`, and after `dependency` in `stats`). Every existing member keeps
+  the canonical form, a `via` String of `list-dependents` included, which has no `written`: a consumer
+  that ignores it reads what it read before.
 - When a step raises before Results exist, `summary` is omitted (as it always is for
   `list-dependencies` and `list-dependents`) and `files` is empty, so a run that evaluated
   nothing never reports zero counts.
@@ -544,7 +561,8 @@ One block per entry, in the order of §13.8:
 
 with one row per dependent, in path order: two spaces, the dependent padded with spaces to the
 width of the longest dependent of the block, three spaces, `via `, and the patterns joined with
-`, `, each written as in §14.2. An entry with no dependents has the single row `  (no dependents)`,
+`, `, each written as in §14.2; the canonical form of a Selected Dependency (§13.8 step 4.2) is
+written as its display form (§14.2). An entry with no dependents has the single row `  (no dependents)`,
 also when it has a `W_UNKNOWN_PATH`. Diagnostics as in §14.3, those of the entries included.
 
 With `--transitive` the rows form the tree of `DirectFirstTree` (§13.8), depth first: the
@@ -596,7 +614,7 @@ dependency  commits  only
 src/a.ts          2     2
 ```
 
-A dependency from a Preset is followed by `(preset <name>)`, as in §14.3. The header row has the columns `dependency` (`[[Dependency]]` as in §14.2), `commits` and `only`,
+A dependency from a Preset is followed by `(preset <name>)`, as in §14.3. The header row has the columns `dependency` (`[[Written]]` when present, else `[[Dependency]]`, as in §14.2), `commits` and `only`,
 separated by two spaces, padded as the table above; a row has no trailing space.
 
 ### 14.9 Suggest, Text Mode

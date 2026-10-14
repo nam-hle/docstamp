@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { Raised, diag } from '../core/diagnostics.ts';
+import { Raised, canonicalForm, diag } from '../core/diagnostics.ts';
 import { sortPaths } from '../core/order.ts';
 import type { Diagnostic, Result, ReverseEntry } from '../core/types.ts';
 import { resolveDependencies } from '../engine/evaluate.ts';
@@ -7,7 +7,6 @@ import { dependentTree, dependentsOf } from '../engine/reverse.ts';
 import { statistics, type FileStats, type StatsDependency } from '../engine/stats.ts';
 import type { Host } from '../host/host.ts';
 import { parsePattern } from '../pattern/parse.ts';
-import { canonicalJson } from '../core/canonical.ts';
 import { fragmentChangedAt, type FragmentCache } from '../history/fragments.ts';
 import { replay } from '../history/replay.ts';
 import { listJsonText, reverseJsonText, statsJsonText, type StatsWindow } from '../report/json.ts';
@@ -134,7 +133,7 @@ function breakdownOf(r: Result): StatsDependency[] {
     return pattern.negated ? [] : [{ label, preset: r.origins?.[i] ?? null, pattern }];
   });
   const selected = (r.selected ?? []).map((entry) => ({
-    label: `${entry.path}#${canonicalJson(entry.select)}`,
+    label: canonicalForm(entry),
     preset: null,
     entry,
   }));

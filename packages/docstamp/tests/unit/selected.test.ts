@@ -158,3 +158,47 @@ describe('§8.7 / §12.1 selected dependencies', () => {
     ]);
   });
 });
+
+describe('§8.7 the written form of a selected dependency', () => {
+  const written = 'docs/guide.md:Install';
+
+  it('is no part of the identity: the Dependency Hash is the same', () => {
+    const plain = run(decl([entry()]), () => found('x'));
+    const shorthand = run(decl([entry({ written })]), () => found('x'));
+    expect(shorthand.current).toBe(plain.current);
+  });
+
+  it('is carried by the Diagnostics raised for that dependency only', () => {
+    const result = run(decl([entry({ written })]), () => {
+      throw new Raised([
+        diag('E_SELECT_NOT_FOUND', { subject: 'docs/guide.md#"Install"' }),
+        diag('E_SELECT', { subject: 'docs/guide.md#"Other"' }),
+      ]);
+    });
+    expect(result.diagnostics.map((d) => [d.subject, d.written])).toEqual([
+      ['docs/guide.md#"Other"', undefined],
+      ['docs/guide.md#"Install"', written],
+    ]);
+  });
+
+  it('is not carried when the dependency has none', () => {
+    const result = run(decl([entry()]), () => {
+      throw new Raised([diag('E_SELECT_NOT_FOUND', { subject: 'docs/guide.md#"Install"' })]);
+    });
+    expect(result.diagnostics[0]).not.toHaveProperty('written');
+  });
+
+  it('names the written form of each canonical via String of a dependent', () => {
+    const [dependent] = dependentsOf(
+      'docs/guide.md',
+      [decl([entry({ written })])],
+      new Set(universe),
+      [],
+    );
+    expect(dependent).toEqual({
+      file: 'CLAUDE.md',
+      via: ['docs/guide.md#"Install"'],
+      written: new Map([['docs/guide.md#"Install"', written]]),
+    });
+  });
+});

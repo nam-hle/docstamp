@@ -46,6 +46,7 @@ export function fragmentChanges(
     changes.push({
       path: entry.path,
       select: entry.select,
+      ...(entry.written === undefined ? {} : { written: entry.written }),
       status,
       ...(described ? { parts: infos } : {}),
     });

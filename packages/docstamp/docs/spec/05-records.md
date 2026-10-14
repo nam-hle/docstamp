@@ -82,7 +82,8 @@ non-empty List of String, `[[WhitespaceOnly]]`: Boolean, `[[Pair]]`: RepoPath or
 A *SelectionChange* is { `[[Status]]`: `added` or `removed`, `[[Path]]`: RepoPath }: a file that the
 edited own list selects and the own list at *C* did not (`added`), or the reverse (`removed`).
 
-A *FragmentChange* is { `[[Path]]`: RepoPath, `[[Select]]`: a plain value (§3.5), `[[Status]]`:
+A *FragmentChange* is { `[[Path]]`: RepoPath, `[[Select]]`: a plain value (§3.5), `[[Written]]`:
+a String, when present, `[[Status]]`:
 `changed` or `new`, `[[Parts]]`: List of PartInfo or none }: a Selected Dependency (§8.7) whose
 Fragment differs from the one at *C* (`changed`), or that has none to compare with at *C* (`new`).
 A *PartInfo* is { `[[Focus]]`: String or none, `[[Lines]]`: { `start`, `end` } or none }. `[[Parts]]` has one PartInfo for each Part of its Fragment now, and is none when no Part has
@@ -102,6 +103,11 @@ computed from the repository history (§12.3); it is *unknown* whenever that his
 | `[[Subject]]` | String or empty | the pattern, path, key or argument it concerns |
 | `[[Message]]` | String | informative; see below |
 | `[[PluginCode]]` | String, optional | the stable identifier a Plugin gave the Diagnostic (§8.7 step 3); absent for every other |
+| `[[Written]]` | String, optional | the `[[Written]]` of the Selected Dependency (§8.7) whose canonical form is the `[[Subject]]`; absent for every other |
+
+`[[Written]]` only changes how text mode shows the `[[Subject]]` (§14.3): the code, the severity, the
+`[[Subject]]` and the meaning are those of the canonical form, and it is no part of Diagnostic
+order or of the comparison that removes duplicates.
 
 A Diagnostic with a non-empty `[[File]]` is *attached* to that file; any other is
 *global*.
