@@ -82,8 +82,8 @@ raises:
    `dependents`, and otherwise (a first configuration file) says to add `version: 2`.
 5. If step 3 returned a `plugins` member (§9.5) that is not a valid List of Plugins, collect its
    `E_PLUGIN` into *fatal*. Then, for each key of *value* other than `version`, `gitignore`,
-   `ignore`, `include`, `presets`, `default-presets` and `files`, collect `E_UNKNOWN_KEY` into
-   *fatal*, `[[Subject]]` the key.
+   `ignore`, `include`, `presets`, `default-presets`, `undeclared` and `files`, collect
+   `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` the key.
 6. If `gitignore` is present and not a Boolean, or `ignore` is present and not a List of
    Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` the key. If `include` is present and
    not a non-empty List of Strings, collect `E_CONFIG` into *fatal*, `[[Subject]]` `include`;
@@ -97,7 +97,13 @@ raises:
    a repeated element, collect `E_CONFIG` into *fatal*, `[[Subject]]` `default-presets`; otherwise,
    for each string *n* of it that is not a key of `presets` (all of them when `presets` is absent or
    not a Map), collect `E_UNKNOWN_PRESET` into *fatal*, `[[Subject]]` *n*, with an empty `[[File]]`:
-   a global Diagnostic, as every other Diagnostic of this step.
+   a global Diagnostic, as every other Diagnostic of this step. If `undeclared` is present and is
+   not a Map, collect `E_CONFIG` into *fatal*, `[[Subject]]` `undeclared`; otherwise, for each of
+   its keys other than `ignore`, collect `E_UNKNOWN_KEY` into *fatal*, `[[Subject]]` that key
+   preceded by `undeclared.`; if its `ignore` is present and not a List of Strings, collect
+   `E_CONFIG` into *fatal*, `[[Subject]]` `undeclared.ignore`; otherwise, for each string *s* of it
+   that is not a valid Pattern (§8.1), collect `E_PATTERN` into *fatal*, `[[Subject]]` *s*. The
+   List may be empty, and a Pattern may have a Negation (§8.4).
 7. If `files` is not a Map, or is absent while no key of step 5 has `files` as its near key
    (NOTE below), collect `E_CONFIG` into *fatal*, `[[Subject]]` `files`. When it is absent, the
    message says that `files` is required and to write `files: {}` for none. When it is absent and
@@ -122,7 +128,8 @@ raises:
       `config`, `[[Recorded]]`: none }.
 9. If *fatal* is not empty, raise *fatal*.
 10. Return the Config, with defaults (§5.2) for absent keys, `[[Presets]]` from `presets`,
-    `[[DefaultPresets]]` from `default-presets`, and the Declarations in path order, *attached* and
+    `[[DefaultPresets]]` from `default-presets`, `[[UndeclaredIgnore]]` from `undeclared.ignore`,
+    and the Declarations in path order, *attached* and
     *present* true.
 
 NOTE: An empty `use` means "none of the default Presets" (§8.6), so it is accepted only where there
@@ -135,6 +142,19 @@ A structural error stops evaluation.
 NOTE: `include` replaces the default `**/*.md` (§5.2); it selects only where inline blocks are
 searched (§9.6.1), never which files may be dependencies. `files` stays required: a Configuration
 file that only sets `ignore` or `include` writes `files: {}`.
+
+NOTE: `undeclared.ignore` is read only by `check --undeclared` (§13.5), never by a verdict, a Hash,
+the Universe or any other command. It lives in the Configuration file alone: an inline block
+(§9.6.2) has no such key.
+
+```yaml
+version: 2
+undeclared:
+  ignore:
+    - LICENSE
+    - docs/generated/**
+files: {}
+```
 
 NOTE: `plugins` is accepted only in a script Carrier (§9.5), which removes it from the value before
 step 3. In `docstamp.yaml` it is `E_UNKNOWN_KEY` (step 5), and its message says that Plugins are

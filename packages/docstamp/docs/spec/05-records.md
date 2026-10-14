@@ -21,6 +21,7 @@
 | `[[Include]]` | non-empty List of String (patterns, §8.1) | « `**/*.md` » |
 | `[[Presets]]` | Map from preset name (§9.3) to non-empty List of String (patterns, §8.1) | an empty Map |
 | `[[DefaultPresets]]` | List of String (names of `[[Presets]]`, distinct): the default Presets (§8.6) | « » |
+| `[[UndeclaredIgnore]]` | List of String (patterns, §8.1): the paths `check --undeclared` does not report (§13.5) | « » |
 | `[[Declarations]]` | List of configured Declaration, in path order of `[[File]]` | (required) |
 
 NOTE: A Config is built from the normalized value of the Configuration file (§9.3), whatever its
