@@ -81,6 +81,58 @@ scenario('§13.5 declaring the path makes --undeclared pass', async (repo) => {
   expect(json.json().undeclared).toEqual([]);
 });
 
+const CROSS_REFS = '# A\n\nSee `src/old.ts`, `docs/b.md` and `docs/notes.md`.\n';
+
+async function repoWithCrossReferences(repo: Repo, config = CONFIG): Promise<void> {
+  await repoWithGap(repo);
+  repo.write('docstamp.yaml', config);
+  repo.write('docs/notes.md', '# Notes\n');
+  repo.write('docs/a.md', CROSS_REFS);
+  repo.write('docs/b.md', DOC_B.replace('`src/new.ts`', '`docs/a.md`'));
+  await repo.run(['update', '--all'], { expectExit: 0, snapshot: false });
+}
+
+scenario(
+  '§13.5 --undeclared skips a tracked file and still reports an untracked one',
+  async (repo) => {
+    await repoWithCrossReferences(repo);
+    const result = await repo.run(['check', '--undeclared']);
+    expect(result.exit).toBe(1);
+    expect(result.stdout).toContain('UNDECLARED docs/a.md  mentions docs/notes.md');
+    expect(result.stdout).not.toContain('mentions docs/b.md');
+    expect(result.stdout).not.toContain('mentions docs/a.md');
+  },
+);
+
+scenario('§13.10 suggest --all still proposes a tracked file', async (repo) => {
+  await repoWithCrossReferences(repo);
+  const result = await repo.run(['suggest', '--all', '--json'], { snapshot: false });
+  const patterns = result.json().files[0].suggestions.map((s: { pattern: string }) => s.pattern);
+  expect(patterns).toContain('docs/b.md');
+});
+
+scenario('§9.3 undeclared.ignore hides the paths its patterns select', async (repo) => {
+  await repoWithCrossReferences(repo, CONFIG + 'undeclared:\n  ignore:\n    - docs/notes.md\n');
+  const result = await repo.run(['check', '--undeclared', '--json'], { snapshot: false });
+  expect(result.exit).toBe(0);
+  expect(result.json().undeclared).toEqual([]);
+});
+
+scenario('§9.3 undeclared.ignore takes globs and negations', async (repo) => {
+  const ignore = 'undeclared:\n  ignore:\n    - "docs/**"\n    - "!docs/notes.md"\n';
+  await repoWithCrossReferences(repo, CONFIG + ignore);
+  const result = await repo.run(['check', '--undeclared', '--json'], { snapshot: false });
+  expect(result.json().undeclared).toEqual([{ file: 'docs/a.md', path: 'docs/notes.md' }]);
+});
+
+scenario('§9.3 an invalid undeclared.ignore pattern is E_PATTERN', async (repo) => {
+  await repoWithGap(repo);
+  repo.write('docstamp.yaml', CONFIG + 'undeclared:\n  ignore:\n    - /abs\n');
+  const result = await repo.run(['check', '--undeclared']);
+  expect(result.exit).toBe(2);
+  expect(result.stderr).toContain('E_PATTERN');
+});
+
 scenario('§14.5 the undeclared member exists only with --undeclared', async (repo) => {
   await repoWithGap(repo);
   const result = await repo.run(['check', '--json'], { snapshot: false });

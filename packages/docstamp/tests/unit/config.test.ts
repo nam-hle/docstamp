@@ -214,3 +214,37 @@ describe('§9.3 include', () => {
     }
   });
 });
+
+describe('§9.3 undeclared', () => {
+  const undeclared = (value: string) => `version: 2\nundeclared: ${value}\nfiles: {}\n`;
+  const failures = (text: string) => {
+    try {
+      read(text);
+      return expect.unreachable();
+    } catch (e) {
+      return (e as Raised).diagnostics.map((d) => [d.code, d.file, d.subject]);
+    }
+  };
+  it('defaults to an empty list and reads undeclared.ignore', () => {
+    expect(read('version: 2\nfiles: {}\n').config.undeclaredIgnore).toEqual([]);
+    expect(
+      read(undeclared('{ ignore: [LICENSE, "docs/gen/**"] }')).config.undeclaredIgnore,
+    ).toEqual(['LICENSE', 'docs/gen/**']);
+    expect(read(undeclared('{ ignore: [] }')).config.undeclaredIgnore).toEqual([]);
+    expect(read(undeclared('{}')).config.undeclaredIgnore).toEqual([]);
+  });
+  it.each(['[a]', 'a', 'null'])('%s is E_CONFIG with subject undeclared', (value) => {
+    expect(failures(undeclared(value))).toEqual([['E_CONFIG', '', 'undeclared']]);
+  });
+  it.each(['a.md', '[1]', '{}'])('ignore: %s is E_CONFIG with subject undeclared.ignore', (v) => {
+    expect(failures(undeclared(`{ ignore: ${v} }`))).toEqual([
+      ['E_CONFIG', '', 'undeclared.ignore'],
+    ]);
+  });
+  it('an unknown key is E_UNKNOWN_KEY, an invalid pattern is E_PATTERN', () => {
+    expect(failures(undeclared('{ ignores: [a] }'))).toEqual([
+      ['E_UNKNOWN_KEY', '', 'undeclared.ignores'],
+    ]);
+    expect(failures(undeclared('{ ignore: ["/abs"] }'))).toEqual([['E_PATTERN', '', '/abs']]);
+  });
+});

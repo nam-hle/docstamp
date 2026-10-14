@@ -20,8 +20,8 @@ Options:
   --only-stale  With --json, leave the ok files out of files; summary still counts them.
   --quiet       Print nothing on standard output when every selected file is ok.
   --undeclared  Also fail (exit 1) when a selected file mentions a path of an existing file that
-                none of its patterns covers. Directories and globs are not judged. With --json:
-                undeclared.
+                none of its patterns covers. Directories, globs, tracked files (those with their own
+                declaration) and undeclared.ignore paths are not judged. With --json: undeclared.
   --limit <n>   With --undeclared, print at most <n> UNDECLARED lines (default 10), then how many
                 were left out; 0 prints all. The exit code and --json are not limited.
   --cwd <dir>   Act as if run from <dir>: the root is searched upward from it, and file arguments

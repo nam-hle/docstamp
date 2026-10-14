@@ -26,6 +26,11 @@ const configSchema = {
       },
     },
     'default-presets': { ...USE, minItems: 1 },
+    undeclared: {
+      type: 'object',
+      additionalProperties: false,
+      properties: { ignore: { type: 'array', items: PATTERN_SCHEMA, default: [] } },
+    },
     files: {
       type: 'object',
       additionalProperties: {

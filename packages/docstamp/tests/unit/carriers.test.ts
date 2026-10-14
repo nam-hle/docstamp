@@ -75,6 +75,7 @@ describe('§9.3 discovery', () => {
       include: ['**/*.md'],
       presets: new Map(),
       defaultPresets: [],
+      undeclaredIgnore: [],
       declarations: [],
     });
   });

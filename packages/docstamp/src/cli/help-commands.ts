@@ -48,7 +48,8 @@ file's patterns as depends lines. That report is advisory: the verdict never rea
       [
         '--undeclared',
         'Also fail (exit 1) when a selected file mentions a path of an existing file that none of ' +
-          'its patterns covers. Directories and globs are not judged. With --json: undeclared.',
+          'its patterns covers. Directories, globs, tracked files (those with their own ' +
+          'declaration) and undeclared.ignore paths are not judged. With --json: undeclared.',
       ],
       [
         '--limit <n>',

@@ -30,6 +30,7 @@ export interface DocstampConfig {
   ignore?: string[];
   presets?: Record<string, [string, ...string[]]>;
   'default-presets'?: [string, ...string[]];
+  undeclared?: { ignore?: string[] };
   plugins?: DocstampPlugin[];
   files: Record<string, { dependencies: [Dependency, ...Dependency[]]; use?: string[] }>;
 }
