@@ -146,6 +146,11 @@ The following are not breaking:
   line uses (`--all` was `E_USAGE` with `suggest`, `--undeclared` unknown), the undeclared lines of
   §14.3 and the members `undeclared` and `all` of §14.5. Without them every output, verdict and
   exit code is as it was;
+- `--limit` of `check --undeclared` (§13.5) and `suggest --all` (§13.10): a new option that no
+  existing command line uses (it was an unknown option, `E_USAGE`), and the closing line of the text
+  output (§14.3, §14.9). Only the text of those two commands is paged, by default at 10 findings;
+  the verdict, the exit code, the summary line and `--json` are as they were, and `--limit 0`
+  prints everything;
 - *declared* of `suggest` (§13.10 step 4): the `status` column and the `only declared` lines of
   §14.9 for a file that already has a declaration, and the member `declared` of §14.5. A file
   without one prints exactly what it printed; the proposal, `--write` and the exit code are
