@@ -1,6 +1,6 @@
 {
   "name": "docstamp-plugin-markdown",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "docstamp plugin: depend on one section of a Markdown file, by its heading",
   "license": "MIT",
   "author": {
