@@ -1,0 +1,70 @@
+# took our side
+$ docstamp --json
+exit: 1
+--- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 1,
+  "summary": {
+    "ok": 1,
+    "stale": 2,
+    "invalid": 0
+  },
+  "files": [
+    {
+      "file": "CLAUDE.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/**",
+        "!src/**/*.test.ts"
+      ],
+      "changes": [
+        {
+          "status": "modified",
+          "path": "src/index.ts",
+          "via": [
+            "src/**"
+          ]
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "README.md",
+      "state": "stale",
+      "reasons": [
+        "content-changed"
+      ],
+      "dependencies": [
+        "src/index.ts",
+        "docs/guide.md"
+      ],
+      "changes": [
+        {
+          "status": "modified",
+          "path": "src/index.ts",
+          "via": [
+            "src/index.ts"
+          ]
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "file": "docs/guide.md",
+      "state": "ok",
+      "reasons": [],
+      "dependencies": [
+        "src/cli"
+      ],
+      "changes": null,
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}
+--- stderr ---

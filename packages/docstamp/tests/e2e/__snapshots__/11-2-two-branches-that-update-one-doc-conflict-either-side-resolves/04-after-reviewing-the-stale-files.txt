@@ -1,0 +1,6 @@
+# after reviewing the stale files
+$ docstamp
+exit: 0
+--- stdout ---
+3 ok, 0 stale, 0 invalid
+--- stderr ---
