@@ -1,5 +1,6 @@
 import { Raised, diag } from '../core/diagnostics.ts';
 import { closestKey } from '../core/did-you-mean.ts';
+import { DEFAULT_MAX_FILES } from '../engine/suggest.ts';
 
 type StatsWindowArg =
   | { kind: 'days'; days: number; value: string }
@@ -46,6 +47,7 @@ export type Args =
       write: boolean;
       all: boolean;
       limit: number;
+      maxFiles: number;
     }
   | { mode: 'update'; all: boolean; json: boolean; cwd?: string; paths: string[] };
 
@@ -82,6 +84,7 @@ const VALUED: Record<string, string> = {
   '--since': 'a number of days such as 30d',
   '--from': 'a revision',
   '--limit': 'a number of findings such as 10 (0 prints all)',
+  '--max-files': 'a number of files such as 50 (0 sets no limit)',
 };
 const valuedName = (arg: string): string | undefined =>
   Object.keys(VALUED).find((name) => arg === name || arg.startsWith(`${name}=`));
@@ -234,6 +237,14 @@ export function parseArgs(
       fail('--limit', '--limit needs a whole number: 1 or more per page, or 0 to print all.');
     }
   }
+  const maxFiles = values.get('--max-files');
+  if (maxFiles !== undefined) {
+    if (mode !== 'suggest') {
+      fail('--max-files', '--max-files is only valid with "docstamp suggest".');
+    } else if (!LIMIT.test(maxFiles)) {
+      fail('--max-files', '--max-files needs a whole number: 1 or more files, or 0 for no limit.');
+    }
+  }
   if (failure) {
     const page = explicit === undefined ? 'docstamp help' : `docstamp help ${explicit}`;
     throw usage(failure.subject, failure.message.replace(/\.$/u, `; see ${page}.`));
@@ -262,7 +273,16 @@ export function parseArgs(
     return { mode, json, onlyStale, quiet, undeclared, limit: page, ...cwdOpt, paths };
   }
   if (mode === 'suggest') {
-    return { mode, json, ...cwdOpt, paths, write: seen.has('--write'), all, limit: page };
+    return {
+      mode,
+      json,
+      ...cwdOpt,
+      paths,
+      write: seen.has('--write'),
+      all,
+      limit: page,
+      maxFiles: maxFiles === undefined ? DEFAULT_MAX_FILES : Number(maxFiles),
+    };
   }
   return mode === 'update'
     ? { mode, all, json, ...cwdOpt, paths }

@@ -506,7 +506,74 @@ describe('§12.6 Proposal', () => {
       expect(propose('README.md', 'Nothing here.\n', REPO, () => false)).toEqual({
         suggestions: [],
         ignored: [],
+        skipped: [],
       });
+    });
+  });
+
+  describe('step 8 cap', () => {
+    const universe = tree(
+      'README.md',
+      'src/a.ts',
+      'src/b.ts',
+      'src/cli/x.ts',
+      'src/cli/y.ts',
+      'src/cli/z.ts',
+      'src/deep/q.ts',
+      'src/deep/w.ts',
+      'src/deep/e.ts',
+    );
+    const run = (text: string, max?: number) =>
+      propose('README.md', text, universe, () => false, max);
+    const names = (text: string, max?: number) => run(text, max).suggestions.map((s) => s.pattern);
+
+    it('skips a directory over the cap and counts it', () => {
+      const result = run('`src`', 3);
+      expect(result.suggestions).toEqual([]);
+      expect(result.skipped).toEqual([{ pattern: 'src', files: 8 }]);
+    });
+    it('counts the files before the test exclusions', () => {
+      const tests = tree('README.md', 'lib/a.ts', 'lib/a.test.ts', 'lib/b.test.ts');
+      const result = propose('README.md', '`lib`', tests, () => false, 2);
+      expect(result.skipped).toEqual([{ pattern: 'lib', files: 3 }]);
+    });
+    it('keeps the files the doc mentions below a skipped directory', () => {
+      const result = run('`src` and `src/a.ts`', 3);
+      expect(result.suggestions).toEqual([{ pattern: 'src/a.ts', files: ['src/a.ts'] }]);
+      expect(result.skipped).toEqual([{ pattern: 'src', files: 8 }]);
+    });
+    it('proposes a directory inside a skipped one', () => {
+      const result = run('`src` and `src/cli`', 3);
+      expect(result.suggestions.map((s) => s.pattern)).toEqual(['src/cli']);
+      expect(result.skipped).toEqual([{ pattern: 'src', files: 8 }]);
+    });
+    it('a directory at the cap is proposed', () => {
+      expect(names('`src/cli`', 3)).toEqual(['src/cli']);
+      expect(names('`src/cli`', 2)).toEqual([]);
+    });
+    it('skips a glob over the cap, in path order with the directories', () => {
+      const result = run('`src/**/*.ts` `src`', 3);
+      expect(result.skipped).toEqual([
+        { pattern: 'src', files: 8 },
+        { pattern: 'src/**/*.ts', files: 8 },
+      ]);
+    });
+    it('never caps a literal file', () => {
+      expect(names('`src/a.ts`', 1)).toEqual(['src/a.ts']);
+    });
+    it('0 sets no cap and nothing is skipped', () => {
+      const result = run('`src`', 0);
+      expect(result.suggestions.map((s) => s.pattern)).toEqual(['src']);
+      expect(result.skipped).toEqual([]);
+    });
+    it('a directory that collapses from mentioned files is capped too', () => {
+      const result = run('`src/cli/x.ts` `src/cli/y.ts` `src/cli/z.ts`', 2);
+      expect(result.suggestions.map((s) => s.pattern)).toEqual([
+        'src/cli/x.ts',
+        'src/cli/y.ts',
+        'src/cli/z.ts',
+      ]);
+      expect(result.skipped).toEqual([{ pattern: 'src/cli', files: 3 }]);
     });
   });
 });

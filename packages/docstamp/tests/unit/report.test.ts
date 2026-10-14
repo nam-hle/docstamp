@@ -1043,6 +1043,37 @@ describe('§14.9 suggest text', () => {
       'suggest a.md\n  no paths found\n  only declared  src\n',
     );
   });
+  it('skipped lines follow the ignored lines and name the limit', () => {
+    const rows = [{ pattern: 'x.md', resolvedCount: 1, staleRate: null, status: null }];
+    const skipped = [
+      { pattern: 'src', files: 460 },
+      { pattern: 'tests', files: 1073 },
+    ];
+    expect(suggestText([{ ...entry('a.md', rows, ['dist']), skipped }], false, false, 0, 50)).toBe(
+      'suggest a.md\n  pattern  files  stale\n  x.md         1    n/a\n' +
+        '  ignored  dist\n' +
+        '  skipped  src  460 files  (over --max-files 50)\n' +
+        '  skipped  tests  1073 files  (over --max-files 50)\n',
+    );
+  });
+  it('skipped lines are not rows: --all paging neither counts nor cuts them', () => {
+    const row = (pattern: string) => ({
+      pattern,
+      resolvedCount: 1,
+      staleRate: null,
+      status: 'new' as const,
+    });
+    const skipped = [{ pattern: 'src', files: 9 }];
+    const entries = [
+      { ...entry('a.md', [row('a'), row('b')], [], []), skipped },
+      { ...entry('b.md', [row('c')], [], []), skipped },
+    ];
+    expect(suggestText(entries, false, true, 1, 3)).toBe(
+      'suggest a.md\n  pattern  files  stale  status\n  a            1    n/a  new\n' +
+        '  skipped  src  9 files  (over --max-files 3)\n' +
+        '... and 2 more suggestions in 1 more file. Fix these, then run again.\n',
+    );
+  });
   it('--write adds one line per file after the blocks', () => {
     const rows = [{ pattern: 'src', resolvedCount: 2, staleRate: null, status: null }];
     expect(
@@ -1098,8 +1129,18 @@ describe('§14.5 suggest JSON', () => {
       ],
       ignored: ['dist'],
       declared: null,
+      skipped: [],
       diagnostics: [],
     });
+    const skipped = JSON.parse(
+      suggestJsonText({
+        exitCode: 0,
+        write: false,
+        files: [{ ...files[0]!, skipped: [{ pattern: 'tests', files: 1073 }] }],
+        diagnostics: [],
+      }),
+    );
+    expect(skipped.files[0].skipped).toEqual([{ pattern: 'tests', files: 1073 }]);
     const declared = JSON.parse(
       suggestJsonText({
         exitCode: 0,
@@ -1144,6 +1185,7 @@ describe('§14.5 suggest JSON', () => {
       'suggestions',
       'ignored',
       'declared',
+      'skipped',
       'diagnostics',
       'written',
     ]);

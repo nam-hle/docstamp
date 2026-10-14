@@ -1,0 +1,9 @@
+$ docstamp suggest --max-files 1 docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern   files  stale
+  src/a.ts      1    n/a
+  skipped  lib  2 files  (over --max-files 1)
+  skipped  src  3 files  (over --max-files 1)
+--- stderr ---

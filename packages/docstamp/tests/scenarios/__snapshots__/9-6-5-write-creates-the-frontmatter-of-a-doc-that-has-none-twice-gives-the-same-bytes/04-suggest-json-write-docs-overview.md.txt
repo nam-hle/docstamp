@@ -71,6 +71,7 @@ exit: 0
         "!src/engine/**/*.test.*",
         "!src/engine/**/__tests__"
       ],
+      "skipped": [],
       "diagnostics": [],
       "written": false
     }

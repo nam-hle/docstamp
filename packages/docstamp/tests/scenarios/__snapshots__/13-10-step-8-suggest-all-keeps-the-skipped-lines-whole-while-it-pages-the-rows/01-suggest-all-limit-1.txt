@@ -1,0 +1,9 @@
+$ docstamp suggest --all --limit 1
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern  files  stale  status
+  lib          2    n/a  new
+  skipped  src  61 files  (over --max-files 50)
+... and 3 more suggestions in 1 more file. Fix these, then run again.
+--- stderr ---

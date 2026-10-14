@@ -18,7 +18,8 @@ Commands:
       List the files that depend on each named file, and the patterns that select it.
   docstamp stats [--json] [--cwd <dir>] [--since <n>d | --from <rev>] [<file>...]
       Report how often each file's dependencies would have made it stale.
-  docstamp suggest [--json] [--cwd <dir>] (--all [--limit <n>] | [--write] <file>...)
+  docstamp suggest [--json] [--max-files <n>] [--cwd <dir>]
+    (--all [--limit <n>] | [--write] <file>...)
       Propose dependencies from the paths each file mentions.
   docstamp help [<command> | <topic>]
   docstamp help diagnostics <code>

@@ -1,0 +1,5 @@
+$ docstamp check --max-files 3
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --max-files: --max-files is only valid with "docstamp suggest"; see docstamp help check.

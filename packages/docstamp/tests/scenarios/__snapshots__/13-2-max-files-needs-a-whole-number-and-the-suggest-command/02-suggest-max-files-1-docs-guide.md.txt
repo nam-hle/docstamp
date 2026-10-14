@@ -1,0 +1,5 @@
+$ docstamp suggest --max-files=-1 docs/guide.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --max-files: --max-files needs a whole number: 1 or more files, or 0 for no limit; see docstamp help suggest.

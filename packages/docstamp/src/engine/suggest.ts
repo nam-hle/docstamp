@@ -10,10 +10,19 @@ export interface Suggestion {
   readonly files: readonly string[];
 }
 
+export interface Skipped {
+  readonly pattern: string;
+  readonly files: number;
+}
+
 export interface Proposal {
   readonly suggestions: readonly Suggestion[];
   readonly ignored: readonly string[];
+  readonly skipped: readonly Skipped[];
 }
+
+// SPEC §13.10: the files a directory or glob may resolve to before it is skipped
+export const DEFAULT_MAX_FILES = 50;
 
 // SPEC §12.6 step 7: the files at the root that nearly every commit touches
 const GENERIC = new Set([
@@ -90,6 +99,7 @@ export function propose(
   text: string,
   universe: readonly string[],
   isIgnored: (path: string) => boolean,
+  max = 0,
 ): Proposal {
   const files = universe.filter((path) => path !== doc);
   const known = new Set(files);
@@ -134,6 +144,16 @@ export function propose(
     if (direct.length < COLLAPSE_AT) continue;
     if (below.length > SMALL_DIRECTORY && !below.every((path) => mentioned.has(path))) continue;
     dirs.add(dir);
+  }
+
+  // §12.6 step 8: a directory or glob over the cap is skipped, never proposed
+  const skipped: Skipped[] = [];
+  for (const pattern of max === 0 ? [] : sortPaths([...dirs, ...globs])) {
+    const count = select([parsePattern(pattern)!], files).length;
+    if (count <= max) continue;
+    dirs.delete(pattern);
+    globs.delete(pattern);
+    skipped.push({ pattern, files: count });
   }
 
   // §12.6 step 9
@@ -226,7 +246,7 @@ export function propose(
     })),
     ...reincluded.map((path) => ({ pattern: path, files: [path] })),
   ];
-  return { suggestions, ignored: sortPaths([...ignored]) };
+  return { suggestions, ignored: sortPaths([...ignored]), skipped };
 }
 
 export type Status = 'declared' | 'covered' | 'new';

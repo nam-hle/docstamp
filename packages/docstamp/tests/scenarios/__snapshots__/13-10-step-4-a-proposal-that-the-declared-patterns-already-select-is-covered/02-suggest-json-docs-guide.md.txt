@@ -26,6 +26,7 @@ exit: 0
       "declared": [
         "src/**/*.ts"
       ],
+      "skipped": [],
       "diagnostics": []
     }
   ],

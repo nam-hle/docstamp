@@ -4,7 +4,8 @@ exit: 0
 docstamp suggest: Propose dependencies from the paths each file mentions.
 
 Usage:
-  docstamp suggest [--json] [--cwd <dir>] (--all [--limit <n>] | [--write] <file>...)
+  docstamp suggest [--json] [--max-files <n>] [--cwd <dir>]
+    (--all [--limit <n>] | [--write] <file>...)
 
 Reads each named file and proposes its dependencies from the repository paths it mentions (code
 spans, links, paths in the prose), with the number of files each pattern selects and its stale rate
@@ -19,24 +20,32 @@ proposals with status new, grouped by file: the paths a doc mentions that no dec
 prints nothing when there are none, and never writes. The text shows the first 10 rows over all
 files and says how many were left out: fix those, then run again (--limit changes the count).
 
-Read the proposal before keeping it: a mention can be an illustration, and a directory can select
-many files. It is the quick way to enroll an existing doc: suggest --write, review, then update.
+A directory or glob that selects more than 50 files is not proposed: it would make the doc stale on
+most commits. It is listed as a skipped line, and the files the doc mentions below it are still
+proposed (--max-files changes the limit).
+
+Read the proposal before keeping it: a mention can be an illustration. It is the quick way to enroll
+an existing doc: suggest --write, review, then update.
 
 Options:
-  --all        Propose for every file that has a declaration and print only the new proposals. Not
-               with file arguments or --write.
-  --limit <n>  With --all, print at most <n> rows over all files (default 10), then how many were
-               left out; 0 prints all. --json is not limited.
-  --json       Print one JSON document instead of text (docstamp help json).
-  --cwd <dir>  Act as if run from <dir>: the root is searched upward from it, and file arguments are
-               resolved against it.
-  --write      Write the proposal into the file as a docstamp block without hash, so the file stays
-               unrecorded until reviewed. A block that already declares patterns keeps them, in
-               order, and gains only new ones; an addition that would change what they select is
-               left out. Refuses (E_USAGE) a block that has a hash, a file declared in the
-               configuration file, and a block with use that cannot be extended line by line.
-  <file>...    The files to read. At least one, unless --all.
-  -h, --help   Print this page.
+  --all            Propose for every file that has a declaration and print only the new proposals.
+                   Not with file arguments or --write.
+  --limit <n>      With --all, print at most <n> rows over all files (default 10), then how many
+                   were left out; 0 prints all. --json is not limited.
+  --max-files <n>  Skip a directory or glob that selects more than <n> files (default 50); 0 sets no
+                   limit. Skipped patterns are listed after the table, and --json has them in
+                   skipped.
+  --json           Print one JSON document instead of text (docstamp help json).
+  --cwd <dir>      Act as if run from <dir>: the root is searched upward from it, and file arguments
+                   are resolved against it.
+  --write          Write the proposal into the file as a docstamp block without hash, so the file
+                   stays unrecorded until reviewed. A block that already declares patterns keeps
+                   them, in order, and gains only new ones; an addition that would change what they
+                   select is left out. Refuses (E_USAGE) a block that has a hash, a file declared in
+                   the configuration file, and a block with use that cannot be extended line by
+                   line.
+  <file>...        The files to read. At least one, unless --all.
+  -h, --help       Print this page.
 
 Reads:
   the configuration file, the named files, the file tree and git history (stale rate).

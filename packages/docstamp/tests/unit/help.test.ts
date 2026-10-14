@@ -43,6 +43,7 @@ const VALUES: Record<string, string> = {
   '--since': '30d',
   '--from': 'HEAD',
   '--limit': '10',
+  '--max-files': '50',
 };
 // an option that only another option enables, per command (SPEC §13.2)
 const ENABLERS: Record<string, Record<string, string>> = {
