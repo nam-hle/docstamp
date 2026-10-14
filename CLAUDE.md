@@ -302,6 +302,8 @@ It is never hashed or compared, and `--json` keeps the canonical members and add
 `suggest --all` runs it for every declared file and keeps the `new` proposals, and
 `check --undeclared` (§13.5, `src/cli/undeclared.ts`) reuses it to fail on a literal path that
 nothing declares: a finding with exit 1, never a state or a Diagnostic.
+Both page their text at `--limit` findings (default 10, `DEFAULT_LIMIT` in `src/cli/args.ts`): in
+`checkChunks` and in `paged` of `src/report/suggest.ts`; `--json` and the exit code never see it.
 The extraction is `src/engine/mentions.ts` (text to normalized candidates) and
 `src/engine/suggest.ts` (classification, the generic-file list, collapse, test exclusions, the
 `declared`/`covered`/`new` status and the list `--write` writes after the declared patterns; both

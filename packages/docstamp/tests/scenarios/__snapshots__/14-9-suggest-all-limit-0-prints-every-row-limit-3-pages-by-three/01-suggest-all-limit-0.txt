@@ -1,0 +1,13 @@
+$ docstamp suggest --all --limit 0
+exit: 0
+--- stdout ---
+suggest docs/a.md
+  pattern         files  stale  status
+  mod01/index.ts      1    n/a  new
+  mod02/index.ts      1    n/a  new
+suggest docs/b.md
+  pattern         files  stale  status
+  mod03/index.ts      1    n/a  new
+  mod04/index.ts      1    n/a  new
+  mod05/index.ts      1    n/a  new
+--- stderr ---

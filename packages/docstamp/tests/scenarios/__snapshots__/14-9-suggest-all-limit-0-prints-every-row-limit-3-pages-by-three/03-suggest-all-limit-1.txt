@@ -1,0 +1,8 @@
+$ docstamp suggest --all --limit 1
+exit: 0
+--- stdout ---
+suggest docs/a.md
+  pattern         files  stale  status
+  mod01/index.ts      1    n/a  new
+... and 4 more suggestions in 1 more file. Fix these, then run again.
+--- stderr ---

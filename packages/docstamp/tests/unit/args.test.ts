@@ -21,6 +21,7 @@ describe('§13.2 parseArgs', () => {
       onlyStale: false,
       quiet: false,
       undeclared: false,
+      limit: 10,
       paths: [],
     });
     expect(parseArgs(['a.md', '--json'])).toEqual({
@@ -29,6 +30,7 @@ describe('§13.2 parseArgs', () => {
       onlyStale: false,
       quiet: false,
       undeclared: false,
+      limit: 10,
       paths: ['a.md'],
     });
   });
@@ -39,6 +41,7 @@ describe('§13.2 parseArgs', () => {
       onlyStale: false,
       quiet: false,
       undeclared: false,
+      limit: 10,
       cwd: 'x',
       paths: ['a.md'],
     });
@@ -183,6 +186,33 @@ describe('§13.2 parseArgs', () => {
     });
     expect(usage(['check', '--undeclared', '--undeclared'])).toBe('--undeclared');
   });
+  it('--limit pages --undeclared: a count, 0 for all, a default of 10', () => {
+    expect(parseArgs(['check', '--undeclared', '--limit', '3'])).toMatchObject({ limit: 3 });
+    expect(parseArgs(['--undeclared', '--limit=0'])).toMatchObject({ limit: 0 });
+    expect(parseArgs(['--undeclared'])).toMatchObject({ limit: 10 });
+    expect(parseArgs(['--json', '--undeclared', '--limit', '25'])).toMatchObject({ limit: 25 });
+  });
+  it('--limit needs --undeclared and a whole number', () => {
+    expect(usage(['check', '--limit', '3'])).toBe('--limit');
+    expect(usage(['--limit', '3', 'a.md'])).toBe('--limit');
+    for (const value of ['-1', '2.5', 'ten', '010', '1000000000', '1e3', '+3']) {
+      const argv = ['check', '--undeclared', `--limit=${value}`];
+      expect(usage(argv), argv.join(' ')).toBe('--limit');
+      expect(failure(argv)?.message).toContain('whole number');
+    }
+    expect(usage(['check', '--undeclared', '--limit', '-1'])).toBe('--limit');
+    expect(usage(['check', '--undeclared', '--limit'])).toBe('--limit');
+    expect(usage(['check', '--undeclared', '--limit', '--json'])).toBe('--limit');
+    expect(usage(['check', '--undeclared', '--limit=', 'a.md'])).toBe('--limit');
+    expect(usage(['check', '--undeclared', '--limit', '1', '--limit', '2'])).toBe('--limit');
+  });
+  it('--limit is refused by the other commands', () => {
+    for (const command of ['list-dependencies', 'list-dependents', 'stats']) {
+      const argv = [command, '--limit', '3', 'a.md'];
+      expect(usage(argv), argv.join(' ')).toBe('--limit');
+    }
+    expect(usage(['update', '--limit', '3', '--all'])).toBe('--limit');
+  });
   it('--cwd forms and --', () => {
     expect(parseArgs(['--cwd=x', '--', '--json'])).toMatchObject({ cwd: 'x', paths: ['--json'] });
     expect(parseArgs(['--cwd', 'x'])).toMatchObject({ cwd: 'x' });
@@ -291,6 +321,7 @@ describe('§13.2 suggest', () => {
       json: false,
       paths: ['a.md'],
       write: false,
+      limit: 10,
       all: false,
     });
     expect(parseArgs(['--write', 'suggest', '--json', '--cwd', 'r', 'a.md', 'b.md'])).toEqual({
@@ -299,6 +330,7 @@ describe('§13.2 suggest', () => {
       cwd: 'r',
       paths: ['a.md', 'b.md'],
       write: true,
+      limit: 10,
       all: false,
     });
   });
@@ -324,6 +356,7 @@ describe('§13.2 suggest', () => {
       json: true,
       paths: [],
       write: false,
+      limit: 10,
       all: true,
     });
     expect(usage(['suggest', '--all', 'a'])).toBe('--all');
@@ -332,6 +365,14 @@ describe('§13.2 suggest', () => {
     for (const command of ['check', 'list-dependencies', 'list-dependents', 'stats']) {
       expect(usage([command, '--all', 'a'])).toBe('--all');
     }
+  });
+  it('--limit pages --all and nothing else', () => {
+    expect(parseArgs(['suggest', '--all', '--limit', '3'])).toMatchObject({ all: true, limit: 3 });
+    expect(parseArgs(['suggest', '--all', '--limit=0'])).toMatchObject({ limit: 0 });
+    expect(usage(['suggest', '--limit', '3', 'a.md'])).toBe('--limit');
+    expect(usage(['suggest', '--write', '--limit', '3', 'a.md'])).toBe('--limit');
+    expect(usage(['suggest', '--all', '--limit', 'x'])).toBe('--limit');
+    expect(usage(['suggest', '--all', '--limit'])).toBe('--limit');
   });
   it('--since and --from are refused', () => {
     expect(usage(['suggest', '--since', '30d', 'a'])).toBe('--since');

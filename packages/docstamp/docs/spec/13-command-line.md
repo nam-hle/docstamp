@@ -3,12 +3,12 @@
 ### 13.1 Synopsis
 
 ```
-docstamp [check] [--json] [--only-stale] [--quiet] [--undeclared] [--cwd <dir>] [<file>...]
+docstamp [check] [--json] [--only-stale] [--quiet] [--undeclared [--limit <n>]] [--cwd <dir>] [<file>...]
 docstamp update [--json] [--cwd <dir>] (--all | <file>...)
 docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]
 docstamp list-dependents [--json] [--transitive] [--cwd <dir>] <file>...
 docstamp stats [--json] [--cwd <dir>] [--since <n>d | --from <rev>] [<file>...]
-docstamp suggest [--json] [--cwd <dir>] (--all | [--write] <file>...)
+docstamp suggest [--json] [--cwd <dir>] (--all [--limit <n>] | [--write] <file>...)
 docstamp help [<command> | <topic> | diagnostics <code>]
 docstamp <command> --help
 docstamp version
@@ -26,7 +26,7 @@ option as `--help`, wherever `--help` is written.
 The command line is parsed before anything else.
 
 1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--undeclared`, `--write`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
-   written `--name <value>` or `--name=<value>`: `--cwd`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
+   written `--name <value>` or `--name=<value>`: `--cwd`, `--since`, `--from` and `--limit`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
@@ -68,7 +68,11 @@ Each message states the problem:
 - a `--since` that is not a positive integer without leading zeros followed by `d` (`30d`), or is
   above `3650d`; the message shows the form. `30`, `30.days`, `0d`, `2 weeks ago` and dates are
   refused;
-- a `--from` that starts with `-`.
+- a `--from` that starts with `-`;
+- `--limit` with any command but `check` and `suggest`, with `check` without `--undeclared`, or
+  with `suggest` without `--all` (`[[Subject]]` `--limit`);
+- a `--limit` that is not `0` or a positive integer without leading zeros (`10`) of at most 9
+  digits; the message shows the form. `-1`, `2.5`, `ten` and `010` are refused.
 
 `help` prints help (§13.11) and `version` prints the version; both exit 0 (§14.1), except a
 `help` name that is not known (§13.11). A file named like a command is reached as
@@ -161,6 +165,13 @@ exists is a mention a person can declare or drop. It reads no git history, no Lo
 clock, never changes a Result, a verdict or a Hash, and without the option nothing changes. An
 undeclared path is a finding, as a stale file is, not an error: it has no Diagnostic code and
 exits 1 (§16). The fix is to declare the path in the file, or to stop mentioning it.
+
+With `--undeclared`, the text output lists at most *limit* elements of *undeclared*, the first ones
+in order, where *limit* is the value of `--limit`, or 10 without it; `--limit 0` lists every
+element. When elements are left out, the output says how many (§14.3). The limit changes only
+what step 4 prints in text mode: *undeclared*, the `undeclared` member of `--json` (§14.5), the
+verdict and the exit code of step 5 are the same with every limit, so a list that was cut still
+exits 1.
 
 `--only-stale` and `--quiet` change only what step 4 outputs, never a verdict or the exit code
 of step 5. `--only-stale` omits the `ok` Results from `files` in JSON mode (§14.5); it has no
@@ -387,6 +398,8 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
 With `--all` there is no file argument: the named files are every file with a Declaration,
 configured or inline, and only the Suggestions whose *status* is `new` are output, so that one
 command lists the gaps of a repository. `--all` never writes, so it is not combined with `--write`.
+In text mode it prints at most *limit* rows in all, as `--limit` says (§14.9): 10 without it, every
+row with `--limit 0`. `--json` is never limited.
 
 1. Let *root* be `? DetermineRoot(cwd)`, *config* be the Config of `? ReadConfig(root)`
    (§9.3; a Root with no Configuration file and no inline block is not an error here) and *universe*
@@ -436,7 +449,8 @@ command lists the gaps of a repository. `--all` never writes, so it is not combi
    Only if no step has raised, replace each *path* whose *new* differs from its text atomically, as
    §9.6.4 step 3 does; it is then *written*, and every other file is not.
 8. With `--all`, keep of each file only the Suggestions whose *status* is `new`, and drop the files
-   left with none. Output the Suggestions, *ignored*, *declared* and, with `--write`, which files
+   left with none; in text mode, then keep the first *limit* rows over the files in path order
+   (§14.9). Output the Suggestions, *ignored*, *declared* and, with `--write`, which files
    were *written* (§14.9, §14.5), and exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2; with `--write` nothing was

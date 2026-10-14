@@ -1,0 +1,6 @@
+# suggest --all --limit 1.5
+$ docstamp suggest --all --limit 1.5
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --limit: --limit needs a whole number: 1 or more per page, or 0 to print all; see docstamp help suggest.

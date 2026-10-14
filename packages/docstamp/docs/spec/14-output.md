@@ -86,7 +86,8 @@ it is output. When the command raised before any Result existed (§13.5), none
 of this is output: no block, no summary line and no `next:` line, only the Diagnostics. Then the
 `next:` lines of §14.3.3, then, with `--undeclared` and a non-empty *undeclared* (§13.5), the
 *undeclared lines*: one per element in order, `UNDECLARED ` then the file, two spaces, `mentions `
-and the path, each as in §14.2, and the line
+and the path, each as in §14.2, only the first *limit* of them (§13.5), then, when *n* elements
+are left out, the line `... and <n> more. Fix these, then run again.`, and the line
 `next: declare each mentioned path in its file, or stop mentioning it; see docstamp help suggest`.
 They are written even with `--quiet`, and the summary line does not count them.
 
@@ -324,7 +325,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   still counts every selected Result (§13.5).
 - With `check --undeclared` the document has a last top-level member `"undeclared"`, after
   `diagnostics`: the List *undeclared* of §13.5 as `{ "file", "path" }` in its order, `[]` when
-  there is none or a step raised. Without the option the member is absent.
+  there is none or a step raised. Without the option the member is absent. It always lists every
+  element: `--limit` (§13.5) pages the text output only.
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path", "via" }` in this
   order, or `null` when it is *unknown* or not applicable (§12.3). In update mode it is the review
   input of §13.6: the Changes before the Write, `[]` for a target that was `ok`, and `null` for
@@ -658,6 +660,14 @@ suggest docs/architecture.md
 With `--all` (§13.10) every block has the `status` column and only rows of status `new`, and no
 `ignored` or `only declared` line; a file with no `new` Suggestion has no block, so a repository
 without gaps prints nothing.
+
+With `--all` the rows are paged: the output holds the first *limit* rows over the blocks in path
+order (§13.10 step 8), as if the other rows did not exist, so each table is padded to its printed
+rows. A block with some rows left out keeps its first line and the rows that fit; a block after
+the last printed row is not output. When *n* rows are left out, the last line is `... and <n> more suggestions in <m> more files. Fix these, then run
+again.`, *m* being the number of blocks not output, or `... and <n> more suggestions. Fix these,
+then run again.` when *m* is 0. For *n* or *m* equal to 1 the noun is singular (`suggestion`,
+`file`). With no row left out there is no such line. `--json` lists every row (§14.5).
 
 When *declared* is *none*, the block is exactly as above, without the column and those lines.
 With `--write`, after all blocks, one line `written  <file>` or `unchanged  <file>`

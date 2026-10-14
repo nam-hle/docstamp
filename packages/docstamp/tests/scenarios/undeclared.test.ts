@@ -167,3 +167,168 @@ scenario('§13.2 suggest --all is not combined with files or --write', async (re
     expect(result.stderr).toContain('E_USAGE: --all');
   }
 });
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const mentions = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, i) => `\`mod${pad(from + i)}/index.ts\``).join(' ');
+
+async function repoWithMentions(repo: Repo, docs: Record<string, [number, number]>) {
+  const names = Object.keys(docs);
+  repo.write(
+    'docstamp.yaml',
+    `version: 2\nfiles:\n${names.map((n) => `  ${n}:\n    dependencies:\n      - src\n`).join('')}`,
+  );
+  repo.write('src/a.ts', 'export {};\n');
+  for (let n = 1; n <= 20; n++) repo.write(`mod${pad(n)}/index.ts`, 'export {};\n');
+  for (const [name, [from, to]] of Object.entries(docs)) {
+    repo.write(name, `# Doc\n\nSee ${mentions(from, to)}.\n`);
+  }
+  repo.commit('init');
+  await repo.run(['update', '--all'], { expectExit: 0, snapshot: false });
+}
+
+const undeclaredLines = (stdout: string) =>
+  stdout.split('\n').filter((line) => line.startsWith('UNDECLARED '));
+
+scenario('§13.5 --undeclared prints exactly 10 lines without a closing line', async (repo) => {
+  await repoWithMentions(repo, { 'docs/a.md': [1, 10] });
+  const result = await repo.run(['check', '--undeclared']);
+  expect(result.exit).toBe(1);
+  expect(undeclaredLines(result.stdout)).toHaveLength(10);
+  expect(result.stdout).not.toContain('... and');
+});
+
+scenario('§14.3 --undeclared cuts 11 findings to 10 and says how many are left', async (repo) => {
+  await repoWithMentions(repo, { 'docs/a.md': [1, 11] });
+  const result = await repo.run(['check', '--undeclared']);
+  expect(result.exit).toBe(1);
+  expect(undeclaredLines(result.stdout)).toHaveLength(10);
+  expect(result.stdout).toContain('... and 1 more. Fix these, then run again.\n');
+  expect(result.stdout.endsWith('see docstamp help suggest\n')).toBe(true);
+  expect(result.stdout).not.toContain('mod11/index.ts');
+});
+
+scenario('§13.5 --limit 0 prints every undeclared line', async (repo) => {
+  await repoWithMentions(repo, { 'docs/a.md': [1, 11] });
+  const result = await repo.run(['check', '--undeclared', '--limit', '0']);
+  expect(result.exit).toBe(1);
+  expect(undeclaredLines(result.stdout)).toHaveLength(11);
+  expect(result.stdout).not.toContain('... and');
+});
+
+scenario('§13.5 --limit 3 pages the undeclared lines over several files', async (repo) => {
+  await repoWithMentions(repo, { 'docs/a.md': [1, 2], 'docs/b.md': [3, 5] });
+  const result = await repo.run(['check', '--undeclared', '--limit', '3']);
+  expect(result.exit).toBe(1);
+  expect(undeclaredLines(result.stdout)).toEqual([
+    'UNDECLARED docs/a.md  mentions mod01/index.ts',
+    'UNDECLARED docs/a.md  mentions mod02/index.ts',
+    'UNDECLARED docs/b.md  mentions mod03/index.ts',
+  ]);
+  expect(result.stdout).toContain('... and 2 more. Fix these, then run again.\n');
+});
+
+scenario('§13.5 --quiet and the exit code ignore the limit', async (repo) => {
+  await repoWithMentions(repo, { 'docs/a.md': [1, 12] });
+  const result = await repo.run(['check', '--undeclared', '--quiet', '--limit', '1']);
+  expect(result.exit).toBe(1);
+  expect(result.stdout.startsWith('UNDECLARED docs/a.md  mentions mod01/index.ts\n')).toBe(true);
+  expect(result.stdout).toContain('... and 11 more.');
+});
+
+scenario('§14.5 check --undeclared --json is never paged', async (repo) => {
+  await repoWithMentions(repo, { 'docs/a.md': [1, 12] });
+  const result = await repo.run(['check', '--undeclared', '--limit', '2', '--json'], {
+    snapshot: false,
+  });
+  expect(result.exit).toBe(1);
+  expect(result.json().undeclared).toHaveLength(12);
+  const plain = await repo.run(['check', '--undeclared', '--json'], { snapshot: false });
+  expect(plain.stdout).toBe(result.stdout);
+});
+
+scenario(
+  '§13.2 --limit is E_USAGE without --undeclared, with a bad value or elsewhere',
+  async (repo) => {
+    await repoWithMentions(repo, { 'docs/a.md': [1, 2] });
+    for (const args of [
+      ['check', '--limit', '3'],
+      ['check', '--undeclared', '--limit', '-1'],
+      ['check', '--undeclared', '--limit', 'ten'],
+      ['check', '--undeclared', '--limit'],
+      ['list-dependencies', '--limit', '3'],
+      ['suggest', '--limit', '3', 'docs/a.md'],
+      ['suggest', '--all', '--limit', '1.5'],
+    ]) {
+      const result = await repo.run(args, { label: args.join(' ') });
+      expect(result.exit, args.join(' ')).toBe(2);
+      expect(result.stderr).toContain('E_USAGE: --limit');
+    }
+  },
+);
+
+scenario('§14.9 suggest --all prints exactly 10 rows without a closing line', async (repo) => {
+  await repoWithMentions(repo, { 'docs/a.md': [1, 10] });
+  const result = await repo.run(['suggest', '--all']);
+  expect(result.exit).toBe(0);
+  expect(result.stdout.split('\n').filter((line) => line.includes('/index.ts'))).toHaveLength(10);
+  expect(result.stdout).not.toContain('... and');
+});
+
+scenario('§14.9 suggest --all cuts rows across files and counts the files left', async (repo) => {
+  await repoWithMentions(repo, {
+    'docs/a.md': [1, 6],
+    'docs/b.md': [7, 12],
+    'docs/c.md': [13, 15],
+  });
+  const result = await repo.run(['suggest', '--all']);
+  expect(result.exit).toBe(0);
+  expect(result.stdout).toContain('suggest docs/b.md\n');
+  expect(result.stdout).not.toContain('suggest docs/c.md');
+  expect(
+    result.stdout.endsWith(
+      '... and 5 more suggestions in 1 more file. Fix these, then run again.\n',
+    ),
+  ).toBe(true);
+});
+
+scenario('§14.9 suggest --all with one file cut has no file count', async (repo) => {
+  await repoWithMentions(repo, { 'docs/a.md': [1, 12] });
+  const result = await repo.run(['suggest', '--all']);
+  expect(result.stdout.endsWith('... and 2 more suggestions. Fix these, then run again.\n')).toBe(
+    true,
+  );
+});
+
+scenario(
+  '§14.9 suggest --all --limit 0 prints every row, --limit 3 pages by three',
+  async (repo) => {
+    await repoWithMentions(repo, { 'docs/a.md': [1, 2], 'docs/b.md': [3, 5] });
+    const all = await repo.run(['suggest', '--all', '--limit', '0']);
+    expect(all.stdout).not.toContain('... and');
+    expect(all.stdout.split('\n').filter((line) => line.includes('/index.ts'))).toHaveLength(5);
+    const paged = await repo.run(['suggest', '--all', '--limit', '3']);
+    expect(paged.exit).toBe(0);
+    expect(paged.stdout).toContain('suggest docs/b.md\n');
+    expect(paged.stdout.endsWith('... and 2 more suggestions. Fix these, then run again.\n')).toBe(
+      true,
+    );
+    const one = await repo.run(['suggest', '--all', '--limit', '1']);
+    expect(one.stdout).not.toContain('suggest docs/b.md');
+    expect(
+      one.stdout.endsWith(
+        '... and 4 more suggestions in 1 more file. Fix these, then run again.\n',
+      ),
+    ).toBe(true);
+  },
+);
+
+scenario('§14.5 suggest --all --json is never paged', async (repo) => {
+  await repoWithMentions(repo, { 'docs/a.md': [1, 6], 'docs/b.md': [7, 12] });
+  const result = await repo.run(['suggest', '--all', '--limit', '2', '--json'], {
+    snapshot: false,
+  });
+  expect(result.exit).toBe(0);
+  const rows = result.json().files.flatMap((f: { suggestions: unknown[] }) => f.suggestions);
+  expect(rows).toHaveLength(12);
+});

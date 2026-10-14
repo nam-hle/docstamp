@@ -38,6 +38,8 @@ export interface CheckTextOptions {
   inline?: ReadonlySet<string>;
   // SPEC §14.3: the mentioned paths nothing declares, when --undeclared is given
   undeclared?: readonly { readonly file: string; readonly path: string }[];
+  // SPEC §13.5: the undeclared lines printed; 0 prints all
+  limit?: number;
 }
 
 export interface Chunk {
@@ -232,6 +234,7 @@ export function checkChunks(
     rootFromCwd = '',
     inline = new Set<string>(),
     undeclared = [],
+    limit = 0,
   }: CheckTextOptions = {},
 ): Chunk[] {
   const chunks: Chunk[] = [];
@@ -288,8 +291,14 @@ export function checkChunks(
     }
   }
   if (undeclared.length > 0) {
-    const lines = undeclared.map((u) => `UNDECLARED ${shown(u.file)}  mentions ${shown(u.path)}\n`);
-    emit('stdout', lines.join('') + UNDECLARED_NEXT);
+    // SPEC §13.5, §14.3: limit 0 prints every line
+    const shownCount = limit === 0 ? undeclared.length : Math.min(limit, undeclared.length);
+    const lines = undeclared
+      .slice(0, shownCount)
+      .map((u) => `UNDECLARED ${shown(u.file)}  mentions ${shown(u.path)}\n`);
+    const left = undeclared.length - shownCount;
+    const more = left === 0 ? '' : `... and ${left} more. Fix these, then run again.\n`;
+    emit('stdout', lines.join('') + more + UNDECLARED_NEXT);
   }
   return chunks;
 }

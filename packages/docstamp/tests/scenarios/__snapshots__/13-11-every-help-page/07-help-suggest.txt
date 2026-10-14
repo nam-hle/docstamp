@@ -4,7 +4,7 @@ exit: 0
 docstamp suggest: Propose dependencies from the paths each file mentions.
 
 Usage:
-  docstamp suggest [--json] [--cwd <dir>] (--all | [--write] <file>...)
+  docstamp suggest [--json] [--cwd <dir>] (--all [--limit <n>] | [--write] <file>...)
 
 Reads each named file and proposes its dependencies from the repository paths it mentions (code
 spans, links, paths in the prose), with the number of files each pattern selects and its stale rate
@@ -16,7 +16,8 @@ and only declared lines list the declared patterns it no longer mentions.
 
 With --all it reads every file that has a declaration, configured or inline, and prints only the
 proposals with status new, grouped by file: the paths a doc mentions that no declaration covers. It
-prints nothing when there are none, and never writes.
+prints nothing when there are none, and never writes. The text shows the first 10 rows over all
+files and says how many were left out: fix those, then run again (--limit changes the count).
 
 Read the proposal before keeping it: a mention can be an illustration, and a directory can select
 many files. It is the quick way to enroll an existing doc: suggest --write, review, then update.
@@ -24,6 +25,8 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
 Options:
   --all        Propose for every file that has a declaration and print only the new proposals. Not
                with file arguments or --write.
+  --limit <n>  With --all, print at most <n> rows over all files (default 10), then how many were
+               left out; 0 prints all. --json is not limited.
   --json       Print one JSON document instead of text (docstamp help json).
   --cwd <dir>  Act as if run from <dir>: the root is searched upward from it, and file arguments are
                resolved against it.

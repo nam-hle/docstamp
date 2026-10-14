@@ -1,0 +1,6 @@
+# list-dependencies --limit 3
+$ docstamp list-dependencies --limit 3
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --limit: --limit is only valid with "check --undeclared" and "suggest --all"; see docstamp help list-dependencies.

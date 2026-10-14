@@ -38,10 +38,24 @@ const NAMES = [
 ];
 
 // a value for each option that takes one, so that the parser judges the option itself
-const VALUES: Record<string, string> = { '--cwd': '.', '--since': '30d', '--from': 'HEAD' };
+const VALUES: Record<string, string> = {
+  '--cwd': '.',
+  '--since': '30d',
+  '--from': 'HEAD',
+  '--limit': '10',
+};
+// an option that only another option enables, per command (SPEC §13.2)
+const ENABLERS: Record<string, Record<string, string>> = {
+  '--limit': { check: '--undeclared', suggest: '--all' },
+};
 
 function accepts(command: string, option: string): boolean {
-  const written = option in VALUES ? [option, VALUES[option]!] : [option];
+  const enabler = ENABLERS[option]?.[command];
+  const written = [
+    ...(enabler === undefined ? [] : [enabler]),
+    option,
+    VALUES[option] ?? [],
+  ].flat();
   return [[], ['a.md']].some((files) => {
     try {
       parseArgs([command, ...written, ...files]);
