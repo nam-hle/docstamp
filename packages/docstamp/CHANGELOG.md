@@ -3,6 +3,74 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.0](https://github.com/nam-hle/docstamp/compare/v0.5.0...v0.6.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* a dependency string is now split at its first unescaped `:` into a file path and a selector, so a dependency written as a file name that contains a colon (for example `notes:2024.md`) no longer names that file. Write the colon as `\:` (`notes\:2024.md`). This ships with Lockfile version 4.
+* ignore rules (.gitignore and `ignore`) now match the NFC form of a name, so a decomposed (NFD) file or directory that a rule names is ignored, and a space after an escaped backslash is trimmed as git does, so `name\ ` enters the file set and `name\` leaves it. Selected file lists and Dependency Hashes may change. The Lockfile version is 4; a version 2 or 3 lock is refused with E_LOCK_VERSION. Migration: review every file, then run `docstamp update --all`. Inline `hash:` lines are not refused; a doc whose selection changed reports stale, so review it and run `docstamp update <file>`. The Hash algorithm and the pinned vectors are unchanged.
+* replace --root with --cwd ([#99](https://github.com/nam-hle/docstamp/issues/99))
+
+### Features
+
+* a plugin returns parts and diagnostics ([#95](https://github.com/nam-hle/docstamp/issues/95)) ([2c9341e](https://github.com/nam-hle/docstamp/commit/2c9341e4c451eecada7e1697f58c36149769ed95))
+* add the concepts help topic and help --json ([#139](https://github.com/nam-hle/docstamp/issues/139)) ([4e3b67f](https://github.com/nam-hle/docstamp/commit/4e3b67f5c697b2116ba41d2d3942bf146e355e49))
+* check --undeclared skips tracked files and undeclared.ignore paths ([#142](https://github.com/nam-hle/docstamp/issues/142)) ([e4d3fd7](https://github.com/nam-hle/docstamp/commit/e4d3fd7567b7c44739132037f84bb54e7c16cef9))
+* depend on one value of a JSON or YAML file with built-in plugins ([#80](https://github.com/nam-hle/docstamp/issues/80)) ([bf80d5f](https://github.com/nam-hle/docstamp/commit/bf80d5f161e9a8627bb7b50829fba28b02ae2c47))
+* let a plugin say what a part is and where it is ([#86](https://github.com/nam-hle/docstamp/issues/86)) ([0ba965e](https://github.com/nam-hle/docstamp/commit/0ba965e826e395e137f511d69cccfb36bae79ba4))
+* page the findings of check --undeclared and suggest --all ([#141](https://github.com/nam-hle/docstamp/issues/141)) ([44d6b6f](https://github.com/nam-hle/docstamp/commit/44d6b6fd876192d614e27e18655611c9484f38ca))
+* plugin validateSelect and stable diagnostic codes ([#115](https://github.com/nam-hle/docstamp/issues/115)) ([09dc38f](https://github.com/nam-hle/docstamp/commit/09dc38fa4157ce4ac571d2355ffb32771c239ef0))
+* plugins define their select format, core validates meta.schema ([#118](https://github.com/nam-hle/docstamp/issues/118)) ([dc64255](https://github.com/nam-hle/docstamp/commit/dc6425530edcf84ba23888d568e0fd4c97752f4e))
+* plugins suggest what exists when a selector finds nothing ([#124](https://github.com/nam-hle/docstamp/issues/124)) ([ccfa7c1](https://github.com/nam-hle/docstamp/commit/ccfa7c12237cfaba386045d55804c4912237bd12))
+* print a selected dependency as written in text output ([#140](https://github.com/nam-hle/docstamp/issues/140)) ([6b5ac6f](https://github.com/nam-hle/docstamp/commit/6b5ac6f92db7677e75d93903233878dea20cb5fa))
+* print the review input before update writes ([#138](https://github.com/nam-hle/docstamp/issues/138)) ([bd9684d](https://github.com/nam-hle/docstamp/commit/bd9684d0072ed62ba68a4514756891414e2fde46))
+* replace --root with --cwd ([#99](https://github.com/nam-hle/docstamp/issues/99)) ([09f0698](https://github.com/nam-hle/docstamp/commit/09f06981fd1581304e5bdfc87ca669987ee72032))
+* report paths a doc mentions but does not declare ([#137](https://github.com/nam-hle/docstamp/issues/137)) ([04ed4c8](https://github.com/nam-hle/docstamp/commit/04ed4c8ae6819a5e92e2be30939cc6895fc541ed))
+* say which selected part of a file changed in the changed-file report ([#83](https://github.com/nam-hle/docstamp/issues/83)) ([f890efc](https://github.com/nam-hle/docstamp/commit/f890efc3b36c05ee12af1d4d4076dca1bde6d0e4))
+* select a part of a file with path:selector shorthand ([#117](https://github.com/nam-hle/docstamp/issues/117)) ([ceab8b1](https://github.com/nam-hle/docstamp/commit/ceab8b1c62b500d01bafd4deb4e4b5095d83a473))
+* stats breaks a named file down by dependency ([#132](https://github.com/nam-hle/docstamp/issues/132)) ([8e1d3e3](https://github.com/nam-hle/docstamp/commit/8e1d3e3c9d896f461c3106c32909e402ebaf0472))
+* suggest skips proposals over a file cap ([#143](https://github.com/nam-hle/docstamp/issues/143)) ([eee5c9d](https://github.com/nam-hle/docstamp/commit/eee5c9d1cbc1434d3c0729cdb09a420a03e66a44))
+
+
+### Bug Fixes
+
+* a hash comment needs a blank before the # ([#105](https://github.com/nam-hle/docstamp/issues/105)) ([b0b6fb9](https://github.com/nam-hle/docstamp/commit/b0b6fb906a14fbefb274b029676154b6e6934366))
+* align E_UNREADABLE text, help index and VISION with the spec ([#108](https://github.com/nam-hle/docstamp/issues/108)) ([28824e1](https://github.com/nam-hle/docstamp/commit/28824e1b09b415276c5dd96310a57d74e47a3f68))
+* an empty pattern no longer hides a selector that finds nothing ([#127](https://github.com/nam-hle/docstamp/issues/127)) ([4214108](https://github.com/nam-hle/docstamp/commit/4214108caeb653d3b0dfae885ed1071185c92520))
+* close gaps in the plugin core ([#84](https://github.com/nam-hle/docstamp/issues/84)) ([654e41c](https://github.com/nam-hle/docstamp/commit/654e41cc0a29af1130ff82c75b9335ae395d2a6b))
+* decide binary once, on the file's own bytes ([#106](https://github.com/nam-hle/docstamp/issues/106)) ([8f2c1f5](https://github.com/nam-hle/docstamp/commit/8f2c1f5eb116ec7eaedee2f0b8305ccb7f291e0a))
+* give a plugin a copy of select so it cannot change the hash ([#104](https://github.com/nam-hle/docstamp/issues/104)) ([ca88f2c](https://github.com/nam-hle/docstamp/commit/ca88f2cbf55eeec6204d5d885eae5f6ba90608fe))
+* help names the working directory, not --root ([#101](https://github.com/nam-hle/docstamp/issues/101)) ([2870659](https://github.com/nam-hle/docstamp/commit/2870659ecfc496ebdfeceb03dde06b84bd2218e7))
+* lockfile diagnostics name the lock file ([#131](https://github.com/nam-hle/docstamp/issues/131)) ([e2e16fb](https://github.com/nam-hle/docstamp/commit/e2e16fbffb6d0e12a7533d2f1542cd2f7cef245d))
+* match ignore rules on NFC names, trim a space after an escaped backslash, lock version 4 ([#114](https://github.com/nam-hle/docstamp/issues/114)) ([815a42b](https://github.com/nam-hle/docstamp/commit/815a42b100552c4385c835829c73296174aaefdc))
+* match patterns in linear time ([#113](https://github.com/nam-hle/docstamp/issues/113)) ([c08a034](https://github.com/nam-hle/docstamp/commit/c08a0346f488a11e931ef0fe1b3d323ce820f51f))
+* name the file and the cause when a script config fails to load ([#123](https://github.com/nam-hle/docstamp/issues/123)) ([a6295b2](https://github.com/nam-hle/docstamp/commit/a6295b269293d1d135fd35f610e5214cb9b11281))
+* report a script configuration edited since review ([#133](https://github.com/nam-hle/docstamp/issues/133)) ([6696c75](https://github.com/nam-hle/docstamp/commit/6696c756fb17a01bf8da0c2200218597f643ccb4))
+* stats counts a selected dependency only when its part changed ([#125](https://github.com/nam-hle/docstamp/issues/125)) ([7084aac](https://github.com/nam-hle/docstamp/commit/7084aaccc4d5f1e39295ef66d6de3bbd3781307c))
+
+
+### Documentation
+
+* document resolving a merge conflict in the lock ([#144](https://github.com/nam-hle/docstamp/issues/144)) ([9bccbb3](https://github.com/nam-hle/docstamp/commit/9bccbb3137e9665c89b67c363b4469749fcc41a4))
+* explain how check reports a dependency list edit ([#122](https://github.com/nam-hle/docstamp/issues/122)) ([fac0bca](https://github.com/nam-hle/docstamp/commit/fac0bca5228e9f49537bc51e416c11aec8647e81))
+* split the spec into one file per section ([#98](https://github.com/nam-hle/docstamp/issues/98)) ([b0a0114](https://github.com/nam-hle/docstamp/commit/b0a0114b1bd68927911dc5e5ea792b346d30754d))
+* version the plugin contract, plugins need a script config ([#112](https://github.com/nam-hle/docstamp/issues/112)) ([1099646](https://github.com/nam-hle/docstamp/commit/1099646eef7f3d062de139fc2a54d5829a65592d))
+
+
+### Internal
+
+* canonicalJson to core, platform through Host ([#110](https://github.com/nam-hle/docstamp/issues/110)) ([46e92de](https://github.com/nam-hle/docstamp/commit/46e92de74a9be4f99c72bd704100cc4ee4a97d1c))
+* fail when a spec clause has no cite and no test ([#107](https://github.com/nam-hle/docstamp/issues/107)) ([bddf1e8](https://github.com/nam-hle/docstamp/commit/bddf1e8d0c3ef35e82e955bfe34370e1b64287a5))
+* keep only wiring in the real end-to-end suite ([#90](https://github.com/nam-hle/docstamp/issues/90)) ([f803575](https://github.com/nam-hle/docstamp/commit/f80357508c7ed45243bb3eb3f6c7a4d1a8245d56))
+* move the package into packages/docstamp and run the gate through nadle ([#74](https://github.com/nam-hle/docstamp/issues/74)) ([a47c751](https://github.com/nam-hle/docstamp/commit/a47c7518f99aa6bf7d1b29bb390abd1748018841))
+* reach git and the clock through the Host, and run the git scenarios in memory ([#89](https://github.com/nam-hle/docstamp/issues/89)) ([d0aa922](https://github.com/nam-hle/docstamp/commit/d0aa922f95db0035f37146cd04f4876bbf52fde1))
+* reach the file system through a Host port ([#87](https://github.com/nam-hle/docstamp/issues/87)) ([d92d82b](https://github.com/nam-hle/docstamp/commit/d92d82b7cf1293b5386f3623230ac2b453ecef31))
+* remove match from selected dependencies ([#94](https://github.com/nam-hle/docstamp/issues/94)) ([80adf3b](https://github.com/nam-hle/docstamp/commit/80adf3b9e9224de2721a9a594d4131a5aa5e8d5e))
+* run most scenarios in memory, in this process ([#88](https://github.com/nam-hle/docstamp/issues/88)) ([bc95a87](https://github.com/nam-hle/docstamp/commit/bc95a876b550ea3769cea0be38cfaa332585d036))
+* split check and update out of run.ts, pure planUpdate ([#109](https://github.com/nam-hle/docstamp/issues/109)) ([4649ddd](https://github.com/nam-hle/docstamp/commit/4649ddd4c4edcd554e8b8b88d8b3b32caa184e7f))
+* split the slow history-rewrite scenario into three ([#111](https://github.com/nam-hle/docstamp/issues/111)) ([2cc8abf](https://github.com/nam-hle/docstamp/commit/2cc8abf1f109002a9239b7c934ab76db3e24986b))
+
 ## [0.5.0](https://github.com/nam-hle/docstamp/compare/v0.4.0...v0.5.0) (2026-10-09)
 
 
