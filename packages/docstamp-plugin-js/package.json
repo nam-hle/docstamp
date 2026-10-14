@@ -1,6 +1,6 @@
 {
   "name": "docstamp-plugin-js",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "docstamp plugin: depend on one top-level declaration of a JavaScript or TypeScript file, by its kind and name",
   "license": "MIT",
   "author": {
