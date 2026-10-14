@@ -481,6 +481,7 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
         ],
         "ignored": ["dist/index.js"],
         "declared": null,
+        "skipped": [{ "pattern": "src", "files": 460 }],
         "diagnostics": []
       }
     ],
@@ -493,7 +494,9 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   of `[[Files]]`, and `staleRate` the Number of §13.10 step 6 (as `stats` writes `staleRate`, §14.5
   above) or `null`, then `status`, the *status* of §13.10 step 4 (`"declared"`, `"covered"` or
   `"new"`), or `null` when `declared` is `null`. `ignored` is the List of §12.6, `[]` when there is none. `declared` follows
-  `ignored`: the List *declared* of §13.10 step 4, in its order, or `null` when it is *none*. With `--write` each
+  `ignored`: the List *declared* of §13.10 step 4, in its order, or `null` when it is *none*. `skipped`
+follows `declared`: the List *skipped* of §12.6 step 8 as { `pattern`, `files`: its `[[Count]]` } in
+its order, `[]` when there is none, and never paged. With `--write` each
   element adds `"written": true|false` after `diagnostics`. The `diagnostics` of a file are always
   `[]`, kept for the shape of the other modes; the top-level `diagnostics` hold the raised
   Diagnostics, in which case `files` is empty. With `--all` (§13.10) the document has a last
@@ -641,7 +644,13 @@ on the left, each to the width of its longest cell, header included. `files` is 
 the `staleRate` with exactly four decimals as in §14.8, `n/a` when it is *none* for a pattern with no Negation,
 and empty for one with a Negation. A row has no trailing space. A file with no Suggestion has the
 single line `  no paths found`. Then one line `  ignored  <path>` per *ignored* path, as in §14.2,
-in path order.
+in path order, then one line `  skipped  <pattern>  <n> files  (over --max-files <max>)` per
+*skipped* element (§12.6 step 8), in path order, the pattern as in §14.2, *n* its `[[Count]]` and
+*max* the limit in force; *n* is always more than 1, so `files` is always plural:
+
+```
+  skipped  src  460 files  (over --max-files 50)
+```
 
 When *declared* (§13.10 step 4) is not *none*, the table has a fourth column, `status`, padded on
 the right like `pattern` (a row has still no trailing space): the *status* of the Suggestion
@@ -658,13 +667,14 @@ suggest docs/architecture.md
 ```
 
 With `--all` (§13.10) every block has the `status` column and only rows of status `new`, and no
-`ignored` or `only declared` line; a file with no `new` Suggestion has no block, so a repository
-without gaps prints nothing.
+`ignored` or `only declared` line, but its `skipped` lines; a file with no `new` Suggestion has no
+block, so a repository without gaps prints nothing, and its `skipped` lines are not output.
 
 With `--all` the rows are paged: the output holds the first *limit* rows over the blocks in path
 order (§13.10 step 8), as if the other rows did not exist, so each table is padded to its printed
-rows. A block with some rows left out keeps its first line and the rows that fit; a block after
-the last printed row is not output. When *n* rows are left out, the last line is `... and <n> more suggestions in <m> more files. Fix these, then run
+rows. A block with some rows left out keeps its first line and the rows that fit, and all of its `skipped` lines: a `skipped` line is not a row, is not counted in
+*limit* or in *n*, and is never left out of a block that is output; a block after
+the last printed row is not output, with its `skipped` lines. When *n* rows are left out, the last line is `... and <n> more suggestions in <m> more files. Fix these, then run
 again.`, *m* being the number of blocks not output, or `... and <n> more suggestions. Fix these,
 then run again.` when *m* is 0. For *n* or *m* equal to 1 the noun is singular (`suggestion`,
 `file`). With no row left out there is no such line. `--json` lists every row (§14.5).
