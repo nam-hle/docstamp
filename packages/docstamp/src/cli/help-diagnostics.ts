@@ -37,7 +37,8 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'files.',
     fix:
       'Fix the key the subject names (presets.<name> for a preset, use for a file, ' +
-      'default-presets for the default presets; an empty use needs default-presets); for a ' +
+      'default-presets for the default presets, undeclared or undeclared.ignore for the ignored ' +
+      'paths of check --undeclared; an empty use needs default-presets); for a ' +
       'missing files, write files: {} for none (a key one or two edits from files, such as ' +
       'fils, is E_UNKNOWN_KEY alone); a script must export default plain data. See docstamp ' +
       'help config.',
