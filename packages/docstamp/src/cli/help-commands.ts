@@ -50,6 +50,11 @@ file's patterns as depends lines. That report is advisory: the verdict never rea
         'Also fail (exit 1) when a selected file mentions a path of an existing file that none of ' +
           'its patterns covers. Directories and globs are not judged. With --json: undeclared.',
       ],
+      [
+        '--limit <n>',
+        'With --undeclared, print at most <n> UNDECLARED lines (default 10), then how many were ' +
+          'left out; 0 prints all. The exit code and --json are not limited.',
+      ],
       ROOT_OPTION,
       ['<file>...', 'Check only these stamped files.'],
     ],
@@ -206,7 +211,9 @@ history (fetch-depth: 0 in CI), else E_HISTORY.`,
     related: ['suggest', 'patterns'],
   },
   suggest: {
-    synopsis: ['docstamp suggest [--json] [--cwd <dir>] (--all | [--write] <file>...)'],
+    synopsis: [
+      'docstamp suggest [--json] [--cwd <dir>] (--all [--limit <n>] | [--write] <file>...)',
+    ],
     summary: 'Propose dependencies from the paths each file mentions.',
     description: `
 Reads each named file and proposes its dependencies from the repository paths it mentions (code
@@ -219,7 +226,8 @@ and only declared lines list the declared patterns it no longer mentions.
 
 With --all it reads every file that has a declaration, configured or inline, and prints only the
 proposals with status new, grouped by file: the paths a doc mentions that no declaration covers. It
-prints nothing when there are none, and never writes.
+prints nothing when there are none, and never writes. The text shows the first 10 rows over all
+files and says how many were left out: fix those, then run again (--limit changes the count).
 
 Read the proposal before keeping it: a mention can be an illustration, and a directory can select
 many files. It is the quick way to enroll an existing doc: suggest --write, review, then update.`,
@@ -228,6 +236,11 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
         '--all',
         'Propose for every file that has a declaration and print only the new proposals. Not with ' +
           'file arguments or --write.',
+      ],
+      [
+        '--limit <n>',
+        'With --all, print at most <n> rows over all files (default 10), then how many were left ' +
+          'out; 0 prints all. --json is not limited.',
       ],
       JSON_OPTION,
       ROOT_OPTION,

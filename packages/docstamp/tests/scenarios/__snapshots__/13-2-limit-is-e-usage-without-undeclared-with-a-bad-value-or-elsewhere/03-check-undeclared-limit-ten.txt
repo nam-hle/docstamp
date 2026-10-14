@@ -1,0 +1,6 @@
+# check --undeclared --limit ten
+$ docstamp check --undeclared --limit ten
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --limit: --limit needs a whole number: 1 or more per page, or 0 to print all; see docstamp help check.

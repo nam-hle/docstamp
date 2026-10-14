@@ -1,0 +1,10 @@
+$ docstamp check --undeclared --limit 3
+exit: 1
+--- stdout ---
+2 ok, 0 stale, 0 invalid
+UNDECLARED docs/a.md  mentions mod01/index.ts
+UNDECLARED docs/a.md  mentions mod02/index.ts
+UNDECLARED docs/b.md  mentions mod03/index.ts
+... and 2 more. Fix these, then run again.
+next: declare each mentioned path in its file, or stop mentioning it; see docstamp help suggest
+--- stderr ---

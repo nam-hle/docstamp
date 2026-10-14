@@ -27,6 +27,7 @@ export type Args =
       onlyStale: boolean;
       quiet: boolean;
       undeclared: boolean;
+      limit: number;
       cwd?: string;
       paths: string[];
     }
@@ -44,6 +45,7 @@ export type Args =
       paths: string[];
       write: boolean;
       all: boolean;
+      limit: number;
     }
   | { mode: 'update'; all: boolean; json: boolean; cwd?: string; paths: string[] };
 
@@ -79,6 +81,7 @@ const VALUED: Record<string, string> = {
   '--cwd': 'a directory',
   '--since': 'a number of days such as 30d',
   '--from': 'a revision',
+  '--limit': 'a number of findings such as 10 (0 prints all)',
 };
 const valuedName = (arg: string): string | undefined =>
   Object.keys(VALUED).find((name) => arg === name || arg.startsWith(`${name}=`));
@@ -92,6 +95,9 @@ const STATS_ONLY = ['--since', '--from'];
 const CHECK_ONLY = ['--only-stale', '--quiet', '--undeclared'];
 const MAX_DAYS = 3650;
 const DAYS = /^([1-9][0-9]{0,3})d$/u;
+const LIMIT = /^(0|[1-9][0-9]{0,8})$/u;
+// SPEC §13.5, §14.9: the findings text mode prints
+const DEFAULT_LIMIT = 10;
 const usage = (subject: string, message?: string) =>
   new Raised([diag('E_USAGE', { subject, ...(message === undefined ? {} : { message }) })]);
 
@@ -219,6 +225,15 @@ export function parseArgs(
     fail('--since', `--since needs a number of days written like 30d (1d to ${MAX_DAYS}d).`);
   }
   if (from?.startsWith('-')) fail('--from', '--from needs a revision, not an option.');
+  const limit = values.get('--limit');
+  if (limit !== undefined) {
+    const enabler = mode === 'check' ? '--undeclared' : mode === 'suggest' ? '--all' : undefined;
+    if (enabler === undefined || !seen.has(enabler)) {
+      fail('--limit', '--limit is only valid with "check --undeclared" and "suggest --all".');
+    } else if (!LIMIT.test(limit)) {
+      fail('--limit', '--limit needs a whole number: 1 or more per page, or 0 to print all.');
+    }
+  }
   if (failure) {
     const page = explicit === undefined ? 'docstamp help' : `docstamp help ${explicit}`;
     throw usage(failure.subject, failure.message.replace(/\.$/u, `; see ${page}.`));
@@ -226,6 +241,7 @@ export function parseArgs(
   const json = seen.has('--json');
   const cwd = values.get('--cwd');
   const cwdOpt = cwd === undefined ? {} : { cwd };
+  const page = limit === undefined ? DEFAULT_LIMIT : Number(limit);
   if (mode === 'stats') {
     const window: StatsWindowArg =
       from === undefined
@@ -243,10 +259,10 @@ export function parseArgs(
   if (mode === 'check') {
     const onlyStale = seen.has('--only-stale');
     const [quiet, undeclared] = [seen.has('--quiet'), seen.has('--undeclared')];
-    return { mode, json, onlyStale, quiet, undeclared, ...cwdOpt, paths };
+    return { mode, json, onlyStale, quiet, undeclared, limit: page, ...cwdOpt, paths };
   }
   if (mode === 'suggest') {
-    return { mode, json, ...cwdOpt, paths, write: seen.has('--write'), all };
+    return { mode, json, ...cwdOpt, paths, write: seen.has('--write'), all, limit: page };
   }
   return mode === 'update'
     ? { mode, all, json, ...cwdOpt, paths }

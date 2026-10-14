@@ -1,0 +1,6 @@
+# suggest --limit 3 docs/a.md
+$ docstamp suggest --limit 3 docs/a.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --limit: --limit is only valid with "check --undeclared" and "suggest --all"; see docstamp help suggest.

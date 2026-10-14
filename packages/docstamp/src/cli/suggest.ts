@@ -212,7 +212,7 @@ export function runSuggest(
       suggestJsonText({ exitCode, write: args.write, all: args.all, files, diagnostics: global }),
     );
   } else {
-    io.stdout(suggestText(files, args.write, args.all));
+    io.stdout(suggestText(files, args.write, args.all, args.limit));
     io.stderr(diagnosticsText(global));
   }
   return exitCode;

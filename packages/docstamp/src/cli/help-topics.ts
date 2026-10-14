@@ -295,7 +295,8 @@ With --json, one JSON document goes to standard output and nothing to standard e
 document starts with version (2), mode (the command) and exitCode, and ends with diagnostics: the
 global ones, each { code, severity, file, subject, message }, file and subject null when empty, and
 pluginCode and written when they apply (written: a selected dependency as it was written).
-Consumers must ignore members they do not know: later releases only add members.
+Consumers must ignore members they do not know: later releases only add members. JSON is never
+paged: --limit shortens the text of check --undeclared and suggest --all only.
 
 - check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited (configurationEdited when a script configuration changed instead); fragments (a list of { path, select, status }, with written, focus and lines when they apply) appears when it has selected dependencies; selected lists { path, select } and written for a shorthand; use and origins when it uses presets (use is [] when they are only default-presets).
 - check --undeclared: a last top-level undeclared, a list of { file, path }.

@@ -49,7 +49,37 @@ function onlyDeclared(entry: SuggestEntry): string[] {
   return [...new Set(entry.declared ?? [])].filter((pattern) => !proposed.has(pattern));
 }
 
-export function suggestText(entries: readonly SuggestEntry[], write: boolean, all = false): string {
+const count = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
+// SPEC §14.9: the first `limit` rows over the blocks; 0 keeps every row
+function paged(
+  entries: readonly SuggestEntry[],
+  limit: number,
+): { kept: SuggestEntry[]; closing: string } {
+  const total = entries.reduce((sum, entry) => sum + entry.suggestions.length, 0);
+  if (limit === 0 || total <= limit) return { kept: [...entries], closing: '' };
+  let budget = limit;
+  const kept: SuggestEntry[] = [];
+  for (const entry of entries) {
+    if (budget === 0) break;
+    kept.push({ ...entry, suggestions: entry.suggestions.slice(0, budget) });
+    budget -= Math.min(budget, entry.suggestions.length);
+  }
+  const files = count(entries.length - kept.length, 'more file');
+  const where = kept.length === entries.length ? '' : ` in ${files}`;
+  const more = count(total - limit, 'more suggestion');
+  return { kept, closing: `... and ${more}${where}. Fix these, then run again.\n` };
+}
+
+export function suggestText(
+  everyEntry: readonly SuggestEntry[],
+  write: boolean,
+  all = false,
+  limit = 0,
+): string {
+  const { kept: entries, closing } = all
+    ? paged(everyEntry, limit)
+    : { kept: everyEntry, closing: '' };
   let out = '';
   for (const entry of entries) {
     out += `suggest ${shown(entry.file)}\n`;
@@ -67,7 +97,7 @@ export function suggestText(entries: readonly SuggestEntry[], write: boolean, al
       out += `${entry.written === true ? 'written  ' : 'unchanged  '}${shown(entry.file)}\n`;
     }
   }
-  return out;
+  return out + closing;
 }
 
 export interface SuggestJsonDoc {

@@ -22,6 +22,8 @@ Options:
   --undeclared  Also fail (exit 1) when a selected file mentions a path of an existing file that
                 none of its patterns covers. Directories and globs are not judged. With --json:
                 undeclared.
+  --limit <n>   With --undeclared, print at most <n> UNDECLARED lines (default 10), then how many
+                were left out; 0 prints all. The exit code and --json are not limited.
   --cwd <dir>   Act as if run from <dir>: the root is searched upward from it, and file arguments
                 are resolved against it.
   <file>...     Check only these stamped files.

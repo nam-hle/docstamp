@@ -1,0 +1,17 @@
+$ docstamp suggest --all
+exit: 0
+--- stdout ---
+suggest docs/a.md
+  pattern         files  stale  status
+  mod01/index.ts      1    n/a  new
+  mod02/index.ts      1    n/a  new
+  mod03/index.ts      1    n/a  new
+  mod04/index.ts      1    n/a  new
+  mod05/index.ts      1    n/a  new
+  mod06/index.ts      1    n/a  new
+  mod07/index.ts      1    n/a  new
+  mod08/index.ts      1    n/a  new
+  mod09/index.ts      1    n/a  new
+  mod10/index.ts      1    n/a  new
+... and 2 more suggestions. Fix these, then run again.
+--- stderr ---

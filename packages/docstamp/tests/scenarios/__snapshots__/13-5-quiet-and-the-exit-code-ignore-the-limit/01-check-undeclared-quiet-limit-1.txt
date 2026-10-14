@@ -1,0 +1,7 @@
+$ docstamp check --undeclared --quiet --limit 1
+exit: 1
+--- stdout ---
+UNDECLARED docs/a.md  mentions mod01/index.ts
+... and 11 more. Fix these, then run again.
+next: declare each mentioned path in its file, or stop mentioning it; see docstamp help suggest
+--- stderr ---

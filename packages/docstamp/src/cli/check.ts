@@ -105,6 +105,7 @@ export function runCheck(
       rootFromCwd: rootFromCwd(cwd, root, host.windows),
       inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
       undeclared,
+      limit: args.limit,
     });
     return emit(io, {
       ...empty,
