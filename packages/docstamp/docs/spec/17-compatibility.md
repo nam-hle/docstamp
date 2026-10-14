@@ -148,8 +148,7 @@ The following are not breaking:
   exit code is as it was;
 - the skipped paths of `check --undeclared` (§13.5) and the Configuration key `undeclared.ignore`
   (§9.3): the list *undeclared* loses the paths that are tracked files or that the key ignores. The
-  option is opt-in and was introduced one release ago, so only a command line that uses it sees
-  the smaller list. No row of §17.2 fits: a finding is neither a state, a Reason nor a Diagnostic
+  option is opt-in, so only a command line that uses it sees the smaller list. No row of §17.2 fits: a finding is neither a state, a Reason nor a Diagnostic
   (*Verdicts*), the meaning of exit code 1 (a finding exists) and the members of `--json` do not
   change (*Contract*), and no Hash, selection or Lockfile input is touched. A run that failed only
   on such a path now exits 0; that is the intended removal of a false positive, not a migration.
