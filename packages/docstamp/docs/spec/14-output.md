@@ -263,9 +263,27 @@ every host.
 
 ### 14.4 Update, Text Mode
 
-One line per target in path order: `written  <file>` if it was written (§13.6 step 10), else
-`unchanged  <file>`; then one line `removed  <file>` per removed entry in path order.
-Diagnostics as in §14.3. When step 5 of §13.6 refused, the blocks and summary line of §14.3 are
+First, for each target in path order that has a review input (§13.6):
+
+```
+changed since last review: <file>
+  modified  <path>
+  added     <path>
+```
+
+or, for a target that was `ok`, unless `--all`, the nothing-to-review note:
+
+```
+note: no dependency of <file> differs from its last reviewed state
+```
+
+The `changed since last review:` line is that text, a space and the file as in §14.2. It is followed
+by the *edited line*, the *configuration line*, the *selection lines*, the *summary line*, the
+*change lines* and the *fragment lines* of §14.3 and §14.3.1 for the target, as for a stale block
+and without its review line (§14.3.4); a target with nothing of these has no such block. The *same
+line* of §14.3.1 applies. Then one line per target in path order: `written  <file>` if it was
+written (§13.6 step 10), else `unchanged  <file>`; then one line `removed  <file>` per removed
+entry in path order. All of these go to standard output. Diagnostics as in §14.3. When step 5 of §13.6 refused, the blocks and summary line of §14.3 are
 output for the targets, in the order of §14.3.2, without the `next:` lines, and nothing is written. When the command
 raised before any Result existed, only the Diagnostics are output.
 
@@ -302,7 +320,10 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   `diagnostics`: the List *undeclared* of §13.5 as `{ "file", "path" }` in its order, `[]` when
   there is none or a step raised. Without the option the member is absent.
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path", "via" }` in this
-  order, or `null` when it is *unknown* or not applicable (§12.3), including in update mode.
+  order, or `null` when it is *unknown* or not applicable (§12.3). In update mode it is the review
+  input of §13.6: the Changes before the Write, `[]` for a target that was `ok`, and `null` for
+  an unrecorded target or when §12.3 returns *unknown*. `dependenciesEdited`, `configurationEdited`,
+  `selection` and `fragments` follow as for a stale check Result.
   `via` is `[[Via]]`, the List of patterns that selected the path. A fourth member,
   `"whitespaceOnly": true`, follows `via` in the entry of a Change whose `[[WhitespaceOnly]]` is
   true, and is absent otherwise. A last member, `"pair"`, is the Change's `[[Pair]]` when it is not

@@ -262,7 +262,7 @@ Consumers must ignore members they do not know: later releases only add members.
 
 - check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited (configurationEdited when a script configuration changed instead); fragments (a list of { path, select, status }, with focus and lines when the plugin gives them) appears when it has selected dependencies; use and origins when it uses presets (use is [] when they are only default-presets).
 - check --undeclared: a last top-level undeclared, a list of { file, path }.
-- update: as check, with written true or false on each file and a top-level removed list. A written file reports state ok.
+- update: as check, with written true or false on each file and a top-level removed list. A written file reports state ok. changes is what changed before the write, [] when nothing did, null when unrecorded or unknown.
 - list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and origins with presets, default-presets included.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive each dependent also has dependents, cycle and repeated.
 - stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount, staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }.
@@ -321,7 +321,9 @@ dependencies; compare them with the version that was reviewed.
 2. Read the file and fix every claim the change made untrue. A change that does not affect the
 file needs no edit.
 
-3. Only then run docstamp update <file>, naming that file.
+3. Only then run docstamp update <file>, naming that file. It prints the files that changed since
+the last review, so check that the list is what you read; a note that no dependency differs means
+there was nothing to review.
 
 Never run docstamp update without that review, and never use update --all, or edit a hash: line, to
 make the check pass. Exit 2 is not a review matter: fix the declaration its diagnostic names

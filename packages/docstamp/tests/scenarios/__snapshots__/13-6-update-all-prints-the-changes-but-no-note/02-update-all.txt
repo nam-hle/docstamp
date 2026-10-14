@@ -1,0 +1,5 @@
+$ docstamp update --all
+exit: 0
+--- stdout ---
+unchanged  CLAUDE.md
+--- stderr ---

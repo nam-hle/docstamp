@@ -13,7 +13,9 @@ them with the version that was reviewed.
 2. Read the file and fix every claim the change made untrue. A change that does not affect the file
 needs no edit.
 
-3. Only then run docstamp update <file>, naming that file.
+3. Only then run docstamp update <file>, naming that file. It prints the files that changed since
+the last review, so check that the list is what you read; a note that no dependency differs means
+there was nothing to review.
 
 Never run docstamp update without that review, and never use update --all, or edit a hash: line, to
 make the check pass. Exit 2 is not a review matter: fix the declaration its diagnostic names

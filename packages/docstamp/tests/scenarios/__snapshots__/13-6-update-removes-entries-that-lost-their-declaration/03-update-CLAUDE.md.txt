@@ -1,6 +1,7 @@
 $ docstamp update CLAUDE.md
 exit: 0
 --- stdout ---
+note: no dependency of CLAUDE.md differs from its last reviewed state
 unchanged  CLAUDE.md
 removed  README.md
 removed  docs/guide.md

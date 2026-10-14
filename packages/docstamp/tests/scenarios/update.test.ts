@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import { config, scenario } from './harness/index.ts';
+import { config, scenario, type Repo } from './harness/index.ts';
 
 const fixture = 'docs-site';
 const ROOT_ENTRIES = [
@@ -10,6 +10,8 @@ const ROOT_ENTRIES = [
   'docstamp.yaml',
   'src',
 ];
+const NOTHING = (file: string) =>
+  `note: no dependency of ${file} differs from its last reviewed state\n`;
 
 scenario('§13.6 update --all writes every entry in canonical form', { fixture }, async (repo) => {
   const result = await repo.run(['update', '--all']);
@@ -34,9 +36,11 @@ scenario('§13.6 update <file> records only the named file', { fixture }, async 
   );
 
   const again = await repo.run(['update', 'README.md']);
-  expect(again.stdout).toBe('unchanged  README.md\n');
+  expect(again.stdout).toBe(`${NOTHING('README.md')}unchanged  README.md\n`);
   const mixed = await repo.run(['update', 'docs/guide.md', 'CLAUDE.md', 'README.md']);
-  expect(mixed.stdout).toBe('written  CLAUDE.md\nunchanged  README.md\nwritten  docs/guide.md\n');
+  expect(mixed.stdout).toBe(
+    `${NOTHING('README.md')}written  CLAUDE.md\nunchanged  README.md\nwritten  docs/guide.md\n`,
+  );
   const unchangedJson = await repo.run(['update', '--json', 'README.md']);
   expect(unchangedJson.json().files[0]).toMatchObject({
     state: 'ok',
@@ -68,7 +72,9 @@ scenario('§13.6 update removes entries that lost their Declaration', { fixture 
   expect(check.stderr).toContain('warning: W_ORPHAN: docs/guide.md');
 
   const update = await repo.run(['update', 'CLAUDE.md']);
-  expect(update.stdout).toBe('unchanged  CLAUDE.md\nremoved  README.md\nremoved  docs/guide.md\n');
+  expect(update.stdout).toBe(
+    `${NOTHING('CLAUDE.md')}unchanged  CLAUDE.md\nremoved  README.md\nremoved  docs/guide.md\n`,
+  );
   expect(update.stderr).toBe('');
   await repo.snapFile('docstamp-lock.yaml');
   const after = await repo.run([]);
@@ -225,3 +231,75 @@ scenario(
     expect(repo.read('docstamp-lock.yaml')).toBe(good);
   },
 );
+
+async function reviewedClaude(repo: Repo): Promise<void> {
+  repo.write('docstamp.yaml', config({ 'CLAUDE.md': ['src/**', '!src/**/*.test.ts'] }));
+  repo.remove('README.md');
+  repo.remove('docs/guide.md');
+  repo.commit('initial');
+  await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+  repo.commit('review');
+}
+
+scenario('§13.6 update prints what changed since the last review', { fixture }, async (repo) => {
+  await reviewedClaude(repo);
+  repo.append('src/util.ts', 'more\n');
+  repo.write('src/new.ts', 'n\n');
+  const text = await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+  expect(text.stdout).toBe(
+    'changed since last review: CLAUDE.md\n' +
+      '  added     src/new.ts\n' +
+      '  modified  src/util.ts\n' +
+      'written  CLAUDE.md\n',
+  );
+  expect(text.stderr).toBe('');
+  expect((await repo.run([])).exit).toBe(0);
+});
+
+scenario('§14.5 update JSON carries the changes before the write', { fixture }, async (repo) => {
+  await reviewedClaude(repo);
+  repo.append('src/util.ts', 'more\n');
+  const json = await repo.run(['update', '--json', 'CLAUDE.md'], { expectExit: 0 });
+  expect(json.json().files[0]).toMatchObject({
+    state: 'ok',
+    changes: [{ status: 'modified', path: 'src/util.ts', via: ['src/**'] }],
+    written: true,
+  });
+});
+
+scenario('§13.6 update notes a file with nothing to review', { fixture }, async (repo) => {
+  await reviewedClaude(repo);
+  const text = await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+  expect(text.stdout).toBe(`${NOTHING('CLAUDE.md')}unchanged  CLAUDE.md\n`);
+  const json = await repo.run(['update', '--json', 'CLAUDE.md'], { expectExit: 0 });
+  expect(json.json().files[0]).toMatchObject({ changes: [], written: false });
+  expect(json.json().diagnostics).toEqual([]);
+});
+
+scenario('§13.6 a first update has no note and no list', { fixture }, async (repo) => {
+  const text = await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+  expect(text.stdout).toBe('written  CLAUDE.md\n');
+  const json = await repo.run(['update', '--json', 'README.md'], { expectExit: 0 });
+  expect(json.json().files[0].changes).toBeNull();
+});
+
+scenario('§13.6 update --all prints the changes but no note', { fixture }, async (repo) => {
+  await reviewedClaude(repo);
+  const quiet = await repo.run(['update', '--all'], { expectExit: 0 });
+  expect(quiet.stdout).toBe('unchanged  CLAUDE.md\n');
+  repo.append('src/util.ts', 'more\n');
+  const text = await repo.run(['update', '--all'], { expectExit: 0 });
+  expect(text.stdout).toBe(
+    'changed since last review: CLAUDE.md\n  modified  src/util.ts\nwritten  CLAUDE.md\n',
+  );
+});
+
+scenario('§13.6 the review input needs no git', { fixture: 'no-git', git: false }, async (repo) => {
+  await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+  repo.append('src/a.ts', 'more\n');
+  const text = await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+  expect(text.stdout).toBe('written  CLAUDE.md\n');
+  repo.append('src/a.ts', 'again\n');
+  const json = await repo.run(['update', '--json', 'CLAUDE.md'], { expectExit: 0 });
+  expect(json.json().files[0]).toMatchObject({ changes: null, written: true });
+});

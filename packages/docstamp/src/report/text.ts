@@ -327,6 +327,34 @@ export function listText(selected: readonly Result[]): string {
   return out;
 }
 
+// SPEC §14.4: what changed since each target's last review, or a note that nothing did
+export function reviewInputText(
+  targets: readonly Result[],
+  wasOk: ReadonlySet<string>,
+  withNotes: boolean,
+): string {
+  const renamesShownBy = new Map<string, string>();
+  return targets
+    .map((r) => {
+      if (wasOk.has(r.file)) {
+        return withNotes
+          ? `note: no dependency of ${shown(r.file)} differs from its last reviewed state\n`
+          : '';
+      }
+      const known =
+        r.changes &&
+        (r.changes.length > 0 ||
+          r.edited !== undefined ||
+          r.configEdited !== undefined ||
+          (r.fragments?.length ?? 0) > 0);
+      if (!known) return '';
+      const lines = withoutRepeatedRenames(changeLines(r.changes!), r, renamesShownBy);
+      const head = `changed since last review: ${shown(r.file)}\n${headLines(r)}`;
+      return head + lines.join('') + fragmentLines(r);
+    })
+    .join('');
+}
+
 // SPEC §14.4
 export function updateText(
   written: readonly string[],

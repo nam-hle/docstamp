@@ -4,9 +4,10 @@ import { planUpdate } from '../engine/update-plan.ts';
 import type { Host } from '../host/host.ts';
 import { stampFile } from '../inline/read-inline.ts';
 import { lockExists, writeLock } from '../lock/lock.ts';
-import { checkChunks, updateText } from '../report/text.ts';
+import { checkChunks, reviewInputText, updateText } from '../report/text.ts';
 import { determineRoot, resolveCwd } from '../universe/walk.ts';
 import type { Args } from './args.ts';
+import { withChanges } from './check.ts';
 import { emit, hasError, type Output } from './emit.ts';
 import { evaluateAll } from './evaluate.ts';
 import type { Io } from './io.ts';
@@ -43,19 +44,27 @@ export function runUpdate(
       const chunks = checkChunks(selected, global, { cwd: args.cwd, next: false });
       return emit(io, { ...empty, evaluated: true, selected, global, chunks });
     }
+    // SPEC §13.6: the review input, read before the write
+    const whitespace = new Map<string, boolean>();
+    const reviewed = selected.map((r) =>
+      r.state === 'ok' ? { ...r, changes: [] } : withChanges(host, root, r, evaluated, whitespace),
+    );
+    const wasOk = new Set(selected.filter((r) => r.state === 'ok').map((r) => r.file));
     const plan = planUpdate(selected, evaluated.declarations, evaluated.lock);
     if (plan.hasLockedFiles || lockExists(host, root)) {
       writeLock(host, root, { entries: plan.entries });
     }
     for (const [file, hash] of plan.stamps) stampFile(host, root, evaluated.universe, file, hash);
-    const afterWrite = selected.map((r): Result => ({ ...r, state: 'ok', reasons: [] }));
+    const afterWrite = reviewed.map((r): Result => ({ ...r, state: 'ok', reasons: [] }));
     return emit(io, {
       ...empty,
       evaluated: true,
       exitCode: 0,
       selected: afterWrite,
       global: global.filter((d) => d.code !== 'W_ORPHAN'),
-      text: updateText(plan.written, plan.unchanged, plan.removed),
+      text:
+        reviewInputText(reviewed, wasOk, !args.all) +
+        updateText(plan.written, plan.unchanged, plan.removed),
       written: new Set(plan.written),
       removed: plan.removed,
     });

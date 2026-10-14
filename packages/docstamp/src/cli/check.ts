@@ -14,7 +14,7 @@ import { rootFromCwd, selectResults } from './paths.ts';
 import { undeclaredPaths } from './undeclared.ts';
 
 // SPEC §12.3
-function withChanges(
+export function withChanges(
   host: Host,
   root: string,
   result: Result,

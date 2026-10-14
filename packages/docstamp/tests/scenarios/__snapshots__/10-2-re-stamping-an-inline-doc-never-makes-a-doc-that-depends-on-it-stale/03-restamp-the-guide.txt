@@ -2,5 +2,7 @@
 $ docstamp update docs/GUIDE.md
 exit: 0
 --- stdout ---
+changed since last review: docs/GUIDE.md
+  modified  src/core/hash.ts
 written  docs/GUIDE.md
 --- stderr ---

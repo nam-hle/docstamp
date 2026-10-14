@@ -17,7 +17,8 @@ must ignore members they do not know: later releases only add members.
   default-presets).
 - check --undeclared: a last top-level undeclared, a list of { file, path }.
 - update: as check, with written true or false on each file and a top-level removed list. A written
-  file reports state ok.
+  file reports state ok. changes is what changed before the write, [] when nothing did, null when
+  unrecorded or unknown.
 - list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and
   origins with presets, default-presets included.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive

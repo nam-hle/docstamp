@@ -1,5 +1,8 @@
 $ docstamp update B.md
 exit: 0
 --- stdout ---
+changed since last review: B.md
+  modified  src/index.ts
+  modified  src/util.ts
 written  B.md
 --- stderr ---

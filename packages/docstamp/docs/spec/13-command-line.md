@@ -189,12 +189,37 @@ reviewer compares them with the state at the last Write using its own tools.
 8. If some Declaration is configured, or `docstamp-lock.yaml` exists, `WriteLock(root, lock)`.
 9. For each *t* of *targets* whose Declaration is inline, in path order, whose `[[Recorded]]` is
    not equal to *t*.`[[Current]]`: `Stamp(root, t.[[File]], t.[[Current]])` (§9.6.4).
-10. Output, for each of *targets*, whether its LockEntry changed in step 6, or its `[[Recorded]]`
-   Hash was none or differed from *t*.`[[Current]]` in step 9 (*written*), or was already equal to
-   *t*.`[[Current]]` (*unchanged*), and *removed* (§14), and *global* without its `W_ORPHAN`
-   Diagnostics, since step 7 removed those entries, and the warnings of *targets*. Exit 0.
+10. Output, for each of *targets*, its *review input* (below), whether its LockEntry changed in
+   step 6, or its `[[Recorded]]` Hash was none or differed from *t*.`[[Current]]` in step 9
+   (*written*), or was already equal to *t*.`[[Current]]` (*unchanged*), and *removed* (§14), and
+   *global* without its `W_ORPHAN` Diagnostics, since step 7 removed those entries, and the
+   warnings of *targets*. Exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2.
+
+The *review input* of a target *t* is what changed in its dependencies since its last Review, so
+that the input of the Review is on screen when the Write is made. It is built after step 5 and
+before step 6 writes, from the Results of step 3, and sets `[[Changes]]` of *t* as follows:
+
+- if `[[State]]` is `stale` and `[[Reasons]]` contains `content-changed`, as §12.3 does for a
+  check (§13.5 step 4), with *entry* the LockEntry or the inline `[[Recorded]]` Hash of *t* before
+  the Write; it is *unknown* when §12.3 returns *unknown*;
+- if `[[State]]` is `ok`, `[[Changes]]` is « »: no dependency differs from the state of the last
+  Review;
+- otherwise (`unrecorded`) `[[Changes]]` is *unknown*: there is no last Review to compare with.
+
+Text mode (§14.4) outputs the changes of a target whose `[[Changes]]` is known and not empty, or
+whose `[[Edited]]`, `[[ConfigEdited]]` or `[[Fragments]]` is not none; and, unless `--all` is given,
+the *nothing-to-review note* for a target whose `[[State]]` was `ok`. JSON mode (§14.5) outputs
+`[[Changes]]` of every target.
+
+NOTE: The review input is advisory, as the report of §12.3 is: it never changes a state, a Hash,
+the files written or the exit code, which stay a function of the evaluation alone (principle 3). `update` still writes only the files it was given, and asks nothing
+of the caller: a note says that the Write records a Review of nothing, it does not refuse it. A
+file that is not recorded yet (first update) has no note, since there is nothing to compare with.
+Under `--all` the note is not output, as every unchanged file would print one; the changes are.
+When §12.3 returns *unknown* (no git, a shallow clone, a Write not yet committed), nothing of the
+review input is output and `update` behaves as it did.
 
 NOTE: `update --all` also migrates a version 2 Lockfile (§11.1): it discards the unreadable
 Lockfile and records every current Dependency Hash, with no Review.
