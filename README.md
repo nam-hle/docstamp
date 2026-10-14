@@ -41,6 +41,31 @@ A person or an agent re-reads the doc, fixes it, runs `docstamp update docs/auth
 - **The CLI documents itself.** `docstamp help` works offline; no README needed. `docstamp help concepts` explains the model: what stale means and why `update` is a review, not a refresh.
 - **CI-ready, one dependency.** Exit codes, `--json`, a [GitHub Action](https://nam-hle.github.io/docstamp/guide/ci); `yaml` is its only runtime dependency.
 
+## The loop, end to end
+
+A real run in a new git repository with two files: `src/session.ts`, and `docs/auth.md`, which declares `dependencies: [src]` in its frontmatter and says a session expires after 30 minutes. The commands are copy-pasteable; lines that start with `#` are the edits you make.
+
+```console
+$ docstamp update docs/auth.md
+written  docs/auth.md
+# commit, then change src/session.ts: SESSION_TTL_MINUTES = 30 becomes 60
+$ docstamp
+STALE    docs/auth.md  (content-changed)
+  modified  src/session.ts
+  review: git diff -M 79c25ec08ee9a1cca1d80b3d187c92bf54044839 -- src/session.ts
+0 ok, 1 stale, 0 invalid
+...
+# read the diff, fix docs/auth.md: "30 minutes" becomes "60 minutes"
+$ docstamp update docs/auth.md
+changed since last review: docs/auth.md
+  modified  src/session.ts
+written  docs/auth.md
+$ docstamp
+1 ok, 0 stale, 0 invalid
+```
+
+`...` marks the two `next:` lines that `docstamp` prints after a failure, left out here. `docstamp help concepts` explains the model: what stale means and why `update` is a review, not a refresh.
+
 ## Install
 
 Requires Node.js 24 or newer:
