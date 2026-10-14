@@ -174,6 +174,9 @@ The following are not breaking:
   bare `docstamp help` or `--help` still exits 0. So is shipping `docs/SPEC.md` in the package,
   which no command reads, the rule line after the stale `next:` line (§14.3.3, text layout of
   §14.3), and the wording of the `E_USAGE` and `E_CONFIG_MISSING` messages that name a help page;
+- the topic `concepts` and `--json` with `help` and no name (§13.11 steps 3 and 5, §14.5): `--json`
+  was ignored there and printed the text index; it now prints a JSON document with the new mode
+  `help`. The index text is unchanged, and no verdict or exit code depends on it;
 - `help diagnostics <code>` with a code in another letter case (§13.11 step 4): it was `E_USAGE`
   with exit 2 and now prints the entry and exits 0, which only a person reads;
 - `-h` (§13.1, §13.2): the same option as `--help`. It was an unknown option, `E_USAGE` with exit

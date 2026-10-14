@@ -19,11 +19,13 @@ them.
 | [`docstamp stats`](/reference/commands/stats) | How often each file's list would have made it stale. |
 | [`docstamp suggest`](/reference/commands/suggest) | Propose dependencies from the paths a doc mentions. |
 
-Every command except `help` and `version` takes `--json` and `--cwd <dir>`.
+Every command except `help` and `version` takes `--json` and `--cwd <dir>`. `docstamp help --json`
+lists the commands and topics as JSON.
 
 ## Topics
 
-The topic pages are in the sidebar. The ones to know first: [exit codes](/reference/topics/exit-codes),
+The topic pages are in the sidebar. Start with [concepts](/reference/topics/concepts), the model
+behind the tool. The ones to know next: [exit codes](/reference/topics/exit-codes),
 [states](/reference/topics/states) and [diagnostics](/reference/topics/diagnostics), which explains
 every error and how to fix it.
 

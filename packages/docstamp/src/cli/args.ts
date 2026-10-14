@@ -6,7 +6,7 @@ type StatsWindowArg =
   | { kind: 'from'; value: string };
 
 export type Args =
-  | { mode: 'help'; names: string[] }
+  | { mode: 'help'; names: string[]; json?: true }
   | { mode: 'version' }
   | {
       mode: 'list-dependencies';
@@ -162,8 +162,12 @@ export function parseArgs(
   }
   if (mistyped !== null) throw mistyped;
   // §13.2 step 3: the help names
-  if (command === 'help') return { mode: 'help', names: paths };
-  if (seen.has('--help')) return { mode: 'help', names: explicit === undefined ? [] : [explicit] };
+  // §13.11 step 5: --json reaches help only to ask for the index as JSON
+  const jsonOpt = seen.has('--json') ? ({ json: true } as const) : {};
+  if (command === 'help') return { mode: 'help', names: paths, ...jsonOpt };
+  if (seen.has('--help')) {
+    return { mode: 'help', names: explicit === undefined ? [] : [explicit], ...jsonOpt };
+  }
   if (seen.has('--version') || command === 'version') return { mode: 'version' };
   const mode = (command ?? 'check') as
     | 'check'

@@ -277,11 +277,14 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
     summary: 'Print the index, a command page or a topic page.',
     description: `
 Without a name: the index of commands and topics. With a command or topic: its page. With
-diagnostics and a code: that code alone. It reads no file. --help anywhere before -- prints the
+diagnostics and a code: that code alone. With --json and no name, the index as JSON: the commands
+and the topics, each with its summary. It reads no file. --help anywhere before -- prints the
 page of the command word given, or the index when there is none. A mistyped command (a first word
 one or two edits from a command name that names no file, such as updte) is E_USAGE with exit 2,
 with or without --help.`,
-    options: [],
+    options: [
+      ['--json', 'With no name: print the index as one JSON document (docstamp help json).'],
+    ],
     reads: 'nothing.',
     writes: 'nothing.',
     examples: [
@@ -293,7 +296,7 @@ with or without --help.`,
       ['0', 'the page was printed.'],
       ['2', 'an unknown name (E_USAGE lists the names).'],
     ],
-    related: ['start', 'agents'],
+    related: ['start', 'concepts', 'agents'],
   },
   version: {
     synopsis: ['docstamp version', 'docstamp --version'],

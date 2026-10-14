@@ -28,6 +28,8 @@ must ignore members they do not know: later releases only add members.
 - suggest: files of { file, suggestions: [{ pattern, resolvedCount, staleRate, status }], ignored,
   declared, diagnostics }, plus written with --write; with --all the top level also has all (true)
   and only the new proposals.
+- help (no name): commands of { name, synopsis, summary } and topics of { name, summary }, as the
+  text index lists them. mode is help.
 
 A command that fails before it evaluates anything has an empty files list and no summary. Read the
 verdict from exitCode and state, and the next step from the text mode's next: lines, which have no

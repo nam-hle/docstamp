@@ -311,7 +311,7 @@ change to the generic list, a threshold or a mention rule starts there.
 not in the package (only a short one that links to it), `docs/SPEC.md` is. The pages are static text: `src/cli/help-commands.ts` (one page per
 command of `COMMANDS` in `src/cli/args.ts`), `src/cli/help-topics.ts`, `src/cli/help-diagnostics.ts`
 (a `Record<Code, ...>`, so a new code does not compile without its entry); `src/cli/help.ts` renders
-and looks them up. `tests/unit/help.test.ts` pins them to the parser (every accepted option on its
+and looks them up, and `indexJson` renders the index for `help --json` (§13.11 step 5). `tests/unit/help.test.ts` pins them to the parser (every accepted option on its
 page), to SPEC §15, §16, §5.4 and the section list, and to 100 columns of ASCII;
 `tests/e2e/scenarios/help.test.ts` runs every example that shows output on the `help-examples`
 fixture, committed twice in the last days so `suggest` shows a real stale rate. A behavior change that a page describes changes the page in the same change.

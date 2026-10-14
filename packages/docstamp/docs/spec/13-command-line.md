@@ -475,13 +475,19 @@ a network. `help` reads no file and no Root; it prints to standard output and ex
    command accepts (§13.2), what it reads and writes, examples, its exit codes and related
    commands.
 3. With one name that is a topic: the *topic page*. The topics are `start` (from nothing to a
-   first passing check, with a configuration file or inline), `config`, `inline`, `patterns`,
+   first passing check, with a configuration file or inline), `concepts` (the mental model: what a
+   dependency drift loop is, what stale means, why the verdict is content-only and the lock is never
+   written automatically), `config`, `inline`, `patterns`,
    `presets`, `states` (states and Reasons, §5.4, §12.1), `exit-codes` (§16), `json` (§14.5),
    `diagnostics` (every code of §15, its meaning and its fix), `agents` (the review workflow of
    §1, ready to paste into an agent's instructions), `schema` (the JSON Schemas the package ships)
    and `spec` (where this document is, and its sections).
 4. With the two names `diagnostics` and a code of §15 in any letter case (`e_usage` names
    `E_USAGE`): the entry of that code alone, which names the code as §15 writes it.
+
+5. With no help name and `--json` (§13.2 step 3): instead of the index text, the JSON document of
+   §14.5 that lists the same commands and topics, in the order of the index. With a help name,
+   `--json` is ignored like any other option, and the page is text.
 
 Any other help names raise « `E_USAGE` », `[[Subject]]` the first name that is not known, whose
 message lists the names that are; it is written as §14.3 writes a Diagnostic, and the exit code is

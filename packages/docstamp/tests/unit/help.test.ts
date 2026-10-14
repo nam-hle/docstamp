@@ -4,7 +4,7 @@ import { COMMANDS, OPTIONS, parseArgs } from '../../src/cli/args.ts';
 import { COMMAND_PAGES } from '../../src/cli/help-commands.ts';
 import { DIAGNOSTIC_HELP } from '../../src/cli/help-diagnostics.ts';
 import { TOPICS } from '../../src/cli/help-topics.ts';
-import { helpText } from '../../src/cli/help.ts';
+import { helpText, indexJson } from '../../src/cli/help.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 
 const SPEC_DIR = new URL('../../docs/spec/', import.meta.url);
@@ -75,6 +75,42 @@ describe('§13.11 help', () => {
     for (const topic of Object.keys(TOPICS)) expect(helpText([])).toMatch(`\n  ${topic} `);
   });
 
+  it('the index as JSON lists the commands and topics of the text index (§14.5)', () => {
+    const doc = JSON.parse(indexJson()) as Record<string, unknown>;
+    expect(Object.keys(doc)).toEqual([
+      'version',
+      'mode',
+      'exitCode',
+      'commands',
+      'topics',
+      'diagnostics',
+    ]);
+    expect(doc).toMatchObject({ version: 2, mode: 'help', exitCode: 0, diagnostics: [] });
+    expect(doc.commands).toEqual(
+      COMMANDS.map((name) => ({
+        name,
+        synopsis: COMMAND_PAGES[name].synopsis,
+        summary: COMMAND_PAGES[name].summary,
+      })),
+    );
+    expect(doc.topics).toEqual(
+      Object.entries(TOPICS).map(([name, topic]) => ({ name, summary: topic.summary })),
+    );
+    expect(indexJson().endsWith('}\n')).toBe(true);
+  });
+
+  it('the concepts topic is listed and points at the pages it names', () => {
+    expect(Object.keys(TOPICS)[1]).toBe('concepts');
+    const flat = (text: string) => text.replace(/\s+/gu, ' ');
+    const page = flat(helpText(['concepts']));
+    for (const next of ['start', 'agents', 'patterns', 'states']) {
+      expect(page).toContain(`docstamp help ${next}`);
+      expect(Object.keys(TOPICS)).toContain(next);
+    }
+    expect(flat(helpText(['start']))).toContain('docstamp help concepts');
+    expect(flat(helpText([]))).toContain('docstamp help concepts');
+  });
+
   it('every option a command accepts is on its page, and only those', () => {
     const optionsOf = (command: string) =>
       helpText([command])
@@ -142,6 +178,7 @@ describe('§13.11 help', () => {
         expect(helpText([command])).toContain('\n  -h, --help ');
       }
     }
+    expect(parseArgs(['help', '--json'])).toEqual({ mode: 'help', names: [], json: true });
     expect(parseArgs(['-h'])).toEqual(parseArgs(['--help']));
     expect(parseArgs(['--', '-h'])).toMatchObject({ mode: 'check', paths: ['-h'] });
   });

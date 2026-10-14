@@ -38,7 +38,7 @@ A person or an agent re-reads the doc, fixes it, runs `docstamp update docs/auth
 - **Tells the reviewer what to read.** The changed files and a `git diff` command; whitespace-only edits and renames are flagged.
 - **Works for AI agents.** The failure ends with an agent rule, `docstamp help agents` is the workflow, and `list-dependents` shows affected docs before code changes.
 - **Measurable.** `stats` shows how noisy a dependency list is before you adopt it; `suggest` drafts the list.
-- **The CLI documents itself.** `docstamp help` works offline; no README needed.
+- **The CLI documents itself.** `docstamp help` works offline; no README needed. `docstamp help concepts` explains the model: what stale means and why `update` is a review, not a refresh.
 - **CI-ready, one dependency.** Exit codes, `--json`, a [GitHub Action](https://nam-hle.github.io/docstamp/guide/ci); `yaml` is its only runtime dependency.
 
 ## Install
@@ -48,6 +48,7 @@ Requires Node.js 24 or newer:
 ```sh
 pnpm add -D docstamp      # or run it with npx docstamp
 npx docstamp help start   # from nothing to a first passing check
+npx docstamp help concepts   # the idea: drift, stale, check, review, update
 ```
 
 ## Quick start
@@ -107,7 +108,7 @@ From then on, a doc turns stale when a file it selects changes. Review it agains
 | `docstamp stats` | Reports how often each file's dependencies would have made it stale. |
 | `docstamp suggest <file>...` or `--all` | Proposes dependencies from the paths each file mentions; `--all` covers every declared file and prints only the new proposals. |
 
-Every command except `help` and `version` takes `--json` and `--cwd <dir>` (act as if run from `<dir>`). `docstamp help <command>` shows a command with its options and examples. Exit codes: 0 ok, 1 stale or, with `--undeclared`, an undeclared path (`check` only), 2 error or invalid.
+Every command except `help` and `version` takes `--json` and `--cwd <dir>` (act as if run from `<dir>`); `docstamp help --json` lists the commands and topics as JSON. `docstamp help <command>` shows a command with its options and examples. Exit codes: 0 ok, 1 stale or, with `--undeclared`, an undeclared path (`check` only), 2 error or invalid.
 
 ## Configuration
 

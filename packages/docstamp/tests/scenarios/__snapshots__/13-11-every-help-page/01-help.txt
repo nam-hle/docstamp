@@ -3,7 +3,8 @@ exit: 0
 --- stdout ---
 docstamp is a deterministic gate for hidden links between files. Each file (usually a doc) declares
 the files it depends on; docstamp fails when they changed since the file was last reviewed, and
-docstamp update <file> records the review. New here: docstamp help start.
+docstamp update <file> records the review. New here: docstamp help start, or docstamp help concepts
+for the idea behind it.
 
 Commands:
   docstamp [check] [--json] [--only-stale] [--quiet] [--undeclared] [--cwd <dir>] [<file>...]
@@ -29,6 +30,7 @@ Commands:
 
 Topics:
   start        From nothing to a first passing check, with a configuration file or inline.
+  concepts     The mental model: drift, what stale means, and the check, review, update loop.
   config       The configuration file: docstamp.yaml or docstamp.config.ts, and every key.
   inline       Declaring dependencies in the frontmatter of a Markdown file.
   patterns     The pattern language: paths, globs, ! exclusions, last match wins, escapes.

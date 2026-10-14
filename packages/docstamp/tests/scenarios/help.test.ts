@@ -51,6 +51,17 @@ scenario('§13.11 every help page', { git: false }, async (repo) => {
   expect(lower).toMatchObject({ exit: 0, stdout: one.stdout, stderr: '' });
 });
 
+scenario('§13.11 step 5 help --json prints the index as JSON', { git: false }, async (repo) => {
+  const json = await repo.run(['help', '--json']);
+  expect(json).toMatchObject({ exit: 0, stderr: '' });
+  expect(json.json()).toMatchObject({ version: 2, mode: 'help', exitCode: 0, diagnostics: [] });
+  const bare = await repo.run(['--help', '--json'], { snapshot: false });
+  expect(bare).toMatchObject({ exit: 0, stdout: json.stdout, stderr: '' });
+  const page = await repo.run(['help', 'concepts', '--json'], { snapshot: false });
+  const text = await repo.run(['help', 'concepts'], { snapshot: false });
+  expect(page).toMatchObject({ exit: 0, stdout: text.stdout, stderr: '' });
+});
+
 scenario('§13.11 a command with --help prints its page', { git: false }, async (repo) => {
   // help --help is the index: the names of the help command are its file arguments
   for (const command of COMMANDS.filter((c) => c !== 'help')) {
