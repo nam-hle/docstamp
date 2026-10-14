@@ -303,7 +303,9 @@ It is never hashed or compared, and `--json` keeps the canonical members and add
 `check --undeclared` (§13.5, `src/cli/undeclared.ts`) reuses it to fail on a literal path that
 nothing declares: a finding with exit 1, never a state or a Diagnostic. It skips a path that is a
 tracked file (a declaration of its own) or that `undeclared.ignore` of the configuration file
-selects (`skipper` in `undeclared.ts`); `suggest` keeps proposing both.
+selects (`skipper` in `undeclared.ts`); `suggest` keeps proposing both. `suggest` skips a directory
+or glob over `--max-files` files (default 50, `DEFAULT_MAX_FILES` in `src/engine/suggest.ts`, §12.6
+step 8) and lists it as `skipped`; `check --undeclared` proposes with no limit (`max` 0).
 Both page their text at `--limit` findings (default 10, `DEFAULT_LIMIT` in `src/cli/args.ts`): in
 `checkChunks` and in `paged` of `src/report/suggest.ts`; `--json` and the exit code never see it.
 The extraction is `src/engine/mentions.ts` (text to normalized candidates) and

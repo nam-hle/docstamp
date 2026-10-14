@@ -27,8 +27,16 @@ suggest docs/architecture.md
 ```
 
 `--write` records the proposal as an inline block without a `hash`, so the doc stays `unrecorded`
-until someone reviews it. Read the proposal before you keep it: a directory mention can select
-hundreds of files, and a mention may be an illustration
+until someone reviews it. A directory or glob that selects more than 50 files is not proposed, since
+declaring it would make the doc stale on most commits. It is listed instead, and the files the doc
+mentions below it are still proposed:
+
+```console
+  skipped  src  460 files  (over --max-files 50)
+```
+
+`--max-files <n>` changes the limit and `--max-files 0` removes it. Read the proposal before you keep
+it: a mention may be an illustration
 ([suggest](/reference/commands/suggest), [SPEC §12.6](/spec/evaluation#126-proposal)).
 
 ## Find paths a doc mentions but does not declare

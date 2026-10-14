@@ -106,7 +106,7 @@ From then on, a doc turns stale when a file it selects changes. Review it agains
 | `docstamp list-dependencies [<file>...]` | Lists each file with its dependency patterns and the files they select. |
 | `docstamp list-dependents <file>...` | Lists the files that depend on each named file, and the patterns that select it. |
 | `docstamp stats` | Reports how often each file's dependencies would have made it stale. |
-| `docstamp suggest <file>...` or `--all` | Proposes dependencies from the paths each file mentions; `--all` covers every declared file and prints only the new proposals, 10 rows at a time (`--limit <n>`, `0` for all). |
+| `docstamp suggest <file>...` or `--all` | Proposes dependencies from the paths each file mentions; `--all` covers every declared file and prints only the new proposals, 10 rows at a time (`--limit <n>`, `0` for all). A directory or glob over 50 files is listed as skipped, not proposed (`--max-files <n>`, `0` for no limit). |
 
 Every command except `help` and `version` takes `--json` and `--cwd <dir>` (act as if run from `<dir>`); `docstamp help --json` lists the commands and topics as JSON. `docstamp help <command>` shows a command with its options and examples. Exit codes: 0 ok, 1 stale or, with `--undeclared`, an undeclared path (`check` only), 2 error or invalid.
 
