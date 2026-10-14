@@ -41,6 +41,7 @@ jobs:
           npm pack ./packages/docstamp --dry-run
           npm pack ./packages/docstamp-plugin-markdown --dry-run
           npm pack ./packages/docstamp-plugin-js --dry-run
+          npm pack ./packages/docstamp-plugin-asciidoc --dry-run
 
   docstamp:
     name: Docs gate

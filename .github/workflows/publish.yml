@@ -48,6 +48,11 @@ jobs:
               version="${TAG#docstamp-plugin-js-v}"
               task=verifyReleaseJs
               ;;
+            docstamp-plugin-asciidoc-v[0-9]*)
+              name=docstamp-plugin-asciidoc
+              version="${TAG#docstamp-plugin-asciidoc-v}"
+              task=verifyReleaseAsciidoc
+              ;;
             *) echo "No package is released with the tag $TAG" >&2; exit 1 ;;
           esac
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then

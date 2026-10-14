@@ -19,6 +19,10 @@
       "entry": ["tests/**/*.test.ts"],
       "project": ["src/**/*.ts", "tests/**/*.ts"]
     },
+    "packages/docstamp-plugin-asciidoc": {
+      "entry": ["tests/**/*.test.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts"]
+    },
     "packages/site": {
       "entry": ["scripts/assemble.ts", "tests/**/*.test.ts"],
       "project": [".vitepress/*.ts", "scripts/**/*.ts", "tests/**/*.ts"]

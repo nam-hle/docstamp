@@ -20,6 +20,11 @@ const PLUGINS = [
     dir: 'packages/docstamp-plugin-markdown',
   },
   { id: 'Js', name: 'docstamp-plugin-js', dir: 'packages/docstamp-plugin-js' },
+  {
+    id: 'Asciidoc',
+    name: 'docstamp-plugin-asciidoc',
+    dir: 'packages/docstamp-plugin-asciidoc',
+  },
 ] as const;
 
 // Directories that hold code, per tool. A package's own `dist` and `node_modules` are never inputs.

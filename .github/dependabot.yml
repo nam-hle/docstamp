@@ -29,6 +29,12 @@ updates:
       - dependency-name: "@types/node"
         update-types:
           - version-update:semver-major
+      # The 4.x line has no synchronous load(), which a docstamp plugin needs; the section
+      # boundaries of docstamp-plugin-asciidoc are also part of its hashes, so it moves by hand.
+      - dependency-name: "@asciidoctor/core"
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
     groups:
       npm:
         update-types:

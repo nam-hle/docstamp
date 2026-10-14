@@ -7,5 +7,7 @@ Workspace packages published from this repository, one folder per package, each 
 - [`docstamp-plugin-markdown`](docstamp-plugin-markdown): select a section of a Markdown file by
   its heading.
 - [`docstamp-plugin-js`](docstamp-plugin-js): select a top-level declaration of a JavaScript or
-  TypeScript file by its name. Each plugin has a `SPEC.md` for its selectors and what it hashes; the plugin
+  TypeScript file by its name.
+- [`docstamp-plugin-asciidoc`](docstamp-plugin-asciidoc): select a section of an AsciiDoc file by
+  its title or its anchor. Each plugin has a `SPEC.md` for its selectors and what it hashes; the plugin
   interface itself is [SPEC §8.7](docstamp/docs/spec/08-patterns.md#87-selected-dependencies).
