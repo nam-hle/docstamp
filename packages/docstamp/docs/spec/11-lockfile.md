@@ -53,8 +53,10 @@ files:
 - Indentation is two spaces.
 
 NOTE: Two branches that write the same file conflict on its `hash` line, as two branches that
-change one dependency conflict in a package-manager lockfile. Resolution: take either side, run
-`docstamp`, review what it reports stale, and write again.
+change one dependency conflict in a package-manager lockfile, and git also conflicts on the lines
+of two files that are neighbours in path order. Resolution: take either side, run `docstamp`,
+review what it reports stale, and write again. A recorded Hash that is not the current one only
+makes a file stale (§12.1 step 9), so either side is safe.
 
 ### 11.3 Writing
 

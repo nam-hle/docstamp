@@ -45,9 +45,31 @@ content as data ([json topic](/reference/topics/json)).
 ## Commit the lock separately from the edits
 
 The changed-file list is the difference from the commit that introduced the lock entry. An edit
-committed in the same commit as `docstamp update` makes the doc stale but is not listed. Two branches
-that update the same doc conflict on that doc's line in the lock: take either side, run `docstamp`,
-review what it reports stale, and update again ([SPEC §11.2](/spec/lockfile#112-canonical-form)).
+committed in the same commit as `docstamp update` makes the doc stale but is not listed.
+
+## Resolve a merge conflict in the lock
+
+The lock has one line per doc, so branches that update different docs usually merge cleanly, and the
+merged lock is then still honest: a doc whose dependencies changed on the other branch reports stale
+after the merge. Git treats changes to neighbouring lines as a conflict, so two different docs next
+to each other in path order can conflict too. A conflict on one line means the same doc was updated
+on both sides. To resolve it:
+
+1. Take either side of `docstamp-lock.yaml` (or the merge base), never a hand-picked mix, and never
+   edit a hash: `git checkout --ours docstamp-lock.yaml`, then `git add docstamp-lock.yaml`.
+2. Run `docstamp`. It reports exactly the docs whose dependencies changed since the hash that is now
+   recorded. Until the file parses, it exits 2 with `E_LOCK`.
+3. Review each stale doc as above, then run `docstamp update <doc>` for each by name. Never use
+   `--all` to turn the check green.
+
+Taking either side is safe because a doc's verdict compares the recorded hash with the hash of its
+dependencies now ([SPEC §12.1](/spec/evaluation#121-evaluate)): a recorded hash that is not the
+current one can only make the doc stale, never hide a change. The cost is a repeated review of a doc
+whose line was dropped.
+
+An inline declaration keeps its hash in the doc's own frontmatter, so the conflict is in the doc.
+Resolve the text as usual, keep either `hash:` value, then run `docstamp` and review in the same way
+([SPEC §11.2](/spec/lockfile#112-canonical-form)).
 
 ## With AI agents
 
