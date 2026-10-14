@@ -1,4 +1,5 @@
 {
   "packages/docstamp": "0.6.0",
+  "packages/docstamp-plugin-js": "0.1.0",
   "packages/docstamp-plugin-markdown": "0.1.0"
 }
