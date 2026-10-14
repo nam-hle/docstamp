@@ -155,7 +155,15 @@ isIgnored)` (§12.6) and *declared* the effective patterns of `r.[[Dependencies]
 { `r.[[File]]`, *path* } for each Suggestion of *p* that has no Negation, whose `[[Files]]` holds
 exactly one path *path* and whose pattern is *path* itself (a literal path, so never a directory
 or a glob), whose *status* is `new` (§13.10 step 4, with this *declared*), and such that *path* is
-not the path of a Selected Dependency (§8.7) of *r*. The Universe is the one of step 2.
+not the path of a Selected Dependency (§8.7) of *r*, and that is not skipped (below). The Universe
+is the one of step 2.
+
+A path is *skipped* when it is the `[[File]]` of a Declaration of step 2, configured or inline (a
+*tracked file*: it has a Declaration of its own, so a mention of it is a cross-reference between
+files, not a hidden dependency), or when `Select(P, « path »)` (§8.4) is not empty, *P* being
+`[[UndeclaredIgnore]]` of the Config (§9.3). A tracked file is skipped whatever its state, even
+`invalid`. Only *undeclared* is affected: `suggest` and `suggest --all` (§13.10) still propose
+every such path, and the mention rules, the verdict of a Result and the Lockfile do not change.
 
 NOTE: `--undeclared` finds a path a file mentions that nothing it declares covers, the gap that
 `check` cannot see because a stamp only watches what is declared. It reuses the proposal of §12.6,
@@ -164,7 +172,8 @@ proposals are ignored on purpose: a broad proposal would fail every run, while a
 exists is a mention a person can declare or drop. It reads no git history, no Lockfile and no
 clock, never changes a Result, a verdict or a Hash, and without the option nothing changes. An
 undeclared path is a finding, as a stale file is, not an error: it has no Diagnostic code and
-exits 1 (§16). The fix is to declare the path in the file, or to stop mentioning it.
+exits 1 (§16). The fix is to declare the path in the file, to stop mentioning it, or, for a path
+that is no dependency, to list it in `undeclared.ignore` (§9.3).
 
 With `--undeclared`, the text output lists at most *limit* elements of *undeclared*, the first ones
 in order, where *limit* is the value of `--limit`, or 10 without it; `--limit 0` lists every

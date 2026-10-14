@@ -101,7 +101,7 @@ From then on, a doc turns stale when a file it selects changes. Review it agains
 
 | Command | What it does |
 | --- | --- |
-| `docstamp [check]` | The verdict: checks that each file's dependencies are unchanged since its last review. A bare `docstamp` is `check`; `--undeclared` also fails when a doc mentions the path of an existing file it does not declare, and lists the first 10 (`--limit <n>`, `0` for all). |
+| `docstamp [check]` | The verdict: checks that each file's dependencies are unchanged since its last review. A bare `docstamp` is `check`; `--undeclared` also fails when a doc mentions the path of an existing file it does not declare (a mention of another declared doc, or of a path in `undeclared.ignore`, is skipped), and lists the first 10 (`--limit <n>`, `0` for all). |
 | `docstamp update <file>...` or `--all` | Records that you reviewed the named files, after printing what changed since their last review. The only command that writes the lock. |
 | `docstamp list-dependencies [<file>...]` | Lists each file with its dependency patterns and the files they select. |
 | `docstamp list-dependents <file>...` | Lists the files that depend on each named file, and the patterns that select it. |
@@ -119,6 +119,7 @@ Every command except `help` and `version` takes `--json` and `--cwd <dir>` (act 
 | `version` | Required, exactly `2`. |
 | `files` | Required, even when empty (`files: {}`). Maps each file, by its path from the root, to its `dependencies` (a non-empty list of patterns, or `path:selector`, e.g. `package.json:scripts.build`, [SPEC §8.7](packages/docstamp/docs/spec/08-patterns.md#87-selected-dependencies)) and optionally `use` (preset names). |
 | `presets`, `default-presets` | Named pattern lists, and the ones every file without its own `use` gets. |
+| `undeclared` | `ignore`: patterns of paths that `check --undeclared` does not report. |
 | `include` | The files searched for inline `docstamp` blocks (default `**/*.md`). |
 | `gitignore`, `ignore` | Read the `.gitignore` files (default `true`), and more ignore rules. Ignored files cannot be dependencies. |
 

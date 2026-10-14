@@ -15,6 +15,7 @@ export interface Workspace {
   attached: Diagnostic[];
   presets: ReadonlyMap<string, readonly string[]>;
   defaultPresets: readonly string[];
+  undeclaredIgnore: readonly string[];
   plugins: readonly DocstampPlugin[];
   script?: string;
 }
@@ -55,6 +56,7 @@ export function loadWorkspace(host: Host, root: string): Workspace {
     universe,
     presets: config.presets,
     defaultPresets: config.defaultPresets,
+    undeclaredIgnore: config.undeclaredIgnore,
     plugins,
     ...(script === undefined ? {} : { script }),
     declarations: resolved,

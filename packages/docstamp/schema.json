@@ -61,6 +61,23 @@
       },
       "minItems": 1
     },
+    "undeclared": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ignore": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "not": {
+              "const": "!"
+            }
+          },
+          "default": []
+        }
+      }
+    },
     "files": {
       "type": "object",
       "additionalProperties": {

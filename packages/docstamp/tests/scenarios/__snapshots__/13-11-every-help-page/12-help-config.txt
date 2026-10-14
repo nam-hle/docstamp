@@ -18,6 +18,9 @@ Without one, only inline declarations exist (docstamp help inline).
       no-tests:
         - "!**/*.test.ts"
     default-presets: [no-tests]
+    undeclared:
+      ignore:
+        - LICENSE
     files:
       docs/guide.md:
         dependencies:
@@ -35,6 +38,8 @@ Without one, only inline declarations exist (docstamp help inline).
 - include: the patterns of the files searched for docstamp blocks (default "**/*.md").
 - presets: named pattern lists that a file includes with use.
 - default-presets: presets every file without its own use gets (docstamp help presets).
+- undeclared: { ignore: [patterns] } lists paths that check --undeclared never reports, as patterns
+  (docstamp help patterns). A tracked file, one with its own declaration, is never reported.
 - Any other key is E_UNKNOWN_KEY. In YAML, quote a pattern that starts with ! or *.
 
 The same value as a script, which must export plain data (no functions or class instances, no

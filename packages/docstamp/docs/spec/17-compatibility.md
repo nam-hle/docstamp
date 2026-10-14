@@ -146,6 +146,14 @@ The following are not breaking:
   line uses (`--all` was `E_USAGE` with `suggest`, `--undeclared` unknown), the undeclared lines of
   §14.3 and the members `undeclared` and `all` of §14.5. Without them every output, verdict and
   exit code is as it was;
+- the skipped paths of `check --undeclared` (§13.5) and the Configuration key `undeclared.ignore`
+  (§9.3): the list *undeclared* loses the paths that are tracked files or that the key ignores. The
+  option is opt-in, so only a command line that uses it sees the smaller list. No row of §17.2 fits: a finding is neither a state, a Reason nor a Diagnostic
+  (*Verdicts*), the meaning of exit code 1 (a finding exists) and the members of `--json` do not
+  change (*Contract*), and no Hash, selection or Lockfile input is touched. A run that failed only
+  on such a path now exits 0; that is the intended removal of a false positive, not a migration.
+  The key is a new optional member of the Configuration file: a file without it reads as before,
+  and the version stays 2;
 - `--limit` of `check --undeclared` (§13.5) and `suggest --all` (§13.10): a new option that no
   existing command line uses (it was an unknown option, `E_USAGE`), and the closing line of the text
   output (§14.3, §14.9). Only the text of those two commands is paged, by default at 10 findings;

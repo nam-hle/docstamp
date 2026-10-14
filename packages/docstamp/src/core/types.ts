@@ -81,6 +81,7 @@ export interface Config {
   readonly include: readonly string[];
   readonly presets: ReadonlyMap<string, readonly string[]>;
   readonly defaultPresets: readonly string[];
+  readonly undeclaredIgnore: readonly string[];
   readonly declarations: readonly Declaration[];
 }
 

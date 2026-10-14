@@ -37,6 +37,7 @@ export interface Evaluated {
   universe: Universe;
   presets: ReadonlyMap<string, readonly string[]>;
   defaultPresets: readonly string[];
+  undeclaredIgnore: readonly string[];
   lock: Lock;
   global: Diagnostic[];
 }
@@ -89,7 +90,8 @@ function evaluateDeclarations(
   hashFiles: boolean,
 ) {
   const workspace = loadWorkspace(host, root);
-  const { universe, declarations, presets, defaultPresets, plugins, script } = workspace;
+  const { universe, declarations, presets, defaultPresets, undeclaredIgnore, plugins, script } =
+    workspace;
   const raised = new Set(workspace.attached.map((d) => d.file));
   const remaining = declarations.filter((d) => !raised.has(d.file));
   const attached = [...workspace.attached, ...validatedSelects(remaining, plugins)];
@@ -152,6 +154,7 @@ function evaluateDeclarations(
     universe,
     presets,
     defaultPresets,
+    undeclaredIgnore,
     results,
     lock,
     fragmentProbe,

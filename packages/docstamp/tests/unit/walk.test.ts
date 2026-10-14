@@ -17,6 +17,7 @@ const config = (over: Partial<Config> = {}): Config => ({
   include: ['**/*.md'],
   presets: new Map(),
   defaultPresets: [],
+  undeclaredIgnore: [],
   declarations: [],
   ...over,
 });

@@ -1,0 +1,7 @@
+$ docstamp check --undeclared
+exit: 1
+--- stdout ---
+2 ok, 0 stale, 0 invalid
+UNDECLARED docs/a.md  mentions docs/notes.md
+next: declare each mentioned path in its file, or stop mentioning it; see docstamp help suggest
+--- stderr ---

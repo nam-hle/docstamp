@@ -22,6 +22,7 @@ describe('§9.3 schema.json', () => {
       'include',
       'presets',
       'default-presets',
+      'undeclared',
       'files',
     ]);
   });

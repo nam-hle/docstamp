@@ -23,8 +23,10 @@ const TOP_KEYS = [
   'include',
   'presets',
   'default-presets',
+  'undeclared',
   'files',
 ];
+const UNDECLARED_KEYS = ['ignore'];
 const DEFAULT_INCLUDE: readonly string[] = ['**/*.md'];
 
 const FILE_KEYS = ['dependencies', 'use'];
@@ -192,6 +194,33 @@ function collectDefaults(
   return value;
 }
 
+// SPEC §9.3 step 6: `undeclared.ignore`
+function collectUndeclaredIgnore(
+  undeclared: Value | undefined,
+  fatal: Diagnostic[],
+): readonly string[] {
+  if (undeclared === undefined) return [];
+  if (!isMap(undeclared)) {
+    fatal.push(diag('E_CONFIG', { subject: 'undeclared' }));
+    return [];
+  }
+  for (const key of undeclared.keys()) {
+    if (key === 'ignore') continue;
+    const message = unknownKeyMessage(key, UNDECLARED_KEYS);
+    fatal.push(diag('E_UNKNOWN_KEY', { subject: `undeclared.${key}`, ...optional(message) }));
+  }
+  const ignore = undeclared.get('ignore');
+  if (ignore === undefined) return [];
+  if (!isStrings(ignore)) {
+    fatal.push(diag('E_CONFIG', { subject: 'undeclared.ignore' }));
+    return [];
+  }
+  for (const pattern of ignore) {
+    if (!parsePattern(pattern)) fatal.push(diag('E_PATTERN', { subject: pattern }));
+  }
+  return ignore;
+}
+
 // SPEC §9.5 NOTE: `plugins` is a script Carrier member, never a YAML key
 const unknownTopKeyMessage = (key: string): string | undefined => {
   if (key === 'dependents') return 'Rename "dependents" to "files".';
@@ -224,6 +253,7 @@ export function readConfig(
       include: DEFAULT_INCLUDE,
       presets: new Map<string, readonly string[]>(),
       defaultPresets: [],
+      undeclaredIgnore: [],
       declarations: [],
     };
     return { config, attached: [], present: false, plugins: [] };
@@ -270,6 +300,7 @@ export function readConfig(
 
   const presets = collectPresets(top.get('presets'), fatal);
   const defaultPresets = collectDefaults(top.get('default-presets'), presets, fatal);
+  const undeclaredIgnore = collectUndeclaredIgnore(top.get('undeclared'), fatal);
   const declarations: Declaration[] = [];
   const files = top.get('files');
   if (files === undefined) {
@@ -297,6 +328,7 @@ export function readConfig(
       include: isStrings(include) ? include : DEFAULT_INCLUDE,
       presets,
       defaultPresets,
+      undeclaredIgnore,
       declarations,
     },
     attached,
