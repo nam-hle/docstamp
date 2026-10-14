@@ -38,7 +38,10 @@ A doc can describe a file that none of its patterns covers, so changing that fil
 only the new ones, grouped by doc; it prints nothing when there is no gap. To fail CI on the same
 gap, run `docstamp --undeclared`: it exits 1 and names the doc and the path when a doc mentions the
 path of an existing file that none of its patterns covers. Directories and globs are not judged, so
-a broad proposal does not fail every run
+a broad proposal does not fail every run.
+
+Both print the first 10 findings and say how many are left: fix those, then run again, or pass
+`--limit <n>` for another page size (`--limit 0` prints all). `--json` is never cut
 ([check](/reference/commands/check), [SPEC §13.5](/spec/command-line#135-check)).
 
 ## Measure how noisy a list is
