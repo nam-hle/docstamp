@@ -1,0 +1,11 @@
+$ docstamp suggest docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern   files  stale
+  lib           2    n/a
+  src/a.ts      1    n/a
+  skipped  src  61 files  (over --max-files 50)
+--- stderr ---
+--- setup: docs/guide.md ---
+The folder `src` and the entry `src/a.ts`; see also `lib`.

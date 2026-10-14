@@ -44,7 +44,8 @@ exit: 0
     {
       "name": "suggest",
       "synopsis": [
-        "docstamp suggest [--json] [--cwd <dir>] (--all [--limit <n>] | [--write] <file>...)"
+        "docstamp suggest [--json] [--max-files <n>] [--cwd <dir>]",
+        "  (--all [--limit <n>] | [--write] <file>...)"
       ],
       "summary": "Propose dependencies from the paths each file mentions."
     },

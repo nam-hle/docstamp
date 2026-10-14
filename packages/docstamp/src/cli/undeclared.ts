@@ -51,7 +51,7 @@ export function undeclaredPaths(
       if (text === null) return [];
       const others = universe.paths.filter((path) => path !== result.file);
       const viaSelected = new Set((result.selected ?? []).map((entry) => entry.path));
-      return propose(result.file, text, universe.paths, isIgnored)
+      return propose(result.file, text, universe.paths, isIgnored, 0)
         .suggestions.filter(
           ({ pattern, files }) =>
             files.length === 1 &&

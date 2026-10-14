@@ -349,9 +349,10 @@ selected part) does not touch the Result, which is what a narrower dependency is
 
 ### 12.6 Proposal
 
-`Propose(doc, text, universe, isIgnored)` returns a List of *Suggestions* and a List of
-*ignored* RepoPaths, in path order. *text* is the text of the file *doc* (§9.6.1), *universe* the Universe
-(§7) and *isIgnored* the test of §8.5 NOTE. A *Suggestion* is { `[[Pattern]]`: a valid Pattern
+`Propose(doc, text, universe, isIgnored, max)` returns a List of *Suggestions*, a List of
+*ignored* RepoPaths, in path order, and a List of *skipped* (step 8), in path order. *text* is the text of the file *doc* (§9.6.1), *universe* the Universe
+(§7), *isIgnored* the test of §8.5 NOTE and *max* a whole number: the most files a directory or a glob may
+resolve to, or 0 for no limit. A *Suggestion* is { `[[Pattern]]`: a valid Pattern
 (§8.1), `[[Files]]`: the List of RepoPaths it contributes, in path order }. Let *U* be *universe*
 without *doc*. A *file* below is a member of *U*; a *directory* is a String that is a proper
 prefix, before a `/`, of some path of *U*.
@@ -401,10 +402,15 @@ prefix, before a `/`, of some path of *U*.
    `.gitattributes`, `docstamp.yaml`, `docstamp.config.ts`, `docstamp.config.mts`,
    `docstamp.config.js`, `docstamp.config.mjs`, `docstamp-lock.yaml`, or matches `tsconfig*.json`.
    Generic files are dropped from the *file* candidates.
-8. *Collapse.* Let *files*, *dirs* and *globs* be the candidates so classified. For each directory
+8. *Collapse and cap.* Let *files*, *dirs* and *globs* be the candidates so classified. For each directory
    *d* (never the empty String) with at least 3 of *files* directly in it, let *below* be the files
    of *U* below *d*: if *below* has at most 5 files, or every file of *below* is in *files*, add *d*
-   to *dirs*.
+   to *dirs*. Then, unless *max* is 0, for each member *p* of *dirs* and of *globs*, in path order,
+   let *n* be the number of files of `Select(« p », U)`: if *n* is more than *max*, remove *p* from
+   *dirs* or *globs* and add { `[[Pattern]]` *p*, `[[Count]]` *n* } to *skipped*. *n* counts the files
+   before the exclusions of step 9, which depend on the other members. A *file* is never capped, and
+   step 9 removes only the files below a member of *dirs*, so a file the doc mentions below a skipped
+   directory stays in *files* and is proposed.
 9. *Coverage.* Remove from *dirs* every *d* below another member of *dirs*. For each *d* of *dirs*
    let its *exclusions* be, in this order, those of `!`*d*`/**/*.test.*`, `!`*d*`/**/*.spec.*`,
    `!`*d*`/**/__test__` and `!`*d*`/**/__tests__` that match (§8.3) at least one file of *U*, and
@@ -433,8 +439,12 @@ prefix, before a `/`, of some path of *U*.
    then the members *p* of *reincluded* in path order, each with `[[Files]]` « *p* ».
 
 NOTE: A proposal is the list one would write by hand from what the doc says, and it is a proposal
-only: nothing is read from the repository history, no pattern is judged too broad, and the doc is
-not evaluated. Every non-excluding Suggestion selects a file of *U*, so the list passes §8.5 step 3
+only: nothing is read from the repository history, no pattern is judged too broad except by the
+number of files it resolves to (step 8), and the doc is not evaluated. A skipped pattern is a
+generalisation the doc mentions, such as a source directory of hundreds of files, whose declaration
+would make the doc stale on most commits; it is reported, never proposed, and the specific files the
+doc mentions are still proposed. A skipped directory inside a kept one, or the reverse, are judged
+each on their own count. Every non-excluding Suggestion selects a file of *U*, so the list passes §8.5 step 3
 as written, and an exclusion matches a file of *U*, so it raises no `W_EMPTY_EXCLUSION`; the only
 inclusions after an exclusion are literal paths of single files, so it raises no
 `W_SHADOWED_EXCLUSION` either (§8.5 step 7). Under the

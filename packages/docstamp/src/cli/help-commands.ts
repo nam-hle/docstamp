@@ -213,7 +213,8 @@ history (fetch-depth: 0 in CI), else E_HISTORY.`,
   },
   suggest: {
     synopsis: [
-      'docstamp suggest [--json] [--cwd <dir>] (--all [--limit <n>] | [--write] <file>...)',
+      'docstamp suggest [--json] [--max-files <n>] [--cwd <dir>]',
+      '  (--all [--limit <n>] | [--write] <file>...)',
     ],
     summary: 'Propose dependencies from the paths each file mentions.',
     description: `
@@ -230,8 +231,11 @@ proposals with status new, grouped by file: the paths a doc mentions that no dec
 prints nothing when there are none, and never writes. The text shows the first 10 rows over all
 files and says how many were left out: fix those, then run again (--limit changes the count).
 
-Read the proposal before keeping it: a mention can be an illustration, and a directory can select
-many files. It is the quick way to enroll an existing doc: suggest --write, review, then update.`,
+A directory or glob that selects more than 50 files is not proposed: it would make the doc stale
+on most commits. It is listed as a skipped line, and the files the doc mentions below it are still
+proposed (--max-files changes the limit).
+
+Read the proposal before keeping it: a mention can be an illustration. It is the quick way to enroll an existing doc: suggest --write, review, then update.`,
     options: [
       [
         '--all',
@@ -242,6 +246,11 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
         '--limit <n>',
         'With --all, print at most <n> rows over all files (default 10), then how many were left ' +
           'out; 0 prints all. --json is not limited.',
+      ],
+      [
+        '--max-files <n>',
+        'Skip a directory or glob that selects more than <n> files (default 50); 0 sets no ' +
+          'limit. Skipped patterns are listed after the table, and --json has them in skipped.',
       ],
       JSON_OPTION,
       ROOT_OPTION,

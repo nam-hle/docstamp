@@ -1,0 +1,5 @@
+$ docstamp suggest --max-files 1 --max-files 2 docs/guide.md
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --max-files: --max-files given twice; see docstamp help suggest.

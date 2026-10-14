@@ -1,6 +1,6 @@
 import { sortDiagnostics } from '../core/diagnostics.ts';
 import type { Diagnostic } from '../core/types.ts';
-import type { Status } from '../engine/suggest.ts';
+import type { Skipped, Status } from '../engine/suggest.ts';
 import { diagJson, obj, render, type Json } from './json.ts';
 import { shown } from './text.ts';
 
@@ -17,6 +17,7 @@ export interface SuggestEntry {
   readonly file: string;
   readonly suggestions: readonly SuggestRow[];
   readonly ignored: readonly string[];
+  readonly skipped?: readonly Skipped[];
   // SPEC §13.10 step 4: null when the file has no declaration
   readonly declared: readonly string[] | null;
   readonly written?: boolean;
@@ -76,6 +77,7 @@ export function suggestText(
   write: boolean,
   all = false,
   limit = 0,
+  maxFiles = 0,
 ): string {
   const { kept: entries, closing } = all
     ? paged(everyEntry, limit)
@@ -88,8 +90,11 @@ export function suggestText(
       out += table(entry.suggestions, entry.declared)
         .map((line) => `${line}\n`)
         .join('');
+    if (!all) for (const path of entry.ignored) out += `  ignored  ${shown(path)}\n`;
+    for (const { pattern, files } of entry.skipped ?? []) {
+      out += `  skipped  ${shown(pattern)}  ${files} files  (over --max-files ${maxFiles})\n`;
+    }
     if (all) continue;
-    for (const path of entry.ignored) out += `  ignored  ${shown(path)}\n`;
     for (const pattern of onlyDeclared(entry)) out += `  only declared  ${shown(pattern)}\n`;
   }
   if (write) {
@@ -125,6 +130,15 @@ export function suggestJsonText(doc: SuggestJsonDoc): string {
       ],
       ['ignored', [...entry.ignored]],
       ['declared', entry.declared === null ? null : [...entry.declared]],
+      [
+        'skipped',
+        (entry.skipped ?? []).map(({ pattern, files }) =>
+          obj([
+            ['pattern', pattern],
+            ['files', files],
+          ]),
+        ),
+      ],
       ['diagnostics', []],
     ];
     if (doc.write) members.push(['written', entry.written === true]);

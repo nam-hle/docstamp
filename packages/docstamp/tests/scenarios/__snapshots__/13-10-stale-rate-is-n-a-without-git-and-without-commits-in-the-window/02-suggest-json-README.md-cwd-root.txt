@@ -18,6 +18,7 @@ exit: 0
       ],
       "ignored": [],
       "declared": null,
+      "skipped": [],
       "diagnostics": []
     }
   ],

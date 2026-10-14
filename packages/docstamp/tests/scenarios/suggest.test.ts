@@ -82,6 +82,7 @@ scenario(
           ],
           ignored: ['build/output.js'],
           declared: null,
+          skipped: [],
           diagnostics: [],
         },
       ],
@@ -185,6 +186,7 @@ scenario('§13.10 no paths found is a success', { fixture: 'suggest' }, async (r
     suggestions: [],
     ignored: [],
     declared: null,
+    skipped: [],
     diagnostics: [],
   });
   const written = await repo.run(['suggest', '--write', 'docs/nothing.md'], {
@@ -757,3 +759,121 @@ scenario(
     expect(listed.json().files[0].diagnostics).toEqual([]);
   },
 );
+
+const CAPPED = 'docs/guide.md';
+const GUIDE_TEXT = 'The folder `src` and the entry `src/a.ts`; see also `lib`.\n';
+
+function bigRepo(repo: Repo, files = 60): void {
+  repo.write('src/a.ts', 'export const a = 1;\n');
+  for (let n = 0; n < files; n++) repo.write(`src/f${String(n).padStart(2, '0')}.ts`, 'x\n');
+  repo.write('lib/one.ts', 'export {};\n');
+  repo.write('lib/two.ts', 'export {};\n');
+  repo.write(CAPPED, GUIDE_TEXT);
+  repo.commit('init');
+}
+
+scenario(
+  '§12.6 step 8 a directory over the cap is skipped and listed, its mentioned file stays',
+  async (repo) => {
+    bigRepo(repo);
+    const text = await repo.run(['suggest', CAPPED], { show: [CAPPED] });
+    expect(text.exit).toBe(0);
+    expect(text.stdout).toBe(
+      'suggest docs/guide.md\n' +
+        '  pattern   files  stale\n' +
+        '  lib           2    n/a\n' +
+        '  src/a.ts      1    n/a\n' +
+        '  skipped  src  61 files  (over --max-files 50)\n',
+    );
+    const json = await repo.run(['suggest', '--json', CAPPED]);
+    expect(json.json().files[0].skipped).toEqual([{ pattern: 'src', files: 61 }]);
+    expect(patterns(json.json())).toEqual(['lib', 'src/a.ts']);
+  },
+);
+
+scenario('§13.10 --max-files 0 restores the proposal without a cap', async (repo) => {
+  bigRepo(repo);
+  const result = await repo.run(['suggest', '--max-files', '0', CAPPED]);
+  expect(result.exit).toBe(0);
+  expect(result.stdout).toBe(
+    'suggest docs/guide.md\n' +
+      '  pattern  files  stale\n' +
+      '  lib          2    n/a\n' +
+      '  src         61    n/a\n',
+  );
+  const json = await repo.run(['suggest', '--json', '--max-files=0', CAPPED], {
+    snapshot: false,
+  });
+  expect(json.json().files[0].skipped).toEqual([]);
+});
+
+scenario('§13.10 --max-files 1 skips every directory with two files or more', async (repo) => {
+  bigRepo(repo, 2);
+  const result = await repo.run(['suggest', '--max-files', '1', CAPPED]);
+  expect(result.exit).toBe(0);
+  expect(result.stdout).toBe(
+    'suggest docs/guide.md\n' +
+      '  pattern   files  stale\n' +
+      '  src/a.ts      1    n/a\n' +
+      '  skipped  lib  2 files  (over --max-files 1)\n' +
+      '  skipped  src  3 files  (over --max-files 1)\n',
+  );
+});
+
+scenario('§13.2 --max-files needs a whole number and the suggest command', async (repo) => {
+  bigRepo(repo, 2);
+  for (const args of [
+    ['suggest', '--max-files', 'many', CAPPED],
+    ['suggest', '--max-files=-1', CAPPED],
+    ['suggest', '--max-files', '1', '--max-files', '2', CAPPED],
+    ['check', '--max-files', '3'],
+    ['list-dependencies', '--max-files', '3'],
+  ]) {
+    const result = await repo.run(args, { expectExit: 2 });
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('E_USAGE: --max-files: ');
+  }
+});
+
+scenario(
+  '§13.10 step 8 suggest --all keeps the skipped lines whole while it pages the rows',
+  async (repo) => {
+    bigRepo(repo);
+    repo.write('docs/other.md', 'Also `lib/one.ts`, `lib/two.ts` and `src`.\n');
+    repo.write(
+      'docstamp.yaml',
+      'version: 2\nfiles:\n  docs/guide.md:\n    dependencies:\n      - README.md\n' +
+        '  docs/other.md:\n    dependencies:\n      - README.md\n',
+    );
+    repo.write('README.md', '# readme\n');
+    repo.commit('declare');
+    const paged = await repo.run(['suggest', '--all', '--limit', '1']);
+    expect(paged.exit).toBe(0);
+    expect(paged.stdout).toBe(
+      'suggest docs/guide.md\n' +
+        '  pattern  files  stale  status\n' +
+        '  lib          2    n/a  new\n' +
+        '  skipped  src  61 files  (over --max-files 50)\n' +
+        '... and 3 more suggestions in 1 more file. Fix these, then run again.\n',
+    );
+    const json = await repo.run(['suggest', '--all', '--json'], { snapshot: false });
+    expect(json.json().files.map((f: { skipped: unknown }) => f.skipped)).toEqual([
+      [{ pattern: 'src', files: 61 }],
+      [{ pattern: 'src', files: 61 }],
+    ]);
+  },
+);
+
+scenario('§13.5 --undeclared proposes with no cap, as it did', async (repo) => {
+  bigRepo(repo);
+  repo.write(
+    'docstamp.yaml',
+    'version: 2\nfiles:\n  docs/guide.md:\n    dependencies:\n      - lib\n',
+  );
+  repo.commit('declare');
+  const result = await repo.run(['check', '--undeclared', '--json'], {
+    snapshot: false,
+    expectExit: 1,
+  });
+  expect(result.json().undeclared).toEqual([]);
+});

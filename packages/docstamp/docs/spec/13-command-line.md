@@ -8,7 +8,7 @@ docstamp update [--json] [--cwd <dir>] (--all | <file>...)
 docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]
 docstamp list-dependents [--json] [--transitive] [--cwd <dir>] <file>...
 docstamp stats [--json] [--cwd <dir>] [--since <n>d | --from <rev>] [<file>...]
-docstamp suggest [--json] [--cwd <dir>] (--all [--limit <n>] | [--write] <file>...)
+docstamp suggest [--json] [--max-files <n>] [--cwd <dir>] (--all [--limit <n>] | [--write] <file>...)
 docstamp help [<command> | <topic> | diagnostics <code>]
 docstamp <command> --help
 docstamp version
@@ -26,7 +26,7 @@ option as `--help`, wherever `--help` is written.
 The command line is parsed before anything else.
 
 1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--undeclared`, `--write`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
-   written `--name <value>` or `--name=<value>`: `--cwd`, `--since`, `--from` and `--limit`. Before any `--`, an argument starting with `-` other than a lone `-` is an
+   written `--name <value>` or `--name=<value>`: `--cwd`, `--since`, `--from`, `--limit` and `--max-files`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
 2. The *first non-option argument* before any `--` is the command name if it is `check`, `update`,
@@ -72,7 +72,10 @@ Each message states the problem:
 - `--limit` with any command but `check` and `suggest`, with `check` without `--undeclared`, or
   with `suggest` without `--all` (`[[Subject]]` `--limit`);
 - a `--limit` that is not `0` or a positive integer without leading zeros (`10`) of at most 9
-  digits; the message shows the form. `-1`, `2.5`, `ten` and `010` are refused.
+  digits; the message shows the form. `-1`, `2.5`, `ten` and `010` are refused;
+- `--max-files` with any command but `suggest` (`[[Subject]]` `--max-files`);
+- a `--max-files` that is not `0` or a positive integer without leading zeros (`50`) of at most 9
+  digits; the message shows the form.
 
 `help` prints help (§13.11) and `version` prints the version; both exit 0 (§14.1), except a
 `help` name that is not known (§13.11). A file named like a command is reached as
@@ -151,7 +154,7 @@ With `--undeclared`, *undeclared* is the List of { `[[File]]`, `[[Path]]` } buil
 in path order of `[[File]]` and then `[[Path]]`, and without it *undeclared* is not built. For each
 selected Result *r* that is not `invalid` whose file is an entry of kind *file* with text
 (§9.6.1; any other is skipped, with no Diagnostic), let *p* be `Propose(r.[[File]], text, universe,
-isIgnored)` (§12.6) and *declared* the effective patterns of `r.[[Dependencies]]` (§8.6). Add
+isIgnored, 0)` (§12.6, with no limit on the files of a directory or glob, so that this list does not depend on it) and *declared* the effective patterns of `r.[[Dependencies]]` (§8.6). Add
 { `r.[[File]]`, *path* } for each Suggestion of *p* that has no Negation, whose `[[Files]]` holds
 exactly one path *path* and whose pattern is *path* itself (a literal path, so never a directory
 or a glob), whose *status* is `new` (§13.10 step 4, with this *declared*), and such that *path* is
@@ -410,6 +413,10 @@ command lists the gaps of a repository. `--all` never writes, so it is not combi
 In text mode it prints at most *limit* rows in all, as `--limit` says (§14.9): 10 without it, every
 row with `--limit 0`. `--json` is never limited.
 
+`--max-files <n>` sets *max* of §12.6 for every file: the most files a directory or glob may resolve
+to before it is skipped instead of proposed. Without it *max* is 50, and `--max-files 0` sets no
+limit. It is valid with and without `--all`, and is not a configuration key.
+
 1. Let *root* be `? DetermineRoot(cwd)`, *config* be the Config of `? ReadConfig(root)`
    (§9.3; a Root with no Configuration file and no inline block is not an error here) and *universe*
    be `? ComputeUniverse(root, config)`.
@@ -425,7 +432,8 @@ row with `--limit 0`. `--json` is never limited.
    *path* has a configured Declaration (`[[Declarations]]` of *config*), or is not a candidate
    (§9.6.1): a block in such a file would never be read. The message tells the user to edit the
    configuration by hand, or to name a file that `include` selects.
-4. Let (*suggestions*, *ignored*) be `Propose(path, text, universe, isIgnored)` (§12.6) for each *path*.
+4. Let (*suggestions*, *ignored*, *skipped*) be `Propose(path, text, universe, isIgnored, max)`
+   (§12.6) for each *path*.
    Let its *declared* be the `dependencies` of its configured Declaration (`[[Declarations]]` of
    *config*) if it has one; otherwise, if *path* is a candidate (§9.6.1) and `ScanFrontmatter` of
    its text is not *none*, the `[[Dependencies]]` of the Declaration that `ParseBlock` (§9.6.2)
@@ -459,7 +467,8 @@ row with `--limit 0`. `--json` is never limited.
    §9.6.4 step 3 does; it is then *written*, and every other file is not.
 8. With `--all`, keep of each file only the Suggestions whose *status* is `new`, and drop the files
    left with none; in text mode, then keep the first *limit* rows over the files in path order
-   (§14.9). Output the Suggestions, *ignored*, *declared* and, with `--write`, which files
+   (§14.9); *skipped* is not a row, is kept whole for each file that is kept, and is not paged.
+   Output the Suggestions, *ignored*, *skipped*, *declared* and, with `--write`, which files
    were *written* (§14.9, §14.5), and exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2; with `--write` nothing was

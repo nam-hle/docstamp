@@ -134,7 +134,10 @@ function suggestAll(
   };
   const isIgnored = (path: string) => isIgnoredPath(host, root, universe, path);
   const proposals = new Map(
-    names.map((path) => [path, propose(path, texts.get(path)!, universe.paths, isIgnored)]),
+    names.map((path) => [
+      path,
+      propose(path, texts.get(path)!, universe.paths, isIgnored, args.maxFiles),
+    ]),
   );
   const rates = staleRates(
     host,
@@ -172,7 +175,7 @@ function suggestAll(
     for (const [path, text] of rewritten) replaceFile(host, absolute(path), path, () => text);
   }
   const entries = names.map((path) => {
-    const { suggestions, ignored } = proposals.get(path)!;
+    const { suggestions, ignored, skipped } = proposals.get(path)!;
     const status = statuses.get(path)!;
     return {
       file: path,
@@ -183,6 +186,7 @@ function suggestAll(
         status: status[index]!,
       })),
       ignored,
+      skipped,
       declared: declaredAll.get(path)!,
       written: rewritten.has(path),
     };
@@ -212,7 +216,7 @@ export function runSuggest(
       suggestJsonText({ exitCode, write: args.write, all: args.all, files, diagnostics: global }),
     );
   } else {
-    io.stdout(suggestText(files, args.write, args.all, args.limit));
+    io.stdout(suggestText(files, args.write, args.all, args.limit, args.maxFiles));
     io.stderr(diagnosticsText(global));
   }
   return exitCode;

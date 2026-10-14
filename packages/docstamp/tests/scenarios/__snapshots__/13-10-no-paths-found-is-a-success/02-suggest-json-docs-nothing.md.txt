@@ -11,6 +11,7 @@ exit: 0
       "suggestions": [],
       "ignored": [],
       "declared": null,
+      "skipped": [],
       "diagnostics": []
     }
   ],

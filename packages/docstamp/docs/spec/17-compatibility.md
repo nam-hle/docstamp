@@ -258,6 +258,14 @@ The following are not breaking:
   directory exclusions; `suggest` prints and `--write` writes them, and nothing else reads them;
   so is dropping a scoped test exclusion that the same unscoped one makes redundant (§12.6 step 10):
   the written list selects the same files;
+- the cap of `suggest` (§12.6 step 8, §13.10): by default a directory or glob that resolves to more
+  than 50 files is skipped, not proposed, and the files the doc mentions below it are proposed;
+  the option `--max-files` (a new option that no existing command line uses; it was an unknown
+  option, `E_USAGE`), the `skipped` lines of §14.9 and the member `skipped` of §14.5. It is a
+  proposal rule of §12.6, which this section already leaves free to change: a proposal is advisory,
+  `suggest` exits 0 whatever it finds, and `--write` only writes a block that was not stamped.
+  `check --undeclared` is unchanged, since it proposes with no limit (§13.5). `--max-files 0`
+  restores the earlier proposal;
 - `suggest --write` on a block without a `hash` that declares patterns (§9.6.5 steps 2.3 to 2.5,
   §13.10 step 7): it used to replace the list by the proposal, dropping every declared pattern the
   proposal lacked; it now keeps the declared patterns first and adds only `new` ones that leave

@@ -322,6 +322,7 @@ describe('§13.2 suggest', () => {
       paths: ['a.md'],
       write: false,
       limit: 10,
+      maxFiles: 50,
       all: false,
     });
     expect(parseArgs(['--write', 'suggest', '--json', '--cwd', 'r', 'a.md', 'b.md'])).toEqual({
@@ -331,6 +332,7 @@ describe('§13.2 suggest', () => {
       paths: ['a.md', 'b.md'],
       write: true,
       limit: 10,
+      maxFiles: 50,
       all: false,
     });
   });
@@ -357,6 +359,7 @@ describe('§13.2 suggest', () => {
       paths: [],
       write: false,
       limit: 10,
+      maxFiles: 50,
       all: true,
     });
     expect(usage(['suggest', '--all', 'a'])).toBe('--all');
@@ -373,6 +376,23 @@ describe('§13.2 suggest', () => {
     expect(usage(['suggest', '--write', '--limit', '3', 'a.md'])).toBe('--limit');
     expect(usage(['suggest', '--all', '--limit', 'x'])).toBe('--limit');
     expect(usage(['suggest', '--all', '--limit'])).toBe('--limit');
+  });
+  it('--max-files sets the cap, 0 removes it, with or without --all', () => {
+    expect(parseArgs(['suggest', '--max-files', '3', 'a.md'])).toMatchObject({ maxFiles: 3 });
+    expect(parseArgs(['suggest', '--all', '--max-files=0'])).toMatchObject({ maxFiles: 0 });
+    expect(parseArgs(['suggest', 'a.md'])).toMatchObject({ maxFiles: 50 });
+  });
+  it('--max-files needs a whole number and suggest', () => {
+    for (const value of ['-1', '2.5', 'ten', '010', '1000000000', '1e3', '+3']) {
+      const argv = ['suggest', `--max-files=${value}`, 'a.md'];
+      expect(usage(argv), argv.join(' ')).toBe('--max-files');
+      expect(failure(argv)?.message).toContain('whole number');
+    }
+    expect(usage(['suggest', '--max-files', '--json', 'a.md'])).toBe('--max-files');
+    expect(usage(['suggest', '--max-files', '1', '--max-files', '2', 'a.md'])).toBe('--max-files');
+    for (const command of ['check', 'update', 'list-dependencies', 'list-dependents', 'stats']) {
+      expect(usage([command, '--max-files', '3', 'a.md'])).toBe('--max-files');
+    }
   });
   it('--since and --from are refused', () => {
     expect(usage(['suggest', '--since', '30d', 'a'])).toBe('--since');

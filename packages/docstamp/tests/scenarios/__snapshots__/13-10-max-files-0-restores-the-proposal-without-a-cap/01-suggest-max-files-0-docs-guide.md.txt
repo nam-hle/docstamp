@@ -1,0 +1,8 @@
+$ docstamp suggest --max-files 0 docs/guide.md
+exit: 0
+--- stdout ---
+suggest docs/guide.md
+  pattern  files  stale
+  lib          2    n/a
+  src         61    n/a
+--- stderr ---
