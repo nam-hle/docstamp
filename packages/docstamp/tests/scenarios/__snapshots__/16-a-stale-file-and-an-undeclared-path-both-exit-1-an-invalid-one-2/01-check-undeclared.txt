@@ -1,0 +1,13 @@
+$ docstamp check --undeclared
+exit: 1
+--- stdout ---
+STALE    docs/a.md  (content-changed)
+  depends   src/old.ts
+  depends   src/lib
+1 ok, 1 stale, 0 invalid
+next: review each stale file against its dependencies, then run: docstamp update docs/a.md
+  run update only after the review, never --all just to pass; see docstamp help agents
+UNDECLARED docs/a.md  mentions src/new.ts
+UNDECLARED docs/b.md  mentions src/new.ts
+next: declare each mentioned path in its file, or stop mentioning it; see docstamp help suggest
+--- stderr ---

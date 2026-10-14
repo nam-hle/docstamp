@@ -2,4 +2,4 @@ $ docstamp suggest --all README.md
 exit: 2
 --- stdout ---
 --- stderr ---
-error: E_USAGE: --all: --all is only valid with "docstamp update"; see docstamp help suggest.
+error: E_USAGE: --all: Pass either files or --all, not both, and --all never writes; see docstamp help suggest.

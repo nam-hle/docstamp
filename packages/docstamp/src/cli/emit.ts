@@ -2,6 +2,7 @@ import type { Diagnostic, Result } from '../core/types.ts';
 import { jsonText } from '../report/json.ts';
 import { diagnosticsText, type Chunk } from '../report/text.ts';
 import type { Io } from './io.ts';
+import type { Undeclared } from './undeclared.ts';
 
 export const hasError = (ds: readonly Diagnostic[]) => ds.some((d) => d.severity === 'error');
 
@@ -17,6 +18,7 @@ export interface Output {
   chunks?: Chunk[];
   written?: Set<string>;
   removed?: string[];
+  undeclared?: readonly Undeclared[];
 }
 
 export function emit(io: Io, o: Output): number {
@@ -31,6 +33,7 @@ export function emit(io: Io, o: Output): number {
         diagnostics: o.global,
         ...(o.written === undefined ? {} : { written: o.written }),
         ...(o.removed === undefined ? {} : { removed: o.removed }),
+        ...(o.undeclared === undefined ? {} : { undeclared: o.undeclared }),
       }),
     );
   } else {

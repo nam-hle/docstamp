@@ -1,0 +1,5 @@
+$ docstamp list-dependencies --undeclared
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --undeclared: --undeclared is only valid with "docstamp check"; see docstamp help list-dependencies.

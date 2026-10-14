@@ -100,14 +100,14 @@ From then on, a doc turns stale when a file it selects changes. Review it agains
 
 | Command | What it does |
 | --- | --- |
-| `docstamp [check]` | The verdict: checks that each file's dependencies are unchanged since its last review. A bare `docstamp` is `check`. |
+| `docstamp [check]` | The verdict: checks that each file's dependencies are unchanged since its last review. A bare `docstamp` is `check`; `--undeclared` also fails when a doc mentions the path of an existing file it does not declare. |
 | `docstamp update <file>...` or `--all` | Records that you reviewed the named files. The only command that writes the lock. |
 | `docstamp list-dependencies [<file>...]` | Lists each file with its dependency patterns and the files they select. |
 | `docstamp list-dependents <file>...` | Lists the files that depend on each named file, and the patterns that select it. |
 | `docstamp stats` | Reports how often each file's dependencies would have made it stale. |
-| `docstamp suggest <file>...` | Proposes dependencies from the paths each file mentions. |
+| `docstamp suggest <file>...` or `--all` | Proposes dependencies from the paths each file mentions; `--all` covers every declared file and prints only the new proposals. |
 
-Every command except `help` and `version` takes `--json` and `--cwd <dir>` (act as if run from `<dir>`). `docstamp help <command>` shows a command with its options and examples. Exit codes: 0 ok, 1 stale (`check` only), 2 error or invalid.
+Every command except `help` and `version` takes `--json` and `--cwd <dir>` (act as if run from `<dir>`). `docstamp help <command>` shows a command with its options and examples. Exit codes: 0 ok, 1 stale or, with `--undeclared`, an undeclared path (`check` only), 2 error or invalid.
 
 ## Configuration
 

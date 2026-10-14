@@ -3,12 +3,12 @@
 ### 13.1 Synopsis
 
 ```
-docstamp [check] [--json] [--only-stale] [--quiet] [--cwd <dir>] [<file>...]
+docstamp [check] [--json] [--only-stale] [--quiet] [--undeclared] [--cwd <dir>] [<file>...]
 docstamp update [--json] [--cwd <dir>] (--all | <file>...)
 docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]
 docstamp list-dependents [--json] [--transitive] [--cwd <dir>] <file>...
 docstamp stats [--json] [--cwd <dir>] [--since <n>d | --from <rev>] [<file>...]
-docstamp suggest [--json] [--cwd <dir>] [--write] <file>...
+docstamp suggest [--json] [--cwd <dir>] (--all | [--write] <file>...)
 docstamp help [<command> | <topic> | diagnostics <code>]
 docstamp <command> --help
 docstamp version
@@ -25,7 +25,7 @@ option as `--help`, wherever `--help` is written.
 
 The command line is parsed before anything else.
 
-1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--write`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
+1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--undeclared`, `--write`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
    written `--name <value>` or `--name=<value>`: `--cwd`, `--since` and `--from`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
@@ -56,12 +56,13 @@ Each message states the problem:
   which were removed: the message
   names the replacement, `docstamp update` for `--write`, `docstamp list-dependencies` for
   `--files` and `--cwd` for `--root`, which also resolves file arguments (§13.4);
-- `--all` with any command but `update`;
+- `--all` with any command but `update` and `suggest`;
 - `--transitive` with any command but `list-dependents`;
-- `--only-stale` or `--quiet` with any command but `check` (`[[Subject]]` the option);
+- `--only-stale`, `--quiet` or `--undeclared` with any command but `check` (`[[Subject]]` the option);
 - `update` with neither `--all` nor a file argument (`[[Subject]]` is `update`), or with both;
-- `list-dependents` with no file argument (`[[Subject]]` is `list-dependents`), or `suggest` with
-  none (`[[Subject]]` is `suggest`);
+- `list-dependents` with no file argument (`[[Subject]]` is `list-dependents`), `suggest` with
+  neither `--all` nor a file argument (`[[Subject]]` is `suggest`), or `suggest --all` with a file
+  argument or with `--write` (`[[Subject]]` is `--all`);
 - `--since` or `--from` with any command but `stats`; `--since` and `--from` together (`[[Subject]]`
   `--since`, the message names both);
 - a `--since` that is not a positive integer without leading zeros followed by `d` (`30d`), or is
@@ -131,16 +132,35 @@ declared nor carries an inline block.
 1. Let *root* be `? DetermineRoot(cwd)`.
 2. Let (*results*, *lock*, *global*) be `? EvaluateAll(root, strict)`.
 3. Let *selected* be `? SelectResults(args, cwd, root, results)`.
-4. Output *selected* and *global* (§14).
+4. Output *selected* and *global* (§14), and with `--undeclared` also *undeclared* (below).
 5. Exit with:
    - 2 if *global* contains an error or any of *selected* is `invalid`;
-   - else 1 if any of *selected* is `stale`;
+   - else 1 if any of *selected* is `stale`, or *undeclared* is not empty;
    - else 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2. No evaluation result
 exists then, so nothing but the Diagnostics is output (§14.3, §14.5).
 
 Step 4 evaluates Results as §12.1 and then sets `[[Changes]]` of each selected Result as §12.3.
+
+With `--undeclared`, *undeclared* is the List of { `[[File]]`, `[[Path]]` } built before step 4,
+in path order of `[[File]]` and then `[[Path]]`, and without it *undeclared* is not built. For each
+selected Result *r* that is not `invalid` whose file is an entry of kind *file* with text
+(§9.6.1; any other is skipped, with no Diagnostic), let *p* be `Propose(r.[[File]], text, universe,
+isIgnored)` (§12.6) and *declared* the effective patterns of `r.[[Dependencies]]` (§8.6). Add
+{ `r.[[File]]`, *path* } for each Suggestion of *p* that has no Negation, whose `[[Files]]` holds
+exactly one path *path* and whose pattern is *path* itself (a literal path, so never a directory
+or a glob), whose *status* is `new` (§13.10 step 4, with this *declared*), and such that *path* is
+not the path of a Selected Dependency (§8.7) of *r*. The Universe is the one of step 2.
+
+NOTE: `--undeclared` finds a path a file mentions that nothing it declares covers, the gap that
+`check` cannot see because a stamp only watches what is declared. It reuses the proposal of §12.6,
+so the same mentions, the generic files and the test exclusions apply. Directory and glob
+proposals are ignored on purpose: a broad proposal would fail every run, while a literal path that
+exists is a mention a person can declare or drop. It reads no git history, no Lockfile and no
+clock, never changes a Result, a verdict or a Hash, and without the option nothing changes. An
+undeclared path is a finding, as a stale file is, not an error: it has no Diagnostic code and
+exits 1 (§16). The fix is to declare the path in the file, or to stop mentioning it.
 
 `--only-stale` and `--quiet` change only what step 4 outputs, never a verdict or the exit code
 of step 5. `--only-stale` omits the `ok` Results from `files` in JSON mode (§14.5); it has no
@@ -336,10 +356,17 @@ each pattern selects and how often it would have made the file stale over the la
 `unrecorded` until a person reviews it and runs `update` (§13.6). The command never stamps, never
 reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 whatever it finds.
 
+With `--all` there is no file argument: the named files are every file with a Declaration,
+configured or inline, and only the Suggestions whose *status* is `new` are output, so that one
+command lists the gaps of a repository. `--all` never writes, so it is not combined with `--write`.
+
 1. Let *root* be `? DetermineRoot(cwd)`, *config* be the Config of `? ReadConfig(root)`
    (§9.3; a Root with no Configuration file and no inline block is not an error here) and *universe*
    be `? ComputeUniverse(root, config)`.
-2. For each distinct file argument *arg*, in path order of its *path*: if `ToRepoPath(arg, cwd, root)`
+2. With `--all`, let the *paths* be the `[[File]]` of the Declarations of steps 1 to 5 of §12.2 (the
+   attached Diagnostics are not output, and `E_CONFIG_MISSING` is raised as there) that are an
+   entry of kind *file* with text (§9.6.1), in path order; any other is skipped with no Diagnostic,
+   and there is no file argument to resolve. Otherwise, for each distinct file argument *arg*, in path order of its *path*: if `ToRepoPath(arg, cwd, root)`
    (§13.4) fails, raise « `E_USAGE` with `[[Subject]]` *arg* », for each such *arg*, its
    `[[Message]]` as in §13.8 step 3. Otherwise, if *path*
    is not an entry of kind *file*, or has no text (§9.6.1), raise « `E_UNREADABLE` » with
@@ -380,8 +407,9 @@ reads or writes the Lockfile, and without `--write` writes nothing. It exits 0 w
    Let *new* be `? WriteBlock(text, patterns)` (§9.6.5).
    Only if no step has raised, replace each *path* whose *new* differs from its text atomically, as
    §9.6.4 step 3 does; it is then *written*, and every other file is not.
-8. Output the Suggestions, *ignored*, *declared* and, with `--write`, which files were *written*
-   (§14.9, §14.5), and exit 0.
+8. With `--all`, keep of each file only the Suggestions whose *status* is `new`, and drop the files
+   left with none. Output the Suggestions, *ignored*, *declared* and, with `--write`, which files
+   were *written* (§14.9, §14.5), and exit 0.
 
 If a step raises, output the raised Diagnostics as global and exit 2; with `--write` nothing was
 written then, except that a failure to replace a file (`E_UNREADABLE`) in step 7 leaves the files

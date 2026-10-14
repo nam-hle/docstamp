@@ -1,0 +1,7 @@
+$ docstamp check --undeclared docs/b.md
+exit: 1
+--- stdout ---
+1 ok, 0 stale, 0 invalid
+UNDECLARED docs/b.md  mentions src/new.ts
+next: declare each mentioned path in its file, or stop mentioning it; see docstamp help suggest
+--- stderr ---

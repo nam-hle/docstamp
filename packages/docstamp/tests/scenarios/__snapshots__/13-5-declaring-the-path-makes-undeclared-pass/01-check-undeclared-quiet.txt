@@ -1,0 +1,4 @@
+$ docstamp check --undeclared --quiet
+exit: 0
+--- stdout ---
+--- stderr ---

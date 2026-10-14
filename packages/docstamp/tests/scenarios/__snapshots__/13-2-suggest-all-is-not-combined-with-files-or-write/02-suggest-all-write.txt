@@ -1,0 +1,5 @@
+$ docstamp suggest --all --write
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --all: Pass either files or --all, not both, and --all never writes; see docstamp help suggest.

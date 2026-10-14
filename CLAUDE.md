@@ -108,7 +108,7 @@ Inside `packages/docstamp/`:
 │   ├── lib.ts            # library entry: defineConfig, definePlugin, DocstampConfig (§9.5)
 │   ├── host/             # the machine behind ports: FileSystem, Git, Clock, Host, the Node adapters
 │   ├── core/             # shared types, canonical JSON, path order, quoting, diagnostics (§3, §4, §15)
-│   ├── cli/              # args, path resolution, workspace load, run (dispatch), check, update, evaluate, emit, io, suggest, help; exit codes (§13, §16)
+│   ├── cli/              # args, path resolution, workspace load, run (dispatch), check, update, undeclared, evaluate, emit, io, suggest, help; exit codes (§13, §16)
 │   ├── config/           # configuration carriers: YAML, TS/JS (§9)
 │   ├── inline/           # inline declarations: frontmatter scan, block parse, keys, schema, stamp, block write (§5.6, §9.6)
 │   ├── universe/         # Root, ignore rules, walk (§6, §7)
@@ -293,7 +293,10 @@ resolves them through the plugin's `parseSelect`, never running `extract`. The p
 
 ## Suggest
 
-`docstamp suggest` (SPEC §12.6, §13.10) proposes a doc's `dependencies` from the paths it mentions.
+`docstamp suggest` (SPEC §12.6, §13.10) proposes a doc's `dependencies` from the paths it mentions;
+`suggest --all` runs it for every declared file and keeps the `new` proposals, and
+`check --undeclared` (§13.5, `src/cli/undeclared.ts`) reuses it to fail on a literal path that
+nothing declares: a finding with exit 1, never a state or a Diagnostic.
 The extraction is `src/engine/mentions.ts` (text to normalized candidates) and
 `src/engine/suggest.ts` (classification, the generic-file list, collapse, test exclusions, the
 `declared`/`covered`/`new` status and the list `--write` writes after the declared patterns; both

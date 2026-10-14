@@ -37,6 +37,8 @@ export interface CheckTextOptions {
   rootFromCwd?: string;
   // SPEC §14.3.3: the files whose Declaration is inline
   inline?: ReadonlySet<string>;
+  // SPEC §14.3: the mentioned paths nothing declares, when --undeclared is given
+  undeclared?: readonly { readonly file: string; readonly path: string }[];
 }
 
 export interface Chunk {
@@ -210,6 +212,9 @@ export function reviewLine(r: Result, cwdArg?: string, rootFromCwd = ''): string
 const RULE_LINE =
   '  run update only after the review, never --all just to pass; ' + 'see docstamp help agents\n';
 
+const UNDECLARED_NEXT =
+  'next: declare each mentioned path in its file, or stop mentioning it; see docstamp help suggest\n';
+
 // SPEC §14.3.3
 function nextLine(lead: string, command: string, files: readonly string[], option: string): string {
   const listed = files.slice(0, NEXT_MAX).map(shown).join(' ');
@@ -227,6 +232,7 @@ export function checkChunks(
     quiet = false,
     rootFromCwd = '',
     inline = new Set<string>(),
+    undeclared = [],
   }: CheckTextOptions = {},
 ): Chunk[] {
   const chunks: Chunk[] = [];
@@ -281,6 +287,10 @@ export function checkChunks(
             : 'the configuration or docstamp block';
       emit('stdout', nextLine(`fix ${what} of each invalid file`, 'check', invalid, option));
     }
+  }
+  if (undeclared.length > 0) {
+    const lines = undeclared.map((u) => `UNDECLARED ${shown(u.file)}  mentions ${shown(u.path)}\n`);
+    emit('stdout', lines.join('') + UNDECLARED_NEXT);
   }
   return chunks;
 }

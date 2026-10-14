@@ -19,6 +19,7 @@ import type { Args } from './args.ts';
 import type { Host } from '../host/host.ts';
 import { resolutionMessage, toRepoPath } from './paths.ts';
 import type { Io } from './io.ts';
+import { loadWorkspace } from './workspace.ts';
 
 const WINDOW_DAYS = 30;
 const usage = (subject: string, message: string) => diag('E_USAGE', { subject, message });
@@ -60,6 +61,15 @@ function staleRates(
   return rates;
 }
 
+// SPEC §13.10 step 8: with --all, the new Suggestions only, and no file without one
+const onlyNew = (entries: readonly SuggestEntry[]): SuggestEntry[] =>
+  entries
+    .map((entry) => ({
+      ...entry,
+      suggestions: entry.suggestions.filter((row) => row.status === 'new'),
+    }))
+    .filter((entry) => entry.suggestions.length > 0);
+
 function suggestAll(
   host: Host,
   args: Extract<Args, { mode: 'suggest' }>,
@@ -72,8 +82,12 @@ function suggestAll(
   const problems: Diagnostic[] = [];
   const texts = new Map<string, string>();
   const absolute = (path: string) => join(root, universe.onDisk.get(path) ?? path);
-  for (const arg of args.paths) {
-    const path = toRepoPath(arg, cwd, root, host.windows);
+  // SPEC §13.10 step 2: with --all the paths are the declared files, and unreadable ones are skipped
+  const requested = args.all
+    ? loadWorkspace(host, root).declarations.map((d) => d.file)
+    : args.paths;
+  for (const arg of requested) {
+    const path = args.all ? arg : toRepoPath(arg, cwd, root, host.windows);
     if (path === null) {
       problems.push(usage(arg, resolutionMessage(arg, cwd, root, host.windows)));
       continue;
@@ -84,6 +98,7 @@ function suggestAll(
     } catch {
       text = null;
     }
+    if (text === null && args.all) continue;
     if (text === null) {
       const message = `Cannot read ${path} as text; name a readable text file.`;
       problems.push(diag('E_UNREADABLE', { subject: path, message }));
@@ -156,7 +171,7 @@ function suggestAll(
     }
     for (const [path, text] of rewritten) replaceFile(host, absolute(path), path, () => text);
   }
-  return names.map((path) => {
+  const entries = names.map((path) => {
     const { suggestions, ignored } = proposals.get(path)!;
     const status = statuses.get(path)!;
     return {
@@ -172,6 +187,7 @@ function suggestAll(
       written: rewritten.has(path),
     };
   });
+  return args.all ? onlyNew(entries) : entries;
 }
 
 // SPEC §13.10; reads the clock for the window (§2)
@@ -192,9 +208,11 @@ export function runSuggest(
     global = e.diagnostics;
   }
   if (args.json) {
-    io.stdout(suggestJsonText({ exitCode, write: args.write, files, diagnostics: global }));
+    io.stdout(
+      suggestJsonText({ exitCode, write: args.write, all: args.all, files, diagnostics: global }),
+    );
   } else {
-    io.stdout(suggestText(files, args.write));
+    io.stdout(suggestText(files, args.write, args.all));
     io.stderr(diagnosticsText(global));
   }
   return exitCode;

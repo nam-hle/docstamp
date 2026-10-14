@@ -4,7 +4,7 @@ exit: 0
 docstamp suggest: Propose dependencies from the paths each file mentions.
 
 Usage:
-  docstamp suggest [--json] [--cwd <dir>] [--write] <file>...
+  docstamp suggest [--json] [--cwd <dir>] (--all | [--write] <file>...)
 
 Reads each named file and proposes its dependencies from the repository paths it mentions (code
 spans, links, paths in the prose), with the number of files each pattern selects and its stale rate
@@ -14,10 +14,16 @@ paths are not proposed. A glob that selects test files is followed by exclusions
 says declared (the same pattern), covered (the declared patterns already select its files) or new,
 and only declared lines list the declared patterns it no longer mentions.
 
+With --all it reads every file that has a declaration, configured or inline, and prints only the
+proposals with status new, grouped by file: the paths a doc mentions that no declaration covers. It
+prints nothing when there are none, and never writes.
+
 Read the proposal before keeping it: a mention can be an illustration, and a directory can select
 many files. It is the quick way to enroll an existing doc: suggest --write, review, then update.
 
 Options:
+  --all        Propose for every file that has a declaration and print only the new proposals. Not
+               with file arguments or --write.
   --json       Print one JSON document instead of text (docstamp help json).
   --cwd <dir>  Act as if run from <dir>: the root is searched upward from it, and file arguments are
                resolved against it.
@@ -26,7 +32,7 @@ Options:
                order, and gains only new ones; an addition that would change what they select is
                left out. Refuses (E_USAGE) a block that has a hash, a file declared in the
                configuration file, and a block with use that cannot be extended line by line.
-  <file>...    The files to read. At least one.
+  <file>...    The files to read. At least one, unless --all.
   -h, --help   Print this page.
 
 Reads:
@@ -47,6 +53,7 @@ Examples:
     src/hash.ts      1  0.5000  covered
     only declared  src
     only declared  !src/**/*.test.ts
+  $ docstamp suggest --all
   $ docstamp suggest --write docs/notes.md
 
 Exit codes:

@@ -79,7 +79,11 @@ counting the selected Results. With `--quiet`, the summary line is not output wh
 Result is `stale` or `invalid`, so that standard output is empty on success; in every other case
 it is output. When the command raised before any Result existed (§13.5), none
 of this is output: no block, no summary line and no `next:` line, only the Diagnostics. Then the
-`next:` lines of §14.3.3.
+`next:` lines of §14.3.3, then, with `--undeclared` and a non-empty *undeclared* (§13.5), the
+*undeclared lines*: one per element in order, `UNDECLARED ` then the file, two spaces, `mentions `
+and the path, each as in §14.2, and the line
+`next: declare each mentioned path in its file, or stop mentioning it; see docstamp help suggest`.
+They are written even with `--quiet`, and the summary line does not count them.
 
 Each Diagnostic, global and attached, in Diagnostic order, is written to standard error as:
 
@@ -156,7 +160,7 @@ with both streams merged, each Diagnostic follows the line it belongs to:
 1. the global Diagnostics, to standard error;
 2. for each selected Result in path order: its block, to standard output, when it is not `ok`;
    then its attached Diagnostics, to standard error, in Diagnostic order;
-3. the summary line and the `next:` lines, to standard output.
+3. the summary line, the `next:` lines and the undeclared lines, to standard output.
 
 Each stream, taken alone, holds what §14.3 and §14.1 define, in the same order (global
 Diagnostics first, then the Diagnostics of each file in path order): the order above is not
@@ -294,6 +298,9 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - `files` holds every selected Result (check) or every target (update), in path order,
   including `ok` ones. With `check --only-stale` the `ok` ones are omitted, and `summary`
   still counts every selected Result (§13.5).
+- With `check --undeclared` the document has a last top-level member `"undeclared"`, after
+  `diagnostics`: the List *undeclared* of §13.5 as `{ "file", "path" }` in its order, `[]` when
+  there is none or a step raised. Without the option the member is absent.
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path", "via" }` in this
   order, or `null` when it is *unknown* or not applicable (§12.3), including in update mode.
   `via` is `[[Via]]`, the List of patterns that selected the path. A fourth member,
@@ -458,7 +465,9 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
   `ignored`: the List *declared* of §13.10 step 4, in its order, or `null` when it is *none*. With `--write` each
   element adds `"written": true|false` after `diagnostics`. The `diagnostics` of a file are always
   `[]`, kept for the shape of the other modes; the top-level `diagnostics` hold the raised
-  Diagnostics, in which case `files` is empty.
+  Diagnostics, in which case `files` is empty. With `--all` (§13.10) the document has a last
+  top-level member `"all": true`, after `diagnostics`, `files` holds only the files that have a
+  Suggestion left by step 8, and `suggestions` only the `new` ones; the other members are as above.
 - A Diagnostic is `{ "code", "severity", "file", "subject", "message" }`, with `null` for an
   empty `[[File]]` or `[[Subject]]`, and a last member `"pluginCode"` that is present only when the
   Diagnostic has a `[[PluginCode]]`. Diagnostic Lists are in Diagnostic order.
@@ -587,6 +596,10 @@ suggest docs/architecture.md
   src/server/router.ts      1  0.2222  new
   only declared  src/legacy
 ```
+
+With `--all` (§13.10) every block has the `status` column and only rows of status `new`, and no
+`ignored` or `only declared` line; a file with no `new` Suggestion has no block, so a repository
+without gaps prints nothing.
 
 When *declared* is *none*, the block is exactly as above, without the column and those lines.
 With `--write`, after all blocks, one line `written  <file>` or `unchanged  <file>`

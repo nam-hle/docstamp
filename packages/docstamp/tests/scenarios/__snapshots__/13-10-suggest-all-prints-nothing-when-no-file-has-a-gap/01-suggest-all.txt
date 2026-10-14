@@ -1,0 +1,4 @@
+$ docstamp suggest --all
+exit: 0
+--- stdout ---
+--- stderr ---

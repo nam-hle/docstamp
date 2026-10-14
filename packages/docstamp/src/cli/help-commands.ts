@@ -27,7 +27,9 @@ const ERROR_EXIT = ['2', 'an error diagnostic, or a usage error.'] as const;
 // SPEC §13.1 to §13.11: one page per command of the command table
 export const COMMAND_PAGES: Record<Command, CommandPage> = {
   check: {
-    synopsis: ['docstamp [check] [--json] [--only-stale] [--quiet] [--cwd <dir>] [<file>...]'],
+    synopsis: [
+      'docstamp [check] [--json] [--only-stale] [--quiet] [--undeclared] [--cwd <dir>] [<file>...]',
+    ],
     summary: "Check that each file's dependencies are unchanged since its last review.",
     description: `
 The default command: a bare docstamp is docstamp check. It evaluates every stamped file (or only
@@ -43,6 +45,11 @@ file's patterns as depends lines. That report is advisory: the verdict never rea
       JSON_OPTION,
       ['--only-stale', 'With --json, leave the ok files out of files; summary still counts them.'],
       ['--quiet', 'Print nothing on standard output when every selected file is ok.'],
+      [
+        '--undeclared',
+        'Also fail (exit 1) when a selected file mentions a path of an existing file that none of ' +
+          'its patterns covers. Directories and globs are not judged. With --json: undeclared.',
+      ],
       ROOT_OPTION,
       ['<file>...', 'Check only these stamped files.'],
     ],
@@ -63,10 +70,14 @@ next: review each stale file against its dependencies, then run: docstamp update
 `,
       },
       { args: ['--json', '--only-stale'] },
+      { args: ['--undeclared'] },
     ],
     exit: [
       ['0', 'every selected file is ok.'],
-      ['1', 'a selected file is stale, and none is invalid.'],
+      [
+        '1',
+        'a selected file is stale, or with --undeclared mentions an undeclared path; none invalid.',
+      ],
       ['2', 'a selected file is invalid, an error diagnostic, or a usage error.'],
     ],
     related: ['update', 'list-dependencies', 'states', 'agents'],
@@ -190,7 +201,7 @@ history (fetch-depth: 0 in CI), else E_HISTORY.`,
     related: ['suggest', 'patterns'],
   },
   suggest: {
-    synopsis: ['docstamp suggest [--json] [--cwd <dir>] [--write] <file>...'],
+    synopsis: ['docstamp suggest [--json] [--cwd <dir>] (--all | [--write] <file>...)'],
     summary: 'Propose dependencies from the paths each file mentions.',
     description: `
 Reads each named file and proposes its dependencies from the repository paths it mentions (code
@@ -201,9 +212,18 @@ ignored paths are not proposed. A glob that selects test files is followed by ex
 says declared (the same pattern), covered (the declared patterns already select its files) or new,
 and only declared lines list the declared patterns it no longer mentions.
 
+With --all it reads every file that has a declaration, configured or inline, and prints only the
+proposals with status new, grouped by file: the paths a doc mentions that no declaration covers. It
+prints nothing when there are none, and never writes.
+
 Read the proposal before keeping it: a mention can be an illustration, and a directory can select
 many files. It is the quick way to enroll an existing doc: suggest --write, review, then update.`,
     options: [
+      [
+        '--all',
+        'Propose for every file that has a declaration and print only the new proposals. Not with ' +
+          'file arguments or --write.',
+      ],
       JSON_OPTION,
       ROOT_OPTION,
       [
@@ -214,7 +234,7 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
           'left out. Refuses (E_USAGE) a block that has a hash, a file declared in the ' +
           'configuration file, and a block with use that cannot be extended line by line.',
       ],
-      ['<file>...', 'The files to read. At least one.'],
+      ['<file>...', 'The files to read. At least one, unless --all.'],
     ],
     reads: 'the configuration file, the named files, the file tree and git history (stale rate).',
     writes: 'with --write, the docstamp block of each named file that has a proposal.',
@@ -236,6 +256,7 @@ many files. It is the quick way to enroll an existing doc: suggest --write, revi
   only declared  !src/**/*.test.ts
 `,
       },
+      { args: ['suggest', '--all'] },
       { args: ['suggest', '--write', 'docs/notes.md'] },
     ],
     exit: [['0', 'the proposal was listed, even when it is empty.'], ERROR_EXIT],
