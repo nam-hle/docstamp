@@ -100,6 +100,7 @@ export function propose(
   universe: readonly string[],
   isIgnored: (path: string) => boolean,
   max = 0,
+  mentions: readonly string[] | null = null,
 ): Proposal {
   const files = universe.filter((path) => path !== doc);
   const known = new Set(files);
@@ -114,7 +115,8 @@ export function propose(
   const dirs = new Set<string>();
   const globs = new Set<string>();
   const ignored = new Set<string>();
-  for (const candidate of mentionedPaths(text, parentOf(doc))) {
+  // §12.6 step 0
+  for (const candidate of mentions ?? mentionedPaths(text, parentOf(doc))) {
     if (!GLOB_CHARS.test(candidate)) {
       if (!isLiteral(candidate)) continue;
       if (known.has(candidate)) {

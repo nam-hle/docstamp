@@ -349,14 +349,17 @@ selected part) does not touch the Result, which is what a narrower dependency is
 
 ### 12.6 Proposal
 
-`Propose(doc, text, universe, isIgnored, max)` returns a List of *Suggestions*, a List of
+`Propose(doc, text, universe, isIgnored, max, mentions)` returns a List of *Suggestions*, a List of
 *ignored* RepoPaths, in path order, and a List of *skipped* (step 8), in path order. *text* is the text of the file *doc* (§9.6.1), *universe* the Universe
-(§7), *isIgnored* the test of §8.5 NOTE and *max* a whole number: the most files a directory or a glob may
-resolve to, or 0 for no limit. A *Suggestion* is { `[[Pattern]]`: a valid Pattern
+(§7), *isIgnored* the test of §8.5 NOTE, *max* a whole number: the most files a directory or a glob may
+resolve to, or 0 for no limit, and *mentions* the result of `Mentions(plugins, doc, text)` (§8.7): a
+List of candidates, or none. A *Suggestion* is { `[[Pattern]]`: a valid Pattern
 (§8.1), `[[Files]]`: the List of RepoPaths it contributes, in path order }. Let *U* be *universe*
 without *doc*. A *file* below is a member of *U*; a *directory* is a String that is a proper
 prefix, before a `/`, of some path of *U*.
 
+0. *Source.* If *mentions* is not none, a Plugin has read *doc*: steps 1 to 4 are skipped and the
+   *candidates* of step 5 are *mentions*. Otherwise *doc* is read as Markdown, as steps 1 to 5 say.
 1. *Reading.* Let *lines* be the lines of *text* (§5.6). If `ScanFrontmatter(text)` is not *none*,
    remove the lines from its *marker* through its *last*: the inline block is never read, so that
    writing it (§9.6.5) cannot change a proposal. Remove the *fenced* lines: a line that, after at

@@ -65,6 +65,17 @@ export interface JsonSchema {
   readonly description?: string;
 }
 
+// SPEC §8.7 Mentions: the doc a plugin reads, and the paths it says the doc mentions
+export interface MentionsInput {
+  readonly path: string;
+  readonly text: string;
+}
+
+export interface MentionsResult {
+  readonly links?: readonly string[];
+  readonly words?: readonly string[];
+}
+
 export interface PluginMeta {
   readonly schema?: JsonSchema;
 }
@@ -77,4 +88,5 @@ export interface DocstampPlugin {
   extract(input: ExtractInput): ExtractResult;
   validateSelect?(select: Json): ValidateSelectResult;
   parseSelect?(raw: string): ParseSelectResult;
+  mentions?(input: MentionsInput): MentionsResult;
 }

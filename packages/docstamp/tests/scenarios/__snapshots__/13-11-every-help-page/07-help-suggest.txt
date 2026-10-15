@@ -8,12 +8,13 @@ Usage:
     (--all [--limit <n>] | [--write] <file>...)
 
 Reads each named file and proposes its dependencies from the repository paths it mentions (code
-spans, links, paths in the prose), with the number of files each pattern selects and its stale rate
-over the last 30 days (n/a without git history). Generic files such as package.json and ignored
-paths are not proposed. A glob that selects test files is followed by exclusions of them
-(!<scope>/**/*.test.* and the like). For a file that already declares dependencies, a status column
-says declared (the same pattern), covered (the declared patterns already select its files) or new,
-and only declared lines list the declared patterns it no longer mentions.
+spans, links, paths in the prose; a plugin that claims the file and has a mentions function reads it
+in its own syntax instead), with the number of files each pattern selects and its stale rate over
+the last 30 days (n/a without git history). Generic files such as package.json and ignored paths are
+not proposed. A glob that selects test files is followed by exclusions of them (!<scope>/**/*.test.*
+and the like). For a file that already declares dependencies, a status column says declared (the
+same pattern), covered (the declared patterns already select its files) or new, and only declared
+lines list the declared patterns it no longer mentions.
 
 With --all it reads every file that has a declaration, configured or inline, and prints only the
 proposals with status new, grouped by file: the paths a doc mentions that no declaration covers. It

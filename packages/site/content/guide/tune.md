@@ -59,6 +59,10 @@ undeclared:
 files: {}
 ```
 
+Both read a doc as Markdown (code spans, links, paths in the prose). For a doc of another format,
+register a [plugin](/guide/plugins#ready-made-plugins) that claims it and has a `mentions`
+function, such as the AsciiDoc plugin: it says which paths the doc mentions, and the rest is the same.
+
 Both print the first 10 findings and say how many are left: fix those, then run again, or pass
 `--limit <n>` for another page size (`--limit 0` prints all). `--json` is never cut
 ([check](/reference/commands/check), [SPEC §13.5](/spec/command-line#135-check)).

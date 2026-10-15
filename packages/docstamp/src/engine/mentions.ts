@@ -74,6 +74,24 @@ function normalizeLink(target: string, docDir: string): string | null {
   return finish(resolved.replace(/\/+$/u, ''));
 }
 
+// SPEC §8.7 Mentions step 5: what a Plugin read from a doc, normalized as a link or a span word
+export function normalizeMentions(
+  links: readonly string[],
+  words: readonly string[],
+  docDir: string,
+): string[] {
+  const found = new Set<string>();
+  for (const link of links) {
+    const candidate = normalizeLink(link, docDir);
+    if (candidate !== null) found.add(candidate);
+  }
+  for (const word of words) {
+    const candidate = normalizeWord(word, false);
+    if (candidate !== null) found.add(candidate);
+  }
+  return [...found];
+}
+
 // SPEC §12.6 steps 1 to 5: the paths a text mentions, normalized, in no particular order
 export function mentionedPaths(text: string, docDir: string): string[] {
   let prose = proseOf(text);

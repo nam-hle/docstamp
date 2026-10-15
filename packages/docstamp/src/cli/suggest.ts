@@ -19,6 +19,7 @@ import type { Args } from './args.ts';
 import type { Host } from '../host/host.ts';
 import { resolutionMessage, toRepoPath } from './paths.ts';
 import type { Io } from './io.ts';
+import { docMentions } from './mentions.ts';
 import { loadWorkspace } from './workspace.ts';
 
 const WINDOW_DAYS = 30;
@@ -77,7 +78,7 @@ function suggestAll(
 ): SuggestEntry[] {
   const cwd = resolveCwd(host, processCwd, args.cwd);
   const root = determineRoot(host, cwd);
-  const { config } = readConfig(host, root);
+  const { config, plugins } = readConfig(host, root);
   const universe = computeUniverse(host, root, config);
   const problems: Diagnostic[] = [];
   const texts = new Map<string, string>();
@@ -134,10 +135,20 @@ function suggestAll(
   };
   const isIgnored = (path: string) => isIgnoredPath(host, root, universe, path);
   const proposals = new Map(
-    names.map((path) => [
-      path,
-      propose(path, texts.get(path)!, universe.paths, isIgnored, args.maxFiles),
-    ]),
+    names.map((path) => {
+      const text = texts.get(path)!;
+      return [
+        path,
+        propose(
+          path,
+          text,
+          universe.paths,
+          isIgnored,
+          args.maxFiles,
+          docMentions(plugins, path, text),
+        ),
+      ];
+    }),
   );
   const rates = staleRates(
     host,

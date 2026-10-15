@@ -1,0 +1,9 @@
+$ docstamp suggest docs/notes.txt
+exit: 0
+--- stdout ---
+suggest docs/notes.txt
+  pattern   files  stale  status
+  lib/c.ts      1    n/a  new
+  src/a.ts      1    n/a  new
+  src/b.ts      1    n/a  declared
+--- stderr ---

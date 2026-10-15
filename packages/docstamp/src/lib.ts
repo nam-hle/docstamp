@@ -10,6 +10,8 @@ export type {
   Part,
   PluginDiagnostic,
   JsonSchema,
+  MentionsInput,
+  MentionsResult,
   ParseSelectResult,
   PluginMeta,
   ValidateSelectResult,

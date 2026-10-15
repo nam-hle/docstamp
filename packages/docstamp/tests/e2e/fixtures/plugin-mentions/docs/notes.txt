@@ -1,0 +1,5 @@
+Notes in a format of their own.
+see: ../src/a.ts
+see: ../src/b.ts
+use: lib/c.ts
+`lib/not-a-mention.ts` is only prose here, the plugin says what a mention is.

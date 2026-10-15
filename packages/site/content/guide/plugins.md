@@ -110,7 +110,27 @@ const plugin = {
   shorthand and the written form of the same `select` share one Dependency Hash. A plugin without
   it gets the text as a String.
 
-Both are optional and additive, so `apiVersion` stays 1. The exact subset and the order in which
+A third optional member concerns the doc that declares dependencies, not the file it depends on.
+`suggest` and `check --undeclared` find the paths a doc mentions with a scanner for Markdown (code
+spans, links, bare words). A plugin that claims a doc through `files` and has a synchronous
+`mentions({ path, text })` replaces that scanner for the doc, and returns what it read:
+
+```ts
+mentions: ({ text }) => ({
+  links: [...text.matchAll(/^include::([^[]+)\[/gmu)].map((match) => match[1]),
+  words: [],
+}),
+```
+
+- `links` are targets written relative to the doc, as a Markdown link target is; `words` are paths
+  written from the repository root, as a code span is. docstamp normalizes both and classifies them
+  as it does for Markdown.
+- It is pure and deterministic and reads no file. A `mentions` that throws, returns a promise or
+  returns another shape is an `E_PLUGIN` naming the doc, and two plugins with a `mentions` that
+  claim one doc are too.
+- A doc that no plugin with a `mentions` claims is read as Markdown, as before.
+
+All three are optional and additive, so `apiVersion` stays 1. The exact subset and the order in which
 failures are reported are [SPEC §8.7](/spec/patterns#87-selected-dependencies).
 
 A plugin runs in your process, so determinism is its author's duty: keep it independent of the
