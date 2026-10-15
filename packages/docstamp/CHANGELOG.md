@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.1](https://github.com/nam-hle/docstamp/compare/v0.6.0...v0.6.1) (2026-10-15)
+
+
+### Features
+
+* let a plugin say which paths a doc mentions, and read AsciiDoc docs with it ([#157](https://github.com/nam-hle/docstamp/issues/157)) ([32e6402](https://github.com/nam-hle/docstamp/commit/32e64020f2f996203c3f8724789b7b379c3a4894))
+
 ## [0.6.0](https://github.com/nam-hle/docstamp/compare/v0.5.0...v0.6.0) (2026-10-14)
 
 
