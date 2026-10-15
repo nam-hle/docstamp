@@ -93,10 +93,14 @@ export function runCheck(
     const global = evaluated.global;
     const refused = hasError(global) || selected.some((r) => r.state === 'invalid');
     const undeclared = args.undeclared
-      ? undeclaredPaths(host, root, evaluated.universe, selected, {
-          declarations: evaluated.declarations,
-          ignore: evaluated.undeclaredIgnore,
-        })
+      ? undeclaredPaths(
+          host,
+          root,
+          evaluated.universe,
+          selected,
+          { declarations: evaluated.declarations, ignore: evaluated.undeclaredIgnore },
+          evaluated.plugins,
+        )
       : undefined;
     const stale = selected.some((r) => r.state === 'stale') || (undeclared?.length ?? 0) > 0;
     const exitCode = refused ? 2 : stale ? 1 : 0;

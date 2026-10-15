@@ -233,8 +233,10 @@ Only what no test can check stays here.
 - **A plugin is user code.** It runs in-process and synchronously, only from `cli/evaluate.ts`
   through `EngineFs.extractParts` and, for `validateSelect` and `parseSelect`, from the cli layer
   (`resolveSelector` in `config/shorthand.ts`, called by `cli/workspace.ts` at load and by
-  `cli/check.ts` for §12.3 step 1.4); `engine/` never calls a plugin or reads a file; it imports
-  only the pure `canonicalJson` from `core/` (§8.7).
+  `cli/check.ts` for §12.3 step 1.4) and, for `mentions`, from `cli/mentions.ts` (`docMentions`,
+  called by `cli/suggest.ts` and `cli/undeclared.ts`, which hand the candidates to `propose`);
+  `engine/` never calls a plugin or reads a file; it imports only the pure `canonicalJson` from
+  `core/` (§8.7).
 - **The hash input rule has one exception.** A file with an inline block is hashed without its
   `hash:` line (§10.2 step 4); anything else about hashing is a breaking change (§17).
 
@@ -317,7 +319,11 @@ The extraction is `src/engine/mentions.ts` (text to normalized candidates) and
 pure), the command is `src/cli/suggest.ts` and its output `src/report/suggest.ts`. Tests:
 `tests/unit/suggest.test.ts`, `tests/unit/write-block.test.ts`,
 `tests/e2e/scenarios/suggest.test.ts` on the `suggest` fixture. Every rule is in the spec, so a
-change to the generic list, a threshold or a mention rule starts there.
+change to the generic list, a threshold or a mention rule starts there. The scanner above reads
+Markdown; a plugin with a `mentions` member that claims the doc replaces it (SPEC §8.7 `Mentions`,
+`src/cli/mentions.ts`, passed to `propose` as its `mentions` argument). Tests:
+`tests/unit/mentions-plugin.test.ts`, `tests/e2e/scenarios/plugin-mentions.test.ts` on the
+`plugin-mentions` fixture.
 
 ## Help
 

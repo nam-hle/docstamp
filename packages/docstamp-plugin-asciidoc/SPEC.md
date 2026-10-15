@@ -31,8 +31,8 @@ of its own.
 
 The default export is a docstamp plugin (SPEC §8.7) with `name` `docstamp-plugin-asciidoc`,
 `apiVersion` 1 and `files` « `**/*.adoc`, `**/*.asciidoc`, `**/*.asc` ». Its `extract` is `Extract`
-(§6), its `validateSelect` is `ValidateSelect` (§6.1), its `parseSelect` is `ParseSelect` (§4.1) and
-its `meta.schema` (SPEC §8.7 Select Schema) is { `type`: « `string`, `object` », `minLength`: 1,
+(§6), its `validateSelect` is `ValidateSelect` (§6.1), its `parseSelect` is `ParseSelect` (§4.1), its
+`mentions` is `Mentions` (§7.1) and its `meta.schema` (SPEC §8.7 Select Schema) is { `type`: « `string`, `object` », `minLength`: 1,
 `properties`: { `title`: { `type`: `string`, `minLength`: 1 }, `level`: { `type`: `integer`,
 `minimum`: 1, `maximum`: 6 }, `anchor`: { `type`: `string`, `minLength`: 1 } },
 `additionalProperties`: `false` }: it names the keys of §4 and the range of step 5, so docstamp refuses
@@ -154,7 +154,7 @@ that follow its content, and ends where the Source does for the last one.
    character of its text, not less than `start`, counted in the Source.
 
 NOTE: `focus` and `lines` are advisory: docstamp prints them in its changed-file report and never
-hashes them, so they are not part of the compatibility of §7.
+hashes them, so they are not part of the compatibility of §8.
 
 NOTE: Two Sections that the selector selects are an `error`, even when it has a `level` that both
 have: this Plugin has no form that selects all of them. An Anchor selector selects two Sections only
@@ -203,7 +203,53 @@ that applies, each Section written `<=s> <Title> (line <n>)`, in the order of th
 The message holds no path and no code point below U+0020 (each is replaced by U+0020), so the same
 file gives the same message on every machine.
 
-## 7 Compatibility
+## 7 Mentions
+
+The plugin also reads a doc written in AsciiDoc, for `docstamp suggest` and `docstamp check
+--undeclared` (SPEC §8.7 `Mentions`): it tells docstamp which paths the doc mentions, since those
+commands only know the syntax of Markdown. This is about the doc that declares its dependencies, not
+about the file it depends on (§6). Its `mentions` is `Mentions` (§7.1) and it returns { `links`,
+`words` }, which docstamp normalizes and classifies as it does for Markdown (SPEC §12.6 steps 5 to
+11). A file with the `files` of §3 is read this way, so it is no longer read as Markdown.
+
+### 7.1 Mentions
+
+`Mentions({ path, text })` reads *source* = `Source(text)` (§5.1) line by line, in one pass:
+
+1. *Blocks.* A line that, without its trailing U+0020 and U+0009, is four or more of one code point
+   from `-`, `.`, `/` and `+` and nothing else, opens a listing, literal, comment or passthrough
+   block; the block closes at the next line that is exactly that line (the same code point the same
+   number of times), or lasts to the end. The opening and closing lines are not read, and nor is
+   an enclosed line, with one exception: in a listing, literal or passthrough block (not a comment
+   block) a line that starts with `include::` is read as step 2 reads it and by no other step, for
+   Asciidoctor includes the file there. A path in a code listing is not a mention. A line that
+   starts with `//` and is not four or more `/` is a comment line and is not read either.
+2. *Macros.* In a line that is read, a *macro* is `include::`, `image::`, `image:`, `link:` or `xref:`
+   at the start of the line or after a U+0020 or U+0009, then a *target*: the code points up to the
+   next `[`, which must be on the line. A target that is empty, holds a blank or a `{` (an attribute
+   reference, which has no value here) is dropped. Otherwise it is a *link*, as written: `./a.ts`,
+   `../b.ts`, `c.ts#d` are links. The macro, its target and its `[`...`]` up to the `]` that closes
+   it (or the end of the line) are replaced by one U+0020, which keeps the other steps from reading
+   them twice. A macro nested in the text of another is not read.
+3. *Spans.* In what remains of a read line, a *code span* is a `` ` `` and the next `` ` `` on the
+   line; its content without leading and trailing blanks, if that has no blank, is a *word*; the span
+   is replaced by one U+0020.
+4. *Bare words.* What remains of the line is split at whitespace and at each of `` ` ``, `(`, `)`,
+   `<`, `>`, `"`, `'`, `|`, `;`, `[` and `]`. A part that contains a `/` and does not start with `*`,
+   without its trailing `.`, `,`, `;`, `:` and `!`, is a *word*.
+5. Return { `links`: the links in order of appearance, `words`: the words in order of appearance }.
+
+NOTE: A *link* is relative to the directory of the doc and a *word* to Root, which is how SPEC §8.7
+reads them. `link:` with a URL (`https://...`) is returned as written and docstamp drops it; the
+plugin does not judge what a target is.
+
+NOTE: Mentions never reads a file, so an `include::` of a file is a path to declare, not a text to
+follow, as for `Extract` (§1).
+
+## 8 Compatibility
+
+What `Mentions` (§7) returns decides only what `suggest` and `check --undeclared` report, never a hash,
+so a change to it is not breaking, but a doc that `check --undeclared` accepted may fail it.
 
 The hash of a section is part of the Dependency Hash of every file that depends on it, so a change to
 `Source`, `Sections`, `Start` or `SectionEnd` that changes the hash of an existing section is breaking,

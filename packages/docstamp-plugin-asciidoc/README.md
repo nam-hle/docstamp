@@ -73,6 +73,21 @@ the section, the other sections and the document header never change the hash.
   are not known, so `ifdef::` blocks that depend on them are read as if the attribute were unset.
 - Asciidoctor's own warnings (a duplicate id, a skipped level) are not printed.
 
+## Reading an AsciiDoc doc that declares dependencies
+
+`docstamp suggest` and `docstamp check --undeclared` find the paths a doc mentions, and without this
+plugin they only know Markdown syntax. For a doc this plugin claims (`.adoc`, `.asciidoc`, `.asc`) it
+reads the AsciiDoc ([SPEC §7](SPEC.md#7-mentions)):
+
+- the targets of `include::`, `image::`, `image:`, `link:` and `xref:` macros, relative to the doc
+  (`include::./snippets/a.ts[tags="demo"]` mentions `snippets/a.ts` next to the doc);
+- code spans (`` `src/a.ts` ``) and bare words that contain a `/`;
+- nothing inside a listing (`----`), literal (`....`), comment (`////`) or passthrough (`++++`)
+  block, nor on a `//` comment line.
+
+This needs a docstamp that calls `mentions` (the member is ignored by one that does not), and a doc
+that is declared in the configuration file, as above.
+
 The full contract is [SPEC.md](SPEC.md). The plugin parses with
 [`@asciidoctor/core`](https://github.com/asciidoctor/asciidoctor.js) only to find where sections begin
 and end. It is held to the 3.0 line, the last one with a synchronous API, which docstamp plugins need.

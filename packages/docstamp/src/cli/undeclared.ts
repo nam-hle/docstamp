@@ -4,9 +4,11 @@ import type { Declaration, Result } from '../core/types.ts';
 import { propose, statusOf } from '../engine/suggest.ts';
 import type { Host } from '../host/host.ts';
 import { textOf } from '../inline/read-inline.ts';
+import type { DocstampPlugin } from '../plugin/types.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { select } from '../pattern/match.ts';
 import { isIgnoredPath, type Universe } from '../universe/walk.ts';
+import { docMentions } from './mentions.ts';
 
 export interface Undeclared {
   readonly file: string;
@@ -41,6 +43,7 @@ export function undeclaredPaths(
   universe: Universe,
   selected: readonly Result[],
   skips: Skips,
+  plugins: readonly DocstampPlugin[],
 ): Undeclared[] {
   const isIgnored = (path: string) => isIgnoredPath(host, root, universe, path);
   const isSkipped = skipper(skips);
@@ -51,7 +54,8 @@ export function undeclaredPaths(
       if (text === null) return [];
       const others = universe.paths.filter((path) => path !== result.file);
       const viaSelected = new Set((result.selected ?? []).map((entry) => entry.path));
-      return propose(result.file, text, universe.paths, isIgnored, 0)
+      const mentions = docMentions(plugins, result.file, text);
+      return propose(result.file, text, universe.paths, isIgnored, 0, mentions)
         .suggestions.filter(
           ({ pattern, files }) =>
             files.length === 1 &&

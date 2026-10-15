@@ -287,13 +287,39 @@ The `E_SELECT` has `[[File]]` the file declaring it and `[[Subject]]` `[[Path]]`
 message of one docstamp raises names the Plugin and the path. `ResolveSelector` is called from the
 CLI layer only, at load (§12.2 step 5) and at §12.3 step 1.4, never from the engine (§12.2).
 
+`Mentions(plugins, doc, text)` returns a List of *candidates* (§12.6 step 5), or none, or raises. It
+is how `Propose` (§12.6) reads the paths a doc mentions when the doc is not written in the syntax
+that §12.6 steps 1 to 4 read: the format of a doc, which a Plugin may know, is a different thing
+from the format of a file a doc depends on, which `Extract` reads.
+
+1. Let *claimed* be the Plugins of *plugins* that have `[[Mentions]]` and whose `[[Files]]` select
+   *doc* (§8.2). A builtin Plugin (§8.8) has none. If *claimed* is empty, return none.
+2. If *claimed* has more than one Plugin, raise `E_PLUGIN`, `[[Subject]]` *doc*, its message naming
+   the Plugins.
+3. Call `[[Mentions]]` of the Plugin synchronously with { `path`: *doc*, `text` }, *text* being the
+   text of *doc* as `Propose` receives it. If it throws, returns a Promise or does not return a Map,
+   raise `E_PLUGIN`, `[[Subject]]` *doc*, its message naming the Plugin and *doc* and holding no text
+   of the host's error (§5.5).
+4. Read from the result { `links` } and { `words` }, each a List of at most 100000 well-formed Strings
+   and « » when absent, other members being ignored. A member of another shape is the `E_PLUGIN` of
+   step 3.
+5. Return, without duplicates, `NormalizeLink(t)` for each *link* *t* and `NormalizeWord(w)` for each
+   *word* *w*, as §12.6 step 5 defines them, a *word* being read as a span word is (not as a bare
+   word), and dropping the *none*.
+
+A *link* is a target written relative to the directory of *doc*, as a Markdown link target is; a
+*word* is a path written from Root, as a code span is. `Mentions` is called from the CLI layer only,
+by `suggest` and `check --undeclared` (§13.5, §13.10), never from the engine (§12.6), and a Plugin
+MUST make it pure and deterministic. It reads no file: the Plugin has the text of *doc* and nothing
+else.
+
 A *Plugin* is { `[[Name]]`: a non-empty String, `[[ApiVersion]]`: 1, `[[Files]]`: a non-empty List
 of Patterns, `[[Extract]]`: a function, `[[ValidateSelect]]`: a function, when present,
-`[[ParseSelect]]`: a function, when present, `[[Meta]]`: { `schema`: a *Select Schema* (below),
-when present }, when present }, other members being ignored. Plugin names are unique. A
-`validateSelect` or a `parseSelect` that is present and not a function, a `meta` that is present and
-not a Map, or a `meta.schema` that is not a Select Schema is an invalid Plugin (`E_PLUGIN`, §9.5);
-the message of a schema names the keyword.
+`[[ParseSelect]]`: a function, when present, `[[Mentions]]`: a function, when present, `[[Meta]]`:
+{ `schema`: a *Select Schema* (below), when present }, when present }, other members being ignored.
+Plugin names are unique. A `validateSelect`, a `parseSelect` or a `mentions` that is present and not
+a function, a `meta` that is present and not a Map, or a `meta.schema` that is not a Select Schema
+is an invalid Plugin (`E_PLUGIN`, §9.5); the message of a schema names the keyword.
 
 A *Select Schema* is a Map that uses only the keywords below, as the JSON Schema of the same name
 means them; a Plugin author writes their `select` format freely, and docstamp checks no more than

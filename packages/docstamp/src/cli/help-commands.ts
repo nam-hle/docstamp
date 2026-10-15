@@ -219,7 +219,8 @@ history (fetch-depth: 0 in CI), else E_HISTORY.`,
     summary: 'Propose dependencies from the paths each file mentions.',
     description: `
 Reads each named file and proposes its dependencies from the repository paths it mentions (code
-spans, links, paths in the prose), with the number of files each pattern selects and its stale
+spans, links, paths in the prose; a plugin that claims the file and has a mentions function reads
+it in its own syntax instead), with the number of files each pattern selects and its stale
 rate over the last 30 days (n/a without git history). Generic files such as package.json and
 ignored paths are not proposed. A glob that selects test files is followed by exclusions of them
 (!<scope>/**/*.test.* and the like). For a file that already declares dependencies, a status column

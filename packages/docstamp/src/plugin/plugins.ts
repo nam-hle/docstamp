@@ -13,6 +13,8 @@ import type {
   ExtractResult,
   JsonSchema,
   LineRange,
+  MentionsInput,
+  MentionsResult,
   ParseSelectResult,
   Part,
   ValidateSelectResult,
@@ -68,7 +70,7 @@ function readMeta(raw: unknown, name: string): JsonSchema | undefined {
 
 function validateEntry(entry: unknown, label: string, names: Set<string>): DocstampPlugin {
   if (!isObject(entry)) return bad(label, 'A plugin must be an object.');
-  const { name, apiVersion, files, extract, validateSelect, parseSelect, meta } = entry;
+  const { name, apiVersion, files, extract, validateSelect, parseSelect, mentions, meta } = entry;
   if (typeof name !== 'string' || name === '') return bad(label, 'A plugin needs a "name".');
   if (apiVersion !== 1) {
     return bad(
@@ -91,6 +93,9 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
   }
   if (parseSelect !== undefined && typeof parseSelect !== 'function') {
     return bad(name, `Plugin "${name}" has a "parseSelect" that is not a function.`);
+  }
+  if (mentions !== undefined && typeof mentions !== 'function') {
+    return bad(name, `Plugin "${name}" has a "mentions" that is not a function.`);
   }
   if (names.has(name)) return bad(name, `Two plugins are named "${name}"; names must be unique.`);
   const schema = readMeta(meta, name);
@@ -115,6 +120,12 @@ function validateEntry(entry: unknown, label: string, names: Set<string>): Docst
           validateSelect: (select: Json) =>
             Reflect.apply(validateSelect, entry, [select]) as ValidateSelectResult,
         }),
+    ...(mentions === undefined
+      ? {}
+      : {
+          mentions: (input: MentionsInput) =>
+            Reflect.apply(mentions, entry, [input]) as MentionsResult,
+        }),
   };
 }
 
@@ -136,6 +147,62 @@ export function claim(plugins: readonly DocstampPlugin[], path: string): Docstam
   const names = claimed.map((plugin) => `"${plugin.name}"`).join(', ');
   const message = `Plugins ${names} all claim "${path}"; narrow their "files" so one does.`;
   throw new Raised([diag('E_PLUGIN', { subject: path, message })]);
+}
+
+const MAX_MENTIONS = 100_000;
+
+// SPEC §8.7 Mentions steps 1 to 4: what the Plugin that claims `doc` read from it, or null
+export function readMentions(
+  plugins: readonly DocstampPlugin[],
+  doc: string,
+  text: string,
+): { readonly links: readonly string[]; readonly words: readonly string[] } | null {
+  const claimed = plugins.filter((plugin) => plugin.mentions !== undefined && claims(plugin, doc));
+  if (claimed.length === 0) return null;
+  if (claimed.length > 1) {
+    const names = claimed.map((plugin) => `"${plugin.name}"`).join(', ');
+    const message = `Plugins ${names} all read the mentions of "${doc}"; narrow their "files" so one does.`;
+    throw new Raised([diag('E_PLUGIN', { subject: doc, message })]);
+  }
+  const plugin = claimed[0]!;
+  const fail = (why: string): never => {
+    const message = `Plugin "${plugin.name}" ${why} for "${doc}".`;
+    throw new Raised([diag('E_PLUGIN', { subject: doc, message })]);
+  };
+  let result: unknown;
+  try {
+    result = plugin.mentions!({ path: doc, text });
+  } catch {
+    return fail('threw in mentions');
+  }
+  let raw: { links: unknown; words: unknown };
+  try {
+    if (isObject(result) && typeof result['then'] === 'function') {
+      try {
+        (result as unknown as PromiseLike<unknown>).then(undefined, () => {});
+      } catch {
+        // the failure is reported below; nothing else to contain
+      }
+      return fail('returned a promise; mentions must be synchronous');
+    }
+    if (!isObject(result)) return fail('did not return { links, words } from mentions');
+    raw = { links: result['links'], words: result['words'] };
+  } catch (error) {
+    if (error instanceof Raised) throw error;
+    return fail('returned a value from mentions that could not be read');
+  }
+  const strings = (value: unknown): readonly string[] => {
+    if (value === undefined) return [];
+    if (
+      !Array.isArray(value) ||
+      value.length > MAX_MENTIONS ||
+      !value.every((item) => typeof item === 'string' && item.isWellFormed())
+    ) {
+      return fail(`returned links or words that are not a list of at most ${MAX_MENTIONS} strings`);
+    }
+    return [...(value as string[])];
+  };
+  return { links: strings(raw.links), words: strings(raw.words) };
 }
 
 const MAX_DIAGNOSTICS = 100;

@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
@@ -8,7 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -52,7 +53,7 @@ function repository(entry: string, guide = GUIDE) {
     };
   };
   const lock = () => readFileSync(join(root, 'docstamp-lock.yaml'), 'utf8');
-  return { write, run, lock };
+  return { root, write, run, lock };
 }
 
 const config = (entry: string) =>
@@ -74,6 +75,69 @@ beforeAll(() => {
 
 afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
+describe('§7 Mentions through the docstamp CLI', () => {
+  const DOC = [
+    '= Overview',
+    '',
+    'include::./snippets/example.ts[tags="demo"]',
+    '',
+    'See link:./snippets/other.ts[the other example] and `src/a.ts`.',
+    '',
+    '----',
+    'src/not-a-mention.ts',
+    '----',
+    '',
+  ].join('\n');
+
+  const mentioning = () => {
+    const repo = repository("{ path: 'guide.adoc', select: 'Install' }");
+    const config = [
+      `import plugin from ${JSON.stringify(pathToFileURL(PLUGIN).href)};`,
+      'export default {',
+      '  version: 2,',
+      '  plugins: [plugin],',
+      "  files: { 'docs/overview.adoc': { dependencies: ['src/a.ts'] } },",
+      '};',
+      '',
+    ].join('\n');
+    const root = (path: string, text: string) => {
+      mkdirSync(dirname(join(repo.root, path)), { recursive: true });
+      writeFileSync(join(repo.root, path), text);
+    };
+    root('docstamp.config.mjs', config);
+    root('docs/overview.adoc', DOC);
+    root('docs/snippets/example.ts', 'export const example = 1;\n');
+    root('docs/snippets/other.ts', 'export const other = 1;\n');
+    root('src/a.ts', 'export const a = 1;\n');
+    root('src/not-a-mention.ts', 'export const x = 1;\n');
+    return repo;
+  };
+
+  it('tells suggest the includes and links of an AsciiDoc doc, and not a listing', () => {
+    const result = mentioning().run('suggest', 'docs/overview.adoc');
+    expect(result.exit).toBe(0);
+    expect(result.stdout).toContain('docs/snippets/example.ts');
+    expect(result.stdout).toContain('docs/snippets/other.ts');
+    expect(result.stdout).toContain('src/a.ts');
+    expect(result.stdout).not.toContain('not-a-mention');
+  });
+
+  it('tells check --undeclared what the doc mentions and does not declare', () => {
+    const { run } = mentioning();
+    run('update', '--all');
+    const result = run('check', '--undeclared');
+    expect(result.exit).toBe(1);
+    expect(result.stdout).toContain(
+      'UNDECLARED docs/overview.adoc  mentions docs/snippets/example.ts',
+    );
+    expect(result.stdout).toContain(
+      'UNDECLARED docs/overview.adoc  mentions docs/snippets/other.ts',
+    );
+    expect(result.stdout).not.toContain('mentions src/a.ts');
+    expect(result.stdout).not.toContain('not-a-mention');
+  });
 });
 
 describe('§6 the plugin through the docstamp CLI', () => {

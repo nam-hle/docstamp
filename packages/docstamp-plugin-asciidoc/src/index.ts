@@ -8,6 +8,7 @@ import type {
   ValidateSelectResult,
 } from 'docstamp';
 
+import { mentions } from './mentions.ts';
 import { notFound } from './not-found.ts';
 import { parseSelect } from './parse-select.ts';
 import { parseSelector, type Selector } from './selector.ts';
@@ -111,6 +112,7 @@ const plugin = {
   extract,
   validateSelect,
   parseSelect,
+  mentions,
   meta: { schema },
 } satisfies DocstampPlugin;
 
