@@ -42,6 +42,16 @@ export const PLUGINS: readonly Page[] = [
     to: '/plugins/js-spec',
     title: 'JavaScript plugin specification',
   },
+  {
+    from: 'packages/docstamp-plugin-asciidoc/README.md',
+    to: '/plugins/asciidoc',
+    title: 'AsciiDoc plugin',
+  },
+  {
+    from: 'packages/docstamp-plugin-asciidoc/SPEC.md',
+    to: '/plugins/asciidoc-spec',
+    title: 'AsciiDoc plugin specification',
+  },
 ];
 
 export const SPEC_INDEX: Page = {

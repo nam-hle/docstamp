@@ -63,6 +63,7 @@ files:
       - packages/docstamp/src/plugin
       - packages/docstamp-plugin-markdown/src
       - packages/docstamp-plugin-js/src
+      - packages/docstamp-plugin-asciidoc/src
   packages/site/content/reference/index.md:
     dependencies:
       - packages/docstamp/src/cli
@@ -124,3 +125,9 @@ files:
   packages/docstamp-plugin-js/SPEC.md:
     dependencies:
       - packages/docstamp-plugin-js/src
+  packages/docstamp-plugin-asciidoc/README.md:
+    dependencies:
+      - packages/docstamp-plugin-asciidoc/src
+  packages/docstamp-plugin-asciidoc/SPEC.md:
+    dependencies:
+      - packages/docstamp-plugin-asciidoc/src

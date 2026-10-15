@@ -159,7 +159,7 @@ Any other key is an error (`E_UNKNOWN_KEY`). Every key, with an example, is in t
 | [Review a stale doc](https://nam-hle.github.io/docstamp/guide/review) | Reading the report, the lock, working with AI agents. |
 | [Run it in CI](https://nam-hle.github.io/docstamp/guide/ci) | The GitHub Action, or a plain workflow. |
 | [Tune a dependency list](https://nam-hle.github.io/docstamp/guide/tune) | `suggest` and `stats`. |
-| [Depend on part of a file](https://nam-hle.github.io/docstamp/guide/plugins) | Plugins, and the [Markdown](packages/docstamp-plugin-markdown#readme) and [JavaScript](packages/docstamp-plugin-js#readme) ones (not published yet). |
+| [Depend on part of a file](https://nam-hle.github.io/docstamp/guide/plugins) | Plugins, and the [Markdown](packages/docstamp-plugin-markdown#readme), [JavaScript](packages/docstamp-plugin-js#readme) and [AsciiDoc](packages/docstamp-plugin-asciidoc#readme) ones (not published yet). |
 | [Reference](https://nam-hle.github.io/docstamp/reference/) | Every command, option, state, exit code and diagnostic; the same text as `docstamp help`. |
 | [Specification](packages/docstamp/docs/SPEC.md) | The contract for all observable behavior. |
 

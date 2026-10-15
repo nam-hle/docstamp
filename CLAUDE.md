@@ -88,6 +88,7 @@ docstamp/                   # private workspace root
 │   ├── docstamp/           # the published package `docstamp`; its tree is below
 │   ├── docstamp-plugin-markdown/   # plugin: sections of a Markdown file; SPEC.md, src/, tests/
 │   ├── docstamp-plugin-js/         # plugin: declarations of a JS/TS file; SPEC.md, src/, tests/
+│   ├── docstamp-plugin-asciidoc/   # plugin: sections of an AsciiDoc file; SPEC.md, src/, tests/
 │   └── site/               # private: the documentation site (VitePress); content/, scripts/, tests/
 ├── action.yml              # the composite GitHub Action (GitHub needs it at the root)
 ├── action/                 # render.ts (report to PR comment, pure), run.ts (summary, comment
@@ -261,7 +262,9 @@ Dependency Hash, so a change that alters an existing hash is breaking for the pl
   dependency and no runtime import. It exports a plain object that `satisfies DocstampPlugin`.
 - Its tests include one that runs the built `docstamp` CLI with the plugin
   (`tests/integration/`); `pnpm nadle testMarkdown` (`testJs`) builds both packages first.
-- Each plugin lists its parser as its only dependency, which needs the user's approval.
+- Each plugin lists its parser as its only dependency, which needs the user's approval. A plugin's
+  `extract` is synchronous, so a parser must be: `docstamp-plugin-asciidoc` holds `@asciidoctor/core`
+  to 3.0 (`~3.0.4`), because 4.x loads asynchronously; `dependabot.yml` ignores its major and minor.
 - A plugin returns `parts` (`content`, and `focus` and `lines` for the report) and `diagnostics`
   (SPEC §8.7): write `focus` and `lines` for every part, in words a reviewer can use; they are
   advisory and never hashed. A selector that selects several parts by accident is an `error` of the
@@ -413,7 +416,7 @@ first, bump the Lockfile version, then regenerate the literals and review each d
 - `.github/workflows/ci.yml` runs `pnpm test` (the whole gate, one step) on every pull request and
   push to `main`, in one `Test (<os>)` matrix job for Linux, macOS and Windows, then
   `npm pack --dry-run` of each package (`packages/docstamp`, `packages/docstamp-plugin-markdown`,
-  `packages/docstamp-plugin-js`) to prove the tarballs build. It does not dry-run `npm publish`: that fails once the version in a
+  `packages/docstamp-plugin-js`, `packages/docstamp-plugin-asciidoc`) to prove the tarballs build. It does not dry-run `npm publish`: that fails once the version in a
   package's `package.json` is already on npm, which is true after every release. A `Docs gate`
   job packs the build and runs `action.yml` on this repository (`uses: ./`), the same file users
   call, so the Action is dogfooded and the PR comment appears on our own pull requests.
@@ -432,7 +435,7 @@ first, bump the Lockfile version, then regenerate the literals and review each d
 - Merging a release pull request tags the release and creates the GitHub release, then starts
   `.github/workflows/publish.yml` for that tag. The workflow resolves the package from the tag,
   builds and runs its tests (`pnpm nadle verifyRelease` for `docstamp`, `verifyReleaseMarkdown` and
-  `verifyReleaseJs` for the plugins, never the docs self-check) and **stages** the version on npm with
+  `verifyReleaseJs`, `verifyReleaseAsciidoc` for the plugins, never the docs self-check) and **stages** the version on npm with
   `npm stage publish --provenance`, run in the package folder. There is no npm token: npm trusts
   this workflow through a Trusted Publisher configured on npmjs.com for `nam-hle/docstamp` and
   `publish.yml`, one per package (the job holds `id-token: write`; npm 11.5.1 or newer, with
@@ -446,7 +449,7 @@ first, bump the Lockfile version, then regenerate the literals and review each d
   package's `package.json`. Nothing else stages.
 - Version bumps edit each package's `package.json`, so the docs deliberately do not depend on it: a
   release must not make the docs check fail.
-- `docstamp-plugin-markdown` and `docstamp-plugin-js` declare `docstamp` as a peer (`>=0.6.0`, the
+- `docstamp-plugin-markdown`, `docstamp-plugin-js` and `docstamp-plugin-asciidoc` declare `docstamp` as a peer (`>=0.6.0`, the
   first version with the plugin API) and a `workspace:*` development dependency for its types;
   consumers ignore the development dependency.
 

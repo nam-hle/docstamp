@@ -53,13 +53,15 @@ imported, as above, to use a plugin ([SPEC §9.5](/spec/configuration-file#95-sc
 
 ## Ready-made plugins
 
-Two plugins live in this repository, and docstamp itself ships only the JSON and YAML plugins
+Three plugins live in this repository, and docstamp itself ships only the JSON and YAML plugins
 described in [Declare dependencies](/guide/declare#depend-on-one-value-of-a-json-or-yaml-file):
 
 - [Markdown plugin](/plugins/markdown): a section of a Markdown file, by its heading
   ([specification](/plugins/markdown-spec)).
 - [JavaScript plugin](/plugins/js): a top-level declaration of a JavaScript or TypeScript file, by
   its name ([specification](/plugins/js-spec)).
+- [AsciiDoc plugin](/plugins/asciidoc): a section of an AsciiDoc file, by its title or its anchor
+  ([specification](/plugins/asciidoc-spec)).
 
 ## Write your own
 
