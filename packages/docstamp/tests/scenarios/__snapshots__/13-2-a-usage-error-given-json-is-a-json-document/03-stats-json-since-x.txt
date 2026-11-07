@@ -1,0 +1,20 @@
+$ docstamp stats --json --since x
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "stats",
+  "exitCode": 2,
+  "window": null,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_USAGE",
+      "severity": "error",
+      "file": null,
+      "subject": "--since",
+      "message": "--since needs a number of days written like 30d (1d to 3650d); see docstamp help stats."
+    }
+  ]
+}
+--- stderr ---

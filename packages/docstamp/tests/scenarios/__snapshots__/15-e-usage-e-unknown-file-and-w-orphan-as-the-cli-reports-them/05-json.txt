@@ -42,6 +42,7 @@ exit: 0
       "subject": "docs/guide.md",
       "message": "Run \"docstamp update\" on any file to remove the entry."
     }
-  ]
+  ],
+  "next": []
 }
 --- stderr ---

@@ -47,18 +47,36 @@ scenario('§13.2 usage errors exit 2 before any root discovery', { git: false },
   ];
   for (const [args, fragment] of cases) {
     const result = await repo.run(args);
+    // §13.2: with --json the same Diagnostic is the document on stdout
+    const json = args.includes('--json');
+    const [quiet, said] = json ? [result.stderr, result.stdout] : [result.stdout, result.stderr];
+    const text = json
+      ? (result.json().diagnostics as { code: string; subject: string; message: string }[])
+          .map((d) => `error: ${d.code}: ${d.subject}: ${d.message}`)
+          .join('\n')
+      : said;
     expect(result.exit, args.join(' ')).toBe(2);
-    expect(result.stdout, args.join(' ')).toBe('');
-    expect(result.stderr, args.join(' ')).toContain('error: E_USAGE');
-    expect(result.stderr, args.join(' ')).toContain(fragment);
-    expect(result.stderr, args.join(' ')).not.toContain('E_CONFIG_MISSING');
+    expect(quiet, args.join(' ')).toBe('');
+    expect(text, args.join(' ')).toContain('error: E_USAGE');
+    expect(text, args.join(' ')).toContain(fragment);
+    expect(text, args.join(' ')).not.toContain('E_CONFIG_MISSING');
   }
 });
 
-scenario('§13.2 a usage error has no JSON document', { git: false }, async (repo) => {
+scenario('§13.2 a usage error given --json is a JSON document', { git: false }, async (repo) => {
   const result = await repo.run(['--json', '--bogus']);
   expect(result.exit).toBe(2);
-  expect(result.stderr).toContain('E_USAGE: --bogus');
+  expect(result.stderr).toBe('');
+  expect(result.json()).toMatchObject({ mode: 'check', exitCode: 2, files: [], next: [] });
+  expect(result.json().diagnostics[0]).toMatchObject({ code: 'E_USAGE', subject: '--bogus' });
+  const update = await repo.run(['update', '--json']);
+  expect(update.json()).toMatchObject({ mode: 'update', exitCode: 2, removed: [] });
+  const stats = await repo.run(['stats', '--json', '--since', 'x']);
+  expect(stats.json()).toMatchObject({ mode: 'stats', window: null, files: [] });
+  for (const command of ['list-dependencies', 'list-dependents', 'suggest']) {
+    const other = await repo.run([command, '--json', '--bogus']);
+    expect(other.json()).toMatchObject({ mode: command, exitCode: 2, files: [] });
+  }
 });
 
 scenario(
@@ -123,11 +141,14 @@ scenario('§13.2 step 2 a mistyped command is E_USAGE, not a file argument', asy
     'error: E_USAGE: updte: Unknown command "updte"; did you mean "update"? A file of that ' +
     'name is named after --, as in docstamp -- updte; see docstamp help.\n';
 
-  for (const args of [['updte'], ['updte', '--help'], ['updte', '-h'], ['--json', 'updte']]) {
+  for (const args of [['updte'], ['updte', '--help'], ['updte', '-h']]) {
     const result = await repo.run(args, { expectExit: 2 });
     expect(result.stdout, args.join(' ')).toBe('');
     expect(result.stderr, args.join(' ')).toBe(message);
   }
+  const json = await repo.run(['--json', 'updte'], { expectExit: 2 });
+  expect(json.stderr).toBe('');
+  expect(json.json().diagnostics[0]).toMatchObject({ code: 'E_USAGE', subject: 'updte' });
   const elsewhere = await repo.run(['updte'], { cwd: 'src', expectExit: 2, label: 'from src' });
   expect(elsewhere.stderr).toBe(message);
 

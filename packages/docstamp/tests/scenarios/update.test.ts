@@ -303,3 +303,27 @@ scenario('§13.6 the review input needs no git', { fixture: 'no-git', git: false
   const json = await repo.run(['update', '--json', 'CLAUDE.md'], { expectExit: 0 });
   expect(json.json().files[0]).toMatchObject({ changes: null, written: true });
 });
+
+scenario(
+  '§13.6 update --dry-run says what a Write would do and writes nothing',
+  { fixture },
+  async (repo) => {
+    const before = repo.list();
+    const result = await repo.run(['update', '--dry-run', '--all']);
+    expect(result).toMatchObject({
+      exit: 0,
+      stdout: 'would write  CLAUDE.md\nwould write  README.md\nwould write  docs/guide.md\n',
+      stderr: '',
+    });
+    expect(repo.list()).toEqual(before);
+    const json = await repo.run(['update', '--dry-run', '--json', 'README.md']);
+    expect(json.json()).toMatchObject({ exitCode: 0, dryRun: true, removed: [] });
+    expect(json.json().files[0]).toMatchObject({ file: 'README.md', written: true });
+    expect(repo.list()).toEqual(before);
+    await repo.run(['update', 'README.md'], { expectExit: 0 });
+    const lock = repo.read('docstamp-lock.yaml');
+    const again = await repo.run(['update', '--dry-run', 'README.md']);
+    expect(again.stdout).toContain('unchanged  README.md\n');
+    expect(repo.read('docstamp-lock.yaml')).toBe(lock);
+  },
+);

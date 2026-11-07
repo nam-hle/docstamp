@@ -303,8 +303,9 @@ Consumers must ignore members they do not know: later releases only add members.
 paged: --limit shortens the text of check --undeclared and suggest --all only.
 
 - check: summary { ok, stale, invalid } and files, one per selected file: { file, state, reasons, dependencies, changes, diagnostics }. changes is null, or a list of { status, path, via } (whitespaceOnly and pair when they apply). dependenciesEdited and selection appear when the file's own list was edited (configurationEdited when a script configuration changed instead); fragments (a list of { path, select, status }, with written, focus and lines when they apply) appears when it has selected dependencies; selected lists { path, select } and written for a shorthand; use and origins when it uses presets (use is [] when they are only default-presets).
+- check: a top-level next, a list of { state, command }: the command of each next: line as an argument list, every file included (stale: docstamp update ..., invalid: docstamp check ...). Run a stale one only after the review.
 - check --undeclared: a last top-level undeclared, a list of { file, path }.
-- update: as check, with written true or false on each file and a top-level removed list. A written file reports state ok. changes is what changed before the write, [] when nothing did, null when unrecorded or unknown.
+- update: as check without next, with written true or false on each file and a top-level removed list; with --dry-run, dryRun true and what a write would do. A written file reports state ok. changes is what changed before the write, [] when nothing did, null when unrecorded or unknown.
 - list-dependencies: files of { file, dependencies, resolvedFiles, diagnostics }, plus use and origins with presets, default-presets included.
 - list-dependents: files of { file, dependents: [{ file, via }], diagnostics }; with --transitive each dependent also has dependents, cycle and repeated.
 - stats: window { kind, value, commits, untouched } and files of { file, patterns, resolvedCount, staleCommits, days, staleRate, sweepCommits, sweepShare, diagnostics }; named files add dependencies of { dependency, commits, only }, with written for a shorthand.
@@ -312,8 +313,8 @@ paged: --limit shortens the text of check --undeclared and suggest --all only.
 - help (no name): commands of { name, synopsis, summary } and topics of { name, summary }, as the text index lists them. mode is help.
 
 A command that fails before it evaluates anything has an empty files list and no summary. Read the
-verdict from exitCode and state, and the next step from the text mode's next: lines, which have no
-JSON member: a stale file needs a review, then docstamp update <file>.`,
+verdict from exitCode and state, and the next step from next: a stale file needs a review, then
+docstamp update <file>. A usage error given --json is a document too, with exitCode 2.`,
     examples: [
       {
         args: ['--json', 'list-dependents', 'src/hash.ts'],

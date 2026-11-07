@@ -89,7 +89,7 @@ next: review each stale file against its dependencies, then run: docstamp update
     related: ['update', 'list-dependencies', 'states', 'agents'],
   },
   update: {
-    synopsis: ['docstamp update [--json] [--cwd <dir>] (--all | <file>...)'],
+    synopsis: ['docstamp update [--json] [--dry-run] [--cwd <dir>] (--all | <file>...)'],
     summary: 'Record that you reviewed the named files against their dependencies.',
     description: `
 Records the current dependency hash of each named file: in docstamp-lock.yaml for a file declared
@@ -104,9 +104,13 @@ written or the exit code. With --json the changes member of each file holds the 
 A write asserts that a review happened, and docstamp cannot check that. Run it only after reading
 the changed dependencies and fixing what the file no longer gets right. --all is for the first
 adoption and for recovery from an unreadable lock, never for making a failing check pass. When a
-named file is invalid nothing is written.`,
+named file is invalid nothing is written.
+
+--dry-run prints what a write would do (would write, unchanged, would remove) and writes nothing,
+so it records no review.`,
     options: [
       ['--all', 'Record every stamped file. Not with file arguments.'],
+      ['--dry-run', 'Print what would be written, and write nothing.'],
       JSON_OPTION,
       ROOT_OPTION,
       ['<file>...', 'The stamped files you reviewed.'],

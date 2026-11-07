@@ -31,6 +31,16 @@ exit: 2
       ]
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "next": [
+    {
+      "state": "invalid",
+      "command": [
+        "docstamp",
+        "check",
+        "docs/api.md"
+      ]
+    }
+  ]
 }
 --- stderr ---

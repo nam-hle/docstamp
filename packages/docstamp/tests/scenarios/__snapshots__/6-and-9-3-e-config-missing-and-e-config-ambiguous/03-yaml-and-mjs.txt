@@ -15,7 +15,8 @@ exit: 2
       "subject": "docstamp.yaml, docstamp.config.mjs",
       "message": "Keep one configuration file."
     }
-  ]
+  ],
+  "next": []
 }
 --- stderr ---
 --- setup: docstamp.yaml ---

@@ -290,7 +290,8 @@ by the *edited line*, the *configuration line*, the *selection lines*, the *summ
 and without its review line (§14.3.4); a target with nothing of these has no such block. The *same
 line* of §14.3.1 applies. Then one line per target in path order: `written  <file>` if it was
 written (§13.6 step 10), else `unchanged  <file>`; then one line `removed  <file>` per removed
-entry in path order. All of these go to standard output. Diagnostics as in §14.3. When step 5 of §13.6 refused, the blocks and summary line of §14.3 are
+entry in path order. With `--dry-run` (§13.6), `written  <file>` reads
+`would write  <file>` and `removed  <file>` reads `would remove  <file>`; `unchanged` lines stay. All of these go to standard output. Diagnostics as in §14.3. When step 5 of §13.6 refused, the blocks and summary line of §14.3 are
 output for the targets, in the order of §14.3.2, without the `next:` lines, and nothing is written. When the command
 raised before any Result existed, only the Diagnostics are output.
 
@@ -315,7 +316,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
       "diagnostics": []
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "next": [{ "state": "stale", "command": ["docstamp", "update", "CLAUDE.md"] }]
 }
 ```
 
@@ -323,8 +325,16 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - `files` holds every selected Result (check) or every target (update), in path order,
   including `ok` ones. With `check --only-stale` the `ok` ones are omitted, and `summary`
   still counts every selected Result (§13.5).
+- With `check` the document has a top-level member `"next"`, after `diagnostics`: the commands of
+  the `next:` lines of §14.3.3 as data, a List with one `{ "state", "command" }` for `stale` and
+  then one for `invalid`, each only when a selected Result has that state. `command` is the command
+  that line names as a List of Strings, one per argument, unquoted: `"docstamp"`, `"update"` (for
+  `stale`) or `"check"` (for `invalid`), every file of that state as §14.3.3 writes it, without its
+  limit of 10, then `"--cwd"` and its value as given, if one was given. It is `[]` when there is
+  none or a step raised. The rule line of §14.3.3 stays in text: a `stale` command is run only
+  after the Review.
 - With `check --undeclared` the document has a last top-level member `"undeclared"`, after
-  `diagnostics`: the List *undeclared* of §13.5 as `{ "file", "path" }` in its order, `[]` when
+  `next`: the List *undeclared* of §13.5 as `{ "file", "path" }` in its order, `[]` when
   there is none or a step raised. Without the option the member is absent. It always lists every
   element: `--limit` (§13.5) pages the text output only.
 - `changes` is the Result's `[[Changes]]` as a List of `{ "status", "path", "via" }` in this
@@ -360,7 +370,8 @@ that every string is encoded with `Quote` (§3.4). Object members appear in the 
 - With `update`, each element of `files` adds `"written": true|false` after
   `diagnostics` (true only when it was written, §13.6 step 10; false when it was unchanged or when
   step 5 of §13.6 refused), and the top level adds `"removed"`, a
-  List of files, after `diagnostics`. An element with `"written": true` reports the state after
+  List of files, after `diagnostics`. With `--dry-run` the top level adds a last member
+  `"dryRun": true`, and `written` and `removed` are what a Write would do: nothing was written. An element with `"written": true` reports the state after
   the Write: `state` is `ok` and `reasons` is empty; `summary` counts those states. An unchanged
   element also reports `ok`; a refused element reports the state evaluated by §12.1.
 - With `list-dependencies` the document is instead (§13.7):

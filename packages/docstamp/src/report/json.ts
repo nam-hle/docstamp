@@ -20,6 +20,14 @@ export interface JsonDoc {
   written?: ReadonlySet<string>;
   removed?: readonly string[];
   undeclared?: readonly { readonly file: string; readonly path: string }[];
+  next?: readonly NextCommand[];
+  dryRun?: boolean;
+}
+
+// SPEC §14.5: a next: line of §14.3.3 as data
+export interface NextCommand {
+  readonly state: 'stale' | 'invalid';
+  readonly command: readonly string[];
 }
 
 export type Json = null | boolean | number | string | readonly Json[] | JsonObject;
@@ -207,6 +215,15 @@ export function jsonText(doc: JsonDoc): string {
     ['diagnostics', sortDiagnostics(doc.diagnostics).map(diagJson)],
   ];
   if (doc.mode === 'update') top.push(['removed', [...(doc.removed ?? [])]]);
+  if (doc.mode === 'check') {
+    const next = (doc.next ?? []).map((n) =>
+      obj([
+        ['state', n.state],
+        ['command', [...n.command]],
+      ]),
+    );
+    top.push(['next', next]);
+  }
   if (doc.undeclared !== undefined) {
     top.push([
       'undeclared',
@@ -218,6 +235,7 @@ export function jsonText(doc: JsonDoc): string {
       ),
     ]);
   }
+  if (doc.dryRun === true) top.push(['dryRun', true]);
   return `${render(obj(top), '')}\n`;
 }
 

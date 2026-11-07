@@ -37,6 +37,16 @@ exit: 1
       "diagnostics": []
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "next": [
+    {
+      "state": "stale",
+      "command": [
+        "docstamp",
+        "update",
+        "README.md"
+      ]
+    }
+  ]
 }
 --- stderr ---

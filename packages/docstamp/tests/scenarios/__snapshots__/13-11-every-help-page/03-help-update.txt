@@ -4,7 +4,7 @@ exit: 0
 docstamp update: Record that you reviewed the named files against their dependencies.
 
 Usage:
-  docstamp update [--json] [--cwd <dir>] (--all | <file>...)
+  docstamp update [--json] [--dry-run] [--cwd <dir>] (--all | <file>...)
 
 Records the current dependency hash of each named file: in docstamp-lock.yaml for a file declared in
 the configuration file, in the hash: line of its docstamp block for an inline file. It prints
@@ -20,8 +20,12 @@ the changed dependencies and fixing what the file no longer gets right. --all is
 adoption and for recovery from an unreadable lock, never for making a failing check pass. When a
 named file is invalid nothing is written.
 
+--dry-run prints what a write would do (would write, unchanged, would remove) and writes nothing, so
+it records no review.
+
 Options:
   --all        Record every stamped file. Not with file arguments.
+  --dry-run    Print what would be written, and write nothing.
   --json       Print one JSON document instead of text (docstamp help json).
   --cwd <dir>  Act as if run from <dir>: the root is searched upward from it, and file arguments are
                resolved against it.

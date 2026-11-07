@@ -30,6 +30,7 @@ export function runUpdate(
     text: '',
     written: new Set<string>(),
     removed: [],
+    dryRun: args.dryRun,
   };
   try {
     const cwd = resolveCwd(host, processCwd, args.cwd);
@@ -51,10 +52,13 @@ export function runUpdate(
     );
     const wasOk = new Set(selected.filter((r) => r.state === 'ok').map((r) => r.file));
     const plan = planUpdate(selected, evaluated.declarations, evaluated.lock);
-    if (plan.hasLockedFiles || lockExists(host, root)) {
-      writeLock(host, root, { entries: plan.entries });
+    // SPEC §13.6: --dry-run decides the writes and makes none
+    if (!args.dryRun) {
+      if (plan.hasLockedFiles || lockExists(host, root)) {
+        writeLock(host, root, { entries: plan.entries });
+      }
+      for (const [file, hash] of plan.stamps) stampFile(host, root, evaluated.universe, file, hash);
     }
-    for (const [file, hash] of plan.stamps) stampFile(host, root, evaluated.universe, file, hash);
     const afterWrite = reviewed.map((r): Result => ({ ...r, state: 'ok', reasons: [] }));
     return emit(io, {
       ...empty,
@@ -64,7 +68,7 @@ export function runUpdate(
       global: global.filter((d) => d.code !== 'W_ORPHAN'),
       text:
         reviewInputText(reviewed, wasOk, !args.all) +
-        updateText(plan.written, plan.unchanged, plan.removed),
+        updateText(plan.written, plan.unchanged, plan.removed, args.dryRun),
       written: new Set(plan.written),
       removed: plan.removed,
     });

@@ -15,7 +15,8 @@ exit: 2
       "subject": null,
       "message": "The script cannot be loaded: it imports \"nonexistent-module-xyz\", which cannot be resolved."
     }
-  ]
+  ],
+  "next": []
 }
 --- stderr ---
 --- setup: docstamp.config.ts ---

@@ -34,6 +34,7 @@ exit: 0
       "diagnostics": []
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "next": []
 }
 --- stderr ---

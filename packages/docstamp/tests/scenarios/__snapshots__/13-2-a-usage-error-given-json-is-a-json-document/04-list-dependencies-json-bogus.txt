@@ -1,0 +1,19 @@
+$ docstamp list-dependencies --json --bogus
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "list-dependencies",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_USAGE",
+      "severity": "error",
+      "file": null,
+      "subject": "--bogus",
+      "message": "Unknown option --bogus; see docstamp help list-dependencies."
+    }
+  ]
+}
+--- stderr ---

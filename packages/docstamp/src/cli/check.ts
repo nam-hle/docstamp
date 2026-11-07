@@ -4,7 +4,7 @@ import { selectionChanges } from '../engine/selection.ts';
 import type { Host } from '../host/host.ts';
 import { resolveSelector } from '../config/shorthand.ts';
 import { changedSince } from '../history/changes.ts';
-import { checkChunks } from '../report/text.ts';
+import { checkChunks, nextCommands } from '../report/text.ts';
 import { determineRoot, resolveCwd } from '../universe/walk.ts';
 import type { Args } from './args.ts';
 import { emit, hasError, type Output } from './emit.ts';
@@ -106,10 +106,11 @@ export function runCheck(
     const exitCode = refused ? 2 : stale ? 1 : 0;
     const whitespace = new Map<string, boolean>();
     const reported = selected.map((r) => withChanges(host, root, r, evaluated, whitespace));
+    const fromCwd = rootFromCwd(cwd, root, host.windows);
     const chunks = checkChunks(reported, global, {
       cwd: args.cwd,
       quiet: args.quiet,
-      rootFromCwd: rootFromCwd(cwd, root, host.windows),
+      rootFromCwd: fromCwd,
       inline: new Set(evaluated.declarations.filter((b) => b.inline).map((b) => b.file)),
       undeclared,
       limit: args.limit,
@@ -122,6 +123,7 @@ export function runCheck(
       selected: reported,
       global,
       chunks,
+      next: nextCommands(reported, args.cwd, fromCwd),
       ...(undeclared === undefined ? {} : { undeclared }),
     });
   } catch (e) {

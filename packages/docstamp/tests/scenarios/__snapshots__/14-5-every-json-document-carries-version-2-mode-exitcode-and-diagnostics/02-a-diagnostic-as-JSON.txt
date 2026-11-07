@@ -15,6 +15,7 @@ exit: 2
       "subject": "missing.md",
       "message": "Name a file listed under \"files\" in the configuration file, or one with a docstamp block."
     }
-  ]
+  ],
+  "next": []
 }
 --- stderr ---

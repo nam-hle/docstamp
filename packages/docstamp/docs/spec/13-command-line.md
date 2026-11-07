@@ -4,7 +4,7 @@
 
 ```
 docstamp [check] [--json] [--only-stale] [--quiet] [--undeclared [--limit <n>]] [--cwd <dir>] [<file>...]
-docstamp update [--json] [--cwd <dir>] (--all | <file>...)
+docstamp update [--json] [--dry-run] [--cwd <dir>] (--all | <file>...)
 docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]
 docstamp list-dependents [--json] [--transitive] [--cwd <dir>] <file>...
 docstamp stats [--json] [--cwd <dir>] [--since <n>d | --from <rev>] [<file>...]
@@ -25,7 +25,7 @@ option as `--help`, wherever `--help` is written.
 
 The command line is parsed before anything else.
 
-1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--undeclared`, `--write`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
+1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--undeclared`, `--write`, `--dry-run`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
    written `--name <value>` or `--name=<value>`: `--cwd`, `--since`, `--from`, `--limit` and `--max-files`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
@@ -51,7 +51,11 @@ Otherwise the following raise « `E_USAGE` » with `[[Subject]]` the offending a
 Each message states the problem:
 
 - an unknown option, a missing value for an option with a value (none, empty, `--`, or a
-  recognised option, so `--cwd --json` is an error), or an option given twice;
+  recognised option, so `--cwd --json` is an error), or an option given twice; for an unknown
+  option whose text before any `=` is at edit distance 1 or 2 (the §9.3 NOTE) from an option of
+  step 1, the message names the first such option at the smallest distance, in the order of step 1
+  (`Unknown option --jsn; did you mean "--json"?`);
+- `--dry-run` with any command but `update`;
 - `--write` with any command but `suggest`, `--files` and `--root` (also written `--root=<value>`),
   which were removed: the message
   names the replacement, `docstamp update` for `--write`, `docstamp list-dependencies` for
@@ -76,6 +80,12 @@ Each message states the problem:
 - `--max-files` with any command but `suggest` (`[[Subject]]` `--max-files`);
 - a `--max-files` that is not `0` or a positive integer without leading zeros (`50`) of at most 9
   digits; the message shows the form.
+
+When `--json` is given before any `--`, an `E_USAGE` of step 2 or of the list above is output as
+the JSON document that mode outputs when a step raised (§14.5), with `mode` the command of step 2
+(`check` when step 2 found none or a mistyped command), `exitCode` 2 and the Diagnostic in
+`diagnostics`, and nothing goes to standard error (§14.1). The members that only an option adds
+(`undeclared`, `all`, `dryRun`) are absent, since the options were not read.
 
 `help` prints help (§13.11) and `version` prints the version; both exit 0 (§14.1), except a
 `help` name that is not known (§13.11). A file named like a command is reached as
@@ -114,7 +124,8 @@ resolve against it.
 1. If `--cwd` is absent, return *processCwd*.
 2. Let *dir* be the value joined to *processCwd* unless it is absolute, with `.` segments removed
    and `..` segments resolved textually, as in `ToRepoPath` step 2.
-3. If *dir* is not an existing directory, raise `E_CWD`.
+3. If *dir* is not an existing directory, raise `E_CWD` with `[[Subject]]` the `--cwd` value as
+   given.
 4. Return *dir*.
 
 `ToRepoPath(arg, cwd, root)` is lexical: no symbolic link is resolved and no file system access
@@ -243,6 +254,14 @@ file that is not recorded yet (first update) has no note, since there is nothing
 Under `--all` the note is not output, as every unchanged file would print one; the changes are.
 When §12.3 returns *unknown* (no git, a shallow clone, a Write not yet committed), nothing of the
 review input is output and `update` behaves as it did.
+
+With `--dry-run`, steps 6 to 9 decide what they would write, but `WriteLock` and `Stamp` are not
+called, so no file changes. Step 10 outputs the same targets, *written*, *unchanged*, *removed*
+and Diagnostics as without the option, and the exit code is the same; the output says that
+nothing was written (§14.4, §14.5).
+
+NOTE: `--dry-run` previews a Write: the files it lists as written are those a Write would record.
+It records no Review, so it may be run before the Review as often as wanted.
 
 NOTE: `update --all` also migrates a version 2 Lockfile (§11.1): it discards the unreadable
 Lockfile and records every current Dependency Hash, with no Review.

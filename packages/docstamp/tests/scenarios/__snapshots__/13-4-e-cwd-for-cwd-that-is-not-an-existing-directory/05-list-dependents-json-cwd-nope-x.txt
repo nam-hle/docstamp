@@ -11,7 +11,7 @@ exit: 2
       "code": "E_CWD",
       "severity": "error",
       "file": null,
-      "subject": null,
+      "subject": "nope",
       "message": "Pass an existing directory to --cwd."
     }
   ]

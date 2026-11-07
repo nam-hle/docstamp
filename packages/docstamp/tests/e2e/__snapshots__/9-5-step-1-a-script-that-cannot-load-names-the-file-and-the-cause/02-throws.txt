@@ -15,7 +15,8 @@ exit: 2
       "subject": null,
       "message": "The script cannot be loaded: evaluation threw TypeError."
     }
-  ]
+  ],
+  "next": []
 }
 --- stderr ---
 --- setup: docstamp.config.ts ---

@@ -10,7 +10,7 @@ import type {
   ReverseEntry,
 } from '../core/types.ts';
 import type { FileStats } from '../engine/stats.ts';
-import type { StatsWindow } from './json.ts';
+import type { NextCommand, StatsWindow } from './json.ts';
 
 // SPEC §14.2
 export function shown(s: string): string {
@@ -223,6 +223,22 @@ function nextLine(lead: string, command: string, files: readonly string[], optio
   return `next: ${lead}, then run: docstamp ${command} ${listed}${option}\n${more}`;
 }
 
+// SPEC §14.3.3, §14.5: the commands of the next: lines, every file listed
+export function nextCommands(
+  selected: readonly Result[],
+  cwdArg: string | undefined,
+  rootFromCwd: string,
+): NextCommand[] {
+  const argument = (file: string) => (rootFromCwd === '' ? file : `${rootFromCwd}/${file}`);
+  const option = cwdArg === undefined ? [] : ['--cwd', cwdArg];
+  return (['stale', 'invalid'] as const).flatMap((state) => {
+    const files = selected.filter((r) => r.state === state).map((r) => argument(r.file));
+    if (files.length === 0) return [];
+    const command = state === 'stale' ? 'update' : 'check';
+    return [{ state, command: ['docstamp', command, ...files, ...option] }];
+  });
+}
+
 // SPEC §14.3, §14.3.2
 export function checkChunks(
   selected: readonly Result[],
@@ -368,16 +384,19 @@ export function updateText(
   written: readonly string[],
   unchanged: readonly string[],
   removed: readonly string[],
+  dryRun = false,
 ): string {
+  // SPEC §14.4: --dry-run says what a Write would do
+  const [write, remove] = dryRun ? ['would write', 'would remove'] : ['written', 'removed'];
   const targets = [
-    ...written.map((file) => ({ file, label: 'written  ' })),
+    ...written.map((file) => ({ file, label: `${write}  ` })),
     ...unchanged.map((file) => ({ file, label: 'unchanged  ' })),
   ];
   const order = sortPaths(targets.map((t) => t.file));
   return (
     order.map((file) => `${targets.find((t) => t.file === file)!.label}${shown(file)}\n`).join('') +
     sortPaths(removed)
-      .map((d) => `removed  ${shown(d)}\n`)
+      .map((d) => `${remove}  ${shown(d)}\n`)
       .join('')
   );
 }

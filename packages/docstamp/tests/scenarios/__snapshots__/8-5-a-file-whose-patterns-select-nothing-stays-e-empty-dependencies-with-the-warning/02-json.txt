@@ -77,6 +77,25 @@ exit: 2
       ]
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "next": [
+    {
+      "state": "stale",
+      "command": [
+        "docstamp",
+        "update",
+        "docs/all.md"
+      ]
+    },
+    {
+      "state": "invalid",
+      "command": [
+        "docstamp",
+        "check",
+        "docs/mixed.md",
+        "docs/only.md"
+      ]
+    }
+  ]
 }
 --- stderr ---

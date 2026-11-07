@@ -697,6 +697,7 @@ describe('§14.5 JSON', () => {
       'summary',
       'files',
       'diagnostics',
+      'next',
     ]);
     expect(Object.keys(doc.files[0])).toEqual([
       'file',

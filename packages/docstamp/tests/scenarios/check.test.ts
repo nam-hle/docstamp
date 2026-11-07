@@ -131,6 +131,7 @@ scenario('§14.5 check JSON has the documented shape', { fixture }, async (repo)
     'summary',
     'files',
     'diagnostics',
+    'next',
   ]);
   expect(doc).toMatchObject({
     version: 2,
@@ -236,3 +237,23 @@ scenario(
     ]);
   },
 );
+
+scenario('§14.5 check JSON names the next commands as data', { fixture }, async (repo) => {
+  const fresh = await repo.run(['--json'], { expectExit: 1 });
+  expect(fresh.json().next).toEqual([
+    { state: 'stale', command: ['docstamp', 'update', 'CLAUDE.md', 'README.md', 'docs/guide.md'] },
+  ]);
+  const fromDocs = await repo.run(['--json', '--cwd', 'docs'], { expectExit: 1 });
+  expect(fromDocs.json().next[0].command).toEqual([
+    'docstamp',
+    'update',
+    '../CLAUDE.md',
+    '../README.md',
+    '../docs/guide.md',
+    '--cwd',
+    'docs',
+  ]);
+  await repo.run(['update', '--all'], { expectExit: 0 });
+  const clean = await repo.run(['--json'], { expectExit: 0 });
+  expect(clean.json().next).toEqual([]);
+});
