@@ -4,7 +4,7 @@
 
 ```
 docstamp [check] [--json] [--only-stale] [--quiet] [--undeclared [--limit <n>]] [--cwd <dir>] [<file>...]
-docstamp update [--json] [--dry-run] [--cwd <dir>] (--all | <file>...)
+docstamp update [--json] [--dry-run] [--cwd <dir>] (--all [--reviewed] | <file>...)
 docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]
 docstamp list-dependents [--json] [--transitive] [--cwd <dir>] <file>...
 docstamp stats [--json] [--cwd <dir>] [--since <n>d | --from <rev>] [<file>...]
@@ -25,7 +25,7 @@ option as `--help`, wherever `--help` is written.
 
 The command line is parsed before anything else.
 
-1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--undeclared`, `--write`, `--dry-run`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
+1. The options are `--json`, `--all`, `--transitive`, `--only-stale`, `--quiet`, `--undeclared`, `--write`, `--dry-run`, `--reviewed`, `--help` (also written `-h`: below, `--help` stands for both), `--version`, and the options with a value, each
    written `--name <value>` or `--name=<value>`: `--cwd`, `--since`, `--from`, `--limit` and `--max-files`. Before any `--`, an argument starting with `-` other than a lone `-` is an
    option; an option with a value consumes the next argument as its value, unless that argument is
    `--` or another recognised option (including itself), which is a missing value. After `--`, every argument is a file argument.
@@ -56,6 +56,7 @@ Each message states the problem:
   step 1, the message names the first such option at the smallest distance, in the order of step 1
   (`Unknown option --jsn; did you mean "--json"?`);
 - `--dry-run` with any command but `update`;
+- `--reviewed` with any command but `update`, or with `update` without `--all`;
 - `--write` with any command but `suggest`, `--files` and `--root` (also written `--root=<value>`),
   which were removed: the message
   names the replacement, `docstamp update` for `--write`, `docstamp list-dependencies` for
@@ -216,6 +217,9 @@ reviewer compares them with the state at the last Write using its own tools.
    `? SelectResults(args, cwd, root, results)`.
 5. If *global* contains an error or any of *targets* is `invalid`: output *targets* as a check
    does (§14.3) but without its `next:` lines, and *global*, write nothing, and exit 2.
+   Otherwise, if `--all` is given without `--reviewed` and the `[[Reasons]]` of some of *targets*
+   contain `content-changed`: raise « `E_UNREVIEWED` », `[[Subject]]` `--all`, whose message names
+   those files in path order and says to review them, then name them, or pass `--all --reviewed`.
 6. For each *t* of *targets* whose Declaration is configured, set the LockEntry of
    *t*.`[[File]]` in *lock* to *t*.`[[Current]]`.
 7. Let *removed* be the files of *lock* that have no configured Declaration, in path order. Remove
@@ -276,7 +280,14 @@ changes no other file, and a file that depends on it stays `ok` (§12.2 NOTE).
 
 NOTE: A Write asserts that a Review happened; docstamp cannot check that, and trusts its caller.
 `update` requires naming the files, or `--all` on purpose (first adoption, or recovery from an
-unreadable Lockfile), so no file is marked reviewed by accident.
+unreadable Lockfile), so no file is marked reviewed by accident. `--all` records only files that
+have no due Review to skip (`ok`, or `stale` for `unrecorded` alone, as on first adoption) unless
+`--reviewed` says the `content-changed` ones were reviewed too: one flag alone does not pass the
+gate.
+
+NOTE: `update` has no confirmation option. It writes only the files it is given, asks nothing
+(principle 5), and `--dry-run` shows the Write before it is made; a prompt would add a step an
+agent cannot answer and check nothing the tool can verify.
 
 ### 13.7 ListDependencies
 

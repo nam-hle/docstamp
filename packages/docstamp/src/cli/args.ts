@@ -54,6 +54,7 @@ export type Args =
       all: boolean;
       json: boolean;
       dryRun: boolean;
+      reviewed: boolean;
       cwd?: string;
       paths: string[];
     };
@@ -95,6 +96,7 @@ const FLAGS = new Set([
   '--write',
   '--undeclared',
   '--dry-run',
+  '--reviewed',
 ]);
 // SPEC §13.2 step 1: the options in the order a near option is chosen from
 const NEAR_ORDER = [
@@ -106,6 +108,7 @@ const NEAR_ORDER = [
   '--undeclared',
   '--write',
   '--dry-run',
+  '--reviewed',
   '--help',
   '--version',
   '--cwd',
@@ -231,6 +234,9 @@ export function parseArgs(
   if (mode !== 'update' && seen.has('--dry-run')) {
     fail('--dry-run', '--dry-run is only valid with "docstamp update".');
   }
+  if (seen.has('--reviewed') && (mode !== 'update' || !all)) {
+    fail('--reviewed', '--reviewed is only valid with "docstamp update --all".');
+  }
   if (mode !== 'suggest' && seen.has('--write')) {
     fail('--write', '--write was removed; use "docstamp update".');
   }
@@ -330,6 +336,14 @@ export function parseArgs(
     };
   }
   return mode === 'update'
-    ? { mode, all, json, dryRun: seen.has('--dry-run'), ...cwdOpt, paths }
+    ? {
+        mode,
+        all,
+        json,
+        dryRun: seen.has('--dry-run'),
+        reviewed: seen.has('--reviewed'),
+        ...cwdOpt,
+        paths,
+      }
     : { mode, json, ...cwdOpt, paths };
 }

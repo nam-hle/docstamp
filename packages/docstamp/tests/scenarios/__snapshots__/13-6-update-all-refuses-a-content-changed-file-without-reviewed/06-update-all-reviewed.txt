@@ -1,0 +1,7 @@
+$ docstamp update --all --reviewed
+exit: 0
+--- stdout ---
+written  CLAUDE.md
+unchanged  README.md
+unchanged  docs/guide.md
+--- stderr ---

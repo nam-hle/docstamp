@@ -288,11 +288,51 @@ scenario('§13.6 update --all prints the changes but no note', { fixture }, asyn
   const quiet = await repo.run(['update', '--all'], { expectExit: 0 });
   expect(quiet.stdout).toBe('unchanged  CLAUDE.md\n');
   repo.append('src/util.ts', 'more\n');
-  const text = await repo.run(['update', '--all'], { expectExit: 0 });
+  const text = await repo.run(['update', '--all', '--reviewed'], { expectExit: 0 });
   expect(text.stdout).toBe(
     'changed since last review: CLAUDE.md\n  modified  src/util.ts\nwritten  CLAUDE.md\n',
   );
 });
+
+scenario(
+  '§13.6 update --all refuses a content-changed file without --reviewed',
+  { fixture },
+  async (repo) => {
+    const first = await repo.run(['update', '--all'], { label: 'first adoption, all unrecorded' });
+    expect(first.exit).toBe(0);
+    repo.append('src/util.ts', 'more\n');
+    const lock = repo.read('docstamp-lock.yaml');
+
+    const refused = await repo.run(['update', '--all'], { expectExit: 2 });
+    expect(refused.stdout).toBe('');
+    expect(refused.stderr).toBe(
+      'error: E_UNREVIEWED: --all: 1 stale file (CLAUDE.md); review them, then name them in ' +
+        '"docstamp update", or pass --all --reviewed.\n',
+    );
+    expect(repo.read('docstamp-lock.yaml')).toBe(lock);
+    const dry = await repo.run(['update', '--all', '--dry-run'], { expectExit: 2 });
+    expect(dry.stderr).toContain('E_UNREVIEWED');
+    const json = await repo.run(['update', '--all', '--json'], { expectExit: 2 });
+    expect(json.json()).toMatchObject({ mode: 'update', exitCode: 2, files: [] });
+    expect(json.json().diagnostics[0]).toMatchObject({ code: 'E_UNREVIEWED', subject: '--all' });
+
+    const named = await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });
+    expect(named.stdout).toContain('written  CLAUDE.md');
+    repo.append('src/util.ts', 'again\n');
+    const reviewed = await repo.run(['update', '--all', '--reviewed'], { expectExit: 0 });
+    expect(reviewed.stdout).toContain('written  CLAUDE.md');
+
+    for (const args of [
+      ['update', 'CLAUDE.md', '--reviewed'],
+      ['check', '--reviewed'],
+    ]) {
+      const usage = await repo.run(args, { expectExit: 2 });
+      expect(usage.stderr, args.join(' ')).toContain(
+        'error: E_USAGE: --reviewed: --reviewed is only valid with "docstamp update --all"',
+      );
+    }
+  },
+);
 
 scenario('§13.6 the review input needs no git', { fixture: 'no-git', git: false }, async (repo) => {
   await repo.run(['update', 'CLAUDE.md'], { expectExit: 0 });

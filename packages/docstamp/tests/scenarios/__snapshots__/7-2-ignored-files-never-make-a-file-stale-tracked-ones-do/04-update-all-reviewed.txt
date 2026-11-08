@@ -1,0 +1,5 @@
+$ docstamp update --all --reviewed
+exit: 0
+--- stdout ---
+written  DOC.md
+--- stderr ---

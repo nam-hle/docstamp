@@ -133,6 +133,14 @@ export const DIAGNOSTIC_HELP: Record<Code, { meaning: string; fix: string }> = {
       'Name a file listed under files or one with a docstamp block, resolved against the ' +
       'working directory (the current one, or --cwd); docstamp list-dependencies lists them all.',
   },
+  E_UNREVIEWED: {
+    meaning:
+      'update --all was given without --reviewed while some files have dependencies changed ' +
+      'since their last review (content-changed).',
+    fix:
+      'Review each file the message names, then docstamp update <file>...; or, once all of ' +
+      'them were reviewed, docstamp update --all --reviewed.',
+  },
   E_HISTORY: {
     meaning:
       'stats needs git history it cannot read: no git, not a work tree, a shallow clone, no ' +

@@ -16,7 +16,7 @@ exit: 0
     {
       "name": "update",
       "synopsis": [
-        "docstamp update [--json] [--dry-run] [--cwd <dir>] (--all | <file>...)"
+        "docstamp update [--json] [--dry-run] [--cwd <dir>] (--all [--reviewed] | <file>...)"
       ],
       "summary": "Record that you reviewed the named files against their dependencies."
     },

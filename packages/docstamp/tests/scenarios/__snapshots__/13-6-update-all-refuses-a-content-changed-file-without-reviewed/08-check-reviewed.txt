@@ -1,0 +1,5 @@
+$ docstamp check --reviewed
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_USAGE: --reviewed: --reviewed is only valid with "docstamp update --all"; see docstamp help check.

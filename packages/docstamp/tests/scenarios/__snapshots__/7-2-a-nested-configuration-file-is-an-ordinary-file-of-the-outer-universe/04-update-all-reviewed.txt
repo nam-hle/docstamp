@@ -1,4 +1,4 @@
-$ docstamp update --all
+$ docstamp update --all --reviewed
 exit: 0
 --- stdout ---
 written  ROOT.md

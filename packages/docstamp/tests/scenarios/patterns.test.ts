@@ -17,7 +17,7 @@ scenario('§8 which declarations notice which edit', { fixture }, async (repo) =
   const edit = async (path: string, label: string, expected: string[]) => {
     repo.append(path, '// edit\n');
     expect(await staleFiles(repo, label), label).toEqual(expected);
-    await repo.run(['update', '--all'], { expectExit: 0 });
+    await repo.run(['update', '--all', '--reviewed'], { expectExit: 0 });
   };
 
   await edit('src/c.ts', '** reaches c.ts', ['docs/all.md', 'docs/negation.md']);

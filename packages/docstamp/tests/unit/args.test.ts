@@ -60,6 +60,7 @@ describe('§13.2 parseArgs', () => {
       all: false,
       json: true,
       dryRun: false,
+      reviewed: false,
       paths: ['D.md'],
     });
     expect(parseArgs(['--cwd', 'd', 'update', '--all'])).toMatchObject({
@@ -257,6 +258,7 @@ describe('§13.2 parseArgs', () => {
       all: false,
       json: false,
       dryRun: false,
+      reviewed: false,
       paths: ['a'],
     });
     expect(usage(['update'])).toBe('update');

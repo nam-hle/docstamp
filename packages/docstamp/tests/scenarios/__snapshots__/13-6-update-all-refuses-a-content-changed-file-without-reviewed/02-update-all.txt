@@ -1,0 +1,5 @@
+$ docstamp update --all
+exit: 2
+--- stdout ---
+--- stderr ---
+error: E_UNREVIEWED: --all: 1 stale file (CLAUDE.md); review them, then name them in "docstamp update", or pass --all --reviewed.
