@@ -1,5 +1,20 @@
 $ docstamp --json updte
 exit: 2
 --- stdout ---
+{
+  "version": 2,
+  "mode": "check",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_USAGE",
+      "severity": "error",
+      "file": null,
+      "subject": "updte",
+      "message": "Unknown command \"updte\"; did you mean \"update\"? A file of that name is named after --, as in docstamp -- updte; see docstamp help."
+    }
+  ],
+  "next": []
+}
 --- stderr ---
-error: E_USAGE: updte: Unknown command "updte"; did you mean "update"? A file of that name is named after --, as in docstamp -- updte; see docstamp help.

@@ -46,6 +46,17 @@ exit: 2
       ]
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "next": [
+    {
+      "state": "invalid",
+      "command": [
+        "docstamp",
+        "check",
+        "bad/flow.md",
+        "bad/unknown-key.md"
+      ]
+    }
+  ]
 }
 --- stderr ---

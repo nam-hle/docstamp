@@ -390,8 +390,10 @@ scenario(
     expect(json.exit).toBe(2);
     expect(json.json().diagnostics[0].code).toBe('E_CWD');
     expect(json.json().files).toEqual([]);
-    const absolute = await repo.run([`--cwd=${repo.root}`, '--json']);
+    // not snapshotted: on Windows the normalizer unquotes "<root>", which breaks the JSON shape
+    const absolute = await repo.run([`--cwd=${repo.root}`, '--json'], { snapshot: false });
     expect(absolute.json().summary.stale).toBe(3);
+    expect(absolute.json().next[0].command.slice(-2)).toEqual(['--cwd', repo.root]);
   },
 );
 

@@ -36,6 +36,16 @@ exit: 2
       ]
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "next": [
+    {
+      "state": "invalid",
+      "command": [
+        "docstamp",
+        "check",
+        "CLAUDE.md"
+      ]
+    }
+  ]
 }
 --- stderr ---

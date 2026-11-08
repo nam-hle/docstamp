@@ -25,7 +25,7 @@ const hasEntry = (host: Host, dir: string, name: string): boolean =>
 export function resolveCwd(host: Host, processCwd: string, cwdOption: string | undefined): string {
   if (cwdOption === undefined) return processCwd;
   const dir = resolve(processCwd, cwdOption);
-  if (!host.fs.isDirectory(dir)) throw new Raised([diag('E_CWD')]);
+  if (!host.fs.isDirectory(dir)) throw new Raised([diag('E_CWD', { subject: cwdOption })]);
   return dir;
 }
 

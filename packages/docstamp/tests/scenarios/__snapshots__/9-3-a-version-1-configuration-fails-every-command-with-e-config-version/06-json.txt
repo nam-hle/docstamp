@@ -14,6 +14,7 @@ exit: 2
       "subject": null,
       "message": "Rename \"dependents\" to \"files\" and \"covers\" to \"dependencies\", set \"version: 2\"."
     }
-  ]
+  ],
+  "next": []
 }
 --- stderr ---

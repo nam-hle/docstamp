@@ -12,6 +12,7 @@ exit: 0
     "invalid": 0
   },
   "files": [],
-  "diagnostics": []
+  "diagnostics": [],
+  "next": []
 }
 --- stderr ---

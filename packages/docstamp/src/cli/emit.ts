@@ -1,5 +1,5 @@
 import type { Diagnostic, Result } from '../core/types.ts';
-import { jsonText } from '../report/json.ts';
+import { jsonText, type NextCommand } from '../report/json.ts';
 import { diagnosticsText, type Chunk } from '../report/text.ts';
 import type { Io } from './io.ts';
 import type { Undeclared } from './undeclared.ts';
@@ -19,6 +19,8 @@ export interface Output {
   written?: Set<string>;
   removed?: string[];
   undeclared?: readonly Undeclared[];
+  next?: readonly NextCommand[];
+  dryRun?: boolean;
 }
 
 export function emit(io: Io, o: Output): number {
@@ -34,6 +36,8 @@ export function emit(io: Io, o: Output): number {
         ...(o.written === undefined ? {} : { written: o.written }),
         ...(o.removed === undefined ? {} : { removed: o.removed }),
         ...(o.undeclared === undefined ? {} : { undeclared: o.undeclared }),
+        ...(o.next === undefined ? {} : { next: o.next }),
+        ...(o.dryRun === true ? { dryRun: true } : {}),
       }),
     );
   } else {

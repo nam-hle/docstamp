@@ -144,6 +144,7 @@ scenario('§14.5 the undeclared member exists only with --undeclared', async (re
     'summary',
     'files',
     'diagnostics',
+    'next',
   ]);
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseArgs } from '../../src/cli/args.ts';
+import { parseArgs, type UsageError } from '../../src/cli/args.ts';
 import { Raised } from '../../src/core/diagnostics.ts';
 
 const failure = (argv: string[]) => {
@@ -59,6 +59,7 @@ describe('§13.2 parseArgs', () => {
       mode: 'update',
       all: false,
       json: true,
+      dryRun: false,
       paths: ['D.md'],
     });
     expect(parseArgs(['--cwd', 'd', 'update', '--all'])).toMatchObject({
@@ -218,11 +219,44 @@ describe('§13.2 parseArgs', () => {
     expect(parseArgs(['--cwd', 'x'])).toMatchObject({ cwd: 'x' });
     expect(parseArgs(['list-dependencies', '--cwd=x'])).toMatchObject({ cwd: 'x' });
   });
+  it('§13.6 --dry-run is an option of update only', () => {
+    expect(parseArgs(['update', '--dry-run', 'a'])).toMatchObject({ dryRun: true });
+    expect(usage(['check', '--dry-run'])).toBe('--dry-run');
+  });
+  it('§13.2 an unknown option names a near one', () => {
+    const message = (argv: string[]) => {
+      try {
+        parseArgs(argv);
+      } catch (e) {
+        return (e as Raised).diagnostics[0]!.message;
+      }
+      return '';
+    };
+    expect(message(['--jsn'])).toBe(
+      'Unknown option --jsn; did you mean "--json"?; see docstamp help.',
+    );
+    expect(message(['--cdw=x'])).toContain('did you mean "--cwd"?');
+    expect(message(['--bogus'])).toBe('Unknown option --bogus; see docstamp help.');
+  });
+  it('§13.2 a usage error carries --json and the command', () => {
+    const error = (argv: string[]) => {
+      try {
+        parseArgs(argv);
+      } catch (e) {
+        return e as UsageError;
+      }
+      throw new Error('no error');
+    };
+    expect(error(['update', '--json'])).toMatchObject({ json: true, mode: 'update' });
+    expect(error(['stats', '--bogus'])).toMatchObject({ json: false, mode: 'stats' });
+    expect(error(['--json', 'updte'])).toMatchObject({ json: true, mode: 'check' });
+  });
   it('update needs exactly one of --all or files', () => {
     expect(parseArgs(['update', 'a'])).toEqual({
       mode: 'update',
       all: false,
       json: false,
+      dryRun: false,
       paths: ['a'],
     });
     expect(usage(['update'])).toBe('update');

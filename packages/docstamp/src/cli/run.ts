@@ -9,10 +9,17 @@ import type { Host } from '../host/host.ts';
 import { parsePattern } from '../pattern/parse.ts';
 import { fragmentChangedAt, type FragmentCache } from '../history/fragments.ts';
 import { replay } from '../history/replay.ts';
-import { listJsonText, reverseJsonText, statsJsonText, type StatsWindow } from '../report/json.ts';
+import {
+  jsonText,
+  listJsonText,
+  reverseJsonText,
+  statsJsonText,
+  type StatsWindow,
+} from '../report/json.ts';
+import { suggestJsonText } from '../report/suggest.ts';
 import { diagnosticsText, listText, reverseText, statsText } from '../report/text.ts';
 import { determineRoot, existsUnderRoot, resolveCwd } from '../universe/walk.ts';
-import { parseArgs, type Args } from './args.ts';
+import { UsageError, parseArgs, type Args } from './args.ts';
 import { runCheck } from './check.ts';
 import { hasError } from './emit.ts';
 import { listAll, listWorkspace } from './evaluate.ts';
@@ -205,6 +212,19 @@ function runStats(
   return exitCode;
 }
 
+// SPEC §13.2: a usage error given --json, as the document of its mode when a step raised
+function usageJson({ mode, diagnostics }: UsageError): string {
+  const exitCode = 2;
+  if (mode === 'check' || mode === 'update') {
+    const removed = mode === 'update' ? { removed: [] } : {};
+    return jsonText({ mode, evaluated: false, exitCode, selected: [], diagnostics, ...removed });
+  }
+  if (mode === 'list-dependencies') return listJsonText({ exitCode, selected: [], diagnostics });
+  if (mode === 'list-dependents') return reverseJsonText({ exitCode, entries: [], diagnostics });
+  if (mode === 'stats') return statsJsonText({ exitCode, window: null, files: [], diagnostics });
+  return suggestJsonText({ exitCode, write: false, files: [], diagnostics });
+}
+
 // SPEC §13.5, §13.6, §13.7, §13.8, §13.9
 export function run(host: Host, argv: readonly string[], processCwd: string, io: Io): number {
   let args: ReturnType<typeof parseArgs>;
@@ -212,7 +232,8 @@ export function run(host: Host, argv: readonly string[], processCwd: string, io:
     args = parseArgs(argv, (arg) => isEntry(host, resolve(processCwd, arg)));
   } catch (e) {
     if (!(e instanceof Raised)) throw e;
-    io.stderr(diagnosticsText(e.diagnostics));
+    if (e instanceof UsageError && e.json) io.stdout(usageJson(e));
+    else io.stderr(diagnosticsText(e.diagnostics));
     return 2;
   }
   if (args.mode === 'help') {

@@ -285,7 +285,15 @@ The following are not breaking:
   API, which keeps `[[ApiVersion]]` 1; a Plugin without `parseSelect` is addressed by the Shorthand
   with its `select` as the String verbatim, and one without `meta.schema` has its `select` checked
   by itself only. An old release ignores both (§8.7), so its own Shorthand is the breaking part, not
-  these members; none was released before the Shorthand.
+  these members; none was released before the Shorthand;
+- the JSON document of a usage error given `--json` (§13.2), which was a text line on standard
+  error: the exit code and the Diagnostic are the same, and a command line without `--json` prints
+  what it printed;
+- the member `next` of `check --json` (§14.5): a new member, which consumers ignore;
+- the `[[Subject]]` of `E_CWD` (§13.4), which was empty; and the near option named in the message
+  of an unknown option (§13.2);
+- the option `--dry-run` of `update` (§13.6), with its `would` lines (§14.4) and the member
+  `dryRun` (§14.5): a new option that no existing command line uses.
 
 ### 17.4 The Hash Guarantee
 

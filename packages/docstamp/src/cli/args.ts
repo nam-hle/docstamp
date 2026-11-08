@@ -49,7 +49,27 @@ export type Args =
       limit: number;
       maxFiles: number;
     }
-  | { mode: 'update'; all: boolean; json: boolean; cwd?: string; paths: string[] };
+  | {
+      mode: 'update';
+      all: boolean;
+      json: boolean;
+      dryRun: boolean;
+      cwd?: string;
+      paths: string[];
+    };
+
+type CommandMode = Exclude<Args['mode'], 'help' | 'version'>;
+
+// SPEC §13.2: a usage error, with what its JSON document needs
+export class UsageError extends Raised {
+  constructor(
+    raised: Raised,
+    readonly json: boolean,
+    readonly mode: CommandMode,
+  ) {
+    super(raised.diagnostics);
+  }
+}
 
 // SPEC §13.1: the command table, in the order help lists it
 export const COMMANDS = [
@@ -74,7 +94,26 @@ const FLAGS = new Set([
   '--help',
   '--write',
   '--undeclared',
+  '--dry-run',
 ]);
+// SPEC §13.2 step 1: the options in the order a near option is chosen from
+const NEAR_ORDER = [
+  '--json',
+  '--all',
+  '--transitive',
+  '--only-stale',
+  '--quiet',
+  '--undeclared',
+  '--write',
+  '--dry-run',
+  '--help',
+  '--version',
+  '--cwd',
+  '--since',
+  '--from',
+  '--limit',
+  '--max-files',
+];
 const REMOVED: Record<string, string> = {
   '--files': 'docstamp list-dependencies',
   '--root': '--cwd',
@@ -159,7 +198,9 @@ export function parseArgs(
       const name = removedName(arg)!;
       fail(arg, `${name} was removed; use "${REMOVED[name]}".`);
     } else if (arg.startsWith('-') && arg !== '-') {
-      fail(arg, `Unknown option ${arg}.`);
+      // SPEC §13.2: an unknown option names a near one
+      const near = closestKey(arg.split('=')[0]!, NEAR_ORDER);
+      fail(arg, `Unknown option ${arg}${near === null ? '' : `; did you mean "${near}"?`}.`);
     } else if (command === undefined) {
       if (isCommand(arg)) command = explicit = arg;
       else {
@@ -169,7 +210,8 @@ export function parseArgs(
       }
     } else paths.push(arg);
   }
-  if (mistyped !== null) throw mistyped;
+  const json = seen.has('--json');
+  if (mistyped !== null) throw new UsageError(mistyped, json, 'check');
   // §13.2 step 3: the help names
   // §13.11 step 5: --json reaches help only to ask for the index as JSON
   const jsonOpt = seen.has('--json') ? ({ json: true } as const) : {};
@@ -186,6 +228,9 @@ export function parseArgs(
     | 'stats'
     | 'suggest';
   const all = seen.has('--all');
+  if (mode !== 'update' && seen.has('--dry-run')) {
+    fail('--dry-run', '--dry-run is only valid with "docstamp update".');
+  }
   if (mode !== 'suggest' && seen.has('--write')) {
     fail('--write', '--write was removed; use "docstamp update".');
   }
@@ -247,9 +292,9 @@ export function parseArgs(
   }
   if (failure) {
     const page = explicit === undefined ? 'docstamp help' : `docstamp help ${explicit}`;
-    throw usage(failure.subject, failure.message.replace(/\.$/u, `; see ${page}.`));
+    const raised = usage(failure.subject, failure.message.replace(/\.$/u, `; see ${page}.`));
+    throw new UsageError(raised, json, mode);
   }
-  const json = seen.has('--json');
   const cwd = values.get('--cwd');
   const cwdOpt = cwd === undefined ? {} : { cwd };
   const page = limit === undefined ? DEFAULT_LIMIT : Number(limit);
@@ -285,6 +330,6 @@ export function parseArgs(
     };
   }
   return mode === 'update'
-    ? { mode, all, json, ...cwdOpt, paths }
+    ? { mode, all, json, dryRun: seen.has('--dry-run'), ...cwdOpt, paths }
     : { mode, json, ...cwdOpt, paths };
 }

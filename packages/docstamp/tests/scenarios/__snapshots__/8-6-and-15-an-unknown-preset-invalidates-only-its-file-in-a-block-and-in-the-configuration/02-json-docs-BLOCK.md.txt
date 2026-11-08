@@ -45,6 +45,16 @@ exit: 2
       ]
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "next": [
+    {
+      "state": "invalid",
+      "command": [
+        "docstamp",
+        "check",
+        "docs/BLOCK.md"
+      ]
+    }
+  ]
 }
 --- stderr ---
