@@ -1,4 +1,4 @@
-import { Raised } from '../core/diagnostics.ts';
+import { diag, Raised } from '../core/diagnostics.ts';
 import type { Result } from '../core/types.ts';
 import { planUpdate } from '../engine/update-plan.ts';
 import type { Host } from '../host/host.ts';
@@ -44,6 +44,14 @@ export function runUpdate(
     if (refused) {
       const chunks = checkChunks(selected, global, { cwd: args.cwd, next: false });
       return emit(io, { ...empty, evaluated: true, selected, global, chunks });
+    }
+    // SPEC §13.6 step 5: --all alone does not pass the gate over a changed dependency
+    const stale = selected.filter((r) => r.reasons.includes('content-changed')).map((r) => r.file);
+    if (args.all && !args.reviewed && stale.length > 0) {
+      const message =
+        `${stale.length} stale ${stale.length === 1 ? 'file' : 'files'} (${stale.join(', ')}); ` +
+        'review them, then name them in "docstamp update", or pass --all --reviewed.';
+      throw new Raised([diag('E_UNREVIEWED', { subject: '--all', message })]);
     }
     // SPEC §13.6: the review input, read before the write
     const whitespace = new Map<string, boolean>();

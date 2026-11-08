@@ -256,7 +256,7 @@ scenario(
     repo.write('sub/docstamp-lock.yaml', 'version: 3\nfiles: {}\n');
     const nestedLock = await repo.run(['--json'], { label: 'a nested lock file appears' });
     expect(nestedLock.exit).toBe(1);
-    await repo.run(['update', '--all'], { expectExit: 0 });
+    await repo.run(['update', '--all', '--reviewed'], { expectExit: 0 });
 
     repo.append('sub/docstamp.yaml', '# edited\n');
     const edited = await repo.run([], { label: 'the nested configuration file is edited' });

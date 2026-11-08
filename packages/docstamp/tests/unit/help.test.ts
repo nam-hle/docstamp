@@ -48,6 +48,7 @@ const VALUES: Record<string, string> = {
 // an option that only another option enables, per command (SPEC §13.2)
 const ENABLERS: Record<string, Record<string, string>> = {
   '--limit': { check: '--undeclared', suggest: '--all' },
+  '--reviewed': { update: '--all' },
 };
 
 function accepts(command: string, option: string): boolean {

@@ -44,6 +44,9 @@ const FIX: Record<Code, string> = {
   // Lockfile version 2 uses a dedicated message (lock.ts).
   E_UNKNOWN_FILE:
     'Name a file listed under "files" in the configuration file, or one with a docstamp block.',
+  E_UNREVIEWED:
+    'Review each stale file, then name it in "docstamp update", ' +
+    'or pass --all --reviewed once all of them were reviewed.',
   E_HISTORY:
     'Run in a git work tree with its full history (not a shallow clone); ' +
     'for --from, name a commit.',

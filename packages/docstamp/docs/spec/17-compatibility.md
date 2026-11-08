@@ -112,6 +112,14 @@ which is the same Pattern as before; the Hash and the selection of the Declarati
 were. A Shorthand adds no Hash input: its Dependency Hash is that of the Map it stands for, and the
 vectors of §17.7 are unchanged.
 
+NOTE: `update --all` with a `content-changed` file recorded it and exited 0; it is now
+`E_UNREVIEWED`, exit 2, and writes nothing (§13.6 step 5), unless `--reviewed` is given. A command
+line that a previous release accepted is refused (§17.1, third item; *Contract*: the meaning of an
+argument), so it is breaking. The migration is to review those files and name them, or to add
+`--reviewed`. `update --all` where every file is `ok` or `unrecorded` (first adoption, a discarded
+Lockfile) is unchanged.
+No Hash input, selection or Lockfile `version` changes.
+
 ### 17.3 Non-breaking changes
 
 The following are not breaking:

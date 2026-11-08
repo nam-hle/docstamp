@@ -4,7 +4,7 @@ exit: 0
 docstamp update: Record that you reviewed the named files against their dependencies.
 
 Usage:
-  docstamp update [--json] [--dry-run] [--cwd <dir>] (--all | <file>...)
+  docstamp update [--json] [--dry-run] [--cwd <dir>] (--all [--reviewed] | <file>...)
 
 Records the current dependency hash of each named file: in docstamp-lock.yaml for a file declared in
 the configuration file, in the hash: line of its docstamp block for an inline file. It prints
@@ -17,14 +17,16 @@ written or the exit code. With --json the changes member of each file holds the 
 
 A write asserts that a review happened, and docstamp cannot check that. Run it only after reading
 the changed dependencies and fixing what the file no longer gets right. --all is for the first
-adoption and for recovery from an unreadable lock, never for making a failing check pass. When a
-named file is invalid nothing is written.
+adoption and for recovery from an unreadable lock, never for making a failing check pass: when a
+file's dependencies changed since its last review it fails with E_UNREVIEWED and writes nothing,
+unless --reviewed says each such file was reviewed. When a named file is invalid nothing is written.
 
 --dry-run prints what a write would do (would write, unchanged, would remove) and writes nothing, so
 it records no review.
 
 Options:
   --all        Record every stamped file. Not with file arguments.
+  --reviewed   With --all: each file with changed dependencies was reviewed; record it.
   --dry-run    Print what would be written, and write nothing.
   --json       Print one JSON document instead of text (docstamp help json).
   --cwd <dir>  Act as if run from <dir>: the root is searched upward from it, and file arguments are

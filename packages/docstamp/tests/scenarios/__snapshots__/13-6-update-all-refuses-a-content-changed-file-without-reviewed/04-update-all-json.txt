@@ -1,0 +1,20 @@
+$ docstamp update --all --json
+exit: 2
+--- stdout ---
+{
+  "version": 2,
+  "mode": "update",
+  "exitCode": 2,
+  "files": [],
+  "diagnostics": [
+    {
+      "code": "E_UNREVIEWED",
+      "severity": "error",
+      "file": null,
+      "subject": "--all",
+      "message": "1 stale file (CLAUDE.md); review them, then name them in \"docstamp update\", or pass --all --reviewed."
+    }
+  ],
+  "removed": []
+}
+--- stderr ---

@@ -484,6 +484,15 @@ scenario('§9.3 steps 4 and 7 a first configuration file is told what to add', a
   );
 });
 
+scenario('§15 E_UNREVIEWED: update --all over a changed dependency', async (repo) => {
+  base(repo);
+  repo.write('docstamp.yaml', config({ 'DOC.md': ['src/**'] }));
+  await repo.run(['update', '--all'], { expectExit: 0 });
+  repo.append('src/a.ts', 'b\n');
+  const refused = await run(repo, 'content-changed', ['update', '--all'], 2, ['E_UNREVIEWED']);
+  expect(refused.stderr).toContain('error: E_UNREVIEWED: --all: 1 stale file (DOC.md)');
+});
+
 it('every diagnostic code of SPEC §15 is exercised through the CLI', () => {
   const table = readFileSync(new URL('../../docs/spec/15-diagnostics.md', import.meta.url), 'utf8');
   const codes = [...table.matchAll(/^\| `([EW]_[A-Z_]+)`/gmu)].map((m) => m[1]!);

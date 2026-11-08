@@ -49,7 +49,7 @@ scenario(
     repo.append('keep.log', 'edit\n');
     const negated = await repo.run([], { label: 'a negated-ignore file changed' });
     expect(negated.exit).toBe(1);
-    await repo.run(['update', '--all'], { expectExit: 0 });
+    await repo.run(['update', '--all', '--reviewed'], { expectExit: 0 });
 
     repo.append('other/x.gen.ts', 'edit\n');
     expect((await repo.run([], { label: 'a file the nested rule does not scope' })).exit).toBe(1);

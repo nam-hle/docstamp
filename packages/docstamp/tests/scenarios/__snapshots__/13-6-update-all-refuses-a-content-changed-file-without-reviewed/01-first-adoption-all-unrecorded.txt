@@ -1,7 +1,8 @@
+# first adoption, all unrecorded
 $ docstamp update --all
 exit: 0
 --- stdout ---
-changed since last review: CLAUDE.md
-  modified  src/util.ts
 written  CLAUDE.md
+written  README.md
+written  docs/guide.md
 --- stderr ---

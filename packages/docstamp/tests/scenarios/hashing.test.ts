@@ -80,7 +80,7 @@ scenario('§10.1 binary content is hashed byte for byte', { fixture }, async (re
 
   const utf16 = (text: string) => Buffer.from(text, 'utf16le');
   repo.write('src/wide.txt', utf16('one\r\ntwo\r\n'));
-  await repo.run(['update', '--all'], { expectExit: 0 });
+  await repo.run(['update', '--all', '--reviewed'], { expectExit: 0 });
   repo.write('src/wide.txt', utf16('one\ntwo\n'));
   await verdict('UTF-16 text is binary, so CRLF counts', 1);
 });
@@ -99,7 +99,7 @@ scenario(
     const early = (separator: string) =>
       Buffer.concat([Buffer.alloc(8191, 'a'), Buffer.from(`\0x${separator}y${separator}`)]);
     repo.write('src/early-nul.txt', early('\r\n'));
-    await repo.run(['update', '--all'], { expectExit: 0 });
+    await repo.run(['update', '--all', '--reviewed'], { expectExit: 0 });
     repo.write('src/early-nul.txt', early('\n'));
     await expectVerdict(repo, 'NUL at offset 8191 makes the file binary', 1);
   },
@@ -141,7 +141,7 @@ scenario('§10.4 empty files and file order do not hide a change', { fixture }, 
   await repo.run(['update', '--all'], { expectExit: 0 });
   repo.write('src/empty.txt', 'x');
   await expectVerdict(repo, 'an empty file gained a byte', 1);
-  await repo.run(['update', '--all'], { expectExit: 0 });
+  await repo.run(['update', '--all', '--reviewed'], { expectExit: 0 });
   repo.remove('src/empty.txt');
   await expectVerdict(repo, 'an empty file was deleted', 1);
 });

@@ -73,7 +73,7 @@ scenario('§13.5 declaring the path makes --undeclared pass', async (repo) => {
   await repoWithGap(repo);
   repo.write('docstamp.yaml', CONFIG + '      - src/new.ts\n');
   repo.write('docs/b.md', DOC_B.replace('- src/lib/**', '- src/lib/**\n    - src/new.ts'));
-  await repo.run(['update', '--all'], { expectExit: 0, snapshot: false });
+  await repo.run(['update', '--all', '--reviewed'], { expectExit: 0, snapshot: false });
   const result = await repo.run(['check', '--undeclared', '--quiet']);
   expect(result.exit).toBe(0);
   expect(result.stdout).toBe('');

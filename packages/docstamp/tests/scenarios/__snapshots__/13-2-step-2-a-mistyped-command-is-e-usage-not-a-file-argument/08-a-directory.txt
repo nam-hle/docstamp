@@ -10,7 +10,7 @@ for the idea behind it.
 Commands:
   docstamp [check] [--json] [--only-stale] [--quiet] [--undeclared] [--cwd <dir>] [<file>...]
       Check that each file's dependencies are unchanged since its last review.
-  docstamp update [--json] [--dry-run] [--cwd <dir>] (--all | <file>...)
+  docstamp update [--json] [--dry-run] [--cwd <dir>] (--all [--reviewed] | <file>...)
       Record that you reviewed the named files against their dependencies.
   docstamp list-dependencies [--json] [--cwd <dir>] [<file>...]
       List each file with its dependency patterns and the files they select.
