@@ -3,6 +3,19 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.0](https://github.com/nam-hle/docstamp/compare/v0.6.0...v0.7.0) (2026-11-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* refuse update --all over a changed dependency without --reviewed ([#162](https://github.com/nam-hle/docstamp/issues/162))
+
+### Features
+
+* give agents usage errors, next steps and a dry run as data ([#161](https://github.com/nam-hle/docstamp/issues/161)) ([e402c26](https://github.com/nam-hle/docstamp/commit/e402c264bb72090bd9054cc012f6096e274a2a9a))
+* let a plugin say which paths a doc mentions, and read AsciiDoc docs with it ([#157](https://github.com/nam-hle/docstamp/issues/157)) ([32e6402](https://github.com/nam-hle/docstamp/commit/32e64020f2f996203c3f8724789b7b379c3a4894))
+* refuse update --all over a changed dependency without --reviewed ([#162](https://github.com/nam-hle/docstamp/issues/162)) ([272ebcc](https://github.com/nam-hle/docstamp/commit/272ebcc8b1f24d212af864ca89635450379034aa))
+
 ## [0.6.0](https://github.com/nam-hle/docstamp/compare/v0.5.0...v0.6.0) (2026-10-14)
 
 
