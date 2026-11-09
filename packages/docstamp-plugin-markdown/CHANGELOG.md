@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/nam-hle/docstamp/compare/docstamp-plugin-markdown-v0.1.0...docstamp-plugin-markdown-v0.1.1) (2026-11-09)
+
+
+### Internal
+
+* Bump the npm group across 1 directory with 7 updates ([#159](https://github.com/nam-hle/docstamp/issues/159)) ([3877bed](https://github.com/nam-hle/docstamp/commit/3877bed19639967ef93a1a79e6ea84d59db21b98))
+
 ## 0.1.0 (2026-10-14)
 
 
