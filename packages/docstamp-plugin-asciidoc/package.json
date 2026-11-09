@@ -1,6 +1,6 @@
 {
   "name": "docstamp-plugin-asciidoc",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "docstamp plugin: depend on one section of an AsciiDoc file, by its title or anchor",
   "license": "MIT",
   "author": {
