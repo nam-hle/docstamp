@@ -1,6 +1,6 @@
 version: 4
 files:
-  "CLAUDE.md": d49da6cc63d2a263e464345743b2521ff581807d69d31f1936c311260c216b41
+  "CLAUDE.md": 396a7791846f056ba45492a1a7e2f104d45d194d8b1ae531092bf2970e00bd88
   "README.md": 9868a37511a1710972556a9fac2047d367cb9806ba03c56d0f3a1ef163af99c9
   "packages/docstamp-plugin-asciidoc/README.md": 3e6e82e25a6fe868001edfc8b9be4118d1567c2aafe27d73115a1dd2fbb7b696
   "packages/docstamp-plugin-asciidoc/SPEC.md": 3e6e82e25a6fe868001edfc8b9be4118d1567c2aafe27d73115a1dd2fbb7b696
@@ -23,7 +23,7 @@ files:
   "packages/docstamp/docs/spec/16-exit-codes.md": 9ce9d85b72936d66faf293ffdd79653b484f934e7965d78f5f9eacf244a5abab
   "packages/docstamp/docs/spec/17-compatibility.md": decf64a130e893b504bf0a4730d41266a57cca196e976ddaac13f23cd674f463
   "packages/site/content/get-started.md": 9868a37511a1710972556a9fac2047d367cb9806ba03c56d0f3a1ef163af99c9
-  "packages/site/content/guide/ci.md": 181eb926da694d27e475508e5eba57c4ef5bf1504d6e9cbe8693c414ac6ceb42
+  "packages/site/content/guide/ci.md": 67e78428bc5874e8ceaf87522648224453e1becb6a3425d43f5f35b96221dbe0
   "packages/site/content/guide/declare.md": 64ba493dbd209b9caa2d743e4aa48aba5a643ecb7c8462dca597a3e9beb2c22c
   "packages/site/content/guide/plugins.md": 679f12014dcf135e20db87875db4d86713492de76946953a18806b81aeac3d68
   "packages/site/content/guide/review.md": 5933e1e6e22962183f90f26f5285e462ed91d089fba4d3882bd47f84981b1438
