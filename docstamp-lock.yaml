@@ -2,6 +2,7 @@ version: 4
 files:
   "CLAUDE.md": 396a7791846f056ba45492a1a7e2f104d45d194d8b1ae531092bf2970e00bd88
   "README.md": 9868a37511a1710972556a9fac2047d367cb9806ba03c56d0f3a1ef163af99c9
+  "docs/VISION.md": 5657a0810136c6e39c99242704b896c1280a84066190a4300512f5f1fff26bf0
   "packages/docstamp-plugin-asciidoc/README.md": 3e6e82e25a6fe868001edfc8b9be4118d1567c2aafe27d73115a1dd2fbb7b696
   "packages/docstamp-plugin-asciidoc/SPEC.md": 3e6e82e25a6fe868001edfc8b9be4118d1567c2aafe27d73115a1dd2fbb7b696
   "packages/docstamp-plugin-js/README.md": 6160073f7f3eb62d9f0baf5a227605104c761af875053af877c4f9b569436b12

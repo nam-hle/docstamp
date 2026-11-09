@@ -25,6 +25,9 @@ files:
       - packages/docstamp/src/cli
       - packages/docstamp/src/config
       - packages/docstamp/src/report
+  docs/VISION.md:
+    dependencies:
+      - release-please-config.json:packages
   packages/docstamp/README.md:
     dependencies:
       - packages/docstamp/src/cli
