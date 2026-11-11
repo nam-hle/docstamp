@@ -41,7 +41,7 @@
     "node": ">=24.0.0"
   },
   "dependencies": {
-    "marked": "^18.1.1"
+    "marked": "^18.1.3"
   },
   "peerDependencies": {
     "docstamp": ">=0.6.0"
