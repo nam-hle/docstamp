@@ -42,7 +42,7 @@
     "node": ">=24.0.0"
   },
   "dependencies": {
-    "@babel/parser": "^7.29.9"
+    "@babel/parser": "^8.1.0"
   },
   "peerDependencies": {
     "docstamp": ">=0.6.0"
