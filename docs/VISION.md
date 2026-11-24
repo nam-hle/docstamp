@@ -62,9 +62,9 @@ Roughly in order of how settled each is:
   heading, a TypeScript symbol by its public shape, a key of `package.json`), so an unrelated
   edit or an internal refactor does not ask for a doc review. The plugin defines what a selector
   means; docstamp only hashes the content it returns. Shipped so far: the plugin API, a value of a
-  JSON or YAML file by its path (built into `docstamp`, as it needs no new dependency), and a
-  Markdown plugin (sections by heading) and a JavaScript and TypeScript plugin (declarations by
-  kind and name), each in its own package, not published yet.
+  JSON or YAML file by its path (built into `docstamp`, as it needs no new dependency), and three
+  published plugins, each in its own package: Markdown (sections by heading), JavaScript and
+  TypeScript (declarations by kind and name), and AsciiDoc (sections by title or anchor).
 - **More first-party plugins** as separate packages, once the API has met a few real plugins.
 
 ## What it will not become
